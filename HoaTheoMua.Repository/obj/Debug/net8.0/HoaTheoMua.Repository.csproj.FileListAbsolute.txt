@@ -1,0 +1,12 @@
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\bin\Debug\net8.0\HoaTheoMua.Repository.deps.json
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\bin\Debug\net8.0\HoaTheoMua.Repository.dll
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\bin\Debug\net8.0\HoaTheoMua.Repository.pdb
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\obj\Debug\net8.0\HoaTheoMua.Repository.csproj.AssemblyReference.cache
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\obj\Debug\net8.0\HoaTheoMua.Repository.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\obj\Debug\net8.0\HoaTheoMua.Repository.AssemblyInfoInputs.cache
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\obj\Debug\net8.0\HoaTheoMua.Repository.AssemblyInfo.cs
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\obj\Debug\net8.0\HoaTheoMua.Repository.csproj.CoreCompileInputs.cache
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\obj\Debug\net8.0\HoaTheoMua.Repository.dll
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\obj\Debug\net8.0\refint\HoaTheoMua.Repository.dll
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\obj\Debug\net8.0\HoaTheoMua.Repository.pdb
+C:\Users\Admin\Desktop\HoaTheoMua\HoaTheoMua\HoaTheoMua.Repository\obj\Debug\net8.0\ref\HoaTheoMua.Repository.dll

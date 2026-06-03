@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HoaTheoMua.API", "HoaTheoMua.API\HoaTheoMua.API.csproj", "{158374B4-DCB1-4E9D-82D4-2269B211AACB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HoaTheoMua.Repository", "HoaTheoMua.Repository\HoaTheoMua.Repository.csproj", "{B17F7C78-F5CF-41C9-BE78-E7DBB18E076B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HoaTheoMua.Service", "HoaTheoMua.Service\HoaTheoMua.Service.csproj", "{DFC8642C-3370-4D74-8377-FC5FF19C89B5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{158374B4-DCB1-4E9D-82D4-2269B211AACB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{158374B4-DCB1-4E9D-82D4-2269B211AACB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{158374B4-DCB1-4E9D-82D4-2269B211AACB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{158374B4-DCB1-4E9D-82D4-2269B211AACB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B17F7C78-F5CF-41C9-BE78-E7DBB18E076B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B17F7C78-F5CF-41C9-BE78-E7DBB18E076B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B17F7C78-F5CF-41C9-BE78-E7DBB18E076B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B17F7C78-F5CF-41C9-BE78-E7DBB18E076B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFC8642C-3370-4D74-8377-FC5FF19C89B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFC8642C-3370-4D74-8377-FC5FF19C89B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFC8642C-3370-4D74-8377-FC5FF19C89B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFC8642C-3370-4D74-8377-FC5FF19C89B5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
