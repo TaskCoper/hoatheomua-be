@@ -7,9 +7,9 @@ public class CategoryNews: BaseEntity<Guid>, IAuditableEntity
     public String Title { get; set; }
     
     public User User { get; set; }
-    public Guid UserID { get; set; }
+    public Guid UserId { get; set; }
     public CategoryNews? ParentCategoryNews{ get; set; }
-    public Guid? ParentCategoryNewsID { get; set; }
+    public Guid? ParentCategoryNewsId { get; set; }
     
     public ICollection<CategoryNews>? ChildCategoryNews { get; set; } = new List<CategoryNews>();
     public ICollection<CategoryNewsDetail> CategoryNewsDetail { get; set; } = new List<CategoryNewsDetail>();

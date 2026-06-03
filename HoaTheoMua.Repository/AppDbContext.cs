@@ -30,11 +30,11 @@ public class AppDbContext : DbContext
 
             builder.HasIndex(u => u.Email).IsUnique();
 
-            builder.HasMany(u => u.RefreshToken).WithOne(t => t.User).HasForeignKey(t => t.UserID).OnDelete(DeleteBehavior.Cascade);
-            builder.HasMany(u => u.ResetPassword).WithOne(p => p.User).HasForeignKey(p => p.UserID).OnDelete(DeleteBehavior.Cascade);
-            builder.HasMany(u => u.AuditLog).WithOne(a => a.User).HasForeignKey(a => a.UserID).OnDelete(DeleteBehavior.Cascade);
+            builder.HasMany(u => u.RefreshToken).WithOne(t => t.User).HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+            builder.HasMany(u => u.ResetPassword).WithOne(p => p.User).HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+            builder.HasMany(u => u.AuditLog).WithOne(a => a.User).HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasMany(u => u.CategoryNews).WithOne(c => c.User).HasForeignKey(c => c.UserID).OnDelete(DeleteBehavior.Restrict);
+            builder.HasMany(u => u.CategoryNews).WithOne(c => c.User).HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CategoryNews>(builder =>
@@ -44,7 +44,7 @@ public class AppDbContext : DbContext
 
             builder.HasOne(c => c.ParentCategoryNews)
                    .WithMany(c => c.ChildCategoryNews)
-                   .HasForeignKey(c => c.ParentCategoryNewsID)
+                   .HasForeignKey(c => c.ParentCategoryNewsId)
                    .OnDelete(DeleteBehavior.Restrict); 
         });
 
@@ -58,16 +58,16 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<CategoryNewsDetail>(builder =>
         {
-            builder.HasIndex(cnd => new { cnd.CategoryNewsID, cnd.NewsID }).IsUnique();
+            builder.HasIndex(cnd => new { cnd.CategoryNewsId, cnd.NewsId }).IsUnique();
 
             builder.HasOne(cnd => cnd.CategoryNews)
                    .WithMany(c => c.CategoryNewsDetail)
-                   .HasForeignKey(cnd => cnd.CategoryNewsID)
+                   .HasForeignKey(cnd => cnd.CategoryNewsId)
                    .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasOne(cnd => cnd.news)
                    .WithMany(n => n.CategoryNewsDetail)
-                   .HasForeignKey(cnd => cnd.NewsID)
+                   .HasForeignKey(cnd => cnd.NewsId)
                    .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -83,11 +83,11 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ResetPassword>(builder =>
         {
-            builder.Property(rp => rp.TokenHash).IsRequired();
+            builder.Property(rp => rp.TokenHashed).IsRequired();
             builder.Property(rp => rp.IsUsed).HasDefaultValue(false);
             builder.Property(rp => rp.CreatedAt).HasDefaultValueSql("now()");
 
-            builder.HasIndex(rp => rp.TokenHash).IsUnique();
+            builder.HasIndex(rp => rp.TokenHashed).IsUnique();
         });
 
         modelBuilder.Entity<CompanyAddress>(builder =>
@@ -104,7 +104,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AuditLog>(builder =>
         {
             builder.Property(al => al.Action).IsRequired().HasMaxLength(255);
-            builder.Property(al => al.Entity).HasMaxLength(255);
+            builder.Property(al => al.Description).IsRequired();
+            builder.Property(al => al.EntityType).HasMaxLength(255);
             builder.Property(al => al.CreatedAt).HasDefaultValueSql("now()");
         });
     }
