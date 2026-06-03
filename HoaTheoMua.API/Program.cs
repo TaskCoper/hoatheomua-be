@@ -1,4 +1,4 @@
-using HoaTheoMua.Repository.Data;
+using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);

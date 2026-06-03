@@ -2,7 +2,7 @@
 using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
 
-namespace HoaTheoMua.Repository.Data;
+namespace HoaTheoMua.Repository;
 
 public class AppDbContext : DbContext
 {
@@ -74,7 +74,8 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(500);
             builder.Property(n => n.Description)
-                .IsRequired();
+                .IsRequired()
+                .HasColumnType("text");
             builder.Property(n => n.ViewCount)
                 .HasDefaultValue(0);
             builder.Property(n => n.Status)
