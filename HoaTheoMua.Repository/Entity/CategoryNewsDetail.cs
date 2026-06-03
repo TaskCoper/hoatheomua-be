@@ -6,7 +6,7 @@ public class CategoryNewsDetail:BaseEntity<Guid>, IAuditableEntity
 {
     public CategoryNews CategoryNews { get; set; } 
     public Guid CategoryNewsId { get; set; }
-    public News news { get; set; }
+    public News News { get; set; }
     public Guid NewsId { get; set; }
     
     public DateTimeOffset CreatedAt { get; set; }
