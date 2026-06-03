@@ -13,7 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<News> NewsList { get; set; }
     public DbSet<CategoryNewsDetail> CategoryNewsDetails { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
-    public DbSet<ResetPassword> ResetPasswords { get; set; }
+    public DbSet<ForgotPassword> ResetPasswords { get; set; }
     public DbSet<CompanyAddress> CompanyAddresses { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     
@@ -26,10 +26,14 @@ public class AppDbContext : DbContext
             builder.Property(u => u.Email)
                 .IsRequired()
                 .HasMaxLength(256);
+            builder.Property(u => u.Name)
+                .IsRequired()
+                .HasMaxLength(256);
             builder.Property(u => u.PhoneNumber)
                 .HasMaxLength(10);
             builder.Property(u => u.HashPassword)
-                .IsRequired();
+                .IsRequired()
+                .HasMaxLength(256);
             builder.Property(u => u.IsDeleted)
                 .HasDefaultValue(false);
             builder.HasIndex(u => u.Email)
@@ -76,6 +80,8 @@ public class AppDbContext : DbContext
             builder.Property(n => n.Description)
                 .IsRequired()
                 .HasColumnType("text");
+            builder.Property(n => n.PictureUrl)
+                .HasMaxLength(500);
             builder.Property(n => n.ViewCount)
                 .HasDefaultValue(0);
             builder.Property(n => n.Status)
@@ -103,8 +109,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<RefreshToken>(builder =>
         {
             builder.Property(rt => rt.RefreshTokenHash)
-                .IsRequired();
+                .IsRequired()
+                .HasMaxLength(500);
             builder.Property(rt => rt.IpAddress)
+                .HasMaxLength(45);
+            builder.Property(rt => rt.UserAgent)
                 .HasMaxLength(45);
             builder.Property(rt => rt.DeviceLabel)
                 .HasMaxLength(255);
@@ -115,7 +124,7 @@ public class AppDbContext : DbContext
                 .IsUnique();
         });
 
-        modelBuilder.Entity<ResetPassword>(builder =>
+        modelBuilder.Entity<ForgotPassword>(builder =>
         {
             builder.Property(rp => rp.Otp)
                 .IsRequired();

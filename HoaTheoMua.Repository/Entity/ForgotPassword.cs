@@ -2,9 +2,9 @@
 
 namespace HoaTheoMua.Repository.Entity;
 
-public class ResetPassword: BaseEntity<Guid>, IAuditableEntity
+public class ForgotPassword: BaseEntity<Guid>, IAuditableEntity
 {
-    public string Otp { get; set; }
+    public required string Otp { get; set; }
     public bool IsUsed { get; set; } = false;
     public DateTimeOffset ExpiresAt { get; set; }
 
