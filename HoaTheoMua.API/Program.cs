@@ -10,6 +10,27 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddCors(options =>
+{
+   options.AddPolicy("CorsPolicy1", policyBuilder =>
+   {
+       policyBuilder.AllowAnyOrigin();
+       policyBuilder.AllowAnyMethod();
+       policyBuilder.AllowAnyHeader();
+       policyBuilder.AllowCredentials();
+   });
+   
+   options.AddPolicy("CorsPolicy2", policyBuilder =>
+   {
+       policyBuilder.WithOrigins("http://localhost:4200");
+       policyBuilder.WithMethods("GET", "POST");
+       policyBuilder.WithHeaders("Authorization");
+       policyBuilder.AllowCredentials();
+   });
+});
+
+
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")
@@ -27,5 +48,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseCors("CorsPolicy1");
 
 app.Run();
