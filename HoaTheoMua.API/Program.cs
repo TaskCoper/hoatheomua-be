@@ -1,3 +1,4 @@
+using HoaTheoMua.Extension;
 using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")
     )
 );
+
+builder.Services.ConfigureRateLimiter();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -23,6 +26,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseRateLimiter();
 
 app.UseAuthorization();
 
