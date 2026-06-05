@@ -6,7 +6,7 @@ namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class RefreshTokenSeed
 {
-    public static void SeedRefreshToken(EntityTypeBuilder<RefreshToken> builder)
+    public static void SeedRefreshToken(this EntityTypeBuilder<RefreshToken> builder)
     {
         var baseDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         

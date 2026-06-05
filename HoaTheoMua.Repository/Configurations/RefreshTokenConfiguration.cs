@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -22,5 +23,6 @@ public class RefreshTokenConfiguration: IEntityTypeConfiguration<RefreshToken>
 
         builder.HasIndex(rt => rt.RefreshTokenHash)
             .IsUnique();
+        builder.SeedRefreshToken();
     }
 }

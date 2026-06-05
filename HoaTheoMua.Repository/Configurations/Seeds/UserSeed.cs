@@ -7,7 +7,7 @@ namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class UserSeed
 {
-    public static void SeedUser(EntityTypeBuilder<User> builder)
+    public static void SeedUser(this EntityTypeBuilder<User> builder)
     {
         var baseDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         

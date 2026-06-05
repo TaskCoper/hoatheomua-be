@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -24,5 +25,6 @@ public class NewsConfiguration: IEntityTypeConfiguration<News>
             .HasDefaultValue(NewsStatus.Draft);
         builder.Property(n => n.CreatedAt)
             .HasDefaultValueSql("now()");
+        builder.SeedNews();
     }
 }
