@@ -1,10 +1,11 @@
 ﻿using HoaTheoMua.Repository.Abtraction;
+using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Repository.Entity;
 
 public class AuditLog: BaseEntity<Guid>, IAuditableEntity
 {
-    public required string Action { get; set; } 
+    public ActionNews Action { get; set; } 
     public required string Description { get; set; }
     public required string OldValue { get; set; }
     public required string NewValue { get; set; }

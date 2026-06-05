@@ -4,10 +4,9 @@ namespace HoaTheoMua.Repository.Entity;
 
 public class CompanyAddress: BaseEntity<Guid>, IAuditableEntity
 {
-    public string? AddressLine { get; set; }
-    public string? Ward { get; set; }
-    public string? District { get; set; }
-    public string? Province { get; set; }
+    public required string AddressLine { get; set; }
+    public required string Ward { get; set; }//phuong
+    public required string District { get; set; }//quan
     public required string City { get; set; }
     public required string Country { get; set; }
     

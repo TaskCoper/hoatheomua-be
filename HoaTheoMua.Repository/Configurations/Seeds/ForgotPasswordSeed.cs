@@ -1,15 +1,16 @@
 using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class ForgotPasswordSeed
 {
-    public static void SeedForgotPassword(this ModelBuilder modelBuilder)
+    public static void SeedForgotPassword(EntityTypeBuilder<ForgotPassword> builder)
     {
         var baseDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         
-        modelBuilder.Entity<ForgotPassword>().HasData(
+        builder.HasData(
             new ForgotPassword { Id = Guid.Parse("f1111111-1111-1111-1111-111111111111"), Otp = "123456", IsUsed = true, ExpiresAt = baseDate.AddMinutes(15), UserId = Guid.Parse("33333333-3333-3333-3333-333333333333"), CreatedAt = baseDate, IsDeleted = false },
             new ForgotPassword { Id = Guid.Parse("f1111111-1111-1111-1111-111111111112"), Otp = "654321", IsUsed = false, ExpiresAt = baseDate.AddDays(1).AddMinutes(15), UserId = Guid.Parse("33333333-3333-3333-3333-333333333334"), CreatedAt = baseDate.AddDays(1), IsDeleted = false },
             new ForgotPassword { Id = Guid.Parse("f1111111-1111-1111-1111-111111111113"), Otp = "111222", IsUsed = true, ExpiresAt = baseDate.AddDays(2).AddMinutes(15), UserId = Guid.Parse("33333333-3333-3333-3333-333333333335"), CreatedAt = baseDate.AddDays(2), IsDeleted = false },

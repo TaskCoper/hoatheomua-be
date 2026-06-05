@@ -9,12 +9,12 @@ public class CompanyAddressConfiguration: IEntityTypeConfiguration<CompanyAddres
     public void Configure(EntityTypeBuilder<CompanyAddress> builder)
     {
         builder.Property(ca => ca.AddressLine)
+            .IsRequired()
             .HasMaxLength(500);
         builder.Property(ca => ca.Ward)
+            .IsRequired()
             .HasMaxLength(100);
         builder.Property(ca => ca.District)
-            .HasMaxLength(100);
-        builder.Property(ca => ca.Province)
             .HasMaxLength(100);
         builder.Property(ca => ca.City)
             .HasMaxLength(100);

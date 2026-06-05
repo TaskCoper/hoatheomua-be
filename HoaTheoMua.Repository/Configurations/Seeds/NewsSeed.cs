@@ -1,16 +1,17 @@
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class NewsSeed
 {
-    public static void SeedNews(this ModelBuilder modelBuilder)
+    public static void SeedNews(EntityTypeBuilder<News> builder)
     {
         var baseDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         
-        modelBuilder.Entity<News>().HasData(
+        builder.HasData(
             new News { Id = Guid.Parse("77777777-7777-7777-7777-777777777771"), Title = "C# 12 Released", Description = "New features in C# 12 include primary constructors...", ViewCount = 100, PictureUrl = "https://example.com/csharp.jpg", Status = NewsStatus.Published, CreatedAt = baseDate, IsDeleted = false },
             new News { Id = Guid.Parse("77777777-7777-7777-7777-777777777772"), Title = "AI is taking over", Description = "Generative AI is changing the landscape of software engineering.", ViewCount = 550, PictureUrl = "https://example.com/ai.jpg", Status = NewsStatus.Published, CreatedAt = baseDate.AddDays(1), IsDeleted = false },
             new News { Id = Guid.Parse("77777777-7777-7777-7777-777777777773"), Title = "Healthy Eating Habits", Description = "Top 10 tips for maintaining a balanced diet.", ViewCount = 300, PictureUrl = "https://example.com/health.jpg", Status = NewsStatus.Published, CreatedAt = baseDate.AddDays(2), IsDeleted = false },

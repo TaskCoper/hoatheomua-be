@@ -1,16 +1,17 @@
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class UserSeed
 {
-    public static void SeedUser(this ModelBuilder modelBuilder)
+    public static void SeedUser(EntityTypeBuilder<User> builder)
     {
         var baseDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         
-        modelBuilder.Entity<User>().HasData(
+        builder.HasData(
             new User { Id = Guid.Parse("11111111-1111-1111-1111-111111111111"), Name = "Admin User", Email = "admin@example.com", HashPassword = "hashed_password_1", PhoneNumber = "0123456780", Role = Role.Admin, CreatedAt = baseDate, IsDeleted = false },
             new User { Id = Guid.Parse("22222222-2222-2222-2222-222222222222"), Name = "Staff User", Email = "staff@example.com", HashPassword = "hashed_password_2", PhoneNumber = "0123456781", Role = Role.Staff, CreatedAt = baseDate.AddDays(1), IsDeleted = false },
             new User { Id = Guid.Parse("33333333-3333-3333-3333-333333333333"), Name = "Normal User", Email = "user@example.com", HashPassword = "hashed_password_3", PhoneNumber = "0123456782", Role = Role.User, CreatedAt = baseDate.AddDays(2), IsDeleted = false },
