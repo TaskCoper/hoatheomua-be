@@ -15,7 +15,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111111"),
-                Action = ActionNews.Delete,
+                Action = ActionAuditLog.Delete,
                 Description = "Created a new user",
                 OldValue = "",
                 NewValue = "User Data",
@@ -28,7 +28,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111112"),
-                Action =  ActionNews.Read,
+                Action =  ActionAuditLog.Read,
                 Description = "Updated news title",
                 OldValue = "Old Title",
                 NewValue = "New Title",
@@ -41,7 +41,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111113"),
-                Action =  ActionNews.Write,
+                Action =  ActionAuditLog.Write,
                 Description = "Deleted old category",
                 OldValue = "Category Data",
                 NewValue = "",
@@ -54,7 +54,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111114"),
-                Action = ActionNews.Write,
+                Action = ActionAuditLog.Write,
                 Description = "Created news article",
                 OldValue = "",
                 NewValue = "News Data",
@@ -67,7 +67,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111115"),
-                Action = ActionNews.Write,
+                Action = ActionAuditLog.Write,
                 Description = "User logged in",
                 OldValue = "",
                 NewValue = "Session Started",
@@ -80,7 +80,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111116"),
-                Action = ActionNews.Read,
+                Action = ActionAuditLog.Read,
                 Description = "Updated user profile",
                 OldValue = "Old Name",
                 NewValue = "New Name",
@@ -93,7 +93,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111117"),
-                Action = ActionNews.Read,
+                Action = ActionAuditLog.Read,
                 Description = "Added category detail",
                 OldValue = "",
                 NewValue = "Mapping Data",
@@ -106,7 +106,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111118"),
-                Action = ActionNews.Delete,
+                Action = ActionAuditLog.Delete,
                 Description = "Added company address",
                 OldValue = "",
                 NewValue = "Address Data",
@@ -119,7 +119,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111119"),
-                Action =ActionNews.Read,
+                Action =ActionAuditLog.Read,
                 Description = "Requested password reset",
                 OldValue = "",
                 NewValue = "Token Generated",
@@ -132,7 +132,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111120"),
-                Action = ActionNews.Write,
+                Action = ActionAuditLog.Write,
                 Description = "User logged out",
                 OldValue = "Session Active",
                 NewValue = "Session Ended",

@@ -1,6 +1,6 @@
 ﻿namespace HoaTheoMua.Repository.Enum;
 
-public enum ActionNews
+public enum ActionAuditLog
 {
     Write,
     Read,

@@ -15,7 +15,7 @@ public class NewsConfiguration: IEntityTypeConfiguration<News>
         builder.Property(n => n.Description)
             .IsRequired()
             .HasColumnType("text");
-        builder.Property(n => n.PictureUrl)
+        builder.Property(n => n.CoverImage)
             .HasMaxLength(500);
         builder.Property(n => n.ViewCount)
             .HasDefaultValue(0);

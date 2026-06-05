@@ -9,7 +9,7 @@ public class News: BaseEntity<Guid>, IAuditableEntity
     public required string Title { get; set; }
     public required string Description { get; set; }
     public int ViewCount { get; set; }
-    public string PictureUrl { get; set; } = null!;
+    public string CoverImage { get; set; } = null!;
     public NewsStatus Status { get; set; }
     
     public ICollection<CategoryNewsDetail> CategoryNewsDetail { get; set; } = new List<CategoryNewsDetail>();

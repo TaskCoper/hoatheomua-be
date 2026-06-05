@@ -5,7 +5,7 @@ namespace HoaTheoMua.Repository.Entity;
 
 public class AuditLog: BaseEntity<Guid>, IAuditableEntity
 {
-    public ActionNews Action { get; set; } 
+    public ActionAuditLog Action { get; set; } 
     public required string Description { get; set; }
     public required string OldValue { get; set; }
     public required string NewValue { get; set; }
