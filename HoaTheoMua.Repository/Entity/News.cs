@@ -1,14 +1,15 @@
 ﻿using HoaTheoMua.Repository.Abtraction;
 using HoaTheoMua.Repository.Enum;
+using Microsoft.AspNetCore.Http;
 
 namespace HoaTheoMua.Repository.Entity;
 
 public class News: BaseEntity<Guid>, IAuditableEntity
 {
-    public string Title { get; set; }
-    public string Description { get; set; }
-    public int ViewCount { get; set; } 
-    public string PictureUrl { get; set; }
+    public required string Title { get; set; }
+    public required string Description { get; set; }
+    public int ViewCount { get; set; }
+    public string CoverImage { get; set; } = null!;
     public NewsStatus Status { get; set; }
     
     public ICollection<CategoryNewsDetail> CategoryNewsDetail { get; set; } = new List<CategoryNewsDetail>();

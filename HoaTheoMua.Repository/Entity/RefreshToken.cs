@@ -4,10 +4,10 @@ namespace HoaTheoMua.Repository.Entity;
 
 public class RefreshToken : BaseEntity<Guid>, IAuditableEntity
 {
-    public string RefreshTokenHash { get; set; }
-    public string IpAddress { get; set; }
-    public string UserAgent { get; set; }
-    public string DeviceLabel { get; set; }
+    public required string RefreshTokenHash { get; set; }
+    public required string IpAddress { get; set; }
+    public required string UserAgent { get; set; }
+    public required string DeviceLabel { get; set; }
     
     public DateTimeOffset ExpiredAt { get; set; }
     public DateTimeOffset? RevokedAt { get; set; }
