@@ -13,7 +13,7 @@ public class Service: IService
         _distributedCache = distributedCache;
     }
     
-    public void Set<T>(string key, T value, TimeSpan? expiration = null)
+    public async Task Set<T>(string key, T value, TimeSpan? expiration = null)
     {
         var options = new DistributedCacheEntryOptions
         {
@@ -21,23 +21,21 @@ public class Service: IService
         };
         
         var jsonString = JsonSerializer.Serialize(value);
-        _distributedCache.SetString(key, jsonString, options);
+        await _distributedCache.SetStringAsync(key, jsonString, options);
     }
 
-    public bool TryGet<T>(string key, out T value)
+    public async Task<T?> TryGet<T>(string key)
     {
-        var jsonString = _distributedCache.GetString(key);
+        var jsonString = await _distributedCache.GetStringAsync(key);
         if (string.IsNullOrEmpty(jsonString))
         {
-            value = default!;
-            return false;
+            return default;
         }
-        value = JsonSerializer.Deserialize<T>(jsonString)!;
-        return true;
+        return JsonSerializer.Deserialize<T>(jsonString)!;
     }
 
-    public void Remove(string key)
+    public async Task Remove(string key)
     {
-        _distributedCache.Remove(key);
+        await _distributedCache.RemoveAsync(key);
     }
 }
