@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260604112624_Initial")]
+    [Migration("20260607125352_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -31,10 +31,8 @@ namespace HoaTheoMua.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                    b.Property<int>("Action")
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -82,7 +80,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111111"),
-                            Action = "Create",
+                            Action = 2,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Created a new user",
                             EntityId = new Guid("33333333-3333-3333-3333-333333333333"),
@@ -95,7 +93,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111112"),
-                            Action = "Update",
+                            Action = 1,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Updated news title",
                             EntityId = new Guid("77777777-7777-7777-7777-777777777777"),
@@ -108,7 +106,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111113"),
-                            Action = "Delete",
+                            Action = 0,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Deleted old category",
                             EntityId = new Guid("44444444-4444-4444-4444-444444444444"),
@@ -121,7 +119,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111114"),
-                            Action = "Create",
+                            Action = 0,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Created news article",
                             EntityId = new Guid("88888888-8888-8888-8888-888888888888"),
@@ -134,7 +132,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111115"),
-                            Action = "Login",
+                            Action = 0,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "User logged in",
                             EntityId = new Guid("33333333-3333-3333-3333-333333333333"),
@@ -147,7 +145,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111116"),
-                            Action = "Update",
+                            Action = 1,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Updated user profile",
                             EntityId = new Guid("33333333-3333-3333-3333-333333333333"),
@@ -160,7 +158,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111117"),
-                            Action = "Create",
+                            Action = 1,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Added category detail",
                             EntityId = new Guid("c1111111-1111-1111-1111-111111111111"),
@@ -173,7 +171,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111118"),
-                            Action = "Create",
+                            Action = 2,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Added company address",
                             EntityId = new Guid("e1111111-1111-1111-1111-111111111111"),
@@ -186,7 +184,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111119"),
-                            Action = "ResetPassword",
+                            Action = 1,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Requested password reset",
                             EntityId = new Guid("33333333-3333-3333-3333-333333333333"),
@@ -199,7 +197,7 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("d1111111-1111-1111-1111-111111111120"),
-                            Action = "Logout",
+                            Action = 0,
                             CreatedAt = new DateTimeOffset(new DateTime(2024, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "User logged out",
                             EntityId = new Guid("22222222-2222-2222-2222-222222222222"),
@@ -456,6 +454,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AddressLine")
+                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
@@ -481,14 +480,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("Province")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<decimal?>("Latitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasColumnType("numeric");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Ward")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
@@ -506,7 +508,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 1",
                             IsDeleted = false,
-                            Province = "HCMC",
                             Ward = "Ward 1"
                         },
                         new
@@ -518,7 +519,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 2",
                             IsDeleted = false,
-                            Province = "HCMC",
                             Ward = "Ward 2"
                         },
                         new
@@ -530,7 +530,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 3",
                             IsDeleted = false,
-                            Province = "Hanoi",
                             Ward = "Ward 3"
                         },
                         new
@@ -542,7 +541,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 4",
                             IsDeleted = false,
-                            Province = "Danang",
                             Ward = "Ward 4"
                         },
                         new
@@ -554,7 +552,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 5",
                             IsDeleted = false,
-                            Province = "Hue",
                             Ward = "Ward 5"
                         },
                         new
@@ -566,7 +563,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 6",
                             IsDeleted = false,
-                            Province = "Can Tho",
                             Ward = "Ward 6"
                         },
                         new
@@ -578,7 +574,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 7",
                             IsDeleted = false,
-                            Province = "Hai Phong",
                             Ward = "Ward 7"
                         },
                         new
@@ -590,7 +585,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 8",
                             IsDeleted = false,
-                            Province = "Nha Trang",
                             Ward = "Ward 8"
                         },
                         new
@@ -602,7 +596,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 9",
                             IsDeleted = false,
-                            Province = "Da Lat",
                             Ward = "Ward 9"
                         },
                         new
@@ -614,7 +607,6 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             District = "District 10",
                             IsDeleted = false,
-                            Province = "Vung Tau",
                             Ward = "Ward 10"
                         });
                 });
@@ -769,6 +761,11 @@ namespace HoaTheoMua.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CoverImage")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -780,11 +777,6 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("PictureUrl")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
 
                     b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
@@ -813,10 +805,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777771"),
+                            CoverImage = "https://example.com/csharp.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "New features in C# 12 include primary constructors...",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/csharp.jpg",
                             Status = 1,
                             Title = "C# 12 Released",
                             ViewCount = 100
@@ -824,10 +816,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777772"),
+                            CoverImage = "https://example.com/ai.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Generative AI is changing the landscape of software engineering.",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/ai.jpg",
                             Status = 1,
                             Title = "AI is taking over",
                             ViewCount = 550
@@ -835,10 +827,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777773"),
+                            CoverImage = "https://example.com/health.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Top 10 tips for maintaining a balanced diet.",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/health.jpg",
                             Status = 1,
                             Title = "Healthy Eating Habits",
                             ViewCount = 300
@@ -846,10 +838,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777774"),
+                            CoverImage = "https://example.com/workout.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Quick 15-minute workouts for busy people.",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/workout.jpg",
                             Status = 1,
                             Title = "Workout Routines",
                             ViewCount = 120
@@ -857,10 +849,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777775"),
+                            CoverImage = "https://example.com/finance.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Tech stocks reach an all-time high.",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/finance.jpg",
                             Status = 0,
                             Title = "Stock Market Surge",
                             ViewCount = 800
@@ -868,10 +860,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777776"),
+                            CoverImage = "https://example.com/movies.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "A review of the best movies released this year.",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/movies.jpg",
                             Status = 1,
                             Title = "Top 10 Movies of 2024",
                             ViewCount = 1500
@@ -879,10 +871,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777777"),
+                            CoverImage = "https://example.com/realestate.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "What to expect in the housing market.",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/realestate.jpg",
                             Status = 1,
                             Title = "Real Estate Trends",
                             ViewCount = 420
@@ -890,10 +882,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777778"),
+                            CoverImage = "https://example.com/gadgets.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "The most anticipated gadgets of the season.",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/gadgets.jpg",
                             Status = 0,
                             Title = "Upcoming Tech Gadgets",
                             ViewCount = 750
@@ -901,10 +893,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777779"),
+                            CoverImage = "https://example.com/mentalhealth.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Importance of taking mental health seriously.",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/mentalhealth.jpg",
                             Status = 1,
                             Title = "Mental Health Awareness",
                             ViewCount = 600
@@ -912,10 +904,10 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777780"),
+                            CoverImage = "https://example.com/travel.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Must-visit places for your next vacation.",
                             IsDeleted = false,
-                            PictureUrl = "https://example.com/travel.jpg",
                             Status = 1,
                             Title = "Travel Destinations",
                             ViewCount = 950
@@ -945,6 +937,11 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasMaxLength(45)
                         .HasColumnType("character varying(45)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -985,6 +982,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Desktop",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 1, 31, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.1",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash1",
                             UserAgent = "Mozilla",
@@ -997,6 +995,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Mobile",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.2",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash2",
                             UserAgent = "Chrome",
@@ -1009,6 +1008,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Tablet",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.3",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash3",
                             UserAgent = "Safari",
@@ -1021,6 +1021,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Desktop",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.4",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash4",
                             UserAgent = "Edge",
@@ -1033,6 +1034,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Mobile",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.5",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash5",
                             UserAgent = "Firefox",
@@ -1045,6 +1047,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Desktop",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.6",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash6",
                             UserAgent = "Opera",
@@ -1057,6 +1060,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Tablet",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.7",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash7",
                             UserAgent = "Mozilla",
@@ -1069,6 +1073,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Mobile",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.8",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash8",
                             UserAgent = "Chrome",
@@ -1081,6 +1086,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Desktop",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.9",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash9",
                             UserAgent = "Safari",
@@ -1093,6 +1099,7 @@ namespace HoaTheoMua.Repository.Migrations
                             DeviceLabel = "Tablet",
                             ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IpAddress = "192.168.1.10",
+                            IsActive = true,
                             IsDeleted = false,
                             RefreshTokenHash = "hash10",
                             UserAgent = "Edge",
@@ -1116,6 +1123,11 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<string>("HashPassword")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -1126,7 +1138,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
-                    b.Property<string>("Name")
+                    b.Property<bool>("IsVerify")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -1154,9 +1169,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "admin@example.com",
+                            FirstName = "Admin",
                             HashPassword = "hashed_password_1",
                             IsDeleted = false,
-                            Name = "Admin User",
+                            IsVerify = true,
+                            LastName = "User",
                             PhoneNumber = "0123456780",
                             Role = 0
                         },
@@ -1165,9 +1182,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("22222222-2222-2222-2222-222222222222"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "staff@example.com",
+                            FirstName = "Staff",
                             HashPassword = "hashed_password_2",
                             IsDeleted = false,
-                            Name = "Staff User",
+                            IsVerify = true,
+                            LastName = "User",
                             PhoneNumber = "0123456781",
                             Role = 2
                         },
@@ -1176,9 +1195,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("33333333-3333-3333-3333-333333333333"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "user@example.com",
+                            FirstName = "Normal",
                             HashPassword = "hashed_password_3",
                             IsDeleted = false,
-                            Name = "Normal User",
+                            IsVerify = true,
+                            LastName = "User",
                             PhoneNumber = "0123456782",
                             Role = 1
                         },
@@ -1187,9 +1208,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("33333333-3333-3333-3333-333333333334"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "alice@example.com",
+                            FirstName = "Alice",
                             HashPassword = "hashed_password_4",
                             IsDeleted = false,
-                            Name = "Alice Smith",
+                            IsVerify = true,
+                            LastName = "Smith",
                             PhoneNumber = "0123456783",
                             Role = 1
                         },
@@ -1198,9 +1221,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("33333333-3333-3333-3333-333333333335"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "bob@example.com",
+                            FirstName = "Bob",
                             HashPassword = "hashed_password_5",
                             IsDeleted = false,
-                            Name = "Bob Johnson",
+                            IsVerify = true,
+                            LastName = "Johnson",
                             PhoneNumber = "0123456784",
                             Role = 1
                         },
@@ -1209,9 +1234,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("33333333-3333-3333-3333-333333333336"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "charlie@example.com",
+                            FirstName = "Charlie",
                             HashPassword = "hashed_password_6",
                             IsDeleted = false,
-                            Name = "Charlie Brown",
+                            IsVerify = true,
+                            LastName = "Brown",
                             PhoneNumber = "0123456785",
                             Role = 1
                         },
@@ -1220,9 +1247,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("33333333-3333-3333-3333-333333333337"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "diana@example.com",
+                            FirstName = "Diana",
                             HashPassword = "hashed_password_7",
                             IsDeleted = false,
-                            Name = "Diana Prince",
+                            IsVerify = true,
+                            LastName = "Prince",
                             PhoneNumber = "0123456786",
                             Role = 1
                         },
@@ -1231,9 +1260,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("33333333-3333-3333-3333-333333333338"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "evan@example.com",
+                            FirstName = "Evan",
                             HashPassword = "hashed_password_8",
                             IsDeleted = false,
-                            Name = "Evan Wright",
+                            IsVerify = true,
+                            LastName = "Wright",
                             PhoneNumber = "0123456787",
                             Role = 1
                         },
@@ -1242,9 +1273,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("33333333-3333-3333-3333-333333333339"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "fiona@example.com",
+                            FirstName = "Fiona",
                             HashPassword = "hashed_password_9",
                             IsDeleted = false,
-                            Name = "Fiona Gallagher",
+                            IsVerify = true,
+                            LastName = "Gallagher",
                             PhoneNumber = "0123456788",
                             Role = 1
                         },
@@ -1253,9 +1286,11 @@ namespace HoaTheoMua.Repository.Migrations
                             Id = new Guid("33333333-3333-3333-3333-333333333340"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Email = "george@example.com",
+                            FirstName = "George",
                             HashPassword = "hashed_password_10",
                             IsDeleted = false,
-                            Name = "George Lucas",
+                            IsVerify = true,
+                            LastName = "Lucas",
                             PhoneNumber = "0123456789",
                             Role = 1
                         });
