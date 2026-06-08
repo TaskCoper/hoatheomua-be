@@ -1,5 +1,6 @@
 ﻿using HoaTheoMua.Repository.Configurations.Seeds;
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -31,6 +32,8 @@ public class UserConfiguration: IEntityTypeConfiguration<User>
             .IsUnique();
         builder.Property(u => u.CreatedAt)
             .HasDefaultValueSql("now()");
+        builder.Property(u => u.Role)
+            .HasDefaultValue(Role.User);
 
         builder.HasMany(x => x.RefreshToken)
             .WithOne(x => x.User)

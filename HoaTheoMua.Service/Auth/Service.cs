@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.MailService;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -36,8 +37,7 @@ public class Service:IService
         try
         {
             var isExistEmail = await _dbContext.Users
-                .AnyAsync(x =>
-                    x.Email == request.Email && x.IsVerify);
+                .AnyAsync(x => x.Email == request.Email);
             if (isExistEmail)
             {
                 throw new BadHttpRequestException($"Email {request.Email} đã tồn tại trong hệ thống");
@@ -54,14 +54,16 @@ public class Service:IService
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 HashPassword = hashedPassword,
+                Role = Role.User,
                 IsVerify = false
             };
             await _dbContext.Users.AddAsync(newUser);
-           // await  _dbContext.SaveChangesAsync();
+            await  _dbContext.SaveChangesAsync();
+            
             var newClaims = new List<Claim>()
             {
                 new Claim("UserId", newUser.Id.ToString()),
-                new Claim("IsVerify", newUser.IsVerify.ToString()),
+                new Claim("IsVerify", newUser.IsVerify.ToString().ToLower()),
             };
             var emailToken = _jwtService.GenerateEmailVerificationToken(newClaims, 2);
 
@@ -71,7 +73,9 @@ public class Service:IService
                 Subject = "Hoa Theo Mua",
                 Body = MailTemplate.EmailContainToken(emailToken),
             });
-
+            
+            
+            await transaction.CommitAsync();
             return "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.";
         }
         catch
