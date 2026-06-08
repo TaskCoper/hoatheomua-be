@@ -25,7 +25,7 @@ public static class CookieExtensions
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Lax,
-            Path = "/",s
+            Path = "/",
             Expires = DateTimeOffset.UtcNow.AddDays(7)
         };
         response.Cookies.Append(AccessTokenCookieName, accessToken, accessOptions);
