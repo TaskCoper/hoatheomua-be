@@ -12,7 +12,6 @@ public static class JwtExtensions
     public const string StaffPolicy = "StaffPolicy";
     public const string UserPolicy = "UserPolicy";
     public const string StaffOrAdminPolicy = "StaffOrAdminPolicy";
-    public const string VerifiedUserOnly =  "VerifiedUserOnly";
     
     public static void AddJwtServices(this IServiceCollection services, IConfiguration configuration)
     {
@@ -68,9 +67,7 @@ public static class JwtExtensions
             options.AddPolicy(StaffOrAdminPolicy, policy =>
                 policy.RequireRole("Staff", "Admin"));
             // [Authorize(Policy = JwtExtensions.StaffOrAdminPolicy)]
-            
-            options.AddPolicy(VerifiedUserOnly, policy =>
-                policy.RequireClaim("IsVerified", "true"));
+
         });
     }
 }

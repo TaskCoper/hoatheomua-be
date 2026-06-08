@@ -47,6 +47,35 @@ public class Service: IService
 
     public ClaimsPrincipal ValidateToken(string token)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(_jwtOption.SecretKey); // Sử dụng _jwtOption 
+
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = true,
+                ValidIssuer = _jwtOption.Issuer,
+                ValidateAudience = true,
+                ValidAudience = _jwtOption.Audience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+
+            var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
+            return principal;
+        }
+        catch (SecurityTokenException ex)
+        {
+            Console.WriteLine($"Token validation failed: {ex.Message}");
+            return null!;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error during token validation: {ex.Message}");
+            return null!;
+        }
     }
 }
