@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using MailService = HoaTheoMua.Service.MailService;
 using JwtService = HoaTheoMua.Service.JwtService;
 
-
+using HoaTheoMua.Service.AuthService;
+using HoaTheoMua.Service.JwtService;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,7 +38,8 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<MailService.IService, MailService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
-builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
+builder.Services.AddScoped<ILoginJwtService, LoginJwtService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 
 
