@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -12,15 +13,18 @@ public class RefreshTokenConfiguration: IEntityTypeConfiguration<RefreshToken>
             .IsRequired()
             .HasMaxLength(500);
         builder.Property(rt => rt.IpAddress)
-            .HasMaxLength(45);
+            .HasMaxLength(500);
         builder.Property(rt => rt.UserAgent)
-            .HasMaxLength(45);
+            .HasMaxLength(500);
         builder.Property(rt => rt.DeviceLabel)
             .HasMaxLength(255);
         builder.Property(rt => rt.CreatedAt)
             .HasDefaultValueSql("now()");
-
+        builder.Property(rt => rt.IsActive)
+            .HasDefaultValue(true)
+            .IsRequired();
         builder.HasIndex(rt => rt.RefreshTokenHash)
             .IsUnique();
+        builder.SeedRefreshToken();
     }
 }

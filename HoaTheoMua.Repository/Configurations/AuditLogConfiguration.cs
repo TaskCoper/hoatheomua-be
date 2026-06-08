@@ -10,8 +10,7 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
     public void Configure(EntityTypeBuilder<AuditLog> builder)
     {
         builder.Property(al => al.Action)
-            .IsRequired()
-            .HasMaxLength(255);
+            .IsRequired();
         builder.Property(al => al.Description)
             .IsRequired();
         builder.Property(al => al.EntityType)

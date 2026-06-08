@@ -6,7 +6,7 @@ namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class ForgotPasswordSeed
 {
-    public static void SeedForgotPassword(EntityTypeBuilder<ForgotPassword> builder)
+    public static void SeedForgotPassword(this EntityTypeBuilder<ForgotPassword> builder)
     {
         var baseDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         

@@ -6,7 +6,10 @@ namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class CompanyAddressSeed
 {
-    public static void SeedCompanyAddress(EntityTypeBuilder<CompanyAddress> builder)
+    public static void SeedCompanyAddress( this EntityTypeBuilder<CompanyAddress> builder)
+    //this ở đây giúp biến cái hàm SeedCompanyAddress: thành một cái Extension Method của builder
+    //do đó khi cần thì builder chấm ra là có
+    //nếu ko dùng this, thì thì khi vào trong CompanyAddressConfiguration bạn phải CompanyAddressSeed.SeedCompanyAddress(builder)
     {
         var baseDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         

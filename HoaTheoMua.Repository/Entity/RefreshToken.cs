@@ -8,7 +8,7 @@ public class RefreshToken : BaseEntity<Guid>, IAuditableEntity
     public required string IpAddress { get; set; }
     public required string UserAgent { get; set; }
     public required string DeviceLabel { get; set; }
-    
+    public required bool IsActive = true;
     public DateTimeOffset ExpiredAt { get; set; }
     public DateTimeOffset? RevokedAt { get; set; }
 
