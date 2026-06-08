@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,9 +12,14 @@ public class UserConfiguration: IEntityTypeConfiguration<User>
         builder.Property(u => u.Email)
             .IsRequired()
             .HasMaxLength(256);
-        builder.Property(u => u.Name)
+        builder.Property(u => u.FirstName)
             .IsRequired()
             .HasMaxLength(256);
+        builder.Property(u => u.LastName)
+            .IsRequired()
+            .HasMaxLength(256);
+        builder.Property(u => u.IsVerify)
+            .IsRequired();
         builder.Property(u => u.PhoneNumber)
             .HasMaxLength(10);
         builder.Property(u => u.HashPassword)
@@ -42,5 +48,6 @@ public class UserConfiguration: IEntityTypeConfiguration<User>
             .WithOne(c => c.User)
             .HasForeignKey(c => c.UserId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.SeedUser();
     }
 }

@@ -6,7 +6,7 @@ namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class CategoryNewsSeed
 {
-    public static void SeedCategoryNews(EntityTypeBuilder<CategoryNewsDetail> builder)
+    public static void SeedCategoryNews( this EntityTypeBuilder<CategoryNews> builder)
     {
         var baseDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         

@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -22,5 +23,7 @@ public class CompanyAddressConfiguration: IEntityTypeConfiguration<CompanyAddres
             .HasMaxLength(100);
         builder.Property(ca => ca.CreatedAt)
             .HasDefaultValueSql("now()");
+        builder.SeedCompanyAddress();
     }
+    
 }

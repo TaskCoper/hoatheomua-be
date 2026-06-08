@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,5 +18,7 @@ public class ForgotPasswordConfiguration: IEntityTypeConfiguration<ForgotPasswor
 
         builder.HasIndex(rp => rp.Otp)
             .IsUnique();
+        
+        builder.SeedForgotPassword();
     }
 }

@@ -5,9 +5,11 @@ namespace HoaTheoMua.Repository.Entity;
 
 public class User: BaseEntity<Guid>, IAuditableEntity
 {
-    public required String Name { get; set; }
-    public required String Email { get; set; }
-    public required String HashPassword { get; set; }
+    public required string FirstName { get; set; }
+    public required string LastName { get; set; }
+    public required string Email { get; set; }
+    public required string HashPassword { get; set; }
+    public required bool IsVerify = false;
     public String? PhoneNumber { get; set; }
     public Role Role { get; set; }
     

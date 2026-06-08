@@ -4,7 +4,7 @@ namespace HoaTheoMua.Repository.Entity;
 
 public class CategoryNews: BaseEntity<Guid>, IAuditableEntity
 {
-    public required String Title { get; set; }
+    public required string Title { get; set; }
     
     public User User { get; set; }
     public Guid UserId { get; set; }
