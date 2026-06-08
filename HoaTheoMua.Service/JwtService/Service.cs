@@ -45,6 +45,27 @@ public class Service: IService
         return Convert.ToBase64String(bytes);
     }
 
+    public string GenerateEmailVerificationToken(IEnumerable<Claim> claims, double expiration)
+    {
+        var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOption.SecretKey));
+  
+        var signingCredentials = new SigningCredentials(
+            secretKey, 
+            SecurityAlgorithms.HmacSha256);
+
+        var tokenOptions = new JwtSecurityToken( 
+            issuer: _jwtOption.Issuer, 
+            audience: _jwtOption.Audience, 
+            claims: claims, 
+            expires: DateTime.Now.AddHours(expiration),
+            signingCredentials: signingCredentials
+        );
+        
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(tokenOptions);
+     
+        return tokenString;
+    }
+
     public ClaimsPrincipal ValidateToken(string token)
     {
         try
