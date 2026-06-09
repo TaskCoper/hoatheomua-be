@@ -5,12 +5,14 @@ namespace HoaTheoMua.Repository.Entity;
 
 public class User: BaseEntity<Guid>, IAuditableEntity
 {
-    public required String Name { get; set; }
-    public required String Email { get; set; }
-    public required String HashPassword { get; set; }
+    public required string FirstName { get; set; }
+    public required string LastName { get; set; }
+    public required string Email { get; set; }
+    public required string HashPassword { get; set; }
+    public required bool IsVerify = false;
     public String? PhoneNumber { get; set; }
     public Role Role { get; set; }
-    
+    //
     public ICollection<CategoryNews> CategoryNews { get; set; } = new List<CategoryNews>();
     public ICollection<AuditLog> AuditLog { get; set; } = new List<AuditLog>();
     public ICollection<ForgotPassword> ResetPassword { get; set; } = new List<ForgotPassword>();

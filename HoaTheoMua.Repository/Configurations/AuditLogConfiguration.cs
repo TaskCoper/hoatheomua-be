@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,8 +10,7 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
     public void Configure(EntityTypeBuilder<AuditLog> builder)
     {
         builder.Property(al => al.Action)
-            .IsRequired()
-            .HasMaxLength(255);
+            .IsRequired();
         builder.Property(al => al.Description)
             .IsRequired();
         builder.Property(al => al.EntityType)
@@ -22,5 +22,9 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
             
         builder.Property(al => al.CreatedAt)
             .HasDefaultValueSql("now()");
+      
+        builder.SeedAudit();
     }
+    
+    
 }

@@ -1,19 +1,21 @@
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class AuditLogSeed
 {
-    public static void SeedAudit(this ModelBuilder modelBuilder)
+    public static void SeedAudit(this EntityTypeBuilder<AuditLog> builder)
     {
         var baseDate = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
         
-        modelBuilder.Entity<AuditLog>().HasData(
+        builder.HasData(
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111111"),
-                Action = "Create",
+                Action = ActionAuditLog.Delete,
                 Description = "Created a new user",
                 OldValue = "",
                 NewValue = "User Data",
@@ -26,7 +28,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111112"),
-                Action = "Update",
+                Action =  ActionAuditLog.Read,
                 Description = "Updated news title",
                 OldValue = "Old Title",
                 NewValue = "New Title",
@@ -39,7 +41,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111113"),
-                Action = "Delete",
+                Action =  ActionAuditLog.Write,
                 Description = "Deleted old category",
                 OldValue = "Category Data",
                 NewValue = "",
@@ -52,7 +54,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111114"),
-                Action = "Create",
+                Action = ActionAuditLog.Write,
                 Description = "Created news article",
                 OldValue = "",
                 NewValue = "News Data",
@@ -65,7 +67,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111115"),
-                Action = "Login",
+                Action = ActionAuditLog.Write,
                 Description = "User logged in",
                 OldValue = "",
                 NewValue = "Session Started",
@@ -78,7 +80,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111116"),
-                Action = "Update",
+                Action = ActionAuditLog.Read,
                 Description = "Updated user profile",
                 OldValue = "Old Name",
                 NewValue = "New Name",
@@ -91,7 +93,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111117"),
-                Action = "Create",
+                Action = ActionAuditLog.Read,
                 Description = "Added category detail",
                 OldValue = "",
                 NewValue = "Mapping Data",
@@ -104,7 +106,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111118"),
-                Action = "Create",
+                Action = ActionAuditLog.Delete,
                 Description = "Added company address",
                 OldValue = "",
                 NewValue = "Address Data",
@@ -117,7 +119,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111119"),
-                Action = "ResetPassword",
+                Action =ActionAuditLog.Read,
                 Description = "Requested password reset",
                 OldValue = "",
                 NewValue = "Token Generated",
@@ -130,7 +132,7 @@ public static class AuditLogSeed
             new AuditLog
             {
                 Id = Guid.Parse("d1111111-1111-1111-1111-111111111120"),
-                Action = "Logout",
+                Action = ActionAuditLog.Write,
                 Description = "User logged out",
                 OldValue = "Session Active",
                 NewValue = "Session Ended",

@@ -1,15 +1,16 @@
 using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace HoaTheoMua.Repository.Configurations.Seeds;
 
 public static class CategoryNewsSeed
 {
-    public static void SeedCategoryNews(this ModelBuilder modelBuilder)
+    public static void SeedCategoryNews( this EntityTypeBuilder<CategoryNews> builder)
     {
         var baseDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         
-        modelBuilder.Entity<CategoryNews>().HasData(
+        builder.HasData(
             new CategoryNews { Id = Guid.Parse("44444444-4444-4444-4444-444444444441"), Title = "Technology", UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"), ParentCategoryNewsId = null, CreatedAt = baseDate, IsDeleted = false },
             new CategoryNews { Id = Guid.Parse("44444444-4444-4444-4444-444444444442"), Title = "Software Development", UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"), ParentCategoryNewsId = Guid.Parse("44444444-4444-4444-4444-444444444441"), CreatedAt = baseDate.AddDays(1), IsDeleted = false },
             new CategoryNews { Id = Guid.Parse("44444444-4444-4444-4444-444444444443"), Title = "AI & Machine Learning", UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"), ParentCategoryNewsId = Guid.Parse("44444444-4444-4444-4444-444444444441"), CreatedAt = baseDate.AddDays(2), IsDeleted = false },

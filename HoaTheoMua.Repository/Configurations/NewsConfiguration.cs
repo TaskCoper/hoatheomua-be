@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -15,7 +16,7 @@ public class NewsConfiguration: IEntityTypeConfiguration<News>
         builder.Property(n => n.Description)
             .IsRequired()
             .HasColumnType("text");
-        builder.Property(n => n.PictureUrl)
+        builder.Property(n => n.CoverImage)
             .HasMaxLength(500);
         builder.Property(n => n.ViewCount)
             .HasDefaultValue(0);
@@ -24,5 +25,6 @@ public class NewsConfiguration: IEntityTypeConfiguration<News>
             .HasDefaultValue(NewsStatus.Draft);
         builder.Property(n => n.CreatedAt)
             .HasDefaultValueSql("now()");
+        builder.SeedNews();
     }
 }

@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,6 +17,9 @@ public class CategoryNewsConfiguration: IEntityTypeConfiguration<CategoryNews>
         builder.HasOne(c => c.ParentCategoryNews)
             .WithMany(c => c.ChildCategoryNews)
             .HasForeignKey(c => c.ParentCategoryNewsId)
-            .OnDelete(DeleteBehavior.Restrict); 
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.SeedCategoryNews();
     }
+    
 }
