@@ -1,6 +1,7 @@
+using HoaTheoMua.Extentions;
+using HoaTheoMua.Service.Auth;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.User;
-using HoaTheoMua.Service.Auth;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HoaTheoMua.Controllers;
@@ -26,5 +27,16 @@ public class UserController: ControllerBase
     {
         var result = await _authService.Register(request);
         return Ok(ApiResponseFactory.SuccessResponse(result, "Success", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpPost("/api/v1/auth/verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromQuery]Request.VerifyEmailRequest request)
+    {
+        var result = await _authService.VerifyEmail(request);
+        if (!string.IsNullOrEmpty(result!.AccessToken) && !string.IsNullOrEmpty(result.RefreshToken))
+        {
+            HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
+        }
+        return Ok(ApiResponseFactory.SuccessResponse(result,"", HttpContext.TraceIdentifier));
     }
 }
