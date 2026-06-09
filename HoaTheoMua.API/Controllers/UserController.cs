@@ -39,4 +39,12 @@ public class UserController: ControllerBase
         }
         return Ok(ApiResponseFactory.SuccessResponse(result,"", HttpContext.TraceIdentifier));
     }
+
+    [HttpPost("/api/v1/auth/refresh")]
+    public async Task<IActionResult> RefreshToken()
+    {
+        var result = await _authService.RefreshToken();
+        HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
+        return Ok(ApiResponseFactory.SuccessResponse(null, "success", HttpContext.TraceIdentifier));
+    }
 }

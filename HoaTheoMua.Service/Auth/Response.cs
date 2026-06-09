@@ -8,5 +8,7 @@ public class Response
         public string? RefreshToken { get; set; }
         public string? Message { get; set; }
     }
+
+    public class AuthResponse : VerifyEmailResponse;
     
 }
