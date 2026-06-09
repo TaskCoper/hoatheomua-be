@@ -2,5 +2,5 @@
 
 public interface IService
 {
-    
+    Task<Response.GetMeResponse> GetMe();
 }
