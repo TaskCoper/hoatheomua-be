@@ -5,4 +5,5 @@ public interface IService
     public Task<string> Register(Request.RegisterRequest request);
 
     public Task<Response.AuthResponse> RefreshToken();
+    public Task<Response.VerifyEmailResponse?> VerifyEmail(Request.VerifyEmailRequest request);
 }

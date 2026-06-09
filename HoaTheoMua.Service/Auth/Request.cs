@@ -10,4 +10,9 @@ public class Request
         public required string Password { get; set; }
         public required string ConfirmPassword { get; set; }
     }
+    public class VerifyEmailRequest
+    {
+        public required string Token { get; set; }
+        
+    }
 }
