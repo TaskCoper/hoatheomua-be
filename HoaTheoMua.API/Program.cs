@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using MailService = HoaTheoMua.Service.MailService;
 using JwtService = HoaTheoMua.Service.JwtService;
 using UserService = HoaTheoMua.Service.User;
+using AuthService = HoaTheoMua.Service.Auth;
 
 
 
@@ -31,6 +32,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")
     )
 );
+
+builder.Services.ConfigureRateLimiter();
+var app = builder.Build();
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
 builder.Services.AddHttpContextAccessor();
@@ -39,7 +43,7 @@ builder.Services.AddScoped<MailService.IService, MailService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
-
+builder.Services.AddScoped<AuthService.IService, AuthService.Service>();
 
 
 var app = builder.Build();
@@ -51,6 +55,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerAPI();
 }
 
+app.UseRateLimiter();
 app.UseAuthentication();
 
 app.UseAuthorization();
