@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class Test1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -63,7 +63,8 @@ namespace HoaTheoMua.Repository.Migrations
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     HashPassword = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     PhoneNumber = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: true),
-                    Role = table.Column<int>(type: "integer", nullable: false),
+                    Role = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    Avatar = table.Column<string>(type: "text", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     IsVerify = table.Column<bool>(type: "boolean", nullable: false),
@@ -136,8 +137,8 @@ namespace HoaTheoMua.Repository.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     RefreshTokenHash = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    IpAddress = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: false),
-                    UserAgent = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: false),
+                    IpAddress = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    UserAgent = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     DeviceLabel = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     ExpiredAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     RevokedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -268,19 +269,23 @@ namespace HoaTheoMua.Repository.Migrations
 
             migrationBuilder.InsertData(
                 table: "Users",
-                columns: new[] { "Id", "CreatedAt", "Email", "FirstName", "HashPassword", "IsVerify", "LastName", "PhoneNumber", "Role", "UpdatedAt" },
+                columns: new[] { "Id", "Avatar", "CreatedAt", "Email", "FirstName", "HashPassword", "IsVerify", "LastName", "PhoneNumber", "UpdatedAt" },
+                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), null, new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "admin@example.com", "Admin", "hashed_password_1", true, "User", "0123456780", null });
+
+            migrationBuilder.InsertData(
+                table: "Users",
+                columns: new[] { "Id", "Avatar", "CreatedAt", "Email", "FirstName", "HashPassword", "IsVerify", "LastName", "PhoneNumber", "Role", "UpdatedAt" },
                 values: new object[,]
                 {
-                    { new Guid("11111111-1111-1111-1111-111111111111"), new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "admin@example.com", "Admin", "hashed_password_1", true, "User", "0123456780", 0, null },
-                    { new Guid("22222222-2222-2222-2222-222222222222"), new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "staff@example.com", "Staff", "hashed_password_2", true, "User", "0123456781", 2, null },
-                    { new Guid("33333333-3333-3333-3333-333333333333"), new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "user@example.com", "Normal", "hashed_password_3", true, "User", "0123456782", 1, null },
-                    { new Guid("33333333-3333-3333-3333-333333333334"), new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "alice@example.com", "Alice", "hashed_password_4", true, "Smith", "0123456783", 1, null },
-                    { new Guid("33333333-3333-3333-3333-333333333335"), new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "bob@example.com", "Bob", "hashed_password_5", true, "Johnson", "0123456784", 1, null },
-                    { new Guid("33333333-3333-3333-3333-333333333336"), new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "charlie@example.com", "Charlie", "hashed_password_6", true, "Brown", "0123456785", 1, null },
-                    { new Guid("33333333-3333-3333-3333-333333333337"), new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "diana@example.com", "Diana", "hashed_password_7", true, "Prince", "0123456786", 1, null },
-                    { new Guid("33333333-3333-3333-3333-333333333338"), new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "evan@example.com", "Evan", "hashed_password_8", true, "Wright", "0123456787", 1, null },
-                    { new Guid("33333333-3333-3333-3333-333333333339"), new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "fiona@example.com", "Fiona", "hashed_password_9", true, "Gallagher", "0123456788", 1, null },
-                    { new Guid("33333333-3333-3333-3333-333333333340"), new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "george@example.com", "George", "hashed_password_10", true, "Lucas", "0123456789", 1, null }
+                    { new Guid("22222222-2222-2222-2222-222222222222"), null, new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "staff@example.com", "Staff", "hashed_password_2", true, "User", "0123456781", 2, null },
+                    { new Guid("33333333-3333-3333-3333-333333333333"), null, new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "user@example.com", "Normal", "hashed_password_3", true, "User", "0123456782", 1, null },
+                    { new Guid("33333333-3333-3333-3333-333333333334"), null, new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "alice@example.com", "Alice", "hashed_password_4", true, "Smith", "0123456783", 1, null },
+                    { new Guid("33333333-3333-3333-3333-333333333335"), null, new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "bob@example.com", "Bob", "hashed_password_5", true, "Johnson", "0123456784", 1, null },
+                    { new Guid("33333333-3333-3333-3333-333333333336"), null, new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "charlie@example.com", "Charlie", "hashed_password_6", true, "Brown", "0123456785", 1, null },
+                    { new Guid("33333333-3333-3333-3333-333333333337"), null, new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "diana@example.com", "Diana", "hashed_password_7", true, "Prince", "0123456786", 1, null },
+                    { new Guid("33333333-3333-3333-3333-333333333338"), null, new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "evan@example.com", "Evan", "hashed_password_8", true, "Wright", "0123456787", 1, null },
+                    { new Guid("33333333-3333-3333-3333-333333333339"), null, new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "fiona@example.com", "Fiona", "hashed_password_9", true, "Gallagher", "0123456788", 1, null },
+                    { new Guid("33333333-3333-3333-3333-333333333340"), null, new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), "george@example.com", "George", "hashed_password_10", true, "Lucas", "0123456789", 1, null }
                 });
 
             migrationBuilder.InsertData(
