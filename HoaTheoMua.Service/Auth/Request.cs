@@ -1,8 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace HoaTheoMua.Service.Models.Auth;
 
-public class LoginRequest
+namespace HoaTheoMua.Service.Auth;
+
+public class Request
 {
     [Required(ErrorMessage = "Email không được để trống")]
     [EmailAddress(ErrorMessage = "Email không hợp lệ")]
