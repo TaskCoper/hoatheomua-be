@@ -126,8 +126,7 @@ public class Service:IService
             var authClaims = new List<Claim>
             {
                 new Claim("UserId", user.Id.ToString()),
-                new Claim("Email", user.Email),
-                new Claim("Role", user.Role.ToString())
+                new Claim("IsVerify", user.IsVerify.ToString().ToLower()),
             };
 
             var accessToken = _jwtService.GenerateAccessToken(authClaims);
