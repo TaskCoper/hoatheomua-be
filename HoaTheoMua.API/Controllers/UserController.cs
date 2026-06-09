@@ -27,7 +27,10 @@ public class UserController: ControllerBase
     public async Task<IActionResult> VerifyEmail([FromQuery]Request.VerifyEmailRequest request)
     {
         var result = await _authService.VerifyEmail(request);
-        HttpContext.Response.WriteAuthCookies(result!.AccessToken!, result!.RefreshToken!);
-        return Ok(ApiResponseFactory.SuccessResponse("","Xác thực email thành công", HttpContext.TraceIdentifier));
+        if (!string.IsNullOrEmpty(result!.AccessToken) && !string.IsNullOrEmpty(result.RefreshToken))
+        {
+            HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
+        }
+        return Ok(ApiResponseFactory.SuccessResponse(result,"", HttpContext.TraceIdentifier));
     }
 }

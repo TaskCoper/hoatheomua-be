@@ -107,7 +107,7 @@ public class Service:IService
         }
 
         if (user.IsVerify)
-        {
+        {//dùng tạm chưa config API ApiResponse
             return new Response.VerifyEmailResponse
             {
                 AccessToken = null!,
