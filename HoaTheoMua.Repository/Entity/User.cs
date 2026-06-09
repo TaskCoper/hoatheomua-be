@@ -12,6 +12,7 @@ public class User: BaseEntity<Guid>, IAuditableEntity
     public required bool IsVerify = false;
     public String? PhoneNumber { get; set; }
     public Role Role { get; set; }
+    public string? Avatar { get; set; }
     //
     public ICollection<CategoryNews> CategoryNews { get; set; } = new List<CategoryNews>();
     public ICollection<AuditLog> AuditLog { get; set; } = new List<AuditLog>();
