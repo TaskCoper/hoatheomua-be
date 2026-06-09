@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.MailService;
 using Microsoft.AspNetCore.Http;
@@ -8,17 +9,17 @@ using Microsoft.Extensions.Configuration;
 
 namespace HoaTheoMua.Service.Auth;
 
-public class Service:IService
+public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly SecurityOptions _securityOptions = new();
     private readonly JwtService.IService _jwtService;
     private readonly MailService.IService _mailService;
-    private  readonly IHttpContextAccessor _httpContext;
-    
-    public Service(AppDbContext dbContext, IConfiguration configuration,  
-                    MailService.IService mailService, IHttpContextAccessor httpContextAccessor, 
-                    JwtService.IService jwtService)
+    private readonly IHttpContextAccessor _httpContext;
+
+    public Service(AppDbContext dbContext, IConfiguration configuration,
+        MailService.IService mailService, IHttpContextAccessor httpContextAccessor,
+        JwtService.IService jwtService)
     {
         _dbContext = dbContext;
         configuration.GetSection("SecurityOptions").Bind(_securityOptions);
@@ -26,13 +27,50 @@ public class Service:IService
         _mailService = mailService;
         _httpContext = httpContextAccessor;
     }
-    
+
+    public bool checkExpiredAccessToken()
+    {
+        var check = _httpContext.HttpContext?.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Expiration);
+        if (check != null)
+        {
+            if (long.TryParse(check.Value, out long expUnixTime))
+            {
+                var expirationTime = DateTimeOffset.FromUnixTimeSeconds(expUnixTime);
+
+                if (expirationTime > DateTimeOffset.UtcNow)
+                {
+                    // Token VẪN CÒN HẠN
+                    Console.WriteLine("Token vẫn còn hiệu lực.");
+                    return false;
+                }
+                else
+                {
+                    throw new UnauthorizedAccessException("EXPIRED_ACCESS_TOKEN");
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public string checkRefreshToken()
+    {
+        var check = _httpContext.HttpContext!.Request.Cookies["HTM-Refresh-Token"];
+        if (check == null)
+        {
+            throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+        }
+
+        return check;
+    }
+
     public async Task<string> Register(Request.RegisterRequest request)
     {
         if (request.Password != request.ConfirmPassword)
         {
             throw new ArgumentException("Password không khớp!");
         }
+
         var transaction = await _dbContext.Database.BeginTransactionAsync();
         try
         {
@@ -58,8 +96,8 @@ public class Service:IService
                 IsVerify = false
             };
             await _dbContext.Users.AddAsync(newUser);
-            await  _dbContext.SaveChangesAsync();
-            
+            await _dbContext.SaveChangesAsync();
+
             var newClaims = new List<Claim>()
             {
                 new Claim("UserId", newUser.Id.ToString()),
@@ -73,8 +111,8 @@ public class Service:IService
                 Subject = "Hoa Theo Mua",
                 Body = MailTemplate.EmailContainToken(emailToken),
             });
-            
-            
+
+
             await transaction.CommitAsync();
             return "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.";
         }
@@ -83,6 +121,68 @@ public class Service:IService
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    public async Task<Response.AuthResponse> RefreshToken()
+    {
+        // Trả về false tức là: CÒN ACCESS VÀ CÒN HẠN
+        bool isMissingAccessToken = checkExpiredAccessToken();
+
+        if (!isMissingAccessToken)
+        {
+            throw new BadHttpRequestException("ACCESS_TOKEN_STILL_VALID");
+        } // Nếu trả về true: Nghĩa là KHÔNG CÓ ACCESS TOKEN -> Luồng tự động trôi xuống bước 2
+
+        var rawRefreshToken = checkRefreshToken();
+
+        var storedToken = await _dbContext.RefreshTokens
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.RefreshTokenHash == rawRefreshToken);
+
+        if (storedToken == null)
+        {
+            throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+        }
+        bool isActive = storedToken.RevokedAt == null && storedToken.ExpiredAt > DateTimeOffset.UtcNow;
+
+        if (!isActive)
+        {
+            throw new UnauthorizedAccessException("EXPIRED_REFRESH_TOKEN");
+        }
+
+        storedToken.RevokedAt = DateTimeOffset.UtcNow;
+        storedToken.IsActive = false;
+        await _dbContext.SaveChangesAsync();
+
+        string newRawRefreshToken = _jwtService.GenerateRefreshToken();
+
+        var newRefreshTokenEntity = new RefreshToken()
+        {
+            RefreshTokenHash = newRawRefreshToken, // Lưu chuỗi thuần trực tiếp theo cấu hình hệ thống
+            UserId = storedToken.User.Id,
+            IpAddress = _httpContext.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+            UserAgent = _httpContext.HttpContext?.Request.Headers["User-Agent"].ToString() ?? "Unknown",
+            DeviceLabel = storedToken.DeviceLabel,
+            ExpiredAt = DateTimeOffset.UtcNow.AddDays(7), 
+            CreatedAt = DateTimeOffset.UtcNow,
+            IsActive =  true,
+        };
+        _dbContext.RefreshTokens.Add(newRefreshTokenEntity);
+        await _dbContext.SaveChangesAsync();
         
+        var claimsForNewToken = new List<Claim>
+        {
+            new Claim("UserId", storedToken.User.Id.ToString()),
+            new Claim("IsVerify", storedToken.User.IsVerify.ToString().ToLower()),
+        };
+        string newAccessToken = _jwtService.GenerateAccessToken(claimsForNewToken);
+
+        var result = new Response.AuthResponse()
+        {
+            RefreshToken = newRawRefreshToken,
+            AccessToken = newAccessToken,
+        };
+        
+        return result;
     }
 }
