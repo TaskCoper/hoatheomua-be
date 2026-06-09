@@ -4,7 +4,7 @@ using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
 using MailService = HoaTheoMua.Service.MailService;
 using JwtService = HoaTheoMua.Service.JwtService;
-
+using UserService = HoaTheoMua.Service.User;
 
 
 
@@ -38,6 +38,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<MailService.IService, MailService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
+builder.Services.AddScoped<UserService.IService, UserService.Service>();
 
 
 
