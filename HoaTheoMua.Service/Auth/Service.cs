@@ -38,20 +38,15 @@ public class Service : IService
             if (long.TryParse(check.Value, out long expUnixTime))
             {
                 var expirationTime = DateTimeOffset.FromUnixTimeSeconds(expUnixTime);
-
                 if (expirationTime > DateTimeOffset.UtcNow)
                 {
                     // Token VẪN CÒN HẠN
                     Console.WriteLine("Token vẫn còn hiệu lực.");
                     return false;
                 }
-                else
-                {
-                    throw new UnauthorizedAccessException("EXPIRED_ACCESS_TOKEN");
-                }
+                return true;
             }
         }
-
         return true;
     }
 
@@ -145,6 +140,7 @@ public class Service : IService
         {
             throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
         }
+
         bool isActive = storedToken.RevokedAt == null && storedToken.ExpiredAt > DateTimeOffset.UtcNow;
 
         if (!isActive)
@@ -165,13 +161,13 @@ public class Service : IService
             IpAddress = _httpContext.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
             UserAgent = _httpContext.HttpContext?.Request.Headers["User-Agent"].ToString() ?? "Unknown",
             DeviceLabel = storedToken.DeviceLabel,
-            ExpiredAt = DateTimeOffset.UtcNow.AddDays(7), 
+            ExpiredAt = DateTimeOffset.UtcNow.AddDays(7),
             CreatedAt = DateTimeOffset.UtcNow,
-            IsActive =  true,
+            IsActive = true,
         };
         _dbContext.RefreshTokens.Add(newRefreshTokenEntity);
         await _dbContext.SaveChangesAsync();
-        
+
         var claimsForNewToken = new List<Claim>
         {
             new Claim("UserId", storedToken.User.Id.ToString()),
@@ -184,19 +180,18 @@ public class Service : IService
             RefreshToken = newRawRefreshToken,
             AccessToken = newAccessToken,
         };
-        
+
         return result;
     }
 
     public async Task<Response.VerifyEmailResponse?> VerifyEmail(Request.VerifyEmailRequest request)
     {
-        
         var validateToken = _jwtService.ValidateToken(request.Token);
         if (validateToken == null)
         {
             throw new BadHttpRequestException("Liên kết xác thực đã hết hạn hoặc không hợp lệ.");
         }
-        
+
         var userIdStr = validateToken.FindFirst("UserId")?.Value;
         var userId = Guid.Parse(userIdStr!);
         var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
@@ -206,7 +201,8 @@ public class Service : IService
         }
 
         if (user.IsVerify)
-        {//dùng tạm chưa config API ApiResponse
+        {
+            //dùng tạm chưa config API ApiResponse
             return new Response.VerifyEmailResponse
             {
                 AccessToken = null!,
@@ -214,14 +210,14 @@ public class Service : IService
                 Message = "Người dùng đã xác thực"
             };
         }
+
         var transaction = await _dbContext.Database.BeginTransactionAsync();
         try
         {
-        
             user.IsVerify = true;
             _dbContext.Users.Update(user);
             user.UpdatedAt = DateTimeOffset.UtcNow;
-        
+
             var authClaims = new List<Claim>
             {
                 new Claim("UserId", user.Id.ToString()),
@@ -234,13 +230,13 @@ public class Service : IService
             var httpContext = _httpContext.HttpContext;
             var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown IP";
             var userAgent = httpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown Device";
-        
+
             var refreshTokenEntity = new RefreshToken()
             {
                 Id = Guid.NewGuid(),
-                RefreshTokenHash = _jwtService.GenerateRefreshToken(), 
-                IpAddress = ipAddress,    
-                UserAgent = userAgent,    
+                RefreshTokenHash = _jwtService.GenerateRefreshToken(),
+                IpAddress = ipAddress,
+                UserAgent = userAgent,
                 RevokedAt = null,
                 DeviceLabel = "",
                 UserId = user.Id,
@@ -251,11 +247,11 @@ public class Service : IService
             };
             await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
 
-       
+
             await _dbContext.SaveChangesAsync();
-        
+
             await transaction.CommitAsync();
-        
+
             return new Response.VerifyEmailResponse()
             {
                 AccessToken = accessToken,
@@ -267,6 +263,43 @@ public class Service : IService
         {
             await transaction.RollbackAsync();
             throw;
-        } 
+        }
+    }
+
+    private Guid CheckAccessToken()
+    {
+        var accessToken = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;
+        if (accessToken != null)
+        {
+            return Guid.Parse(accessToken);
+        }
+
+        return Guid.Empty;
+    }
+
+    public async Task<Response.GetMeResponse> GetMe()
+    {
+        var userId = CheckAccessToken();
+        if (userId == Guid.Empty)
+        {
+            throw new UnauthorizedAccessException("Access token is invalid");
+        }
+
+        var query = await _dbContext.Users
+            .Where(x => x.Id == userId)
+            .Select(y => new Response.GetMeResponse()
+            {
+                Email = y.Email,
+                FirstName = y.FirstName,
+                LastName = y.LastName,
+                Avatar = y.Avatar,
+            }).FirstOrDefaultAsync();
+
+        if (query == null)
+        {
+            throw new BadHttpRequestException("User not found");
+        }
+
+        return query;
     }
 }

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260607125352_Initial")]
-    partial class Initial
+    [Migration("20260609123215_Test1")]
+    partial class Test1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -935,8 +935,8 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("IpAddress")
                         .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("character varying(45)");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -959,8 +959,8 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("UserAgent")
                         .IsRequired()
-                        .HasMaxLength(45)
-                        .HasColumnType("character varying(45)");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -1113,6 +1113,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Avatar")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -1151,7 +1154,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("character varying(10)");
 
                     b.Property<int>("Role")
-                        .HasColumnType("integer");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

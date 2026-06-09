@@ -6,4 +6,5 @@ public interface IService
 
     public Task<Response.AuthResponse> RefreshToken();
     public Task<Response.VerifyEmailResponse?> VerifyEmail(Request.VerifyEmailRequest request);
+    public Task<Response.GetMeResponse> GetMe();
 }

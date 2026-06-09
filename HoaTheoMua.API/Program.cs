@@ -1,3 +1,4 @@
+using HoaTheoMua.Extension;
 using HoaTheoMua.Extentions;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
@@ -34,7 +35,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 
 builder.Services.ConfigureRateLimiter();
-var app = builder.Build();
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
 builder.Services.AddHttpContextAccessor();

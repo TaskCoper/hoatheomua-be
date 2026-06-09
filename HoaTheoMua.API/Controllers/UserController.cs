@@ -3,22 +3,24 @@ using HoaTheoMua.Service.Auth;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.User;
 using Microsoft.AspNetCore.Mvc;
+using IService = HoaTheoMua.Service.Auth.IService;
+using Request = HoaTheoMua.Service.Auth.Request;
 
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
 public class UserController: ControllerBase
 {
-    private readonly IService _UserService;
+    private readonly IService _authService;
     public UserController(IService userService)
     {
-        _UserService = userService;
+        _authService = userService;
     }
 
-    [HttpGet("api/users/me")]
+    [HttpGet("api/v1/auth/me")]
     public async Task<IActionResult> GetMe()
     {
-        var result = await _UserService.GetMe();
+        var result = await _authService.GetMe();
         return Ok(ApiResponseFactory.SuccessResponse(result, "Success", HttpContext.TraceIdentifier));
     }
     
