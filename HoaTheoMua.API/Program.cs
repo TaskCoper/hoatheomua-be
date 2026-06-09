@@ -31,6 +31,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")
     )
 );
+
+builder.Services.ConfigureRateLimiter();
+var app = builder.Build();
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
 builder.Services.AddHttpContextAccessor();
@@ -50,6 +53,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerAPI();
 }
 
+app.UseRateLimiter();
 app.UseAuthentication();
 
 app.UseAuthorization();
