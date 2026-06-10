@@ -364,8 +364,12 @@ public class Service : IService
         var result = new Response.LoginResponse()
         {
             AccessToken = accessToken,
-            RefreshToken = refreshToken
+            RefreshToken = refreshToken,
+            Message = "Login successful!",
+            
         };
         return result;
+
     }
+     
 }

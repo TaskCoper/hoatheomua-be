@@ -67,7 +67,8 @@ public class UserController: ControllerBase
         HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
 
         return Ok(ApiResponseFactory.SuccessResponse(
-            data: null,
+            data: result.Message,
+            "success",
             traceId: HttpContext.TraceIdentifier
         ));
     }
