@@ -320,7 +320,7 @@ public class Service : IService
     {
         try
         {
-            var accessToken = GetAccessToken();
+            // var accessToken = GetAccessToken();
 
             var rtInCookie = checkRefreshToken();
 
