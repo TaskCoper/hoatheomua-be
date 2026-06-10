@@ -13,7 +13,7 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
+      - postgres-hoatheomua-data-dev:/var/lib/postgresql/data
 
   hoatheomua-api:
     container_name: hoatheomua-api-dev
@@ -58,6 +58,6 @@ services:
       - ./logs:/app/logs
 
 volumes:
-  postgres-data-dev:
-    name: postgres-data-dev
+  postgres-hoatheomua-data-dev:
+    name: postgres-hoatheomua-data-dev
     driver: local
