@@ -1,0 +1,61 @@
+# Dev overlay for docker-compose.yml — dev container names, dev-scoped volumes, dev environment.
+# Usage: docker compose -f .docker/docker-compose.yml -f .docker/compose.dev.yml up -d
+# (Run one environment at a time with its own .env; use compose.yaml profiles to run dev + prod side by side.)
+services:
+  hoatheomua-postgres:
+    container_name: hoatheomua-postgres-dev
+    environment:
+      POSTGRES_DB: ${POSTGRES_DBNAME}
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - postgres-data-dev:/var/lib/postgresql/data
+
+  hoatheomua-api:
+    container_name: hoatheomua-api-dev
+    environment:
+      TZ: UTC
+
+      # Environment Configuration
+      Environment: ${ENVIRONMENT}
+      ASPNETCORE_ENVIRONMENT: ${ENVIRONMENT}
+      ASPNETCORE_URLS: http://+:8080
+      HttpPort: ${HTTP_PORT}
+
+      # Connection Strings
+      ConnectionStrings__PostgresSql: Host=hoatheomua-postgres;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
+
+      # Postgres Configuration
+      PostgresOption__MaxIdleConns: ${POSTGRES_MAX_IDLE_CONNS}
+      PostgresOption__MaxOpenConns: ${POSTGRES_MAX_OPEN_CONNS}
+      PostgresOption__ConnMaxLifetime: ${POSTGRES_CONN_MAX_LIFETIME}
+
+      # Mail Configuration
+      MailOption__Mail: ${MAIL_ADDRESS}
+      MailOption__DisplayName: ${MAIL_DISPLAY_NAME}
+      MailOption__Password: ${MAIL_PASSWORD}
+      MailOption__Host: ${MAIL_HOST}
+      MailOption__Port: ${MAIL_PORT}
+
+      # JWT Configuration
+      JwtOption__Issuer: ${JWT_ISSUER}
+      JwtOption__Audience: ${JWT_AUDIENCE}
+      JwtOption__AccessTokenKey: ${JWT_ACCESS_TOKEN_KEY}
+      JwtOption__AccessTokenExpireMin: ${JWT_ACCESS_TOKEN_EXPIRE_MIN}
+      JwtOption__RefreshTokenKey: ${JWT_REFRESH_TOKEN_KEY}
+      JwtOption__RefreshTokenExpireMin: ${JWT_REFRESH_TOKEN_EXPIRE_MIN}
+
+      # Security Configuration
+      SecurityOption__Pepper: ${SECURITY_PEPPER}
+
+      # Allowed Hosts
+      AllowedHosts: "*"
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  postgres-data-dev:
+    name: postgres-data-dev
+    driver: local
