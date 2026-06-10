@@ -789,12 +789,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("ViewCount")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("NewsList");
 
@@ -808,6 +813,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 1,
                             Title = "C# 12 Released",
+                            UserId = new Guid("11111111-1111-1111-1111-111111111111"),
                             ViewCount = 100
                         },
                         new
@@ -819,6 +825,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 1,
                             Title = "AI is taking over",
+                            UserId = new Guid("11111111-1111-1111-1111-111111111111"),
                             ViewCount = 550
                         },
                         new
@@ -830,6 +837,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 1,
                             Title = "Healthy Eating Habits",
+                            UserId = new Guid("22222222-2222-2222-2222-222222222222"),
                             ViewCount = 300
                         },
                         new
@@ -841,6 +849,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 1,
                             Title = "Workout Routines",
+                            UserId = new Guid("22222222-2222-2222-2222-222222222222"),
                             ViewCount = 120
                         },
                         new
@@ -852,6 +861,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 0,
                             Title = "Stock Market Surge",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333333"),
                             ViewCount = 800
                         },
                         new
@@ -863,6 +873,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 1,
                             Title = "Top 10 Movies of 2024",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333333"),
                             ViewCount = 1500
                         },
                         new
@@ -874,6 +885,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 1,
                             Title = "Real Estate Trends",
+                            UserId = new Guid("11111111-1111-1111-1111-111111111111"),
                             ViewCount = 420
                         },
                         new
@@ -885,6 +897,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 0,
                             Title = "Upcoming Tech Gadgets",
+                            UserId = new Guid("22222222-2222-2222-2222-222222222222"),
                             ViewCount = 750
                         },
                         new
@@ -896,6 +909,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 1,
                             Title = "Mental Health Awareness",
+                            UserId = new Guid("11111111-1111-1111-1111-111111111111"),
                             ViewCount = 600
                         },
                         new
@@ -907,6 +921,7 @@ namespace HoaTheoMua.Repository.Migrations
                             IsDeleted = false,
                             Status = 1,
                             Title = "Travel Destinations",
+                            UserId = new Guid("22222222-2222-2222-2222-222222222222"),
                             ViewCount = 950
                         });
                 });
@@ -1357,6 +1372,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.News", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
+                        .WithMany("News")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
@@ -1385,6 +1411,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("AuditLog");
 
                     b.Navigation("CategoryNews");
+
+                    b.Navigation("News");
 
                     b.Navigation("RefreshToken");
 
