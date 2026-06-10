@@ -62,7 +62,7 @@ services:
     ports: ["${POSTGRES_PORT:-5432}:5432"]
     networks: [hoatheomua-network-dev]
     volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
+      - postgres-hoatheomua-data-dev:/var/lib/postgresql/data
     profiles: [dev, database-dev, database, dev-pull]
 
   hoatheomua-postgres-prod:
@@ -72,7 +72,7 @@ services:
     ports: ["${POSTGRES_PORT:-5433}:5432"]
     networks: [hoatheomua-network-prod]
     volumes:
-      - postgres-data-prod:/var/lib/postgresql/data
+      - postgres-hoatheomua-data-prod:/var/lib/postgresql/data
     profiles: [prod, database-prod, database, prod-pull]
 
   hoatheomua-api-dev:
@@ -114,11 +114,11 @@ services:
     profiles: [prod, cloudflare-prod, proxy, prod-pull]
 
 volumes:
-  postgres-data-dev:
-    name: postgres-data-dev
+  postgres-hoatheomua-data-dev:
+    name: postgres-hoatheomua-data-dev
     driver: local
-  postgres-data-prod:
-    name: postgres-data-prod
+  postgres-hoatheomua-data-prod:
+    name: postgres-hoatheomua-data-prod
     driver: local
 
 networks:

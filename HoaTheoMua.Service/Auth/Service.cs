@@ -53,7 +53,7 @@ public class Service : IService
 
     private string CheckRefreshToken()
     {
-        var check = _httpContext.HttpContext!.Request.Cookies["HTM-Refresh-Token"];
+        _httpContext.HttpContext!.Request.Cookies.TryGetValue("HTM-Refresh-Token", out var check);
         if (check == null)
         {
             throw new MissingAccessTokenException();
@@ -231,7 +231,7 @@ public class Service : IService
             var refreshTokenEntity = new RefreshToken()
             {
                 Id = Guid.NewGuid(),
-                RefreshTokenHash = _jwtService.GenerateRefreshToken(),
+                RefreshTokenHash = refreshToken,
                 IpAddress = ipAddress,
                 UserAgent = userAgent,
                 RevokedAt = null,
@@ -298,5 +298,110 @@ public class Service : IService
         }
 
         return query;
+    }
+
+    public async Task<Response.LogoutResponse> Logout()
+    {
+        try
+        {
+            // var accessToken = GetAccessToken();
+
+            var rtInCookie = CheckRefreshToken();
+
+            var refreshToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x =>
+                x.RefreshTokenHash == rtInCookie && x.IsActive == true && x.RevokedAt == null);
+
+            if (refreshToken == null)
+            {
+                throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+            }
+
+            refreshToken.RevokedAt = DateTimeOffset.UtcNow;
+            refreshToken.IsActive = false;
+            _dbContext.RefreshTokens.Update(refreshToken);
+            await _dbContext.SaveChangesAsync();
+
+            return new Response.LogoutResponse()
+            {
+                Message = "LOGOUT_SUCCESSFUL",
+            };
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("SEVER_ERROR", ex);
+        }
+    }
+    
+    public async Task<Response.LoginResponse> LoginAsync(
+        Request.LoginRequest request)
+    {
+        var httpContext = _httpContext.HttpContext;
+        var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+        var userAgent = httpContext?.Request.Headers.UserAgent.ToString() ?? "Unknown Device";
+        var email = request.Email.Trim();
+
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Email == email && !x.IsDeleted);
+
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+        }
+
+        var pepperPassword = request.Password + _securityOptions.Pepper;
+
+        var isPasswordValid = BCrypt.Net.BCrypt.EnhancedVerify(
+            pepperPassword,
+            user.HashPassword,
+            hashType: BCrypt.Net.HashType.SHA256
+        );
+
+        if (!isPasswordValid)
+        {
+            throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+        }
+
+       
+
+        var claims = new List<Claim>
+        {
+            new Claim("UserId", user.Id.ToString()),
+            new Claim("isVerify", user.IsVerify.ToString())
+        };
+
+        var accessToken = _jwtService.GenerateAccessToken(claims);
+
+        var refreshToken = _jwtService.GenerateRefreshToken();
+
+        var refreshTokenEntity = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            RefreshTokenHash = refreshToken,
+            IpAddress = ipAddress,
+            UserAgent = userAgent,
+            DeviceLabel = "",
+            IsActive = true,
+            ExpiredAt = DateTimeOffset.UtcNow.AddDays(7),
+            UserId = user.Id,
+            CreatedAt = DateTimeOffset.UtcNow,
+            IsDeleted = false
+        };
+
+        await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
+        await _dbContext.SaveChangesAsync();
+
+        var result = new Response.LoginResponse()
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            Message = "Login successful!",
+            
+        };
+        return result;
+
     }
 }
