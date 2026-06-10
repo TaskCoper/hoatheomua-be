@@ -49,4 +49,12 @@ public class UserController: ControllerBase
         HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
         return Ok(ApiResponseFactory.SuccessResponse(null, "success", HttpContext.TraceIdentifier));
     }
+
+    [HttpPost("/api/v1/auth/logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var result = await _authService.Logout();
+        HttpContext.Response.DeleteAuthCookies();
+        return Ok(ApiResponseFactory.SuccessResponse(result, "Success", HttpContext.TraceIdentifier));
+    }
 }

@@ -44,9 +44,11 @@ public class Service : IService
                     Console.WriteLine("Token vẫn còn hiệu lực.");
                     return false;
                 }
+
                 return true;
             }
         }
+
         return true;
     }
 
@@ -277,6 +279,17 @@ public class Service : IService
         return Guid.Empty;
     }
 
+    private string GetAccessToken()
+    {
+        var check = _httpContext.HttpContext!.Request.Cookies["HTM-Access-Token"];
+        if (check == null)
+        {
+            throw new UnauthorizedAccessException("INVALID_ACCESS_TOKEN");
+        }
+
+        return check;
+    }
+
     public async Task<Response.GetMeResponse> GetMe()
     {
         var userId = CheckAccessToken();
@@ -301,5 +314,41 @@ public class Service : IService
         }
 
         return query;
+    }
+
+    public async Task<Response.LogoutResponse> Logout()
+    {
+        try
+        {
+            var accessToken = GetAccessToken();
+
+            var rtInCookie = checkRefreshToken();
+
+            var refreshToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x =>
+                x.RefreshTokenHash == rtInCookie && x.IsActive == true && x.RevokedAt == null);
+
+            if (refreshToken == null)
+            {
+                throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+            }
+
+            refreshToken.RevokedAt = DateTimeOffset.UtcNow;
+            refreshToken.IsActive = false;
+            _dbContext.RefreshTokens.Update(refreshToken);
+            await _dbContext.SaveChangesAsync();
+
+            return new Response.LogoutResponse()
+            {
+                Message = "LOGOUT_SUCCESSFUL",
+            };
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("SEVER_ERROR", ex);
+        }
     }
 }
