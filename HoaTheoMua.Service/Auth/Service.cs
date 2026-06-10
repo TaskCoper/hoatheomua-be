@@ -73,7 +73,7 @@ public class Service : IService
         try
         {
             var isExistEmail = await _dbContext.Users
-                .AnyAsync(x => x.Email == request.Email);
+                .AnyAsync(x => x.Email.ToLower() == request.Email.ToLower() );
             if (isExistEmail)
             {
                 throw new BadRequestException($"Email {request.Email} đã tồn tại trong hệ thống.");            }
