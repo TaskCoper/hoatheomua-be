@@ -57,4 +57,27 @@ public class UserController: ControllerBase
         HttpContext.Response.DeleteAuthCookies();
         return Ok(ApiResponseFactory.SuccessResponse(result, "Success", HttpContext.TraceIdentifier));
     }
+    
+    [HttpPost("/api/v1/auth/sign-in")]
+    public async Task<IActionResult> SignIn([FromBody] Request.LoginRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponseFactory.ErrorResponse(
+                message: "Dữ liệu đăng nhập không hợp lệ",
+                errors: ModelState,
+                traceId: HttpContext.TraceIdentifier
+            ));
+        }
+
+        var result = await _authService.LoginAsync(request);
+
+        HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
+
+        return Ok(ApiResponseFactory.SuccessResponse(
+            data: result.Message,
+            "success",
+            traceId: HttpContext.TraceIdentifier
+        ));
+    }
 }
