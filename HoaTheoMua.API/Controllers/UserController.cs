@@ -1,5 +1,5 @@
 using HoaTheoMua.Extentions;
-using HoaTheoMua.Service.Auth;
+//AuthService = using HoaTheoMua.Service.Auth;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.User;
 using Microsoft.AspNetCore.Mvc;
@@ -48,5 +48,27 @@ public class UserController: ControllerBase
         var result = await _authService.RefreshToken();
         HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
         return Ok(ApiResponseFactory.SuccessResponse(null, "success", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpPost("/api/v1/auth/sign-in")]
+    public async Task<IActionResult> SignIn([FromBody] Request.LoginRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponseFactory.ErrorResponse(
+                message: "Dữ liệu đăng nhập không hợp lệ",
+                errors: ModelState,
+                traceId: HttpContext.TraceIdentifier
+            ));
+        }
+
+        var result = await _authService.LoginAsync(request);
+
+        HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
+
+        return Ok(ApiResponseFactory.SuccessResponse(
+            data: null,
+            traceId: HttpContext.TraceIdentifier
+        ));
     }
 }

@@ -302,4 +302,97 @@ public class Service : IService
 
         return query;
     }
+    
+     public async Task<Response.LoginResponse> LoginAsync(
+        Request.LoginRequest request)
+    {
+        var httpContext = _httpContext.HttpContext;
+        var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
+        var userAgent = httpContext?.Request.Headers.UserAgent.ToString() ?? "Unknown Device";
+        var email = request.Email.Trim().ToLower();
+
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == email && !x.IsDeleted);
+
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+        }
+
+        var pepperPassword = request.Password + _securityOptions.Pepper;
+
+        var isPasswordValid = BCrypt.Net.BCrypt.EnhancedVerify(
+            pepperPassword,
+            user.HashPassword,
+            hashType: BCrypt.Net.HashType.SHA256
+        );
+
+        if (!isPasswordValid)
+        {
+            throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+        }
+
+       
+
+        var claims = new List<Claim>
+        {
+            new Claim("UserId", user.Id.ToString()),
+            new Claim("isVerify", user.IsVerify.ToString())
+        };
+
+        var accessToken = _jwtService.GenerateAccessToken(claims);
+
+        var refreshToken = _jwtService.GenerateRefreshToken();
+
+        var refreshTokenHash = _jwtService.GenerateRefreshToken();
+
+        var refreshTokenEntity = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            RefreshTokenHash = refreshTokenHash,
+            IpAddress = ipAddress,
+            UserAgent = userAgent,
+            DeviceLabel = "",
+            IsActive = true,
+            ExpiredAt = DateTimeOffset.UtcNow.AddDays(7),
+            UserId = user.Id,
+            CreatedAt = DateTimeOffset.UtcNow,
+            IsDeleted = false
+        };
+
+        await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
+        await _dbContext.SaveChangesAsync();
+
+        var result = new Response.LoginResponse()
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken
+        };
+        return result;
+    }
+    
+    private static string GetDeviceLabel(string userAgent)
+    {
+        if (string.IsNullOrWhiteSpace(userAgent))
+        {
+            return "Unknown";
+        }
+
+        var lowerUserAgent = userAgent.ToLower();
+
+        if (lowerUserAgent.Contains("mobile") ||
+            lowerUserAgent.Contains("android") ||
+            lowerUserAgent.Contains("iphone"))
+        {
+            return "Mobile";
+        }
+
+        if (lowerUserAgent.Contains("ipad") ||
+            lowerUserAgent.Contains("tablet"))
+        {
+            return "Tablet";
+        }
+
+        return "Desktop";
+    }
 }
