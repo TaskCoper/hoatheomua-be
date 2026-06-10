@@ -71,7 +71,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
 
                     b.HasData(
                         new
@@ -240,7 +240,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CategoryNewsList");
+                    b.ToTable("CategoryNewsList", (string)null);
 
                     b.HasData(
                         new
@@ -359,7 +359,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("CategoryNewsId", "NewsId")
                         .IsUnique();
 
-                    b.ToTable("CategoryNewsDetails");
+                    b.ToTable("CategoryNewsDetails", (string)null);
 
                     b.HasData(
                         new
@@ -493,7 +493,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CompanyAddresses");
+                    b.ToTable("CompanyAddresses", (string)null);
 
                     b.HasData(
                         new
@@ -647,7 +647,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ResetPasswords");
+                    b.ToTable("ResetPasswords", (string)null);
 
                     b.HasData(
                         new
@@ -796,7 +796,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("NewsList");
+                    b.ToTable("NewsList", (string)null);
 
                     b.HasData(
                         new
@@ -969,7 +969,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
 
                     b.HasData(
                         new
@@ -1163,7 +1163,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
 
                     b.HasData(
                         new
