@@ -1,7 +1,8 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
+using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.MailService;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
@@ -29,8 +30,8 @@ public class Service : IService
         _mailService = mailService;
         _httpContext = httpContextAccessor;
     }
-
-    public bool checkExpiredAccessToken()
+    
+    private bool CheckExpiredAccessToken()
     {
         var check = _httpContext.HttpContext?.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Expiration);
         if (check != null)
@@ -50,12 +51,12 @@ public class Service : IService
         return true;
     }
 
-    public string checkRefreshToken()
+    private string CheckRefreshToken()
     {
         _httpContext.HttpContext!.Request.Cookies.TryGetValue("HTM-Refresh-Token", out var check);
         if (check == null)
         {
-            throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+            throw new MissingAccessTokenException();
         }
 
         return check;
@@ -65,18 +66,17 @@ public class Service : IService
     {
         if (request.Password != request.ConfirmPassword)
         {
-            throw new ArgumentException("Password không khớp!");
+            throw new BadRequestException("Mật khẩu xác nhận không trùng khớp!");
         }
 
         var transaction = await _dbContext.Database.BeginTransactionAsync();
         try
         {
             var isExistEmail = await _dbContext.Users
-                .AnyAsync(x => x.Email == request.Email);
+                .AnyAsync(x => x.Email.ToLower() == request.Email.ToLower() );
             if (isExistEmail)
             {
-                throw new BadHttpRequestException($"Email {request.Email} đã tồn tại trong hệ thống");
-            }
+                throw new ConflictException($"Email {request.Email} đã tồn tại trong hệ thống.");            }
 
             var pepperPassword = request.Password + _securityOptions.Pepper;
             var hashedPassword =
@@ -123,14 +123,13 @@ public class Service : IService
     public async Task<Response.AuthResponse> RefreshToken()
     {
         // Trả về false tức là: CÒN ACCESS VÀ CÒN HẠN
-        bool isMissingAccessToken = checkExpiredAccessToken();
+        bool isMissingAccessToken = CheckExpiredAccessToken();
 
         if (!isMissingAccessToken)
-        {
-            throw new BadHttpRequestException("ACCESS_TOKEN_STILL_VALID");
-        } // Nếu trả về true: Nghĩa là KHÔNG CÓ ACCESS TOKEN -> Luồng tự động trôi xuống bước 2
+        {// Nếu trả về true: Nghĩa là KHÔNG CÓ ACCESS TOKEN -> Luồng tự động trôi xuống bước 2
+            throw new BadRequestException("Access token vẫn còn hiệu lực, không cần làm mới.");        } 
 
-        var rawRefreshToken = checkRefreshToken();
+        var rawRefreshToken = CheckRefreshToken();
 
         var storedToken = await _dbContext.RefreshTokens
             .Include(x => x.User)
@@ -138,14 +137,14 @@ public class Service : IService
 
         if (storedToken == null)
         {
-            throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+            throw new ExpiredRefreshTokenException();
         }
 
         bool isActive = storedToken.RevokedAt == null && storedToken.ExpiredAt > DateTimeOffset.UtcNow;
 
         if (!isActive)
         {
-            throw new UnauthorizedAccessException("EXPIRED_REFRESH_TOKEN");
+            throw new ExpiredRefreshTokenException();
         }
 
         storedToken.RevokedAt = DateTimeOffset.UtcNow;
@@ -189,7 +188,7 @@ public class Service : IService
         var validateToken = _jwtService.ValidateToken(request.Token);
         if (validateToken == null)
         {
-            throw new BadHttpRequestException("Liên kết xác thực đã hết hạn hoặc không hợp lệ.");
+            throw new BadRequestException("Liên kết xác thực đã hết hạn hoặc không hợp lệ.");
         }
 
         var userIdStr = validateToken.FindFirst("UserId")?.Value;
@@ -197,17 +196,15 @@ public class Service : IService
         var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
         {
-            throw new BadHttpRequestException("Người dùng không tồn tại trên hệ thống.");
-        }
+            throw new NotFoundException("Người dùng không tồn tại trên hệ thống.");        }
 
         if (user.IsVerify)
         {
-            //dùng tạm chưa config API ApiResponse
             return new Response.VerifyEmailResponse
             {
                 AccessToken = null!,
                 RefreshToken = null!,
-                Message = "Người dùng đã xác thực"
+                Message = "Người dùng đã xác thực trước đó rồi."
             };
         }
 
@@ -282,7 +279,7 @@ public class Service : IService
         var userId = CheckAccessToken();
         if (userId == Guid.Empty)
         {
-            throw new UnauthorizedAccessException("Access token is invalid");
+            throw new MissingAccessTokenException();
         }
 
         var query = await _dbContext.Users
@@ -297,7 +294,7 @@ public class Service : IService
 
         if (query == null)
         {
-            throw new BadHttpRequestException("User not found");
+            throw new NotFoundException("User not found");
         }
 
         return query;
@@ -309,7 +306,7 @@ public class Service : IService
         {
             // var accessToken = GetAccessToken();
 
-            var rtInCookie = checkRefreshToken();
+            var rtInCookie = CheckRefreshToken();
 
             var refreshToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x =>
                 x.RefreshTokenHash == rtInCookie && x.IsActive == true && x.RevokedAt == null);
