@@ -1,10 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HoaTheoMua.API", "HoaTheoMua.API\HoaTheoMua.API.csproj", "{158374B4-DCB1-4E9D-82D4-2269B211AACB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HoaTheoMua.Repository", "HoaTheoMua.Repository\HoaTheoMua.Repository.csproj", "{B17F7C78-F5CF-41C9-BE78-E7DBB18E076B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HoaTheoMua.Service", "HoaTheoMua.Service\HoaTheoMua.Service.csproj", "{DFC8642C-3370-4D74-8377-FC5FF19C89B5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HoaTheoMua.Service.Tests", "HoaTheoMua.Service.Tests\HoaTheoMua.Service.Tests.csproj", "{401D3CD3-A482-4BDA-8A8F-C96D6204E45D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,5 +27,9 @@ Global
 		{DFC8642C-3370-4D74-8377-FC5FF19C89B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DFC8642C-3370-4D74-8377-FC5FF19C89B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DFC8642C-3370-4D74-8377-FC5FF19C89B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{401D3CD3-A482-4BDA-8A8F-C96D6204E45D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{401D3CD3-A482-4BDA-8A8F-C96D6204E45D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{401D3CD3-A482-4BDA-8A8F-C96D6204E45D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{401D3CD3-A482-4BDA-8A8F-C96D6204E45D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
