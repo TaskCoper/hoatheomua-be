@@ -52,7 +52,7 @@ public class Service : IService
 
     public string checkRefreshToken()
     {
-        var check = _httpContext.HttpContext!.Request.Cookies["HTM-Refresh-Token"];
+        _httpContext.HttpContext!.Request.Cookies.TryGetValue("HTM-Refresh-Token", out var check);
         if (check == null)
         {
             throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
@@ -301,6 +301,42 @@ public class Service : IService
         }
 
         return query;
+    }
+
+    public async Task<Response.LogoutResponse> Logout()
+    {
+        try
+        {
+            // var accessToken = GetAccessToken();
+
+            var rtInCookie = checkRefreshToken();
+
+            var refreshToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(x =>
+                x.RefreshTokenHash == rtInCookie && x.IsActive == true && x.RevokedAt == null);
+
+            if (refreshToken == null)
+            {
+                throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+            }
+
+            refreshToken.RevokedAt = DateTimeOffset.UtcNow;
+            refreshToken.IsActive = false;
+            _dbContext.RefreshTokens.Update(refreshToken);
+            await _dbContext.SaveChangesAsync();
+
+            return new Response.LogoutResponse()
+            {
+                Message = "LOGOUT_SUCCESSFUL",
+            };
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("SEVER_ERROR", ex);
+        }
     }
     
     public async Task<Response.LoginResponse> LoginAsync(

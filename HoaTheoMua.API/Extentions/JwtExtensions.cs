@@ -48,6 +48,8 @@ public static class JwtExtensions
                         {
                             context.Token = token; 
                         }
+
+                        
                         return Task.CompletedTask;
                     }
                 };
