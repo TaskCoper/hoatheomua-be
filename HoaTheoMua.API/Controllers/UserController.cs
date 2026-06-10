@@ -39,7 +39,7 @@ public class UserController: ControllerBase
         {
             HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
         }
-        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result.Message, true, "",HttpContext.TraceIdentifier));
     }
 
     [HttpPost("/api/v1/auth/refresh")]
@@ -47,15 +47,15 @@ public class UserController: ControllerBase
     {
         var result = await _authService.RefreshToken();
         HttpContext.Response.WriteAuthCookies(result.AccessToken!, result.RefreshToken!);
-        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result.Message, true, "",HttpContext.TraceIdentifier));
     }
 
-    [HttpPost("/api/v1/auth/sign-out")]
+    [HttpPost("/api/v1/auth/sign-out")] 
     public async Task<IActionResult> Logout()
     {
         var result = await _authService.Logout();
         HttpContext.Response.DeleteAuthCookies();
-        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result.Message, true, "",HttpContext.TraceIdentifier));
     }
     
     [HttpPost("/api/v1/auth/sign-in")]
@@ -63,7 +63,7 @@ public class UserController: ControllerBase
     {
         var result = await _authService.LoginAsync(request);
         HttpContext.Response.WriteAuthCookies(result.AccessToken!, result.RefreshToken!);
-        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result.Message, true, "",HttpContext.TraceIdentifier));
 
     }
 }

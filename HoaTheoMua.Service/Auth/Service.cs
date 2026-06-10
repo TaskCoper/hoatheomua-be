@@ -178,6 +178,7 @@ public class Service : IService
         {
             RefreshToken = newRawRefreshToken,
             AccessToken = newAccessToken,
+            Message = "Refresh token thành công"
         };
 
         return result;
@@ -186,6 +187,7 @@ public class Service : IService
     public async Task<Response.VerifyEmailResponse?> VerifyEmail(Request.VerifyEmailRequest request)
     {
         var validateToken = _jwtService.ValidateToken(request.Token);
+        
         if (validateToken == null)
         {
             throw new BadRequestException("Liên kết xác thực đã hết hạn hoặc không hợp lệ.");
@@ -345,7 +347,7 @@ public class Service : IService
         var email = request.Email.Trim();
 
         var user = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Email == email && !x.IsDeleted);
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower() && !x.IsDeleted);
 
         if (user == null)
         {
