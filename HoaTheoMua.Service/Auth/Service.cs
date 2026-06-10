@@ -368,29 +368,4 @@ public class Service : IService
         };
         return result;
     }
-    
-    // private static string GetDeviceLabel(string userAgent)
-    // {
-    //     if (string.IsNullOrWhiteSpace(userAgent))
-    //     {
-    //         return "Unknown";
-    //     }
-    //
-    //     var lowerUserAgent = userAgent.ToLower();
-    //
-    //     if (lowerUserAgent.Contains("mobile") ||
-    //         lowerUserAgent.Contains("android") ||
-    //         lowerUserAgent.Contains("iphone"))
-    //     {
-    //         return "Mobile";
-    //     }
-    //
-    //     if (lowerUserAgent.Contains("ipad") ||
-    //         lowerUserAgent.Contains("tablet"))
-    //     {
-    //         return "Tablet";
-    //     }
-    //
-    //     return "Desktop";
-    // }
 }

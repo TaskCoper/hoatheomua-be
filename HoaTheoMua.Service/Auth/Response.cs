@@ -24,17 +24,5 @@ public class Response
         public string? AccessToken { get; set; } 
 
         public string? RefreshToken { get; set; } 
-
-        // public static LoginResponse Ok(
-        //     string accessToken,
-        //     string refreshToken
-        // )
-        // {
-        //     return new LoginResponse
-        //     {
-        //         AccessToken = accessToken,
-        //         RefreshToken = refreshToken
-        //     };
-        // }
     }
 }
