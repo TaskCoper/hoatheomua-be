@@ -1,0 +1,84 @@
+# Standalone single-environment compose (base file).
+# Use directly:           docker compose -f .docker/docker-compose.yml up -d
+# Or layer an overlay:    docker compose -f .docker/docker-compose.yml -f .docker/compose.dev.yml up -d
+#                         docker compose -f .docker/docker-compose.yml -f .docker/compose.prod.yml up -d
+# For CI/CD the profile-based .docker/compose.yaml is used instead.
+services:
+  hoatheomua-postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DBNAME}
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - hoatheomua-network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  hoatheomua-api:
+    build:
+      context: ..
+      dockerfile: HoaTheoMua.API/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT}:8080"
+    environment:
+      TZ: UTC
+
+      # Environment Configuration
+      Environment: ${ENVIRONMENT}
+      ASPNETCORE_ENVIRONMENT: ${ENVIRONMENT}
+      ASPNETCORE_URLS: http://+:8080
+      HttpPort: ${HTTP_PORT}
+
+      # Connection Strings
+      ConnectionStrings__PostgresSql: Host=hoatheomua-postgres;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
+
+      # Postgres Configuration
+      PostgresOption__MaxIdleConns: ${POSTGRES_MAX_IDLE_CONNS}
+      PostgresOption__MaxOpenConns: ${POSTGRES_MAX_OPEN_CONNS}
+      PostgresOption__ConnMaxLifetime: ${POSTGRES_CONN_MAX_LIFETIME}
+
+      # Mail Configuration
+      MailOption__Mail: ${MAIL_ADDRESS}
+      MailOption__DisplayName: ${MAIL_DISPLAY_NAME}
+      MailOption__Password: ${MAIL_PASSWORD}
+      MailOption__Host: ${MAIL_HOST}
+      MailOption__Port: ${MAIL_PORT}
+
+      # JWT Configuration
+      JwtOption__Issuer: ${JWT_ISSUER}
+      JwtOption__Audience: ${JWT_AUDIENCE}
+      JwtOption__AccessTokenKey: ${JWT_ACCESS_TOKEN_KEY}
+      JwtOption__AccessTokenExpireMin: ${JWT_ACCESS_TOKEN_EXPIRE_MIN}
+      JwtOption__RefreshTokenKey: ${JWT_REFRESH_TOKEN_KEY}
+      JwtOption__RefreshTokenExpireMin: ${JWT_REFRESH_TOKEN_EXPIRE_MIN}
+
+      # Security Configuration
+      SecurityOption__Pepper: ${SECURITY_PEPPER}
+
+      # Allowed Hosts
+      AllowedHosts: "*"
+    networks:
+      - hoatheomua-network
+    depends_on:
+      - hoatheomua-postgres
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  postgres-data:
+    name: postgres-data
+    driver: local
+
+networks:
+  hoatheomua-network:
+    name: hoatheomua-network
+    driver: bridge
+    ipam:
+      driver: default

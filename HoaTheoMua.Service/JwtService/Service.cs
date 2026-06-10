@@ -9,16 +9,16 @@ namespace HoaTheoMua.Service.JwtService;
 
 public class Service: IService
 {
-    private readonly JwtOptions _jwtOption = new();
+    private readonly JwtOption _jwtOption = new();
 
     public Service(IConfiguration configuration)
     {
-        configuration.GetSection(nameof(JwtOptions)).Bind(_jwtOption);
+        configuration.GetSection(nameof(JwtOption)).Bind(_jwtOption);
     }
     
     public string GenerateAccessToken(IEnumerable<Claim> claims)
     {
-        var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOption.SecretKey));
+        var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOption.AccessTokenKey));
   
         var signingCredentials = new SigningCredentials(
             secretKey, 
@@ -28,7 +28,7 @@ public class Service: IService
             issuer: _jwtOption.Issuer, 
             audience: _jwtOption.Audience, 
             claims: claims, 
-            expires: DateTime.Now.AddMinutes(_jwtOption.ExpireMinutes),
+            expires: DateTime.Now.AddMinutes(_jwtOption.AccessTokenExpireMin),
             signingCredentials: signingCredentials
         );
         
@@ -47,7 +47,7 @@ public class Service: IService
 
     public string GenerateEmailVerificationToken(IEnumerable<Claim> claims, double expiration)
     {
-        var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOption.SecretKey));
+        var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOption.AccessTokenKey));
   
         var signingCredentials = new SigningCredentials(
             secretKey, 
@@ -71,7 +71,7 @@ public class Service: IService
         try
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_jwtOption.SecretKey); // Sử dụng _jwtOption 
+            var key = Encoding.UTF8.GetBytes(_jwtOption.AccessTokenKey); // Sử dụng _jwtOption 
 
             var validationParameters = new TokenValidationParameters
             {
