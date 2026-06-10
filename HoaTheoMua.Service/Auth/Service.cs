@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
@@ -76,7 +76,7 @@ public class Service : IService
                 .AnyAsync(x => x.Email.ToLower() == request.Email.ToLower() );
             if (isExistEmail)
             {
-                throw new BadRequestException($"Email {request.Email} đã tồn tại trong hệ thống.");            }
+                throw new ConflictException($"Email {request.Email} đã tồn tại trong hệ thống.");            }
 
             var pepperPassword = request.Password + _securityOptions.Pepper;
             var hashedPassword =

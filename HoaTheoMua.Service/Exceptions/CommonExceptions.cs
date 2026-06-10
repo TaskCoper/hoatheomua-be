@@ -1,4 +1,4 @@
-﻿namespace HoaTheoMua.Service.Exceptions;
+namespace HoaTheoMua.Service.Exceptions;
 
 public class ServerException : AppException
 {
@@ -28,4 +28,16 @@ public class TooManyRequestException : AppException
 {
     public TooManyRequestException(string detail)
         : base("Too many request", 429, "TOO_MANY_REQUEST", detail) { }
+}
+
+public class ConflictException : AppException
+{
+    public ConflictException(string detail)
+        : base("Conflict", 409, "CONFLICT", detail) { }
+}
+
+public class UnauthorizedException : AppException
+{
+    public UnauthorizedException(string detail)
+        : base("Unauthorized", 401, "UNAUTHORIZED", detail) { }
 }
