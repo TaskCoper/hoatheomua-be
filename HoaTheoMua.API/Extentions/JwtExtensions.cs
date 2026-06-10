@@ -49,11 +49,7 @@ public static class JwtExtensions
                             context.Token = token; 
                         }
 
-                        if (context.Request.Cookies.TryGetValue(CookieExtensions.RefreshTokenCookieName,
-                                out var token2))
-                        {
-                            context.Token = token2;
-                        }
+                        
                         return Task.CompletedTask;
                     }
                 };

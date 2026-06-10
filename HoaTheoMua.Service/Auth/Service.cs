@@ -52,7 +52,7 @@ public class Service : IService
 
     public string checkRefreshToken()
     {
-        var check = _httpContext.HttpContext!.Request.Cookies["HTM-Refresh-Token"];
+        _httpContext.HttpContext!.Request.Cookies.TryGetValue("HTM-Refresh-Token", out var check);
         if (check == null)
         {
             throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
