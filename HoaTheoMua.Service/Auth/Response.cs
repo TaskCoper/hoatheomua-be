@@ -18,4 +18,9 @@ public class Response
         public required String Email { get; set; }
         public String? Avatar { get; set; }
     }
+
+    public class LogoutResponse : VerifyEmailResponse;
+
+
+
 }
