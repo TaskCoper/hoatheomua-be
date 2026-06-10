@@ -14,6 +14,7 @@ public class User: BaseEntity<Guid>, IAuditableEntity
     public Role Role { get; set; }
     public string? Avatar { get; set; }
     //
+    public ICollection<News> News { get; set; } = new List<News>();
     public ICollection<CategoryNews> CategoryNews { get; set; } = new List<CategoryNews>();
     public ICollection<AuditLog> AuditLog { get; set; } = new List<AuditLog>();
     public ICollection<ForgotPassword> ResetPassword { get; set; } = new List<ForgotPassword>();

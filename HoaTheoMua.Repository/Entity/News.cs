@@ -12,6 +12,8 @@ public class News: BaseEntity<Guid>, IAuditableEntity
     public string CoverImage { get; set; } = null!;
     public NewsStatus Status { get; set; }
     
+    public Guid UserId { get; set; }
+    public User User { get; set; }
     public ICollection<CategoryNewsDetail> CategoryNewsDetail { get; set; } = new List<CategoryNewsDetail>();
     
     public DateTimeOffset CreatedAt { get; set; }
