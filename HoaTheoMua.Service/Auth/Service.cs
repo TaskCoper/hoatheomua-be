@@ -56,7 +56,7 @@ public class Service : IService
         _httpContext.HttpContext!.Request.Cookies.TryGetValue("HTM-Refresh-Token", out var check);
         if (check == null)
         {
-            throw new MissingAccessTokenException();
+            throw new BadRequestException("Refresh token is invalid or already revoked");
         }
 
         return check;
@@ -315,7 +315,7 @@ public class Service : IService
 
             if (refreshToken == null)
             {
-                throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+                throw new UnauthorizedException("Refresh token is invalid");
             }
 
             refreshToken.RevokedAt = DateTimeOffset.UtcNow;
@@ -332,10 +332,10 @@ public class Service : IService
         {
             throw;
         }
-        catch (Exception ex)
-        {
-            throw new Exception("SEVER_ERROR", ex);
-        }
+        // catch (Exception ex)
+        // {
+        //     throw new Exception("SEVER_ERROR", ex);
+        // }
     }
     
     public async Task<Response.LoginResponse> LoginAsync(
