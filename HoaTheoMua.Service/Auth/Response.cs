@@ -18,4 +18,14 @@ public class Response
         public required String Email { get; set; }
         public String? Avatar { get; set; }
     }
+    
+    public class LoginResponse
+    {
+        public string? AccessToken { get; set; } 
+
+        public string? RefreshToken { get; set; } 
+        
+        public string? Message { get; set; } 
+        
+    }
 }
