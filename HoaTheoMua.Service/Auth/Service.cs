@@ -278,17 +278,7 @@ public class Service : IService
 
         return Guid.Empty;
     }
-
-    private string GetAccessToken()
-    {
-        var check = _httpContext.HttpContext!.Request.Cookies["HTM-Access-Token"];
-        if (check == null)
-        {
-            throw new UnauthorizedAccessException("INVALID_ACCESS_TOKEN");
-        }
-
-        return check;
-    }
+    
 
     public async Task<Response.GetMeResponse> GetMe()
     {
