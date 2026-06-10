@@ -309,10 +309,10 @@ public class Service : IService
         var httpContext = _httpContext.HttpContext;
         var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
         var userAgent = httpContext?.Request.Headers.UserAgent.ToString() ?? "Unknown Device";
-        var email = request.Email.Trim().ToLower();
+        var email = request.Email.Trim();
 
         var user = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Email.ToLower() == email && !x.IsDeleted);
+            .FirstOrDefaultAsync(x => x.Email == email && !x.IsDeleted);
 
         if (user == null)
         {
@@ -344,12 +344,10 @@ public class Service : IService
 
         var refreshToken = _jwtService.GenerateRefreshToken();
 
-        var refreshTokenHash = _jwtService.GenerateRefreshToken();
-
         var refreshTokenEntity = new RefreshToken
         {
             Id = Guid.NewGuid(),
-            RefreshTokenHash = refreshTokenHash,
+            RefreshTokenHash = refreshToken,
             IpAddress = ipAddress,
             UserAgent = userAgent,
             DeviceLabel = "",
@@ -371,28 +369,28 @@ public class Service : IService
         return result;
     }
     
-    private static string GetDeviceLabel(string userAgent)
-    {
-        if (string.IsNullOrWhiteSpace(userAgent))
-        {
-            return "Unknown";
-        }
-
-        var lowerUserAgent = userAgent.ToLower();
-
-        if (lowerUserAgent.Contains("mobile") ||
-            lowerUserAgent.Contains("android") ||
-            lowerUserAgent.Contains("iphone"))
-        {
-            return "Mobile";
-        }
-
-        if (lowerUserAgent.Contains("ipad") ||
-            lowerUserAgent.Contains("tablet"))
-        {
-            return "Tablet";
-        }
-
-        return "Desktop";
-    }
+    // private static string GetDeviceLabel(string userAgent)
+    // {
+    //     if (string.IsNullOrWhiteSpace(userAgent))
+    //     {
+    //         return "Unknown";
+    //     }
+    //
+    //     var lowerUserAgent = userAgent.ToLower();
+    //
+    //     if (lowerUserAgent.Contains("mobile") ||
+    //         lowerUserAgent.Contains("android") ||
+    //         lowerUserAgent.Contains("iphone"))
+    //     {
+    //         return "Mobile";
+    //     }
+    //
+    //     if (lowerUserAgent.Contains("ipad") ||
+    //         lowerUserAgent.Contains("tablet"))
+    //     {
+    //         return "Tablet";
+    //     }
+    //
+    //     return "Desktop";
+    // }
 }

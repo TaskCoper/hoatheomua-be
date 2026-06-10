@@ -20,12 +20,12 @@ public class Request
     
     public class LoginRequest
     {
-        [Required(ErrorMessage = "Email không được để trống")]
-        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
-        public string Email { get; set; } = string.Empty;
+        // [Required(ErrorMessage = "Email không được để trống")]
+        // [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        public required string Email { get; set; } 
 
-        [Required(ErrorMessage = "Mật khẩu không được để trống")]
-        // [StringLength(128, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 128 ký tự")]
-        public string Password { get; set; } = string.Empty;
+        //[Required(ErrorMessage = "Mật khẩu không được để trống")]
+        
+        public required string Password { get; set; } 
     }
 }
