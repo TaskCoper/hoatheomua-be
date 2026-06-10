@@ -234,7 +234,7 @@ public class Service : IService
             var refreshTokenEntity = new RefreshToken()
             {
                 Id = Guid.NewGuid(),
-                RefreshTokenHash = _jwtService.GenerateRefreshToken(),
+                RefreshTokenHash = refreshToken,
                 IpAddress = ipAddress,
                 UserAgent = userAgent,
                 RevokedAt = null,
