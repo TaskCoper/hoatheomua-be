@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260609123215_Test1")]
-    partial class Test1
+    [Migration("20260610060932_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
