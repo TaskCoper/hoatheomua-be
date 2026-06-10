@@ -14,7 +14,7 @@ namespace HoaTheoMua.Service.Auth;
 public class Service : IService
 {
     private readonly AppDbContext _dbContext;
-    private readonly SecurityOptions _securityOptions = new();
+    private readonly SecurityOption _securityOptions = new();
     private readonly JwtService.IService _jwtService;
     private readonly MailService.IService _mailService;
     private readonly IHttpContextAccessor _httpContext;
@@ -24,7 +24,7 @@ public class Service : IService
         JwtService.IService jwtService)
     {
         _dbContext = dbContext;
-        configuration.GetSection("SecurityOptions").Bind(_securityOptions);
+        configuration.GetSection(nameof(SecurityOption)).Bind(_securityOptions);
         _jwtService = jwtService;
         _mailService = mailService;
         _httpContext = httpContextAccessor;

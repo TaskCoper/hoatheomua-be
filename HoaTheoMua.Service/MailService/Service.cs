@@ -8,11 +8,11 @@ namespace HoaTheoMua.Service.MailService;
 public class Service: IService
 {
     
-    private readonly MailOptions _mailOptions = new ();
-    
+    private readonly MailOption _mailOptions = new ();
+
     public Service(IConfiguration configuration)
     {
-        configuration.GetSection(nameof(MailOptions)).Bind(_mailOptions);
+        configuration.GetSection(nameof(MailOption)).Bind(_mailOptions);
     }
     
     public async Task SendMail(MailContent mailContent)
