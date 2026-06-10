@@ -63,7 +63,7 @@ services:
     networks: [hoatheomua-network-dev]
     volumes:
       - postgres-data-dev:/var/lib/postgresql/data
-    profiles: [dev, database-dev, database]
+    profiles: [dev, database-dev, database, dev-pull]
 
   hoatheomua-postgres-prod:
     <<: *postgres-base
@@ -73,7 +73,7 @@ services:
     networks: [hoatheomua-network-prod]
     volumes:
       - postgres-data-prod:/var/lib/postgresql/data
-    profiles: [prod, database-prod, database]
+    profiles: [prod, database-prod, database, prod-pull]
 
   hoatheomua-api-dev:
     <<: *api-base
@@ -85,7 +85,7 @@ services:
     ports:
       - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-dev]
-    profiles: [dev, api-dev, api]
+    profiles: [dev, api-dev, api, dev-pull]
 
   hoatheomua-api-prod:
     <<: *api-base
@@ -97,21 +97,21 @@ services:
     ports:
       - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-prod]
-    profiles: [prod, api-prod, api]
+    profiles: [prod, api-prod, api, prod-pull]
 
   hoatheomua-cloudflare-dev:
     <<: *cloudflare-tunnel
     container_name: hoatheomua-cloudflare-dev
     hostname: hoatheomua-cloudflare-dev
     networks: [hoatheomua-network-dev]
-    profiles: [dev, cloudflare-dev, proxy]
+    profiles: [dev, cloudflare-dev, proxy, dev-pull]
 
   hoatheomua-cloudflare-prod:
     <<: *cloudflare-tunnel
     container_name: hoatheomua-cloudflare-prod
     hostname: hoatheomua-cloudflare-prod
     networks: [hoatheomua-network-prod]
-    profiles: [prod, cloudflare-prod, proxy]
+    profiles: [prod, cloudflare-prod, proxy, prod-pull]
 
 volumes:
   postgres-data-dev:

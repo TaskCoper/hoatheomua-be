@@ -23,6 +23,10 @@ on:
         required: false
         default: dev
         type: string
+      pull-profile:
+        required: false
+        default: dev-pull
+        type: string
 jobs:
   deploy-application:
     runs-on: ${{ inputs.run-on }}
@@ -85,7 +89,7 @@ jobs:
           REPO_LOWER=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "REGISTRY=ghcr.io/$REPO_LOWER" >> $GITHUB_ENV
       - name: Pull New Image From Registry
-        run: docker compose -f .docker/compose.yaml -p hoatheomua-server-${{ inputs.profile }} --profile api-${{ inputs.profile }} pull
+        run: docker compose -f .docker/compose.yaml -p hoatheomua-server-${{ inputs.profile }} --profile ${{ inputs.pull-profile }} pull
 
       - name: Deploy New Image
         run: docker compose -f .docker/compose.yaml -p hoatheomua-server-${{ inputs.profile }} --profile ${{ inputs.environment }} up -d

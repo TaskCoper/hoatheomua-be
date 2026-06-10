@@ -31,6 +31,8 @@ jobs:
       profile: dev
       environment: dev
       tag: dev-latest
+      run-on: linhdanhthue
+      pull-profile: dev-pull
     secrets: inherit
 
   deploy-api-prod:
@@ -47,6 +49,8 @@ jobs:
       profile: prod
       environment: prod
       tag: prod-latest
+      run-on: linhdanhthue
+      pull-profile: prod-pull
     secrets: inherit
 
   notify-discord:
