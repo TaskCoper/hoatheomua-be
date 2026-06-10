@@ -21,32 +21,32 @@ public class UserController: ControllerBase
     public async Task<IActionResult> GetMe()
     {
         var result = await _authService.GetMe();
-        return Ok(ApiResponseFactory.SuccessResponse(result, "Success", HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result,true,"",HttpContext.TraceIdentifier));
     }
     
     [HttpPost("/api/v1/auth/register")]
     public async Task<IActionResult> RegisterTask([FromBody]Request.RegisterRequest request)
     {
         var result = await _authService.Register(request);
-        return Ok(ApiResponseFactory.SuccessResponse(result, "Success", HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
     [HttpPost("/api/v1/auth/verify-email")]
-    public async Task<IActionResult> VerifyEmail([FromQuery]Request.VerifyEmailRequest request)
+    public async Task<IActionResult> VerifyEmail([FromBody]Request.VerifyEmailRequest request)
     {
         var result = await _authService.VerifyEmail(request);
         if (!string.IsNullOrEmpty(result!.AccessToken) && !string.IsNullOrEmpty(result.RefreshToken))
         {
             HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
         }
-        return Ok(ApiResponseFactory.SuccessResponse(result,"", HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
 
     [HttpPost("/api/v1/auth/refresh")]
     public async Task<IActionResult> RefreshToken()
     {
         var result = await _authService.RefreshToken();
-        HttpContext.Response.WriteAuthCookies(result.AccessToken, result.RefreshToken);
-        return Ok(ApiResponseFactory.SuccessResponse(null, "success", HttpContext.TraceIdentifier));
+        HttpContext.Response.WriteAuthCookies(result.AccessToken!, result.RefreshToken!);
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
 }

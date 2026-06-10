@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Service.Models;
+using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace HoaTheoMua.Middleware;
@@ -32,34 +33,27 @@ public class GlobalExceptionHandlerMiddleware : IMiddleware
                 _logger.LogWarning("The response has already started, the global exception middleware will not write an error response");
                 throw;
             }
-
-            var statusCode = MapStatusCode(ex);
-            context.Response.StatusCode = statusCode;
+            
             context.Response.ContentType = "application/json";
             
-            var response = ApiResponseFactory.ErrorResponse(
-                message: ResolveClientMessage(ex, statusCode),
+            AppException appEx = ex switch
+            {
+                AppException alreadyAppEx => alreadyAppEx,
+                _ => new ServerException("An unexpected system error occurred.") 
+            };
+            
+            context.Response.StatusCode = appEx.StatusCode;
+            
+            var response = ApiResponseFactory.Error(
+                title: appEx.Title,
+                status: appEx.StatusCode,
+                detail: appEx.StatusCode >= 500 ? "An unexpected error occurred." : ex.Message,
+                messageCode: appEx.MessageCode,
                 errors: _environment.IsDevelopment() ? new { detail = ex.Message } : null, 
-                traceId: context.TraceIdentifier);
-
+                traceId: context.TraceIdentifier
+            );
+            
             await context.Response.WriteAsJsonAsync(response);
         }
-    }
-
-    private static int MapStatusCode(Exception ex)
-    {
-        return ex switch
-        {
-            ArgumentException => StatusCodes.Status400BadRequest,
-            InvalidOperationException => StatusCodes.Status400BadRequest,
-            UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
-            KeyNotFoundException => StatusCodes.Status404NotFound, 
-            _ => StatusCodes.Status500InternalServerError 
-        };
-    }
-
-    private static string ResolveClientMessage(Exception ex, int statusCode)
-    {
-        return statusCode >= 500 ? "An unexpected error occurred" : ex.Message;
     }
 }
