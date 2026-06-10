@@ -1,0 +1,6 @@
+@HoaTheoMua_HostAddress = http://localhost:5066
+
+GET {{HoaTheoMua_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

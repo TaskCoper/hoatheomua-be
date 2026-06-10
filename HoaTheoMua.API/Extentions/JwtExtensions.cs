@@ -16,9 +16,9 @@ public static class JwtExtensions
     
     public static void AddJwtServices(this IServiceCollection services, IConfiguration configuration)
     {
-        JwtOption jwtOption = new JwtOption();
-        configuration.GetSection(nameof(JwtOption)).Bind(jwtOption);
-        var key = Encoding.UTF8.GetBytes(jwtOption.AccessTokenKey);
+        JwtOptions jwtOption = new JwtOptions();
+        configuration.GetSection(nameof(JwtOptions)).Bind(jwtOption);
+        var key = Encoding.UTF8.GetBytes(jwtOption.SecretKey);
     
         services.AddAuthentication(options =>
             {

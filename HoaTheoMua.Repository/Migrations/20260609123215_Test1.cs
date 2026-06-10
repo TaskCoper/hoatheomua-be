@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class Test1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

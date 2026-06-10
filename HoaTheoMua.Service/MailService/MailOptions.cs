@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace HoaTheoMua.Service.MailService;
 
-public class MailOption
+public class MailOptions
 {
     [Required]public string Mail { get; set; }
     [Required]public string DisplayName { get; set; }

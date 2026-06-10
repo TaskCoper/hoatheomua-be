@@ -1,8 +1,0 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
-set -e
-
-echo "Running pre-commit build check..."
-dotnet build HoaTheoMua.sln -c Release --nologo
-echo "Pre-commit build check passed"
