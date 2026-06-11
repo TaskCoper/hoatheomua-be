@@ -17,7 +17,7 @@ public class UserController: ControllerBase
         _authService = userService;
     }
 
-    [HttpGet("api/v1/auth/me")]
+    [HttpGet("/api/v1/auth/me")]
     public async Task<IActionResult> GetMe()
     {
         var result = await _authService.GetMe();
