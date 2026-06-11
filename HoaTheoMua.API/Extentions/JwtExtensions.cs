@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text;
+using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.JwtService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -50,6 +51,14 @@ public static class JwtExtensions
                         }
 
                         
+                        return Task.CompletedTask;
+                    },
+                    OnAuthenticationFailed = context =>
+                    {
+                        if (context.Exception is SecurityTokenExpiredException)
+                        {
+                            throw new ExpiredAccessTokenException();
+                        }
                         return Task.CompletedTask;
                     }
                 };
