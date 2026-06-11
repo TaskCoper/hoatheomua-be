@@ -42,6 +42,13 @@ public class UserController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
 
+    [HttpPost("/api/v1/auth/re-send-mail")]
+    public async Task<IActionResult> ReSendMail([FromBody]Request.ReSendMailRequest request)
+    {
+        var result = await _authService.ReSendMail(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpPost("/api/v1/auth/refresh")]
     public async Task<IActionResult> RefreshToken()
     {
