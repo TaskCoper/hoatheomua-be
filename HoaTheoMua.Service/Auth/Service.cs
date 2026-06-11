@@ -311,11 +311,16 @@ public class Service : IService
         return Guid.Empty;
     }
 
-    public async Task<Response.GetMeResponse> GetMe()
+    public async Task<Response.GetMeResponse?> GetMe()
     {
         var userId = CheckAccessToken();
         if (userId == Guid.Empty)
         {
+            _httpContext.HttpContext!.Request.Cookies.TryGetValue("HTM-Refresh-Token", out var refreshToken);
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return null;
+            }
             throw new MissingAccessTokenException();
         }
 
