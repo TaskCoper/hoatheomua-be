@@ -15,9 +15,16 @@ public class Request
     public class VerifyEmailRequest
     {
         public required string Token { get; set; }
-        
+
     }
-    
+
+    public class ReSendMailRequest
+    {
+        [Required(ErrorMessage = "Email không được để trống")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        public required string Email { get; set; }
+    }
+
     public class LoginRequest
     {
         [Required(ErrorMessage = "Email không được để trống")]

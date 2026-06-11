@@ -120,6 +120,39 @@ public class Service : IService
         }
     }
 
+    public async Task<string> ReSendMail(Request.ReSendMailRequest request)
+    {
+        var email = request.Email.Trim().ToLower();
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == email && !x.IsDeleted);
+
+        if (user == null)
+        {
+            throw new NotFoundException("Email Not Found");
+        }
+
+        if (user.IsVerify)
+        {
+            throw new BadRequestException("Email Is Verified");
+        }
+
+        var claims = new List<Claim>()
+        {
+            new Claim("UserId", user.Id.ToString()),
+            new Claim("IsVerify", user.IsVerify.ToString().ToLower()),
+        };
+        var emailToken = _jwtService.GenerateEmailVerificationToken(claims, 2);
+
+        await _mailService.SendMail(new MailContent
+        {
+            To = user.Email,
+            Subject = "Hoa Theo Mua",
+            Body = MailTemplate.EmailContainToken(emailToken),
+        });
+
+        return "Đã gửi lại email xác thực. Vui lòng kiểm tra email.";
+    }
+
     public async Task<Response.AuthResponse> RefreshToken()
     {
         // Trả về false tức là: CÒN ACCESS VÀ CÒN HẠN

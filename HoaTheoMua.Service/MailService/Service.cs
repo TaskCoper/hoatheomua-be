@@ -5,7 +5,7 @@ using MimeKit;
 
 namespace HoaTheoMua.Service.MailService;
 
-public class Service: IService
+public partial class Service: IService
 {
     
     private readonly MailOption _mailOptions = new ();
