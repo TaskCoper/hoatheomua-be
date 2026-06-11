@@ -7,6 +7,7 @@ using MailService = HoaTheoMua.Service.MailService;
 using JwtService = HoaTheoMua.Service.JwtService;
 using UserService = HoaTheoMua.Service.User;
 using AuthService = HoaTheoMua.Service.Auth;
+using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
 
 
 
@@ -32,9 +33,10 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<MailService.IService, MailService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
+builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
 builder.Services.AddScoped<AuthService.IService, AuthService.Service>();
-
+builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService.Service>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
