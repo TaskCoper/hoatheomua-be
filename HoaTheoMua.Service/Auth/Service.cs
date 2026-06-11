@@ -69,11 +69,13 @@ public class Service : IService
             throw new BadRequestException("Mật khẩu xác nhận không trùng khớp!");
         }
 
+        var email = request.Email.Trim().ToLower();
+
         var transaction = await _dbContext.Database.BeginTransactionAsync();
         try
         {
             var isExistEmail = await _dbContext.Users
-                .AnyAsync(x => x.Email.ToLower() == request.Email.ToLower() );
+                .AnyAsync(x => x.Email.ToLower() == email );
             if (isExistEmail)
             {
                 throw new ConflictException($"Email {request.Email} đã tồn tại trong hệ thống.");            }
@@ -85,7 +87,7 @@ public class Service : IService
             var newUser = new Repository.Entity.User()
             {
                 Id = Guid.NewGuid(),
-                Email = request.Email,
+                Email = email,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 HashPassword = hashedPassword,
@@ -104,7 +106,7 @@ public class Service : IService
 
             await _mailService.SendMail(new MailContent
             {
-                To = request.Email,
+                To = email,
                 Subject = "Hoa Theo Mua",
                 Body = MailTemplate.EmailContainToken(emailToken),
             });
@@ -379,10 +381,10 @@ public class Service : IService
         var httpContext = _httpContext.HttpContext;
         var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
         var userAgent = httpContext?.Request.Headers.UserAgent.ToString() ?? "Unknown Device";
-        var email = request.Email.Trim();
+        var email = request.Email.Trim().ToLower();
 
         var user = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower() && !x.IsDeleted);
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == email && !x.IsDeleted);
 
         if (user == null)
         {
