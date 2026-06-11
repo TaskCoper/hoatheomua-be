@@ -361,7 +361,7 @@ public class Service : IService
                 Message = "LOGOUT_SUCCESSFUL",
             };
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedException)
         {
             throw;
         }
@@ -384,7 +384,7 @@ public class Service : IService
 
         if (user == null)
         {
-            throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+            throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
         }
 
         var pepperPassword = request.Password + _securityOptions.Pepper;
@@ -397,7 +397,7 @@ public class Service : IService
 
         if (!isPasswordValid)
         {
-            throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+            throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
         }
 
        
