@@ -7,6 +7,7 @@ using MailService = HoaTheoMua.Service.MailService;
 using JwtService = HoaTheoMua.Service.JwtService;
 using UserService = HoaTheoMua.Service.User;
 using AuthService = HoaTheoMua.Service.Auth;
+using NewService = HoaTheoMua.Service.New;
 
 
 
@@ -34,6 +35,7 @@ builder.Services.AddScoped<MailService.IService, MailService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
 builder.Services.AddScoped<AuthService.IService, AuthService.Service>();
+builder.Services.AddScoped<NewService.IService, NewService.Service>();
 
 builder.Services.AddCors(options =>
 {
