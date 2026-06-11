@@ -32,7 +32,6 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<MailService.IService, MailService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
-builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
 builder.Services.AddScoped<AuthService.IService, AuthService.Service>();
 
@@ -63,14 +62,12 @@ if (app.Environment.IsDevelopment())
     //app.UseSwagger();
     app.UseSwaggerAPI();
 }
-
+app.UseCors("AllowFrontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 
 app.UseAuthorization();
 
 app.MapControllers();
-
-app.UseCors("AllowFrontend");
 
 app.Run();
