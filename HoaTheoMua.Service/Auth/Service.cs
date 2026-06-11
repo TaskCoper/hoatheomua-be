@@ -311,10 +311,24 @@ public class Service : IService
 
     public async Task<Response.GetMeResponse> GetMe()
     {
+        
         var userId = CheckAccessToken();
+        
         if (userId == Guid.Empty)
         {
-            throw new MissingAccessTokenException();
+            try
+            {
+                var check = CheckRefreshToken();
+                throw new UnauthorizedAccessException("MISSING_ACCESS_TOKEN");
+            }
+            catch (Exception e)
+            {
+                if (e is UnauthorizedAccessException)
+                {
+                    throw;
+                }
+                return null;
+            }
         }
 
         var query = await _dbContext.Users
