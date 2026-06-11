@@ -325,6 +325,8 @@ public class Service : IService
                 FirstName = y.FirstName,
                 LastName = y.LastName,
                 Avatar = y.Avatar,
+                IsVerify =  y.IsVerify,
+                Role = y.Role.ToString(),
             }).FirstOrDefaultAsync();
 
         if (query == null)
