@@ -56,7 +56,7 @@ public class Service : IService
         _httpContext.HttpContext!.Request.Cookies.TryGetValue("HTM-Refresh-Token", out var check);
         if (check == null)
         {
-            throw new MissingAccessTokenException();
+            throw new BadRequestException("Refresh token is invalid or already revoked");
         }
 
         return check;
@@ -211,6 +211,7 @@ public class Service : IService
         {
             RefreshToken = newRawRefreshToken,
             AccessToken = newAccessToken,
+            Message = "Refresh token thành công"
         };
 
         return result;
@@ -219,6 +220,7 @@ public class Service : IService
     public async Task<Response.VerifyEmailResponse?> VerifyEmail(Request.VerifyEmailRequest request)
     {
         var validateToken = _jwtService.ValidateToken(request.Token);
+        
         if (validateToken == null)
         {
             throw new BadRequestException("Liên kết xác thực đã hết hạn hoặc không hợp lệ.");
@@ -346,7 +348,7 @@ public class Service : IService
 
             if (refreshToken == null)
             {
-                throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+                throw new UnauthorizedException("Refresh token is invalid");
             }
 
             refreshToken.RevokedAt = DateTimeOffset.UtcNow;
@@ -363,10 +365,10 @@ public class Service : IService
         {
             throw;
         }
-        catch (Exception ex)
-        {
-            throw new Exception("SEVER_ERROR", ex);
-        }
+        // catch (Exception ex)
+        // {
+        //     throw new Exception("SEVER_ERROR", ex);
+        // }
     }
     
     public async Task<Response.LoginResponse> LoginAsync(
@@ -378,7 +380,7 @@ public class Service : IService
         var email = request.Email.Trim();
 
         var user = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Email == email && !x.IsDeleted);
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower() && !x.IsDeleted);
 
         if (user == null)
         {
