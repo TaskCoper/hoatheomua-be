@@ -17,6 +17,9 @@ public class Response
         public required String LastName { get; set; }
         public required String Email { get; set; }
         public String? Avatar { get; set; }
+        public bool IsVerify {get; set;}
+        public Guid UserId { get; set; }
+        public required string Role {get; set;}
     }
 
     public class LogoutResponse : VerifyEmailResponse;
