@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Repository.Abtraction;
+using HoaTheoMua.Repository.Abtraction;
 using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Repository.Entity;
@@ -19,6 +19,7 @@ public class User: BaseEntity<Guid>, IAuditableEntity
     public ICollection<AuditLog> AuditLog { get; set; } = new List<AuditLog>();
     public ICollection<ForgotPassword> ResetPassword { get; set; } = new List<ForgotPassword>();
     public ICollection<RefreshToken> RefreshToken { get; set; } = new List<RefreshToken>();
+    public ICollection<Order> Orders { get; set; } = new List<Order>();
     
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
