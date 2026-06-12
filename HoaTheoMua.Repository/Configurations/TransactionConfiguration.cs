@@ -1,4 +1,5 @@
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Configurations.Seeds;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -38,5 +39,7 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
 
         builder.Property(t => t.CreatedAt)
             .HasDefaultValueSql("now()");
+
+        builder.SeedTransaction();
     }
 }
