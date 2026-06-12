@@ -38,7 +38,49 @@ public class CompanyAddressController : ControllerBase
         return Ok(ApiResponseFactory.Base(
             result,
             true,
-            "Lấy chi tiết địa chỉ công ty thành công.",
+            "Lấy địa chỉ công ty thành công.",
+            HttpContext.TraceIdentifier
+        ));
+    }
+    
+    [HttpPost]
+    public async Task<IActionResult> CreateCompanyAddress(
+        [FromBody] Request.CreateCompanyAddressRequest request)
+    {
+        var result = await _companyAddressService.CreateCompanyAddress(request);
+
+        return StatusCode(201, ApiResponseFactory.Base(
+            result,
+            true,
+            "Tạo địa chỉ công ty thành công.",
+            HttpContext.TraceIdentifier
+        ));
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateCompanyAddress(
+        [FromRoute] Guid id,
+        [FromBody] Request.UpdateCompanyAddressRequest request)
+    {
+        var result = await _companyAddressService.UpdateCompanyAddress(id, request);
+
+        return Ok(ApiResponseFactory.Base(
+            result,
+            true,
+            "Cập nhật địa chỉ công ty thành công.",
+            HttpContext.TraceIdentifier
+        ));
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteCompanyAddress([FromRoute] Guid id)
+    {
+        var result = await _companyAddressService.DeleteCompanyAddress(id);
+
+        return Ok(ApiResponseFactory.Base(
+            result,
+            true,
+            "Xóa địa chỉ công ty thành công.",
             HttpContext.TraceIdentifier
         ));
     }
