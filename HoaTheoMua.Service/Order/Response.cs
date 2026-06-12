@@ -1,4 +1,6 @@
-﻿namespace HoaTheoMua.Service.Order;
+﻿using HoaTheoMua.Repository.Entity;
+
+namespace HoaTheoMua.Service.Order;
 
 public class Response
 {

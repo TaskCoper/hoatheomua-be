@@ -61,7 +61,7 @@ public class Service: IService
             Status = "Pending",
             TrackNumber = "",
             Metadata = request.Metadata.ToString(),
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
         };
         
         await _dbContext.Orders.AddAsync(newOrder);
@@ -96,13 +96,16 @@ public class Service: IService
         var userId = Guid.Parse(user);
         
         var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+            .FirstOrDefaultAsync(x => 
+                x.Id == userId && x.IsVerify);
         if (existUser == null)
         {
             throw new NotFoundException("User not found");
         }
         
-        var order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
+        var order = await _dbContext.Orders
+            .FirstOrDefaultAsync(o => 
+                o.Id == orderId && o.UserId == userId);
         if (order == null)
         {
             throw new NotFoundException("Order ID " + orderId + " not found");
@@ -134,6 +137,7 @@ public class Service: IService
         }
 
         orders.TrackNumber = request.TrackNumber;
+        orders.UpdatedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
         return "Cập nhật thành công";
     }
