@@ -101,6 +101,7 @@ public class Service : IService
             {
                 new Claim("UserId", newUser.Id.ToString()),
                 new Claim("IsVerify", newUser.IsVerify.ToString().ToLower()),
+                new Claim("Email", newUser.Email),
             };
             var emailToken = _jwtService.GenerateEmailVerificationToken(newClaims, 2);
 
