@@ -168,7 +168,7 @@ public class Service : IService
             {
                 if (listCateId.TryGetValue(item.parentId.Value, out var parentItem))
                 {
-                    parentItem.children ??= new List<Response.CategoryResponse>();
+                    parentItem.children = new List<Response.CategoryResponse>();
                     parentItem.children.Add(item);
                 }
             }
