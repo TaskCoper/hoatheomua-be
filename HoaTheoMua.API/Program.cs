@@ -8,6 +8,7 @@ using MailService = HoaTheoMua.Service.MailService;
 using JwtService = HoaTheoMua.Service.JwtService;
 using UserService = HoaTheoMua.Service.User;
 using AuthService = HoaTheoMua.Service.Auth;
+using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
 using NewService = HoaTheoMua.Service.New;
 
 
@@ -36,6 +37,7 @@ builder.Services.AddScoped<MailService.IService, MailService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
 builder.Services.AddScoped<AuthService.IService, AuthService.Service>();
+builder.Services.AddScoped<CategoryNewsService.IService, CategoryNewsService.Service>();
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 
 builder.Services.AddValidatorsFromAssembly(typeof(HoaTheoMua.Service.Auth.Validations.RegisterRequestValidator).Assembly);
