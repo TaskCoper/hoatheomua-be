@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Repository;
+using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -58,7 +58,7 @@ public class Service: IService
         decimal itemAmount = 0;
         decimal shippingFee = 0;
         
-        var metadataJson = JObject.FromObject(order.Metadata);
+        var metadataJson = JObject.Parse(order.Metadata);
         itemAmount = metadataJson["subTotal"] != null ? (decimal)metadataJson["subTotal"]! : 0;
         shippingFee = metadataJson["shippingFee"] != null ? (decimal)metadataJson["shippingFee"]! : 0;
         
@@ -69,7 +69,7 @@ public class Service: IService
             throw new ConflictException("Invalid transfer amount");
         }
         
-        order.Status = "Completed";
+        order.Status = "Paid";
         order.UpdatedAt = DateTimeOffset.UtcNow;
         _dbContext.Orders.Update(order);
         

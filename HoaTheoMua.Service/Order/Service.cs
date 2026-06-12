@@ -67,7 +67,7 @@ public class Service: IService
         await _dbContext.Orders.AddAsync(newOrder);
         await _dbContext.SaveChangesAsync();
 
-        string description = $"HOATHEOMUA-{newOrder.Id}";
+        string description = $"HOATHEOMUA-{newOrder.Id:N}";
         string bankName = "MBBank";
         string bankAccount = "0384875317";
         string qrCodeUrl = $"https://qr.sepay.vn/img?" +
@@ -134,6 +134,7 @@ public class Service: IService
         }
 
         orders.TrackNumber = request.TrackNumber;
+        await _dbContext.SaveChangesAsync();
         return "Cập nhật thành công";
     }
 
