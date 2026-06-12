@@ -123,8 +123,8 @@ public class Service : IService
             throw new NotFoundException("NEW_NOT_FOUND");
         }
 
-        news.Title = request.Title.Trim();
-        news.Description = request.Description.Trim();
+        news.Title = request.Title;
+        news.Description = request.Description;
         news.CoverImage = request.PictureUrl?.Trim() ?? string.Empty;
         news.Status = request.Status;
         news.UpdatedAt = DateTimeOffset.UtcNow;
