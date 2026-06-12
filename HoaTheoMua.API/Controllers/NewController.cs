@@ -7,7 +7,7 @@ using NewService = HoaTheoMua.Service.New;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Route("api/news")]
+[Route("api/v1/news")]
 [Authorize]
 public class NewController : ControllerBase
 {
@@ -27,7 +27,7 @@ public class NewController : ControllerBase
     {
         var result = await _newService.GetNewsAsync(pageIndex, pageSize, keyword, status);
         result.TraceId = HttpContext.TraceIdentifier;
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}")]
