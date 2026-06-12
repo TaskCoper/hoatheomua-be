@@ -926,6 +926,44 @@ namespace HoaTheoMua.Repository.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("TrackNumber")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Orders");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1117,6 +1155,85 @@ namespace HoaTheoMua.Repository.Migrations
                             UserAgent = "Edge",
                             UserId = new Guid("33333333-3333-3333-3333-333333333340")
                         });
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("Accumulated")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Gateway")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReferenceCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("SePayId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SubAccount")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("TransferAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("TransferType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.User", b =>
@@ -1383,6 +1500,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
+                        .WithMany("Orders")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
@@ -1392,6 +1520,17 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
+                        .WithMany("Transactions")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>
@@ -1406,6 +1545,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("CategoryNewsDetail");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.User", b =>
                 {
                     b.Navigation("AuditLog");
@@ -1413,6 +1557,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("CategoryNews");
 
                     b.Navigation("News");
+
+                    b.Navigation("Orders");
 
                     b.Navigation("RefreshToken");
 
