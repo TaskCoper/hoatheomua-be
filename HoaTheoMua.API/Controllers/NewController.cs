@@ -41,10 +41,7 @@ public class NewController : ControllerBase
     public async Task<IActionResult> CreateNew([FromBody] NewService.CreateNewRequest request)
     {
         var result = await _newService.CreateNewAsync(request);
-        return CreatedAtAction(
-            nameof(GetNewById),
-            new { id = result.Id },
-            ApiResponseFactory.Base(result, true, "Tạo bài viết tin tức mới thành công.", HttpContext.TraceIdentifier));
+        return CreatedAtAction(nameof(GetNewById), new { id = result.Id }, ApiResponseFactory.Base(result, true, "Tạo bài viết tin tức mới thành công.", HttpContext.TraceIdentifier));
     }
 
     [HttpPut("{id:guid}")]
