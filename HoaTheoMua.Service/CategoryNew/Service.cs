@@ -71,30 +71,6 @@ public class Service : IService
         };
     }
 
-    private async Task<bool> IsParentLoop(Guid categoryId, Guid newParentId)
-    {
-        var currentParentId = newParentId;
-        while (true)
-        {
-            var parent = await _dbContext.CategoryNewsList
-                .Where(x => x.Id == currentParentId && !x.IsDeleted)
-                .Select(x => new { x.Id, x.ParentCategoryNewsId })
-                .FirstOrDefaultAsync();
-
-            if (parent == null || parent.ParentCategoryNewsId == null)
-            {
-                return false;
-            }
-
-            if (parent.ParentCategoryNewsId == categoryId)
-            {
-                return true;
-            }
-
-            currentParentId = parent.ParentCategoryNewsId.Value;
-        }
-    }
-
     public async Task<Response.CreateCategoryResponse> CreateCate(Request.CreateCategoriesRequest request)
     {
         var userId = GetUserId();
@@ -109,23 +85,40 @@ public class Service : IService
         //     throw new UnauthorizedAccessException();
         // }
 
+        if (string.IsNullOrWhiteSpace(request.title))
+        {
+            throw new BadRequestException("CATEGORY_TITLE_REQUIRED");
+        }
+
+        var isDuplicateTitle = await _dbContext.CategoryNewsList.AnyAsync(x =>
+            !x.IsDeleted &&
+            x.ParentCategoryNewsId == request.parentId &&
+            x.Title == request.title);
+        if (isDuplicateTitle)
+        {
+            throw new ConflictException("CATEGORY_ALREADY_EXISTS");
+        }
 
         var newCate = new CategoryNews()
         {
-            Id = new Guid(),
+            Id = Guid.NewGuid(),
             Title = request.title,
             UserId = userId,
         };
         if (request.parentId != null)
         {
-            if (await checkExistedCategory(request.parentId.Value))
-            {
-                newCate.ParentCategoryNewsId = request.parentId;
-            }
-            else
+            var parentCategory = await GetActiveCategory(request.parentId.Value);
+            if (parentCategory == null)
             {
                 throw new NotFoundException("CATEGORY_NOT_FOUND");
             }
+
+            if (parentCategory.ParentCategoryNewsId != null)
+            {
+                throw new BadRequestException("CATEGORY_PARENT_INVALID");
+            }
+
+            newCate.ParentCategoryNewsId = request.parentId;
         }
 
         var result = new Response.CreateCategoryResponse()
@@ -175,7 +168,7 @@ public class Service : IService
             {
                 if (listCateId.TryGetValue(item.parentId.Value, out var parentItem))
                 {
-                    parentItem.children = new List<Response.CategoryResponse>();
+                    parentItem.children ??= new List<Response.CategoryResponse>();
                     parentItem.children.Add(item);
                 }
             }
@@ -252,6 +245,16 @@ public class Service : IService
             throw new BadRequestException("CATEGORY_PARENT_INVALID");
         }
 
+        var isDuplicateTitle = await _dbContext.CategoryNewsList.AnyAsync(x =>
+            !x.IsDeleted &&
+            x.Id != categoryId &&
+            x.ParentCategoryNewsId == request.parentId &&
+            x.Title == request.title);
+        if (isDuplicateTitle)
+        {
+            throw new ConflictException("CATEGORY_ALREADY_EXISTS");
+        }
+
         if (request.parentId != null)
         {
             var parentCategory = await GetActiveCategory(request.parentId.Value);
@@ -260,7 +263,14 @@ public class Service : IService
                 throw new NotFoundException("PARENT_CATEGORY_NOT_FOUND");
             }
 
-            if (await IsParentLoop(categoryId, request.parentId.Value))
+            if (parentCategory.ParentCategoryNewsId != null)
+            {
+                throw new BadRequestException("CATEGORY_PARENT_INVALID");
+            }
+
+            var hasChildren = await _dbContext.CategoryNewsList.AnyAsync(x =>
+                !x.IsDeleted && x.ParentCategoryNewsId == categoryId);
+            if (hasChildren)
             {
                 throw new BadRequestException("CATEGORY_PARENT_INVALID");
             }
@@ -282,32 +292,17 @@ public class Service : IService
             throw new NotFoundException("CATEGORY_NOT_FOUND");
         }
 
-        var categories = await _dbContext.CategoryNewsList
-            .Where(x => !x.IsDeleted)
-            .ToListAsync();
-        var categoryIds = new HashSet<Guid> { categoryId };
-        var queue = new Queue<Guid>();
-        queue.Enqueue(categoryId);
-
-        while (queue.Count > 0)
+        var categories = new List<CategoryNews> { category };
+        if (category.ParentCategoryNewsId == null)
         {
-            var currentId = queue.Dequeue();
-            var childIds = categories
-                .Where(x => x.ParentCategoryNewsId == currentId)
-                .Select(x => x.Id)
-                .ToList();
-
-            foreach (var childId in childIds)
-            {
-                if (categoryIds.Add(childId))
-                {
-                    queue.Enqueue(childId);
-                }
-            }
+            var childCategories = await _dbContext.CategoryNewsList
+                .Where(x => !x.IsDeleted && x.ParentCategoryNewsId == categoryId)
+                .ToListAsync();
+            categories.AddRange(childCategories);
         }
 
         var now = DateTimeOffset.UtcNow;
-        foreach (var item in categories.Where(x => categoryIds.Contains(x.Id)))
+        foreach (var item in categories)
         {
             item.IsDeleted = true;
             item.UpdatedAt = now;

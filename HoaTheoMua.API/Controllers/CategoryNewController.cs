@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Route("/api/[controller]")]
+[Route("/api/category-news")]
 [Authorize]
 public class CategoryNewController:ControllerBase
 {
