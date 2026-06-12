@@ -6,6 +6,5 @@ public class Request
     {
         public Guid UserId { get; set; }
         public dynamic Metadata { get; set; } = null!;
-
     }
 }

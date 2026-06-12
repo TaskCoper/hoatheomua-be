@@ -1,6 +1,7 @@
-﻿using System.Runtime.InteropServices.JavaScript;
+﻿
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Order;
@@ -55,6 +56,7 @@ public class Service: IService
                            $"amount={totalAmount}&" +
                            $"des={description}&" +
                            $"template=qronly";
+        
         var result = new Response.CreateOrderResponse()
         {
             OrderId = newOrder.Id,
@@ -62,7 +64,17 @@ public class Service: IService
             QrCodeUrl =  qrCodeUrl,
         };
         
-        
         throw new NotImplementedException();
+    }
+
+    public async Task<string> CheckingOrder(Guid orderId)
+    {
+        var order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
+        if (order == null)
+        {
+            throw new BadRequestException("Order ID " + orderId + " not found");
+        }
+        
+        return order.Status;
     }
 }

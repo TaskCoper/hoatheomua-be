@@ -65,6 +65,8 @@ public static class JwtExtensions
             });
         services.AddAuthorization(options =>
         {
+            // Độ lại IsVerify của Base Authorize của .NET luôn 
+            
             options.AddPolicy(AdminPolicy, policy =>
                 policy.RequireRole("Admin"));
             // [Authorize(Policy = JwtExtensions.AdminPolicy)]
