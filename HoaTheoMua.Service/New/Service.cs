@@ -197,7 +197,7 @@ public class Service : IService
             Description = news.Description,
             ViewCount = news.ViewCount,
             PictureUrl = news.CoverImage,
-            Status = news.Status,
+            Status = news.Status.ToString(),
             UserId = news.UserId,
             CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
             CreatedAt = news.CreatedAt,
