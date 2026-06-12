@@ -24,8 +24,8 @@ public class Service: IService
         try
         {
             var metadataJson = JObject.FromObject(request.Metadata);
-            itemAmount = metadataJson["sub_total"] != null ? (decimal)metadataJson["sub_total"] : 0;
-            shippingFee = metadataJson["shipping_fee"] != null ? (decimal)metadataJson["shipping_fee"] : 0;
+            itemAmount = metadataJson["subTotal"] != null ? (decimal)metadataJson["subTotal"] : 0;
+            shippingFee = metadataJson["shippingFee"] != null ? (decimal)metadataJson["shippingFee"] : 0;
         }
         catch (Exception)
         {
