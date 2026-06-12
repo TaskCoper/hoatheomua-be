@@ -14,6 +14,9 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.Status)
             .IsRequired();
         
+        builder.Property(o => o.Metadata)
+            .IsRequired();
+        
         builder.Property(o => o.CreatedAt)
             .HasDefaultValueSql("now()");
 
