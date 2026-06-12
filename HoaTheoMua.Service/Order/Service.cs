@@ -47,7 +47,7 @@ public class Service: IService
         await _dbContext.Orders.AddAsync(newOrder);
         await _dbContext.SaveChangesAsync();
 
-        string description = $"HOATHEOMUA-{newOrder.UserId}";
+        string description = $"HOATHEOMUA-{newOrder.Id}";
         string bankName = "MBBank";
         string bankAccount = "0384875317";
         string qrCodeUrl = $"https://qr.sepay.vn/img?" +
@@ -63,8 +63,8 @@ public class Service: IService
             TotalAmount =  totalAmount,
             QrCodeUrl =  qrCodeUrl,
         };
-        
-        throw new NotImplementedException();
+
+        return result;
     }
 
     public async Task<string> CheckingOrder(Guid orderId)
@@ -72,7 +72,7 @@ public class Service: IService
         var order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
         if (order == null)
         {
-            throw new BadRequestException("Order ID " + orderId + " not found");
+            throw new NotFoundException("Order ID " + orderId + " not found");
         }
         
         return order.Status;

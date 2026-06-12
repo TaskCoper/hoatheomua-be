@@ -35,7 +35,7 @@ public class Service: IService
         }
         else
         {
-            throw new BadRequestException("Invalid exception format");
+            throw new BadRequestException("Invalid description format");
         }
         
         if (orderId == null)
