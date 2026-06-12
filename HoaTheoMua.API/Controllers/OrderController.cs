@@ -35,7 +35,7 @@ public class OrderController: ControllerBase
         return Ok(result);
     }
     
-    [HttpPost("/api/v1/orders/tracking-number")]
+    [HttpPost("/api/v1/orders/update-tracking-number")]
     public async Task<IActionResult> UpdateOrder([FromBody]Request.UpdateOrderRequest request)
     {
         var result = await _orderService.UpdateOrder(request);

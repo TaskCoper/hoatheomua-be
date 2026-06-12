@@ -1034,6 +1034,36 @@ namespace HoaTheoMua.Repository.Migrations
                             Status = "Paid",
                             TrackNumber = "TRK1007",
                             UserId = new Guid("33333333-3333-3333-3333-333333333339")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444448"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Pending",
+                            TrackNumber = "TRK1008",
+                            UserId = new Guid("e5c95b37-6dd1-4bcf-b560-e80d9dc60996")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444449"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Paid",
+                            TrackNumber = "TRK1009",
+                            UserId = new Guid("e5c95b37-6dd1-4bcf-b560-e80d9dc60996")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444450"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Shipped",
+                            TrackNumber = "TRK1010",
+                            UserId = new Guid("e5c95b37-6dd1-4bcf-b560-e80d9dc60996")
                         });
                 });
 
@@ -1440,6 +1470,63 @@ namespace HoaTheoMua.Repository.Migrations
                             SubAccount = "",
                             TransactionDate = new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Utc),
                             TransferAmount = 300000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555558"),
+                            AccountNumber = "123456789",
+                            Accumulated = 1400000m,
+                            Code = "SEP1008",
+                            Content = "Payment for TRK1008",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444448"),
+                            ReferenceCode = "REF1008",
+                            SePayId = 1008L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 350000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555559"),
+                            AccountNumber = "123456789",
+                            Accumulated = 1800000m,
+                            Code = "SEP1009",
+                            Content = "Payment for TRK1009",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444449"),
+                            ReferenceCode = "REF1009",
+                            SePayId = 1009L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 400000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555560"),
+                            AccountNumber = "123456789",
+                            Accumulated = 2250000m,
+                            Code = "SEP1010",
+                            Content = "Payment for TRK1010",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444450"),
+                            ReferenceCode = "REF1010",
+                            SePayId = 1010L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 450000m,
                             TransferType = "IN"
                         });
                 });

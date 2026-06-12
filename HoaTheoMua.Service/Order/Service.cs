@@ -1,4 +1,4 @@
-﻿
+
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -31,7 +31,7 @@ public class Service: IService
         }
         var userId = Guid.Parse(user);
         
-        var existUser = _dbContext.Users
+        var existUser = await _dbContext.Users
             .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
         if (existUser == null)
         {
@@ -95,7 +95,7 @@ public class Service: IService
         }
         var userId = Guid.Parse(user);
         
-        var existUser = _dbContext.Users
+        var existUser = await _dbContext.Users
             .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
         if (existUser == null)
         {
@@ -156,14 +156,21 @@ public class Service: IService
         var orders = _dbContext.Orders
             .Where(x => x.IsDeleted == false && x.UserId == userId);
         var totalCount = await orders.CountAsync();
-        
+
         var items = await orders
             .OrderByDescending(o => o.CreatedAt)
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-            
-        return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+
+        var result =  items.Select(x => new Response.GetOrderResponse
+        {
+            OrderId =  x.Id,
+            Status = x.Status.ToString(),
+            TrackNumber = x.TrackNumber,
+        }).ToList();
+        
+        return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
     
 }

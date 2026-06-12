@@ -52,7 +52,7 @@ public class Service: IService
         
         if (order.Status != "Pending")
         {
-            throw new ConflictException("Order already progressed");
+            return;
         }
         
         decimal itemAmount = 0;
