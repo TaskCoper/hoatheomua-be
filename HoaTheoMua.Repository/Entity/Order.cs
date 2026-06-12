@@ -7,6 +7,7 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     
     public decimal TrackNumber { get; set; }
     public string Status { get; set; }
+    public object? Metadata { get; set; }
     
     public Guid UserId { get; set; }
     public User User  { get; set; }
