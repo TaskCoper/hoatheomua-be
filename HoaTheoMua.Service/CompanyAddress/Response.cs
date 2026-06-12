@@ -29,7 +29,7 @@ public class Response
     {
         public List<CompanyAddressResponse> Items { get; set; } = new();
 
-        public int Page { get; set; }
+        public int PageIndex { get; set; }
 
         public int PageSize { get; set; }
 
