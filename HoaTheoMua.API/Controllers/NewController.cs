@@ -7,7 +7,7 @@ using NewService = HoaTheoMua.Service.New;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/news")]
 [Authorize]
 public class NewController : ControllerBase
 {
