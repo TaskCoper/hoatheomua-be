@@ -59,7 +59,7 @@ public class Service: IService
         {
             UserId = userId,
             Status = "Pending",
-            TrackNumber = totalAmount,
+            TrackNumber = "",
             Metadata = request.Metadata.ToString(),
             CreatedAt = DateTime.Now,
         };
@@ -79,8 +79,6 @@ public class Service: IService
         
         var result = new Response.CreateOrderResponse()
         {
-            OrderId = newOrder.Id,
-            TotalAmount =  totalAmount,
             QrCodeUrl =  qrCodeUrl,
         };
 
@@ -111,6 +109,32 @@ public class Service: IService
         }
         
         return order.Status;
+    }
+
+    public async Task<string> UpdateOrder(Request.UpdateOrderRequest request)
+    {
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        
+        var userId = Guid.Parse(user);
+        
+
+        var orders = await _dbContext.Orders
+            .FirstOrDefaultAsync(x => 
+                x.IsDeleted == false && 
+                x.UserId == userId &&
+                x.Id == request.OrderId);
+        if (orders == null)
+        {
+            throw new NotFoundException("Order ID " + request.OrderId + " not found");
+        }
+
+        orders.TrackNumber = request.TrackNumber;
+        return "Cập nhật thành công";
     }
 
     public async Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize)  

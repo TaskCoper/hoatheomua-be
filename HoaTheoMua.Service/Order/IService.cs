@@ -6,5 +6,6 @@ public interface IService
 {
     Task<Response.CreateOrderResponse> CreateOrderTransport(Request.CreateOrderRequest request);
     Task<string> CheckingOrder(Guid orderId);
+    Task<string> UpdateOrder(Request.UpdateOrderRequest request);
     Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize);
 }

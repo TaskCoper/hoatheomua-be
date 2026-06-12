@@ -2,6 +2,7 @@
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Webhook;
 
@@ -53,8 +54,15 @@ public class Service: IService
         {
             throw new ConflictException("Order already progressed");
         }
-
-        decimal totalAmount = order.TrackNumber;
+        
+        decimal itemAmount = 0;
+        decimal shippingFee = 0;
+        
+        var metadataJson = JObject.FromObject(order.Metadata);
+        itemAmount = metadataJson["subTotal"] != null ? (decimal)metadataJson["subTotal"]! : 0;
+        shippingFee = metadataJson["shippingFee"] != null ? (decimal)metadataJson["shippingFee"]! : 0;
+        
+        decimal totalAmount = itemAmount + shippingFee;
         
         if (totalAmount != request.TransferAmount)
         {
