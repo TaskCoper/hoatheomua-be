@@ -334,6 +334,7 @@ public class Service : IService
                 Avatar = y.Avatar,
                 IsVerify =  y.IsVerify,
                 Role = y.Role.ToString(),
+                UserId = y.Id,
             }).FirstOrDefaultAsync();
 
         if (query == null)
