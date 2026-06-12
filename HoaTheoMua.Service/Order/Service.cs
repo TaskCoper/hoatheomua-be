@@ -20,8 +20,24 @@ public class Service: IService
     }
 
 
-    public async Task<Response.CreateOrderResponse> ProcessOrderTransport(Request.CreateOrderRequest request)
+    public async Task<Response.CreateOrderResponse> CreateOrderTransport(Request.CreateOrderRequest request)
     {
+        
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        var userId = Guid.Parse(user);
+        
+        var existUser = _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        if (existUser == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+        
         decimal itemAmount = 0;
         decimal shippingFee = 0;
 
@@ -41,7 +57,7 @@ public class Service: IService
 
         var newOrder = new Repository.Entity.Order()
         {
-            UserId = request.UserId,
+            UserId = userId,
             Status = "Pending",
             TrackNumber = totalAmount,
             Metadata = request.Metadata.ToString(),
@@ -73,6 +89,21 @@ public class Service: IService
 
     public async Task<string> CheckingOrder(Guid orderId)
     {
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        var userId = Guid.Parse(user);
+        
+        var existUser = _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        if (existUser == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+        
         var order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
         if (order == null)
         {

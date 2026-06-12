@@ -17,7 +17,7 @@ public class OrderController: ControllerBase
     [HttpPost("/api/v1/orders")]
     public async Task<IActionResult> CreateOrderTransport([FromBody]Request.CreateOrderRequest request)
     {
-        var result = await _orderService.ProcessOrderTransport(request);
+        var result = await _orderService.CreateOrderTransport(request);
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
