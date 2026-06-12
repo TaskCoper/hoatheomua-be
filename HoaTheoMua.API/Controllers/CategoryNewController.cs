@@ -8,7 +8,7 @@ namespace HoaTheoMua.Controllers;
 
 [ApiController]
 [Route("/api/category-news")]
-[Authorize]
+
 public class CategoryNewController:ControllerBase
 {
     private readonly IService _categoryService;
@@ -18,6 +18,7 @@ public class CategoryNewController:ControllerBase
     }
     
     [HttpPost]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> CreateCate([FromBody]Request.CreateCategoriesRequest request) 
     {
         var result = await _categoryService.CreateCate(request);
@@ -39,6 +40,7 @@ public class CategoryNewController:ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UpdateCate(Guid id, [FromBody] Request.UpdateCategoriesRequest request)
     {
         var result = await _categoryService.UpdateCate(id, request);
@@ -46,6 +48,7 @@ public class CategoryNewController:ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> DeleteCate(Guid id)
     {
         await _categoryService.DeleteCate(id);
