@@ -22,8 +22,8 @@ public class PaginationValue
     public int PageIndex { get; set; }
     public int PageSize { get; set; }
     public int TotalCount { get; set; }
-    public bool HasNextPage => PageIndex * PageSize < TotalCount;   
-    public bool HasPreviousPage => PageIndex > 1;
+    public bool HasNextPage { get; set; }   
+    public bool HasPreviousPage {get; set;}
 }
 
 public class BasePaginationResponse : ApiResponse
@@ -79,7 +79,9 @@ public static class ApiResponseFactory
                 Items = newItems,       
                 PageIndex = pageIndex,
                 PageSize = pageSize,
-                TotalCount = totalCount
+                TotalCount = totalCount,
+                HasNextPage =  pageIndex * pageSize < totalCount ? true : false,
+                HasPreviousPage = pageIndex > 1 ? true : false,
             }
         };
     }
