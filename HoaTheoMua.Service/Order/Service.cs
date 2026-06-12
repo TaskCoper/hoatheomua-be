@@ -1,6 +1,8 @@
 ﻿
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 
@@ -9,10 +11,12 @@ namespace HoaTheoMua.Service.Order;
 public class Service: IService
 {
     private readonly AppDbContext _dbContext;
+    private readonly IHttpContextAccessor _httpContext;
     
-    public Service(AppDbContext dbContext)
+    public Service(AppDbContext dbContext, IHttpContextAccessor httpContext)
     {
         _dbContext = dbContext;
+        _httpContext = httpContext;
     }
 
 
@@ -77,4 +81,30 @@ public class Service: IService
         
         return order.Status;
     }
+
+    public async Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize)  
+    {        
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        
+        var userId = Guid.Parse(user);
+        
+
+        var orders = _dbContext.Orders
+            .Where(x => x.IsDeleted == false && x.UserId == userId);
+        var totalCount = await orders.CountAsync();
+        
+        var items = await orders
+            .OrderByDescending(o => o.CreatedAt)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+            
+        return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+    }
+    
 }
