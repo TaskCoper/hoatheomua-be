@@ -84,6 +84,9 @@ public class Service: IService
 
     public async Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize)  
     {        
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        
         var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
   
         if (user == null)  
