@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Route("/api/category-news")]
+[Route("/api/v1/category-news")]
 
 public class CategoryNewController:ControllerBase
 {
@@ -29,7 +29,7 @@ public class CategoryNewController:ControllerBase
     public async Task<IActionResult> GetCategories(int pageIndex, int pageSize)
     {
         var result = await _categoryService.GetCategories(pageIndex, pageSize);
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}")]
