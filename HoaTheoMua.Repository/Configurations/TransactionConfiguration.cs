@@ -35,9 +35,6 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(t => t.ReferenceCode)
             .HasMaxLength(100);
 
-        builder.Property(t => t.Status)
-            .HasMaxLength(50)
-            .HasDefaultValue("Success");
 
         builder.Property(t => t.CreatedAt)
             .HasDefaultValueSql("now()");
