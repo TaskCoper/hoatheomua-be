@@ -18,7 +18,7 @@ public class Service: IService
     public async Task SepayWebhookHandler(Request.SepayWebhookRequest request)
     {
         var description = request.Code;
-        var raw = description.Replace("HOATHEOMUA-", "");
+        var raw = description.Replace("HOATHEOMUA", "");
         
         Guid? orderId = null;
         if (raw.Length == 32) 
