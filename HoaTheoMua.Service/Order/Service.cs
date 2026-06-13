@@ -174,6 +174,10 @@ public class Service: IService
             OrderId =  x.Id,
             Status = x.Status.ToString(),
             TrackNumber = x.TrackNumber,
+            NhanhOrderId = x.NhanhOrderId!,
+            NhanhTrackingUrl = x.NhanhTrackingUrl!,
+            AhahaMoveOrderId = x.AhahaMoveOrderId!,
+            AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl!,
             CreateAt = x.CreatedAt,
             UpdateAt = x.UpdatedAt,
         }).ToList();
@@ -269,6 +273,10 @@ public class Service: IService
             TrackNumber = orders.TrackNumber,
             QrCodeUrl = qrCodeUrl,
             Metadata = orders.Metadata,
+            NhanhOrderId = orders.NhanhOrderId!,
+            NhanhTrackingUrl = orders.NhanhTrackingUrl!,
+            AhahaMoveOrderId = orders.AhahaMoveOrderId!,
+            AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl!,
 
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
@@ -334,6 +342,10 @@ public class Service: IService
 
         orders.TrackNumber = request.TrackingNumber;
         orders.Metadata = request.Metadata.ToString()!;
+        orders.NhanhOrderId = request.NhanhOrderId;
+        orders.AhahaMoveOrderId = request.AhahaMoveOrderId;
+        orders.NhanhTrackingUrl = request.NhanhTrackingUrl;
+        orders.AhahaMoveTrackingUrl = request.AhahaMoveTrackingUrl;
         orders.UpdatedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
         return "Cập nhật thành công";

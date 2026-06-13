@@ -933,11 +933,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("AhahaMoveOrderId")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("AhahaMoveTrackingUrl")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -953,11 +951,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("NhanhOrderId")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("NhanhTrackingUrl")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Status")
@@ -984,13 +980,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444441"),
-                            AhahaMoveOrderId = "AHM1011",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123",
                             Status = "Pending",
                             TrackNumber = "TRK1001",
                             UserId = new Guid("33333333-3333-3333-3333-333333333333")
@@ -998,13 +990,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444442"),
-                            AhahaMoveOrderId = "AHM104311",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123",
                             Status = "Paid",
                             TrackNumber = "TRK1002",
                             UserId = new Guid("33333333-3333-3333-3333-333333333334")
@@ -1012,13 +1000,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444443"),
-                            AhahaMoveOrderId = "AHM865",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123",
                             Status = "Shipped",
                             TrackNumber = "TRK1003",
                             UserId = new Guid("33333333-3333-3333-3333-333333333335")
@@ -1026,13 +1010,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444444"),
-                            AhahaMoveOrderId = "AHM5543",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123",
                             Status = "Delivered",
                             TrackNumber = "TRK1004",
                             UserId = new Guid("33333333-3333-3333-3333-333333333336")
@@ -1040,13 +1020,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444445"),
-                            AhahaMoveOrderId = "AHM6444",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123",
                             Status = "Cancelled",
                             TrackNumber = "TRK1005",
                             UserId = new Guid("33333333-3333-3333-3333-333333333337")
@@ -1054,13 +1030,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444446"),
-                            AhahaMoveOrderId = "AHM1234t1",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123",
                             Status = "Pending",
                             TrackNumber = "TRK1006",
                             UserId = new Guid("33333333-3333-3333-3333-333333333338")
@@ -1068,13 +1040,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444447"),
-                            AhahaMoveOrderId = "AHM10234",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123",
                             Status = "Paid",
                             TrackNumber = "TRK1007",
                             UserId = new Guid("33333333-3333-3333-3333-333333333339")
@@ -1082,13 +1050,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444448"),
-                            AhahaMoveOrderId = "AHM1435",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123",
                             Status = "Pending",
                             TrackNumber = "TRK1008",
                             UserId = new Guid("33333333-3333-3333-3333-333333333333")
@@ -1096,13 +1060,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444449"),
-                            AhahaMoveOrderId = "AHM1015",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123",
                             Status = "Paid",
                             TrackNumber = "TRK1009",
                             UserId = new Guid("33333333-3333-3333-3333-333333333333")
@@ -1110,13 +1070,9 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444450"),
-                            AhahaMoveOrderId = "AHM1013",
-                            AhahaMoveTrackingUrl = "https://ahahovetrackingUrl",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
-                            NhanhOrderId = "NO14",
-                            NhanhTrackingUrl = "https://123 ",
                             Status = "Shipped",
                             TrackNumber = "TRK1010",
                             UserId = new Guid("33333333-3333-3333-3333-333333333333")

@@ -16,18 +16,6 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.Status)
             .IsRequired();
         
-        builder.Property(o => o.NhanhOrderId)
-            .IsRequired();
-        
-        builder.Property(o => o.NhanhTrackingUrl)
-            .IsRequired();
-        
-        builder.Property(o => o.AhahaMoveOrderId)
-            .IsRequired();
-        
-        builder.Property(o => o.AhahaMoveTrackingUrl)
-            .IsRequired();
-        
         builder.Property(o => o.Metadata)
             .IsRequired();
         
