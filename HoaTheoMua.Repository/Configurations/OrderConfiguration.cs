@@ -2,6 +2,7 @@ using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Configurations.Seeds;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure;
 
 namespace HoaTheoMua.Repository.Configurations;
 
@@ -13,6 +14,12 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .IsRequired();
 
         builder.Property(o => o.Status)
+            .IsRequired();
+        
+        builder.Property(o => o.NhanhOrderId)
+            .IsRequired();
+        
+        builder.Property(o => o.NhanhTrackingUrl)
             .IsRequired();
         
         builder.Property(o => o.Metadata)

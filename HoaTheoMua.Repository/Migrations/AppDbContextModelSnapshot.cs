@@ -944,6 +944,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("NhanhOrderId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -971,6 +975,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Pending",
                             TrackNumber = "TRK1001",
                             UserId = new Guid("33333333-3333-3333-3333-333333333333")
@@ -981,6 +986,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Paid",
                             TrackNumber = "TRK1002",
                             UserId = new Guid("33333333-3333-3333-3333-333333333334")
@@ -991,6 +997,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Shipped",
                             TrackNumber = "TRK1003",
                             UserId = new Guid("33333333-3333-3333-3333-333333333335")
@@ -1001,6 +1008,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Delivered",
                             TrackNumber = "TRK1004",
                             UserId = new Guid("33333333-3333-3333-3333-333333333336")
@@ -1011,6 +1019,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Cancelled",
                             TrackNumber = "TRK1005",
                             UserId = new Guid("33333333-3333-3333-3333-333333333337")
@@ -1021,6 +1030,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Pending",
                             TrackNumber = "TRK1006",
                             UserId = new Guid("33333333-3333-3333-3333-333333333338")
@@ -1031,6 +1041,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Paid",
                             TrackNumber = "TRK1007",
                             UserId = new Guid("33333333-3333-3333-3333-333333333339")
@@ -1041,6 +1052,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Pending",
                             TrackNumber = "TRK1008",
                             UserId = new Guid("33333333-3333-3333-3333-333333333333")
@@ -1051,6 +1063,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Paid",
                             TrackNumber = "TRK1009",
                             UserId = new Guid("33333333-3333-3333-3333-333333333333")
@@ -1061,6 +1074,7 @@ namespace HoaTheoMua.Repository.Migrations
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDeleted = false,
                             Metadata = "{}",
+                            NhanhOrderId = "1",
                             Status = "Shipped",
                             TrackNumber = "TRK1010",
                             UserId = new Guid("33333333-3333-3333-3333-333333333333")
