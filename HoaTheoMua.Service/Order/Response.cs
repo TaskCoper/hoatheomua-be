@@ -15,6 +15,8 @@ public class Response
         public Guid OrderId { get; set; }
         public string Status { get; set; }
         public string TrackNumber { get; set; }
+        public DateTimeOffset CreateAt { get; set; }
+        public DateTimeOffset? UpdateAt { get; set; }
     }
     
     public class GetOrderByIdResponse
@@ -22,6 +24,7 @@ public class Response
         public Guid OrderId { get; set; }
         public string Status { get; set; }
         public string TrackNumber { get; set; }
+        public string Metadata { get; set; }
         public string QrCodeUrl { get; set; } = string.Empty;
         
         public OrderTransactionResponse? Transaction { get; set; }

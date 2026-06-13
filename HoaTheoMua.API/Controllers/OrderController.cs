@@ -14,6 +14,13 @@ public class OrderController: ControllerBase
         _orderService = orderService;
     }
     
+    [HttpGet("/api/v1/orders")]
+    public async Task<IActionResult> GetOrderById(int pageIndex, int pageSize)
+    {
+        var result = await _orderService.GetOrderPaginationResponse(pageIndex,  pageSize);
+        return Ok(result);
+    }
+    
     [HttpPost("/api/v1/orders")]
     public async Task<IActionResult> CreateOrder([FromBody]Request.CreateOrderRequest request)
     {
@@ -37,9 +44,9 @@ public class OrderController: ControllerBase
     }
     
     [HttpPut("/api/v1/orders/{id}")]
-    public async Task<IActionResult> UpdateOrderById(Request.UpdateOrderByIdRequest request)
+    public async Task<IActionResult> UpdateOrderById(Guid id, [FromBody]Request.UpdateOrderByIdRequest request)
     {
-        var result = await _orderService.UpdateOrderById(request);
+        var result = await _orderService.UpdateOrderById(id, request);
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
