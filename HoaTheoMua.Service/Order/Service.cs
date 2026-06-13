@@ -4,6 +4,7 @@ using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Order;
@@ -41,16 +42,17 @@ public class Service: IService
         decimal itemAmount = 0;
         decimal shippingFee = 0;
 
-        try
-        {
-            var metadataJson = JObject.FromObject(request.Metadata);
-            itemAmount = metadataJson["subTotal"] != null ? (decimal)metadataJson["subTotal"] : 0;
-            shippingFee = metadataJson["shippingFee"] != null ? (decimal)metadataJson["shippingFee"] : 0;
-        }
-        catch (Exception)
-        {
-            throw new BadRequestException("Metadata FE gửi không có field mà FE mong chờ :((");
-        }
+        string raw;
+        if (request.Metadata is System.Text.Json.JsonElement je)
+            raw = je.GetRawText(); 
+        else if (request.Metadata is string s)
+            raw = s;
+        else
+            raw = JsonConvert.SerializeObject(request.Metadata);
+
+        var metadataJson = JObject.Parse(raw);
+        itemAmount  = metadataJson["subTotal"]?.Value<decimal>()    ?? 0;
+        shippingFee = metadataJson["shippingFee"]?.Value<decimal>() ?? 0;
         
         
         decimal totalAmount = itemAmount + shippingFee;
