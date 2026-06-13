@@ -250,7 +250,7 @@ public class Service: IService
         
         string description = $"HOATHEOMUA{orders.Id:N}";
         string bankName = "BIDV";
-        string bankAccount = "8886369921";
+        string bankAccount = "96247BENTRAN";
         string qrCodeUrl = $"https://qr.sepay.vn/img?" +
                            $"acc={bankAccount}&" +
                            $"bank={bankName}&" +
