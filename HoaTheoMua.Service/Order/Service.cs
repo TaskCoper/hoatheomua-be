@@ -310,7 +310,7 @@ public class Service: IService
         return order.Status;
     }
 
-    public async Task<string> UpdateOrderById(Request.UpdateOrderByIdRequest request)
+    public async Task<string> UpdateOrderById(Guid id, Request.UpdateOrderByIdRequest request)
     {
         var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
   
@@ -326,10 +326,10 @@ public class Service: IService
             .FirstOrDefaultAsync(x => 
                 x.IsDeleted == false && 
                 x.UserId == userId &&
-                x.Id == request.OrderId);
+                x.Id == id);
         if (orders == null)
         {
-            throw new NotFoundException("Order ID " + request.OrderId + " not found");
+            throw new NotFoundException("Order ID " + id + " not found");
         }
 
         orders.TrackNumber = request.TrackingNumber;
