@@ -137,15 +137,27 @@ public class Service : IService
         news.Status = request.Status;
         news.UpdatedAt = DateTimeOffset.UtcNow;
 
-        _dbContext.CategoryNewsDetails.RemoveRange(news.CategoryNewsDetail);
-        news.CategoryNewsDetail = categoryIds.Select(categoryId => new CategoryNewsDetail
+        var currentCategoryDetails = news.CategoryNewsDetail.ToList();
+        var currentCategoryIds = currentCategoryDetails.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList();
+        var categoryDetailsToRemove = currentCategoryDetails
+            .Where(categoryNewsDetail => !categoryIds.Contains(categoryNewsDetail.CategoryNewsId))
+            .ToList();
+        var categoryIdsToAdd = categoryIds
+            .Where(categoryId => !currentCategoryIds.Contains(categoryId))
+            .ToList();
+
+        _dbContext.CategoryNewsDetails.RemoveRange(categoryDetailsToRemove);
+        foreach (var categoryId in categoryIdsToAdd)
         {
-            Id = Guid.NewGuid(),
-            CategoryNewsId = categoryId,
-            NewsId = news.Id,
-            IsDeleted = false,
-            CreatedAt = DateTimeOffset.UtcNow
-        }).ToList();
+            news.CategoryNewsDetail.Add(new CategoryNewsDetail
+            {
+                Id = Guid.NewGuid(),
+                CategoryNewsId = categoryId,
+                NewsId = news.Id,
+                IsDeleted = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        }
 
         await _dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
