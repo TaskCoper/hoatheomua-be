@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
@@ -7,7 +8,7 @@ using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Webhook;
 
-public class Service : IService
+public partial class Service : IService
 {
     private readonly AppDbContext _dbContext;
 
@@ -16,36 +17,109 @@ public class Service : IService
         _dbContext = dbContext;
     }
 
-    public async Task SepayWebhookHandler(Request.SepayWebhookRequest request)
+    // Match "HTM" (optional separator) + a GUID. The bank/SePay strips dashes, so the GUID can
+    // arrive either as 32 hex chars or in full dashed form, possibly surrounded by other text.
+    [GeneratedRegex(
+        @"HTM[-_]?([0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex PaymentCodeRegex();
+
+    private static bool TryExtractOrderId(string? value, out Guid orderId)
     {
-        // SePay puts the parsed code in Code, but only when a payment-code pattern is
-        // configured; otherwise fall back to the raw transfer memo in Content.
-        var source = !string.IsNullOrWhiteSpace(request.Code) ? request.Code : request.Content;
-        if (string.IsNullOrWhiteSpace(source))
+        orderId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(value))
         {
-            throw new BadRequestException("Invalid description format");
+            return false;
         }
 
-        // Match "HTM" (optional separator) + a GUID. The bank/SePay strips dashes, so the
-        // GUID can arrive either as 32 hex chars or in full dashed form, possibly surrounded
-        // by other transfer text (reference numbers, account numbers, etc.).
-        var match = Regex.Match(
-            source,
-            @"HTM[-_]?([0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})",
-            RegexOptions.IgnoreCase);
-
+        var match = PaymentCodeRegex().Match(value);
         if (!match.Success)
         {
-            throw new BadRequestException("Invalid description format");
+            return false;
         }
 
         var hex = match.Groups[1].Value.Replace("-", "");
-        if (!Guid.TryParseExact(hex, "N", out var orderId))
+        return Guid.TryParseExact(hex, "N", out orderId);
+    }
+
+    // Same prefix as PaymentCodeRegex but matches a partial run of hex (with optional dashes),
+    // used to recover the order when SePay truncates the code below a full 32-char GUID.
+    [GeneratedRegex(@"HTM[-_]?([0-9a-fA-F][0-9a-fA-F-]*)", RegexOptions.IgnoreCase)]
+    private static partial Regex PaymentCodePrefixRegex();
+
+    // Minimum hex chars before a prefix is unique enough to safely resolve a single order.
+    private const int MinPrefixLength = 24;
+
+    private static bool TryExtractOrderIdPrefix(string? value, out string dashedPrefix)
+    {
+        dashedPrefix = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var match = PaymentCodePrefixRegex().Match(value);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        // Postgres renders uuid as lowercase hex with dashes; normalize to match Id::text.
+        var hex = match.Groups[1].Value.Replace("-", "").ToLowerInvariant();
+
+        // Full GUIDs are handled by TryExtractOrderId; only act on genuinely truncated codes.
+        if (hex.Length < MinPrefixLength || hex.Length >= 32)
+        {
+            return false;
+        }
+
+        var sb = new StringBuilder(hex.Length + 4);
+        for (var i = 0; i < hex.Length; i++)
+        {
+            if (i is 8 or 12 or 16 or 20)
+            {
+                sb.Append('-');
+            }
+            sb.Append(hex[i]);
+        }
+
+        dashedPrefix = sb.ToString();
+        return true;
+    }
+
+    public async Task SepayWebhookHandler(Request.SepayWebhookRequest request)
+    {
+        // SePay's parsed Code can be truncated (it sometimes drops trailing chars), so prefer the
+        // raw transfer memo in Content, which carries the full code, and fall back to Code.
+        Repository.Entity.Order? order;
+
+        if (TryExtractOrderId(request.Content, out var orderId) ||
+            TryExtractOrderId(request.Code, out orderId))
+        {
+            order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
+        }
+        else if (TryExtractOrderIdPrefix(request.Content, out var prefix) ||
+                 TryExtractOrderIdPrefix(request.Code, out prefix))
+        {
+            // The code was truncated below a full GUID (e.g. "HTMd950e85c1a9b4a22947b2c8e0185e8",
+            // missing the final 2 hex chars). Resolve the order by matching the GUID prefix.
+            var matches = await _dbContext.Orders
+                .Where(o => o.Id.ToString().StartsWith(prefix))
+                .Take(2)
+                .ToListAsync();
+
+            if (matches.Count > 1)
+            {
+                throw new ConflictException("Ambiguous payment code");
+            }
+
+            order = matches.FirstOrDefault();
+        }
+        else
         {
             throw new BadRequestException("Invalid description format");
         }
 
-        var order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
         if (order == null)
         {
             throw new NotFoundException("Order not found in description");
