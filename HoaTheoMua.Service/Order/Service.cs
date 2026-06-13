@@ -246,9 +246,9 @@ public class Service: IService
         
         decimal totalAmount = itemAmount + shippingFee;
         
-        string description = $"HOATHEOMUA-{orders.Id:N}";
-        string bankName = "MBBank";
-        string bankAccount = "0384875317";
+        string description = $"HOATHEOMUA{orders.Id:N}";
+        string bankName = "BIDV";
+        string bankAccount = "8886369921";
         string qrCodeUrl = $"https://qr.sepay.vn/img?" +
                            $"acc={bankAccount}&" +
                            $"bank={bankName}&" +
