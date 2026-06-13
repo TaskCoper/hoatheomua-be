@@ -9,6 +9,7 @@ public interface IService
     Task<string> UpdateOrder(Request.UpdateOrderRequest request);
     Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize);
     
-    
+    //--------------------
     Task<string> CreateOrder(Request.CreateOrderRequest request);
+    Task<BaseResponse> GetOrderById (Guid id);
 }

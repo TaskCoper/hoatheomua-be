@@ -210,4 +210,70 @@ public class Service: IService
         
         return newOrder.Id.ToString();
     }
+
+    public async Task<BaseResponse> GetOrderById(Guid id)
+    {
+        
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        
+        var userId = Guid.Parse(user);
+        
+
+        var orders = await _dbContext.Orders
+            .Include(x => x.Transactions)
+            .FirstOrDefaultAsync(x => 
+                x.IsDeleted == false && 
+                x.UserId == userId && 
+                x.Id == id);
+        if (orders == null)
+        {
+            throw new NotFoundException("Order not found ");
+
+        }
+        
+        decimal itemAmount = 0;
+        decimal shippingFee = 0;
+        
+        var metadataJson = JObject.Parse(orders.Metadata);
+        itemAmount = metadataJson["subTotal"]?.Value<decimal>() ?? 0;
+        shippingFee = metadataJson["shippingFee"]?.Value<decimal>() ?? 0;
+        
+        decimal totalAmount = itemAmount + shippingFee;
+        
+        string description = $"HOATHEOMUA-{orders.Id:N}";
+        string bankName = "MBBank";
+        string bankAccount = "0384875317";
+        string qrCodeUrl = $"https://qr.sepay.vn/img?" +
+                           $"acc={bankAccount}&" +
+                           $"bank={bankName}&" +
+                           $"amount={totalAmount}&" +
+                           $"des={description}&" +
+                           $"template=qronly";
+        
+        var lastTransaction = orders.Transactions
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefault();
+        
+        var orderDetails = new Response.GetOrderByIdResponse
+        {
+            OrderId = orders.Id,
+            Status = orders.Status,
+            TrackNumber = orders.TrackNumber,
+            QrCodeUrl = qrCodeUrl,
+
+            Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
+            {
+                TransferAmount =  itemAmount,
+                Code = lastTransaction.Code,
+                TransactionDate = lastTransaction.TransactionDate,
+                Gateway = lastTransaction.Gateway,
+            }
+        }; 
+        return ApiResponseFactory.Base(orderDetails);
+    }
 }

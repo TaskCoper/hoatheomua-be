@@ -15,17 +15,17 @@ public class OrderController: ControllerBase
     }
     
     [HttpPost("/api/v1/orders")]
-    public async Task<IActionResult> CreateOrderTransport([FromBody]Request.CreateOrderRequest request)
+    public async Task<IActionResult> CreateOrder([FromBody]Request.CreateOrderRequest request)
     {
-        var result = await _orderService.CreateOrderTransport(request);
+        var result = await _orderService.CreateOrder(request);
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
     [HttpGet("/api/v1/orders/{id}")]
-    public async Task<IActionResult> GetOrderTransportById(Guid id)
+    public async Task<IActionResult> GetOrderById(Guid id)
     {
-        var result = await _orderService.CheckingOrder(id);
-        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+        var result = await _orderService.GetOrderById(id);
+        return Ok(result);
     }
     
     [HttpGet("/api/v1/orders")]
