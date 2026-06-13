@@ -245,10 +245,22 @@ public class Service: IService
         
         decimal itemAmount = 0;
         decimal shippingFee = 0;
+        string rawMeta = orders.Metadata ?? string.Empty;
         
-        var metadataJson = JObject.Parse(orders.Metadata);
-        itemAmount = metadataJson["subTotal"]?.Value<decimal>() ?? 0;
-        shippingFee = metadataJson["shippingFee"]?.Value<decimal>() ?? 0;
+        try
+        {
+            if (rawMeta.StartsWith("\"") && rawMeta.EndsWith("\""))
+            {
+                rawMeta = JsonConvert.DeserializeObject<string>(rawMeta) ?? rawMeta;
+            }
+            var metadataJson = JObject.Parse(rawMeta);
+            itemAmount = metadataJson["subTotal"]?.Value<decimal>() ?? 0;
+            shippingFee = metadataJson["shippingFee"]?.Value<decimal>() ?? 0;
+        }
+        catch
+        {
+            //
+        }
         
         decimal totalAmount = itemAmount + shippingFee;
         
@@ -272,7 +284,7 @@ public class Service: IService
             Status = orders.Status,
             TrackNumber = orders.TrackNumber,
             QrCodeUrl = qrCodeUrl,
-            Metadata = orders.Metadata,
+            Metadata = rawMeta,
             NhanhOrderId = orders.NhanhOrderId!,
             NhanhTrackingUrl = orders.NhanhTrackingUrl!,
             AhahaMoveOrderId = orders.AhahaMoveOrderId!,
@@ -340,8 +352,16 @@ public class Service: IService
             throw new NotFoundException("Order ID " + id + " not found");
         }
 
+        string raw;
+        if (request.Metadata is System.Text.Json.JsonElement je)
+            raw = je.GetRawText(); 
+        else if (request.Metadata is string s)
+            raw = s;
+        else
+            raw = JsonConvert.SerializeObject(request.Metadata);
+
         orders.TrackNumber = request.TrackingNumber;
-        orders.Metadata = request.Metadata.ToString()!;
+        orders.Metadata = raw;
         orders.NhanhOrderId = request.NhanhOrderId;
         orders.AhahaMoveOrderId = request.AhahaMoveOrderId;
         orders.NhanhTrackingUrl = request.NhanhTrackingUrl;
