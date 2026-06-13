@@ -144,40 +144,42 @@ public class Service: IService
     //     return "Cập nhật thành công";
     // }
 
-    // public async Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize)  
-    // {        
-    //     pageIndex = pageIndex <= 0 ? 1 : pageIndex;
-    //     pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
-    //     
-    //     var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-    //
-    //     if (user == null)  
-    //     {            
-    //         throw new UnauthorizedException("User not found");  
-    //     }
-    //     
-    //     var userId = Guid.Parse(user);
-    //     
-    //
-    //     var orders = _dbContext.Orders
-    //         .Where(x => x.IsDeleted == false && x.UserId == userId);
-    //     var totalCount = await orders.CountAsync();
-    //
-    //     var items = await orders
-    //         .OrderByDescending(o => o.CreatedAt)
-    //         .Skip((pageIndex - 1) * pageSize)
-    //         .Take(pageSize)
-    //         .ToListAsync();
-    //
-    //     var result =  items.Select(x => new Response.GetOrderResponse
-    //     {
-    //         OrderId =  x.Id,
-    //         Status = x.Status.ToString(),
-    //         TrackNumber = x.TrackNumber,
-    //     }).ToList();
-    //     
-    //     return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
-    // }
+    public async Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize)  
+    {        
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+    
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        
+        var userId = Guid.Parse(user);
+        
+    
+        var orders = _dbContext.Orders
+            .Where(x => x.IsDeleted == false && x.UserId == userId);
+        var totalCount = await orders.CountAsync();
+    
+        var items = await orders
+            .OrderByDescending(o => o.CreatedAt)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    
+        var result =  items.Select(x => new Response.GetOrderResponse
+        {
+            OrderId =  x.Id,
+            Status = x.Status.ToString(),
+            TrackNumber = x.TrackNumber,
+            CreateAt = x.CreatedAt,
+            UpdateAt = x.UpdatedAt,
+        }).ToList();
+        
+        return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
+    }
 
     //------------
     public async Task<string> CreateOrder(Request.CreateOrderRequest request)
@@ -203,7 +205,7 @@ public class Service: IService
             UserId = userId,
             Status = "Pending",
             TrackNumber = "",
-            Metadata = JsonConvert.SerializeObject(request.Metadata),
+            Metadata = request.Metadata.ToString(),
             CreatedAt = DateTime.UtcNow,
         };
         await _dbContext.Orders.AddAsync(newOrder);
@@ -266,6 +268,7 @@ public class Service: IService
             Status = orders.Status,
             TrackNumber = orders.TrackNumber,
             QrCodeUrl = qrCodeUrl,
+            Metadata = orders.Metadata,
 
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {

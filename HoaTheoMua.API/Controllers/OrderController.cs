@@ -14,6 +14,13 @@ public class OrderController: ControllerBase
         _orderService = orderService;
     }
     
+    [HttpGet("/api/v1/orders")]
+    public async Task<IActionResult> GetOrderById(int pageIndex, int pageSize)
+    {
+        var result = await _orderService.GetOrderPaginationResponse(pageIndex,  pageSize);
+        return Ok(result);
+    }
+    
     [HttpPost("/api/v1/orders")]
     public async Task<IActionResult> CreateOrder([FromBody]Request.CreateOrderRequest request)
     {
