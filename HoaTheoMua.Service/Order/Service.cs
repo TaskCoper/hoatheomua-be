@@ -233,6 +233,7 @@ public class Service : IService
                 x.IsDeleted == false &&
                 x.UserId == userId &&
                 x.Id == id);
+
         if (orders == null)
         {
             throw new NotFoundException("Order not found ");
@@ -248,7 +249,7 @@ public class Service : IService
 
         decimal totalAmount = itemAmount + shippingFee;
 
-        string description = $"HTM-{orders.Id:N}";
+        string description = $"HTM-{orders.Id.ToString()}";
         string bankName = "BIDV";
         string bankAccount = "96247BENTRAN";
         string qrCodeUrl = $"https://qr.sepay.vn/img?" +
