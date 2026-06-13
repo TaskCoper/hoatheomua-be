@@ -932,6 +932,12 @@ namespace HoaTheoMua.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AhahaMoveOrderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AhahaMoveTrackingUrl")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -942,6 +948,12 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("Metadata")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhanhOrderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhanhTrackingUrl")
                         .HasColumnType("text");
 
                     b.Property<string>("Status")
