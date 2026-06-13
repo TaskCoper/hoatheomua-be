@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
@@ -53,12 +56,17 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
 
-    public async Task<NewResponse?> GetNewByIdAsync(Guid id)
+    public async Task<NewResponse?> GetNewByIdAsync(string key)
     {
-        var news = await _dbContext.NewsList
+        var normalizedKey = NormalizeLookupKey(key);
+        var query = _dbContext.NewsList
             .AsNoTracking()
             .Include(news => news.CategoryNewsDetail)
-            .FirstOrDefaultAsync(news => news.Id == id && !news.IsDeleted);
+            .Where(news => !news.IsDeleted);
+
+        var news = Guid.TryParse(normalizedKey, out var id)
+            ? await query.FirstOrDefaultAsync(news => news.Id == id)
+            : await query.FirstOrDefaultAsync(news => news.slug == normalizedKey);
 
         if (news is null)
         {
@@ -77,6 +85,7 @@ public class Service : IService
         }
         var categoryIds = NormalizeCategoryIds(request.CategoryIds);
         await EnsureCategoriesExistAsync(categoryIds);
+        var slug = await GenerateUniqueSlugAsync(request.Title);
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
@@ -87,6 +96,7 @@ public class Service : IService
             Description = request.Description,
             CoverImage = request.PictureUrl?.Trim() ?? string.Empty,
             Status = request.Status,
+            slug = slug,
             UserId = userId,
             ViewCount = 0,
             IsDeleted = false,
@@ -208,6 +218,62 @@ public class Service : IService
         return normalizedCategoryIds;
     }
 
+    private static string NormalizeLookupKey(string key)
+    {
+        var normalizedKey = key.Trim();
+
+        if (string.IsNullOrWhiteSpace(normalizedKey) || normalizedKey.Length > 100)
+        {
+            throw new BadRequestException("NEW_LOOKUP_KEY_INVALID");
+        }
+
+        if (Guid.TryParse(normalizedKey, out _))
+        {
+            return normalizedKey;
+        }
+
+        if (!Regex.IsMatch(normalizedKey, @"^[a-z0-9]+(?:-[a-z0-9]+)*$"))
+        {
+            throw new BadRequestException("NEW_LOOKUP_KEY_INVALID");
+        }
+
+        return normalizedKey;
+    }
+
+    private async Task<string> GenerateUniqueSlugAsync(string title)
+    {
+        var baseSlug = GenerateSlug(title);
+        var slug = baseSlug;
+        var suffix = 2;
+
+        while (await _dbContext.NewsList.AnyAsync(news => news.slug == slug))
+        {
+            slug = $"{baseSlug}-{suffix}";
+            suffix++;
+        }
+
+        return slug;
+    }
+
+    private static string GenerateSlug(string title)
+    {
+        var normalizedTitle = title.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder();
+
+        foreach (var character in normalizedTitle)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(character == 'đ' ? 'd' : character);
+            }
+        }
+
+        var slug = Regex.Replace(builder.ToString().Normalize(NormalizationForm.FormC), @"[^a-z0-9\s-]", "");
+        slug = Regex.Replace(slug, @"[\s-]+", "-").Trim('-');
+
+        return string.IsNullOrWhiteSpace(slug) ? Guid.NewGuid().ToString("N") : slug;
+    }
+
     private static NewResponse MapToResponse(News news)
     {
         return new NewResponse
@@ -217,6 +283,7 @@ public class Service : IService
             Description = news.Description,
             ViewCount = news.ViewCount,
             PictureUrl = news.CoverImage,
+            slug = news.slug,
             Status = news.Status.ToString(),
             UserId = news.UserId,
             CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),

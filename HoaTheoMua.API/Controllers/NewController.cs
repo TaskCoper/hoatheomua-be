@@ -30,10 +30,10 @@ public class NewController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetNewById(Guid id)
+    [HttpGet("{key}")]
+    public async Task<IActionResult> GetNewById(string key)
     {
-        var result = await _newService.GetNewByIdAsync(id);
+        var result = await _newService.GetNewByIdAsync(key);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
@@ -41,7 +41,7 @@ public class NewController : ControllerBase
     public async Task<IActionResult> CreateNew([FromBody] NewService.CreateNewRequest request)
     {
         var result = await _newService.CreateNewAsync(request);
-        return CreatedAtAction(nameof(GetNewById), new { id = result.Id }, ApiResponseFactory.Base(result, true, "Tạo bài viết tin tức mới thành công.", HttpContext.TraceIdentifier));
+        return CreatedAtAction(nameof(GetNewById), new { key = result.slug ?? result.Id.ToString() }, ApiResponseFactory.Base(result, true, "Tạo bài viết tin tức mới thành công.", HttpContext.TraceIdentifier));
     }
 
     [HttpPut("{id:guid}")]
