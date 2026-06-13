@@ -1046,7 +1046,7 @@ namespace HoaTheoMua.Repository.Migrations
                             Metadata = "{}",
                             Status = "Pending",
                             TrackNumber = "TRK1008",
-                            UserId = new Guid("e5c95b37-6dd1-4bcf-b560-e80d9dc60996")
+                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
                         },
                         new
                         {
@@ -1056,7 +1056,7 @@ namespace HoaTheoMua.Repository.Migrations
                             Metadata = "{}",
                             Status = "Paid",
                             TrackNumber = "TRK1009",
-                            UserId = new Guid("e5c95b37-6dd1-4bcf-b560-e80d9dc60996")
+                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
                         },
                         new
                         {
@@ -1066,7 +1066,7 @@ namespace HoaTheoMua.Repository.Migrations
                             Metadata = "{}",
                             Status = "Shipped",
                             TrackNumber = "TRK1010",
-                            UserId = new Guid("e5c95b37-6dd1-4bcf-b560-e80d9dc60996")
+                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
                         });
                 });
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -18,9 +19,9 @@ namespace HoaTheoMua.Repository.Migrations
                 columns: new[] { "Id", "CreatedAt", "IsDeleted", "Metadata", "Status", "TrackNumber", "UpdatedAt", "UserId" },
                 values: new object[,]
                 {
-                    { new Guid("44444444-4444-4444-4444-444444444448"), new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), false, "{}", "Pending", "TRK1008", null, new Guid("e5c95b37-6dd1-4bcf-b560-e80d9dc60996") },
-                    { new Guid("44444444-4444-4444-4444-444444444449"), new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), false, "{}", "Paid", "TRK1009", null, new Guid("e5c95b37-6dd1-4bcf-b560-e80d9dc60996") },
-                    { new Guid("44444444-4444-4444-4444-444444444450"), new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), false, "{}", "Shipped", "TRK1010", null, new Guid("e5c95b37-6dd1-4bcf-b560-e80d9dc60996") }
+                    { new Guid("44444444-4444-4444-4444-444444444448"), new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), false, "{}", "Pending", "TRK1008", null, new Guid("33333333-3333-3333-3333-333333333333") },
+                    { new Guid("44444444-4444-4444-4444-444444444449"), new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), false, "{}", "Paid", "TRK1009", null, new Guid("33333333-3333-3333-3333-333333333333") },
+                    { new Guid("44444444-4444-4444-4444-444444444450"), new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)), false, "{}", "Shipped", "TRK1010", null, new Guid("33333333-3333-3333-3333-333333333333") }
                 });
 
             migrationBuilder.InsertData(
