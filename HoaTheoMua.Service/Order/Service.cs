@@ -21,100 +21,100 @@ public class Service: IService
     }
 
 
-    public async Task<Response.CreateOrderResponse> CreateOrderTransport(Request.CreateOrderRequest request)
-    {
-        
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        if (existUser == null)
-        {
-            throw new NotFoundException("User not found");
-        }
-        
-        decimal itemAmount = 0;
-        decimal shippingFee = 0;
+    // public async Task<Response.CreateOrderResponse> CreateOrderTransport(Request.CreateOrderRequest request)
+    // {
+    //     
+    //     var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+    //
+    //     if (user == null)  
+    //     {            
+    //         throw new UnauthorizedException("User not found");  
+    //     }
+    //     var userId = Guid.Parse(user);
+    //     
+    //     var existUser = await _dbContext.Users
+    //         .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+    //     if (existUser == null)
+    //     {
+    //         throw new NotFoundException("User not found");
+    //     }
+    //     
+    //     decimal itemAmount = 0;
+    //     decimal shippingFee = 0;
+    //
+    //     string raw;
+    //     if (request.Metadata is System.Text.Json.JsonElement je)
+    //         raw = je.GetRawText(); 
+    //     else if (request.Metadata is string s)
+    //         raw = s;
+    //     else
+    //         raw = JsonConvert.SerializeObject(request.Metadata);
+    //
+    //     var metadataJson = JObject.Parse(raw);
+    //     itemAmount  = metadataJson["subTotal"]?.Value<decimal>()    ?? 0;
+    //     shippingFee = metadataJson["shippingFee"]?.Value<decimal>() ?? 0;
+    //     
+    //     
+    //     decimal totalAmount = itemAmount + shippingFee;
+    //
+    //     var newOrder = new Repository.Entity.Order()
+    //     {
+    //         UserId = userId,
+    //         Status = "Pending",
+    //         TrackNumber = "",
+    //         Metadata = request.Metadata.ToString(),
+    //         CreatedAt = DateTime.UtcNow,
+    //     };
+    //     
+    //     await _dbContext.Orders.AddAsync(newOrder);
+    //     await _dbContext.SaveChangesAsync();
+    //
+    //     string description = $"HOATHEOMUA{newOrder.Id:N}";
+    //     string bankName = "MBBank";
+    //     string bankAccount = "0384875317";
+    //     string qrCodeUrl = $"https://qr.sepay.vn/img?" +
+    //                        $"acc={bankAccount}&" +
+    //                        $"bank={bankName}&" +
+    //                        $"amount={totalAmount}&" +
+    //                        $"des={description}&" +
+    //                        $"template=qronly";
+    //     
+    //     var result = new Response.CreateOrderResponse()
+    //     {
+    //         QrCodeUrl =  qrCodeUrl,
+    //     };
+    //
+    //     return result;
+    // }
 
-        string raw;
-        if (request.Metadata is System.Text.Json.JsonElement je)
-            raw = je.GetRawText(); 
-        else if (request.Metadata is string s)
-            raw = s;
-        else
-            raw = JsonConvert.SerializeObject(request.Metadata);
-
-        var metadataJson = JObject.Parse(raw);
-        itemAmount  = metadataJson["subTotal"]?.Value<decimal>()    ?? 0;
-        shippingFee = metadataJson["shippingFee"]?.Value<decimal>() ?? 0;
-        
-        
-        decimal totalAmount = itemAmount + shippingFee;
-
-        var newOrder = new Repository.Entity.Order()
-        {
-            UserId = userId,
-            Status = "Pending",
-            TrackNumber = "",
-            Metadata = request.Metadata.ToString(),
-            CreatedAt = DateTime.UtcNow,
-        };
-        
-        await _dbContext.Orders.AddAsync(newOrder);
-        await _dbContext.SaveChangesAsync();
-
-        string description = $"HOATHEOMUA{newOrder.Id:N}";
-        string bankName = "MBBank";
-        string bankAccount = "0384875317";
-        string qrCodeUrl = $"https://qr.sepay.vn/img?" +
-                           $"acc={bankAccount}&" +
-                           $"bank={bankName}&" +
-                           $"amount={totalAmount}&" +
-                           $"des={description}&" +
-                           $"template=qronly";
-        
-        var result = new Response.CreateOrderResponse()
-        {
-            QrCodeUrl =  qrCodeUrl,
-        };
-
-        return result;
-    }
-
-    public async Task<string> CheckingOrder(Guid orderId)
-    {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => 
-                x.Id == userId && x.IsVerify);
-        if (existUser == null)
-        {
-            throw new NotFoundException("User not found");
-        }
-        
-        var order = await _dbContext.Orders
-            .FirstOrDefaultAsync(o => 
-                o.Id == orderId && o.UserId == userId);
-        if (order == null)
-        {
-            throw new NotFoundException("Order ID " + orderId + " not found");
-        }
-        
-        return order.Status;
-    }
+    // public async Task<string> CheckingOrder(Guid orderId)
+    // {
+    //     var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+    //
+    //     if (user == null)  
+    //     {            
+    //         throw new UnauthorizedException("User not found");  
+    //     }
+    //     var userId = Guid.Parse(user);
+    //     
+    //     var existUser = await _dbContext.Users
+    //         .FirstOrDefaultAsync(x => 
+    //             x.Id == userId && x.IsVerify);
+    //     if (existUser == null)
+    //     {
+    //         throw new NotFoundException("User not found");
+    //     }
+    //     
+    //     var order = await _dbContext.Orders
+    //         .FirstOrDefaultAsync(o => 
+    //             o.Id == orderId && o.UserId == userId);
+    //     if (order == null)
+    //     {
+    //         throw new NotFoundException("Order ID " + orderId + " not found");
+    //     }
+    //     
+    //     return order.Status;
+    // }
 
     // public async Task<string> UpdateOrder(Request.UpdateOrderRequest request)
     // {
@@ -203,7 +203,7 @@ public class Service: IService
             UserId = userId,
             Status = "Pending",
             TrackNumber = "",
-            Metadata = request.Metadata.ToString(),
+            Metadata = JsonConvert.SerializeObject(request.Metadata),
             CreatedAt = DateTime.UtcNow,
         };
         await _dbContext.Orders.AddAsync(newOrder);

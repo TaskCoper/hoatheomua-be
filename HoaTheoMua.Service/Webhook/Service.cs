@@ -52,7 +52,7 @@ public class Service: IService
         
         if (order.Status != "Pending")
         {
-            return;
+            throw new NotFoundException("Order not on Pending");;
         }
         
         decimal itemAmount = 0;
@@ -77,7 +77,7 @@ public class Service: IService
         {
             SePayId = request.Id,
             Gateway = request.Gateway,
-            TransactionDate = DateTime.TryParse(request.TransactionDate, out DateTime parsedDate) ? parsedDate : DateTime.Now,
+            TransactionDate = DateTime.TryParse(request.TransactionDate, out DateTime parsedDate) ? parsedDate.ToUniversalTime() : DateTime.UtcNow,
             AccountNumber = request.AccountNumber,
             SubAccount = request.SubAccount,
             Code = request.Code,
