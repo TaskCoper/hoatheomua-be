@@ -9,11 +9,11 @@ using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Order;
 
-public class Service: IService
+public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContext;
-    
+
     public Service(AppDbContext dbContext, IHttpContextAccessor httpContext)
     {
         _dbContext = dbContext;
@@ -263,8 +263,8 @@ public class Service: IService
         }
         
         decimal totalAmount = itemAmount + shippingFee;
-        
-        string description = $"HOATHEOMUA{orders.Id:N}";
+
+        string description = $"HTM-{orders.Id.ToString()}";
         string bankName = "BIDV";
         string bankAccount = "96247BENTRAN";
         string qrCodeUrl = $"https://qr.sepay.vn/img?" +

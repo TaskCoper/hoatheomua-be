@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.Exceptions;
@@ -17,31 +18,31 @@ public class Service : IService
 
     public async Task SepayWebhookHandler(Request.SepayWebhookRequest request)
     {
-        var description = request.Code;
-        var raw = description.Replace("HTM", "");
-
-        Guid? orderId = null;
-        if (raw.Length == 32)
-        {
-            var formatted =
-                $"{raw.Substring(0, 8)}-" +
-                $"{raw.Substring(8, 4)}-" +
-                $"{raw.Substring(12, 4)}-" +
-                $"{raw.Substring(16, 4)}-" +
-                $"{raw.Substring(20, 12)}";
-            if (Guid.TryParse(formatted, out var guid))
-            {
-                orderId = guid;
-            }
-        }
-        else
+        // SePay puts the parsed code in Code, but only when a payment-code pattern is
+        // configured; otherwise fall back to the raw transfer memo in Content.
+        var source = !string.IsNullOrWhiteSpace(request.Code) ? request.Code : request.Content;
+        if (string.IsNullOrWhiteSpace(source))
         {
             throw new BadRequestException("Invalid description format");
         }
 
-        if (orderId == null)
+        // Match "HTM" (optional separator) + a GUID. The bank/SePay strips dashes, so the
+        // GUID can arrive either as 32 hex chars or in full dashed form, possibly surrounded
+        // by other transfer text (reference numbers, account numbers, etc.).
+        var match = Regex.Match(
+            source,
+            @"HTM[-_]?([0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12})",
+            RegexOptions.IgnoreCase);
+
+        if (!match.Success)
         {
-            throw new NotFoundException("Order not found in description");
+            throw new BadRequestException("Invalid description format");
+        }
+
+        var hex = match.Groups[1].Value.Replace("-", "");
+        if (!Guid.TryParseExact(hex, "N", out var orderId))
+        {
+            throw new BadRequestException("Invalid description format");
         }
 
         var order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
