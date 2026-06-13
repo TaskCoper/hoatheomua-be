@@ -178,5 +178,36 @@ public class Service: IService
         
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
-    
+
+    public async Task<string> CreateOrder(Request.CreateOrderRequest request)
+    {
+        
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        var userId = Guid.Parse(user);
+        
+        var existUser = await _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        if (existUser == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+        
+        var newOrder = new Repository.Entity.Order()
+        {
+            UserId = userId,
+            Status = "Pending",
+            TrackNumber = "",
+            Metadata = request.Metadata.ToString(),
+            CreatedAt = DateTime.UtcNow,
+        };
+        await _dbContext.Orders.AddAsync(newOrder);
+        await _dbContext.SaveChangesAsync();
+        
+        return newOrder.Id.ToString();
+    }
 }

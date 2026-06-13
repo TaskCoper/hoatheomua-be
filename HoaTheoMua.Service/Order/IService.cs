@@ -8,4 +8,7 @@ public interface IService
     Task<string> CheckingOrder(Guid orderId);
     Task<string> UpdateOrder(Request.UpdateOrderRequest request);
     Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize);
+    
+    
+    Task<string> CreateOrder(Request.CreateOrderRequest request);
 }
