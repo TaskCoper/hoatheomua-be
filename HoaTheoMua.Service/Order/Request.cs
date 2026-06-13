@@ -12,4 +12,11 @@ public class Request
         public Guid OrderId { get; set; }
         public string TrackNumber { get; set; }
     }
+    
+    public class UpdateOrderByIdRequest
+    {
+        public Guid OrderId { get; set; }
+        public string TrackingNumber { get; set; } = string.Empty;
+        public object Metadata { get; set; } = string.Empty;
+    }
 }

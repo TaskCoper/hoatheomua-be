@@ -13,4 +13,5 @@ public interface IService
     Task<string> CreateOrder(Request.CreateOrderRequest request);
     Task<BaseResponse> GetOrderById (Guid id);
     Task<string> GetStatusOrder(Guid id);
+    Task<string> UpdateOrderById(Request.UpdateOrderByIdRequest request);
 }

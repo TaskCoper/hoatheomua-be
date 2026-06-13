@@ -306,4 +306,32 @@ public class Service: IService
         
         return order.Status;
     }
+
+    public async Task<string> UpdateOrderById(Request.UpdateOrderByIdRequest request)
+    {
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        
+        var userId = Guid.Parse(user);
+        
+
+        var orders = await _dbContext.Orders
+            .FirstOrDefaultAsync(x => 
+                x.IsDeleted == false && 
+                x.UserId == userId &&
+                x.Id == request.OrderId);
+        if (orders == null)
+        {
+            throw new NotFoundException("Order ID " + request.OrderId + " not found");
+        }
+
+        orders.TrackNumber = request.TrackingNumber;
+        orders.Metadata = request.Metadata.ToString()!;
+        await _dbContext.SaveChangesAsync();
+        return "Cập nhật thành công";
+    }
 }
