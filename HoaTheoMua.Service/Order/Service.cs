@@ -9,11 +9,11 @@ using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Order;
 
-public class Service: IService
+public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContext;
-    
+
     public Service(AppDbContext dbContext, IHttpContextAccessor httpContext)
     {
         _dbContext = dbContext;
@@ -144,62 +144,62 @@ public class Service: IService
     //     return "Cập nhật thành công";
     // }
 
-    public async Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize)  
-    {        
+    public async Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize)
+    {
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
-        
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-    
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
+
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;
+
+        if (user == null)
+        {
+            throw new UnauthorizedException("User not found");
         }
-        
+
         var userId = Guid.Parse(user);
-        
-    
+
+
         var orders = _dbContext.Orders
             .Where(x => x.IsDeleted == false && x.UserId == userId);
         var totalCount = await orders.CountAsync();
-    
+
         var items = await orders
             .OrderByDescending(o => o.CreatedAt)
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-    
-        var result =  items.Select(x => new Response.GetOrderResponse
+
+        var result = items.Select(x => new Response.GetOrderResponse
         {
-            OrderId =  x.Id,
+            OrderId = x.Id,
             Status = x.Status.ToString(),
             TrackNumber = x.TrackNumber,
             CreateAt = x.CreatedAt,
             UpdateAt = x.UpdatedAt,
         }).ToList();
-        
+
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
 
     //------------
     public async Task<string> CreateOrder(Request.CreateOrderRequest request)
     {
-        
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
+
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;
+
+        if (user == null)
+        {
+            throw new UnauthorizedException("User not found");
         }
         var userId = Guid.Parse(user);
-        
+
         var existUser = await _dbContext.Users
             .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
         if (existUser == null)
         {
             throw new NotFoundException("User not found");
         }
-        
+
         var newOrder = new Repository.Entity.Order()
         {
             UserId = userId,
@@ -210,45 +210,45 @@ public class Service: IService
         };
         await _dbContext.Orders.AddAsync(newOrder);
         await _dbContext.SaveChangesAsync();
-        
+
         return newOrder.Id.ToString();
     }
 
     public async Task<BaseResponse> GetOrderById(Guid id)
     {
-        
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
+
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;
+
+        if (user == null)
+        {
+            throw new UnauthorizedException("User not found");
         }
-        
+
         var userId = Guid.Parse(user);
-        
+
 
         var orders = await _dbContext.Orders
             .Include(x => x.Transactions)
-            .FirstOrDefaultAsync(x => 
-                x.IsDeleted == false && 
-                x.UserId == userId && 
+            .FirstOrDefaultAsync(x =>
+                x.IsDeleted == false &&
+                x.UserId == userId &&
                 x.Id == id);
         if (orders == null)
         {
             throw new NotFoundException("Order not found ");
 
         }
-        
+
         decimal itemAmount = 0;
         decimal shippingFee = 0;
-        
+
         var metadataJson = JObject.Parse(orders.Metadata);
         itemAmount = metadataJson["subTotal"]?.Value<decimal>() ?? 0;
         shippingFee = metadataJson["shippingFee"]?.Value<decimal>() ?? 0;
-        
+
         decimal totalAmount = itemAmount + shippingFee;
-        
-        string description = $"HOATHEOMUA{orders.Id:N}";
+
+        string description = $"HTM{orders.Id:N}";
         string bankName = "BIDV";
         string bankAccount = "96247BENTRAN";
         string qrCodeUrl = $"https://qr.sepay.vn/img?" +
@@ -257,11 +257,11 @@ public class Service: IService
                            $"amount={totalAmount}&" +
                            $"des={description}&" +
                            $"template=qronly";
-        
+
         var lastTransaction = orders.Transactions
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefault();
-        
+
         var orderDetails = new Response.GetOrderByIdResponse
         {
             OrderId = orders.Id,
@@ -272,59 +272,59 @@ public class Service: IService
 
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
-                TransferAmount =  itemAmount,
+                TransferAmount = itemAmount,
                 Code = lastTransaction.Code,
                 TransactionDate = lastTransaction.TransactionDate,
                 Gateway = lastTransaction.Gateway,
             }
-        }; 
+        };
         return ApiResponseFactory.Base(orderDetails);
     }
 
     public async Task<string> GetStatusOrder(Guid id)
     {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;
+
+        if (user == null)
+        {
+            throw new UnauthorizedException("User not found");
         }
         var userId = Guid.Parse(user);
-        
+
         var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => 
+            .FirstOrDefaultAsync(x =>
                 x.Id == userId && x.IsVerify);
         if (existUser == null)
         {
             throw new NotFoundException("User not found");
         }
-        
+
         var order = await _dbContext.Orders
-            .FirstOrDefaultAsync(o => 
+            .FirstOrDefaultAsync(o =>
                 o.Id == id && o.UserId == userId);
         if (order == null)
         {
             throw new NotFoundException("Order ID " + id + " not found");
         }
-        
+
         return order.Status;
     }
 
     public async Task<string> UpdateOrderById(Guid id, Request.UpdateOrderByIdRequest request)
     {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;
+
+        if (user == null)
+        {
+            throw new UnauthorizedException("User not found");
         }
-        
+
         var userId = Guid.Parse(user);
-        
+
 
         var orders = await _dbContext.Orders
-            .FirstOrDefaultAsync(x => 
-                x.IsDeleted == false && 
+            .FirstOrDefaultAsync(x =>
+                x.IsDeleted == false &&
                 x.UserId == userId &&
                 x.Id == id);
         if (orders == null)
