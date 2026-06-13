@@ -3,6 +3,7 @@ using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace HoaTheoMua.Service.New;
@@ -10,10 +11,12 @@ namespace HoaTheoMua.Service.New;
 public class Service : IService
 {
     private readonly AppDbContext _dbContext;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public Service(AppDbContext dbContext)
+    public Service(AppDbContext dbContext, IHttpContextAccessor httpContextAccessor)
     {
         _dbContext = dbContext;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<BasePaginationResponse> GetNewsAsync(int pageIndex, int pageSize, string? keyword, NewsStatus? status)
@@ -67,6 +70,11 @@ public class Service : IService
 
     public async Task<NewResponse> CreateNewAsync(CreateNewRequest request)
     {
+        var userId = CheckAccessToken();
+        if (userId == Guid.Empty)
+        {
+            throw new NotFoundException("USER_NOT_FOUND");
+        }
         var categoryIds = NormalizeCategoryIds(request.CategoryIds);
         await EnsureCategoriesExistAsync(categoryIds);
 
@@ -79,7 +87,7 @@ public class Service : IService
             Description = request.Description,
             CoverImage = request.PictureUrl?.Trim() ?? string.Empty,
             Status = request.Status,
-            UserId = request.UserId,
+            UserId = userId,
             ViewCount = 0,
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow
@@ -129,15 +137,27 @@ public class Service : IService
         news.Status = request.Status;
         news.UpdatedAt = DateTimeOffset.UtcNow;
 
-        _dbContext.CategoryNewsDetails.RemoveRange(news.CategoryNewsDetail);
-        news.CategoryNewsDetail = categoryIds.Select(categoryId => new CategoryNewsDetail
+        var currentCategoryDetails = news.CategoryNewsDetail.ToList();
+        var currentCategoryIds = currentCategoryDetails.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList();
+        var categoryDetailsToRemove = currentCategoryDetails
+            .Where(categoryNewsDetail => !categoryIds.Contains(categoryNewsDetail.CategoryNewsId))
+            .ToList();
+        var categoryIdsToAdd = categoryIds
+            .Where(categoryId => !currentCategoryIds.Contains(categoryId))
+            .ToList();
+
+        _dbContext.CategoryNewsDetails.RemoveRange(categoryDetailsToRemove);
+        foreach (var categoryId in categoryIdsToAdd)
         {
-            Id = Guid.NewGuid(),
-            CategoryNewsId = categoryId,
-            NewsId = news.Id,
-            IsDeleted = false,
-            CreatedAt = DateTimeOffset.UtcNow
-        }).ToList();
+            news.CategoryNewsDetail.Add(new CategoryNewsDetail
+            {
+                Id = Guid.NewGuid(),
+                CategoryNewsId = categoryId,
+                NewsId = news.Id,
+                IsDeleted = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        }
 
         await _dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
@@ -203,5 +223,15 @@ public class Service : IService
             CreatedAt = news.CreatedAt,
             UpdatedAt = news.UpdatedAt
         };
+    }
+    private Guid CheckAccessToken()
+    {
+        var accessToken = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
+        if (accessToken != null)
+        {
+            return Guid.Parse(accessToken);
+        }
+
+        return Guid.Empty;
     }
 }
