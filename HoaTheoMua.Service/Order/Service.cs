@@ -248,7 +248,7 @@ public class Service : IService
 
         decimal totalAmount = itemAmount + shippingFee;
 
-        string description = $"HTM{orders.Id:N}";
+        string description = $"HTM-{orders.Id:N}";
         string bankName = "BIDV";
         string bankAccount = "96247BENTRAN";
         string qrCodeUrl = $"https://qr.sepay.vn/img?" +
