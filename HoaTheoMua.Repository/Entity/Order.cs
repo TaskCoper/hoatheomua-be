@@ -5,7 +5,7 @@ namespace HoaTheoMua.Repository.Entity;
 public class Order: BaseEntity<Guid>,IAuditableEntity
 {
     
-    public decimal TrackNumber { get; set; }
+    public string TrackNumber { get; set; }
     public string Status { get; set; }
     public string Metadata { get; set; }
     

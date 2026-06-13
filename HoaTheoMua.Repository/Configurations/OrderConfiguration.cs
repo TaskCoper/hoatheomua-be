@@ -1,4 +1,5 @@
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Configurations.Seeds;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -24,5 +25,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .WithOne(t => t.Order)
             .HasForeignKey(t => t.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.SeedOrder();
     }
 }

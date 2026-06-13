@@ -1,6 +1,8 @@
-﻿
+
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 
@@ -9,15 +11,33 @@ namespace HoaTheoMua.Service.Order;
 public class Service: IService
 {
     private readonly AppDbContext _dbContext;
+    private readonly IHttpContextAccessor _httpContext;
     
-    public Service(AppDbContext dbContext)
+    public Service(AppDbContext dbContext, IHttpContextAccessor httpContext)
     {
         _dbContext = dbContext;
+        _httpContext = httpContext;
     }
 
 
-    public async Task<Response.CreateOrderResponse> ProcessOrderTransport(Request.CreateOrderRequest request)
+    public async Task<Response.CreateOrderResponse> CreateOrderTransport(Request.CreateOrderRequest request)
     {
+        
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        var userId = Guid.Parse(user);
+        
+        var existUser = await _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        if (existUser == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+        
         decimal itemAmount = 0;
         decimal shippingFee = 0;
 
@@ -37,17 +57,17 @@ public class Service: IService
 
         var newOrder = new Repository.Entity.Order()
         {
-            UserId = request.UserId,
+            UserId = userId,
             Status = "Pending",
-            TrackNumber = totalAmount,
+            TrackNumber = "",
             Metadata = request.Metadata.ToString(),
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
         };
         
         await _dbContext.Orders.AddAsync(newOrder);
         await _dbContext.SaveChangesAsync();
 
-        string description = $"HOATHEOMUA-{newOrder.Id}";
+        string description = $"HOATHEOMUA-{newOrder.Id:N}";
         string bankName = "MBBank";
         string bankAccount = "0384875317";
         string qrCodeUrl = $"https://qr.sepay.vn/img?" +
@@ -59,8 +79,6 @@ public class Service: IService
         
         var result = new Response.CreateOrderResponse()
         {
-            OrderId = newOrder.Id,
-            TotalAmount =  totalAmount,
             QrCodeUrl =  qrCodeUrl,
         };
 
@@ -69,7 +87,25 @@ public class Service: IService
 
     public async Task<string> CheckingOrder(Guid orderId)
     {
-        var order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        var userId = Guid.Parse(user);
+        
+        var existUser = await _dbContext.Users
+            .FirstOrDefaultAsync(x => 
+                x.Id == userId && x.IsVerify);
+        if (existUser == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+        
+        var order = await _dbContext.Orders
+            .FirstOrDefaultAsync(o => 
+                o.Id == orderId && o.UserId == userId);
         if (order == null)
         {
             throw new NotFoundException("Order ID " + orderId + " not found");
@@ -77,4 +113,68 @@ public class Service: IService
         
         return order.Status;
     }
+
+    public async Task<string> UpdateOrder(Request.UpdateOrderRequest request)
+    {
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        
+        var userId = Guid.Parse(user);
+        
+
+        var orders = await _dbContext.Orders
+            .FirstOrDefaultAsync(x => 
+                x.IsDeleted == false && 
+                x.UserId == userId &&
+                x.Id == request.OrderId);
+        if (orders == null)
+        {
+            throw new NotFoundException("Order ID " + request.OrderId + " not found");
+        }
+
+        orders.TrackNumber = request.TrackNumber;
+        orders.UpdatedAt = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync();
+        return "Cập nhật thành công";
+    }
+
+    public async Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize)  
+    {        
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        
+        var userId = Guid.Parse(user);
+        
+
+        var orders = _dbContext.Orders
+            .Where(x => x.IsDeleted == false && x.UserId == userId);
+        var totalCount = await orders.CountAsync();
+
+        var items = await orders
+            .OrderByDescending(o => o.CreatedAt)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var result =  items.Select(x => new Response.GetOrderResponse
+        {
+            OrderId =  x.Id,
+            Status = x.Status.ToString(),
+            TrackNumber = x.TrackNumber,
+        }).ToList();
+        
+        return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
+    }
+    
 }

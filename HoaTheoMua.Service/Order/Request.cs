@@ -4,7 +4,12 @@ public class Request
 {
     public class CreateOrderRequest
     {
-        public Guid UserId { get; set; }
         public dynamic Metadata { get; set; } = null!;
+    }
+
+    public class UpdateOrderRequest
+    {
+        public Guid OrderId { get; set; }
+        public string TrackNumber { get; set; }
     }
 }

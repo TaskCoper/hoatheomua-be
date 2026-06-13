@@ -15,16 +15,30 @@ public class OrderController: ControllerBase
     }
     
     [HttpPost("/api/v1/orders")]
-    public async Task<IActionResult> ProcessOrderTransport([FromBody]Request.CreateOrderRequest request)
+    public async Task<IActionResult> CreateOrderTransport([FromBody]Request.CreateOrderRequest request)
     {
-        var result = await _orderService.ProcessOrderTransport(request);
+        var result = await _orderService.CreateOrderTransport(request);
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
     [HttpGet("/api/v1/orders/{id}")]
-    public async Task<IActionResult> ProcessOrderTransport(Guid id)
+    public async Task<IActionResult> GetOrderTransportById(Guid id)
     {
         var result = await _orderService.CheckingOrder(id);
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+    }
+    
+    [HttpGet("/api/v1/orders")]
+    public async Task<IActionResult> GetAllOrderTransport(int pageIndex, int pageSize)
+    {
+        var result = await _orderService.GetOrderPaginationResponse(pageIndex, pageSize);
+        return Ok(result);
+    }
+    
+    [HttpPost("/api/v1/orders/update-tracking-number")]
+    public async Task<IActionResult> UpdateOrder([FromBody]Request.UpdateOrderRequest request)
+    {
+        var result = await _orderService.UpdateOrder(request);
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
 }

@@ -33,7 +33,7 @@ public class Service : IService
                 news.Title.ToLower().Contains(searchKeyword) ||
                 news.Description.ToLower().Contains(searchKeyword));
         }
-
+    
         if (status.HasValue)
         {
             query = query.Where(news => news.Status == status.Value);

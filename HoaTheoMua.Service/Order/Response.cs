@@ -1,11 +1,18 @@
-﻿namespace HoaTheoMua.Service.Order;
+﻿using HoaTheoMua.Repository.Entity;
+
+namespace HoaTheoMua.Service.Order;
 
 public class Response
 {
     public class CreateOrderResponse
     {
-        public Guid OrderId { get; set; }
-        public decimal TotalAmount { get; set; }
         public string QrCodeUrl { get; set; } = string.Empty; 
+    }
+
+    public class GetOrderResponse
+    {
+        public Guid OrderId { get; set; }
+        public string Status { get; set; }
+        public string TrackNumber { get; set; }
     }
 }

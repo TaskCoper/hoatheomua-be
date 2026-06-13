@@ -1,7 +1,8 @@
-﻿using HoaTheoMua.Repository;
+using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Webhook;
 
@@ -17,7 +18,7 @@ public class Service: IService
     public async Task SepayWebhookHandler(Request.SepayWebhookRequest request)
     {
         var description = request.Code;
-        var raw = description.Replace("HOATHEOMUA", "");
+        var raw = description.Replace("HOATHEOMUA-", "");
         
         Guid? orderId = null;
         if (raw.Length == 32) 
@@ -51,17 +52,24 @@ public class Service: IService
         
         if (order.Status != "Pending")
         {
-            throw new ConflictException("Order already progressed");
+            return;
         }
-
-        decimal totalAmount = order.TrackNumber;
+        
+        decimal itemAmount = 0;
+        decimal shippingFee = 0;
+        
+        var metadataJson = JObject.Parse(order.Metadata);
+        itemAmount = metadataJson["subTotal"] != null ? (decimal)metadataJson["subTotal"]! : 0;
+        shippingFee = metadataJson["shippingFee"] != null ? (decimal)metadataJson["shippingFee"]! : 0;
+        
+        decimal totalAmount = itemAmount + shippingFee;
         
         if (totalAmount != request.TransferAmount)
         {
             throw new ConflictException("Invalid transfer amount");
         }
         
-        order.Status = "Completed";
+        order.Status = "Paid";
         order.UpdatedAt = DateTimeOffset.UtcNow;
         _dbContext.Orders.Update(order);
         

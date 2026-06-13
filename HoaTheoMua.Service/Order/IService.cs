@@ -1,7 +1,11 @@
-﻿namespace HoaTheoMua.Service.Order;
+﻿using HoaTheoMua.Service.Models;
+
+namespace HoaTheoMua.Service.Order;
 
 public interface IService
 {
-    Task<Response.CreateOrderResponse> ProcessOrderTransport(Request.CreateOrderRequest request);
+    Task<Response.CreateOrderResponse> CreateOrderTransport(Request.CreateOrderRequest request);
     Task<string> CheckingOrder(Guid orderId);
+    Task<string> UpdateOrder(Request.UpdateOrderRequest request);
+    Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize);
 }
