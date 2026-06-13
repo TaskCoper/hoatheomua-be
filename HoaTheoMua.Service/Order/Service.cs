@@ -179,6 +179,7 @@ public class Service: IService
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
 
+    //------------
     public async Task<string> CreateOrder(Request.CreateOrderRequest request)
     {
         
@@ -275,5 +276,34 @@ public class Service: IService
             }
         }; 
         return ApiResponseFactory.Base(orderDetails);
+    }
+
+    public async Task<string> GetStatusOrder(Guid id)
+    {
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        var userId = Guid.Parse(user);
+        
+        var existUser = await _dbContext.Users
+            .FirstOrDefaultAsync(x => 
+                x.Id == userId && x.IsVerify);
+        if (existUser == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+        
+        var order = await _dbContext.Orders
+            .FirstOrDefaultAsync(o => 
+                o.Id == id && o.UserId == userId);
+        if (order == null)
+        {
+            throw new NotFoundException("Order ID " + id + " not found");
+        }
+        
+        return order.Status;
     }
 }

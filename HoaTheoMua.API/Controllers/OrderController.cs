@@ -28,6 +28,14 @@ public class OrderController: ControllerBase
         return Ok(result);
     }
     
+    
+    [HttpGet("/api/v1/orders/{id}/status")]
+    public async Task<IActionResult> GetStatusOrder(Guid id)
+    {
+        var result = await _orderService.GetStatusOrder(id);
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+    }
+    
     [HttpGet("/api/v1/orders")]
     public async Task<IActionResult> GetAllOrderTransport(int pageIndex, int pageSize)
     {
