@@ -1,3 +1,4 @@
+using HoaTheoMua.Extentions;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,6 @@ namespace HoaTheoMua.Controllers;
 
 [ApiController]
 [Route("api/news")]
-[Authorize]
 public class NewController : ControllerBase
 {
     private readonly NewService.IService _newService;
@@ -38,6 +38,8 @@ public class NewController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    
     public async Task<IActionResult> CreateNew([FromBody] NewService.CreateNewRequest request)
     {
         var result = await _newService.CreateNewAsync(request);
@@ -45,6 +47,8 @@ public class NewController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    
     public async Task<IActionResult> UpDateNew(Guid id, [FromBody] NewService.UpdateNewRequest request)
     {
         await _newService.UpdateNewAsync(id, request);
@@ -52,6 +56,8 @@ public class NewController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    
     public async Task<IActionResult> DeleteNew(Guid id)
     {
         await _newService.DeleteNewAsync(id);
