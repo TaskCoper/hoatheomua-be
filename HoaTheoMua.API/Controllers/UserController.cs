@@ -4,6 +4,7 @@ using HoaTheoMua.Service.Auth;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.User;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using IService = HoaTheoMua.Service.Auth.IService;
 using Request = HoaTheoMua.Service.Auth.Request;

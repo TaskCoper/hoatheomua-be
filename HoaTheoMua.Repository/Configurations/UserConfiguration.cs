@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Configurations.Seeds;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
@@ -52,6 +52,10 @@ public class UserConfiguration: IEntityTypeConfiguration<User>
             .HasForeignKey(c => c.UserId)
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.News)
+            .WithOne(x => x.User)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.Orders)
             .WithOne(x => x.User)
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);

@@ -1,4 +1,6 @@
+using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
 using Request = HoaTheoMua.Service.CompanyAddress.Request;
@@ -42,6 +44,7 @@ public class CompanyAddressController : ControllerBase
     }
     
     [HttpPost]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> CreateCompanyAddress(
         [FromBody] Request.CreateCompanyAddressRequest request)
     {
@@ -56,6 +59,7 @@ public class CompanyAddressController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UpdateCompanyAddress(
         [FromRoute] Guid id,
         [FromBody] Request.UpdateCompanyAddressRequest request)
@@ -71,6 +75,7 @@ public class CompanyAddressController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> DeleteCompanyAddress([FromRoute] Guid id)
     {
         var result = await _companyAddressService.DeleteCompanyAddress(id);

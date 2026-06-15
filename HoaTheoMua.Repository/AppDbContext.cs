@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Configurations.Seeds;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +17,8 @@ public class AppDbContext : DbContext
     public DbSet<ForgotPassword> ResetPasswords { get; set; }
     public DbSet<CompanyAddress> CompanyAddresses { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<Transaction> Transactions { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

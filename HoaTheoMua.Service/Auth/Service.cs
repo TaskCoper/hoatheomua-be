@@ -62,6 +62,17 @@ public class Service : IService
         return check;
     }
 
+    private void DeleteAuthCookies()
+    {
+        var cookies = _httpContext.HttpContext?.Response.Cookies;
+        if (cookies == null)
+        {
+            return;
+        }
+        cookies.Delete("HTM-Access-Token");
+        cookies.Delete("HTM-Refresh-Token");
+    }
+
     public async Task<string> Register(Request.RegisterRequest request)
     {
         if (request.Password != request.ConfirmPassword)
@@ -173,6 +184,7 @@ public class Service : IService
 
         if (storedToken == null)
         {
+            DeleteAuthCookies();
             throw new ExpiredRefreshTokenException();
         }
 
@@ -180,6 +192,7 @@ public class Service : IService
 
         if (!isActive)
         {
+            DeleteAuthCookies();
             throw new ExpiredRefreshTokenException();
         }
 

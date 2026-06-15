@@ -13,9 +13,6 @@ public class Request
         [StringLength(100, ErrorMessage = "Phường/Xã tối đa 100 ký tự")]
         public string? Ward { get; set; }
 
-        [StringLength(100, ErrorMessage = "Quận/Huyện tối đa 100 ký tự")]
-        public string? District { get; set; }
-
         [Required(ErrorMessage = "Tỉnh/Thành phố không được để trống")]
         [StringLength(100, MinimumLength = 2, ErrorMessage = "Tỉnh/Thành phố phải từ 2 đến 100 ký tự")]
         public required string City { get; set; }
@@ -29,6 +26,8 @@ public class Request
 
         [Range(typeof(decimal), "-180", "180", ErrorMessage = "Kinh độ phải nằm trong khoảng -180 đến 180")]
         public decimal? Longitude { get; set; }
+        
+        public required string MapId { get; set; }
     }
 
     public class UpdateCompanyAddressRequest
@@ -40,9 +39,6 @@ public class Request
         [StringLength(100, ErrorMessage = "Phường/Xã tối đa 100 ký tự")]
         public string? Ward { get; set; }
 
-        [StringLength(100, ErrorMessage = "Quận/Huyện tối đa 100 ký tự")]
-        public string? District { get; set; }
-
         [Required(ErrorMessage = "Tỉnh/Thành phố không được để trống")]
         [StringLength(100, MinimumLength = 2, ErrorMessage = "Tỉnh/Thành phố phải từ 2 đến 100 ký tự")]
         public required string City { get; set; }
@@ -56,5 +52,7 @@ public class Request
 
         [Range(typeof(decimal), "-180", "180", ErrorMessage = "Kinh độ phải nằm trong khoảng -180 đến 180")]
         public decimal? Longitude { get; set; }
+        
+        public required string MapId { get; set; }
     }
 }
