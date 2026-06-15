@@ -112,6 +112,14 @@ public class Service : IService
     public async Task<Response.CompanyAddressResponse> CreateCompanyAddress(
         Request.CreateCompanyAddressRequest request)
     {
+        var hasActiveCompanyAddress = await _dbContext.CompanyAddresses
+            .AnyAsync(x => !x.IsDeleted);
+
+        if (hasActiveCompanyAddress)
+        {
+            throw new ConflictException("Chỉ được phép tồn tại một địa chỉ công ty trong cùng một khoảng thời gian");
+        }
+
         var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         try
