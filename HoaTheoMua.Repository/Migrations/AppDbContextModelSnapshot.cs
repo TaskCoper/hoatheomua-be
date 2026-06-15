@@ -511,6 +511,39 @@ namespace HoaTheoMua.Repository.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Config", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Configs");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.ForgotPassword", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1691,6 +1724,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("News");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Config", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
+                        .WithMany("Config")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.ForgotPassword", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
@@ -1768,6 +1812,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("AuditLog");
 
                     b.Navigation("CategoryNews");
+
+                    b.Navigation("Config");
 
                     b.Navigation("News");
 
