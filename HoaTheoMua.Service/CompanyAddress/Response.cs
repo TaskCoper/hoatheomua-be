@@ -9,8 +9,7 @@ public class Response
         public required string AddressLine { get; set; }
 
         public string? Ward { get; set; }
-
-        public string? District { get; set; }
+        
 
         public required string City { get; set; }
 
@@ -19,6 +18,8 @@ public class Response
         public decimal? Latitude { get; set; }
 
         public decimal? Longitude { get; set; }
+        
+        public string? MapId { get; set; }
 
         public DateTimeOffset CreatedAt { get; set; }
 
