@@ -511,7 +511,7 @@ namespace HoaTheoMua.Repository.Migrations
                         });
                 });
 
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ConfigDynamic", b =>
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Config", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -541,7 +541,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ConfigDynamic");
+                    b.ToTable("Configs");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.ForgotPassword", b =>
@@ -1724,10 +1724,10 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("News");
                 });
 
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ConfigDynamic", b =>
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Config", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
-                        .WithMany("ConfigDynamics")
+                        .WithMany("Config")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1813,7 +1813,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Navigation("CategoryNews");
 
-                    b.Navigation("ConfigDynamics");
+                    b.Navigation("Config");
 
                     b.Navigation("News");
 

@@ -2,7 +2,7 @@
 
 namespace HoaTheoMua.Repository.Entity;
 
-public class ConfigDynamic: BaseEntity<Guid>, IAuditableEntity
+public class Config: BaseEntity<Guid>, IAuditableEntity
 {
 
     public required string Key { get; set; }

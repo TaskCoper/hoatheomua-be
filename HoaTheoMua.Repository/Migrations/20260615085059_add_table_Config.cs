@@ -6,13 +6,13 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class add_table_ConfigDynamic : Migration
+    public partial class add_table_Config : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "ConfigDynamic",
+                name: "Configs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -25,9 +25,9 @@ namespace HoaTheoMua.Repository.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ConfigDynamic", x => x.Id);
+                    table.PrimaryKey("PK_Configs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ConfigDynamic_Users_UserId",
+                        name: "FK_Configs_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -35,8 +35,8 @@ namespace HoaTheoMua.Repository.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ConfigDynamic_UserId",
-                table: "ConfigDynamic",
+                name: "IX_Configs_UserId",
+                table: "Configs",
                 column: "UserId");
         }
 
@@ -44,7 +44,7 @@ namespace HoaTheoMua.Repository.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "ConfigDynamic");
+                name: "Configs");
         }
     }
 }

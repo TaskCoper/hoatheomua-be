@@ -20,7 +20,7 @@ public class User: BaseEntity<Guid>, IAuditableEntity
     public ICollection<ForgotPassword> ResetPassword { get; set; } = new List<ForgotPassword>();
     public ICollection<RefreshToken> RefreshToken { get; set; } = new List<RefreshToken>();
     public ICollection<Order> Orders { get; set; } = new List<Order>();
-    public ICollection<ConfigDynamic> ConfigDynamics { get; set; } = new List<ConfigDynamic>();
+    public ICollection<Config> Config { get; set; } = new List<Config>();
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
