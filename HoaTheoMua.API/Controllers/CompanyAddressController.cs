@@ -8,7 +8,7 @@ using Request = HoaTheoMua.Service.CompanyAddress.Request;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Route("api/v1/companyAddresses")]
+[Route("api/v1/company-addresses")]
 public class CompanyAddressController : ControllerBase
 {
     private readonly CompanyAddressService.IService _companyAddressService;
