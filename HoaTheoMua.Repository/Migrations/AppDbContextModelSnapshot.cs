@@ -470,10 +470,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<string>("District")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -482,6 +478,10 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<decimal?>("Longitude")
                         .HasColumnType("numeric");
+
+                    b.Property<string>("MapId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -503,108 +503,11 @@ namespace HoaTheoMua.Repository.Migrations
                             City = "Ho Chi Minh City",
                             Country = "Vietnam",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 1",
                             IsDeleted = false,
+                            Latitude = 10.7769m,
+                            Longitude = 106.7009m,
+                            MapId = "111-1-1-1-1-1",
                             Ward = "Ward 1"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1111111-1111-1111-1111-111111111112"),
-                            AddressLine = "456 Elm St",
-                            City = "Ho Chi Minh City",
-                            Country = "Vietnam",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 2",
-                            IsDeleted = false,
-                            Ward = "Ward 2"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1111111-1111-1111-1111-111111111113"),
-                            AddressLine = "789 Oak St",
-                            City = "Hanoi",
-                            Country = "Vietnam",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 3",
-                            IsDeleted = false,
-                            Ward = "Ward 3"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1111111-1111-1111-1111-111111111114"),
-                            AddressLine = "321 Pine St",
-                            City = "Danang",
-                            Country = "Vietnam",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 4",
-                            IsDeleted = false,
-                            Ward = "Ward 4"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1111111-1111-1111-1111-111111111115"),
-                            AddressLine = "654 Maple St",
-                            City = "Hue",
-                            Country = "Vietnam",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 5",
-                            IsDeleted = false,
-                            Ward = "Ward 5"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1111111-1111-1111-1111-111111111116"),
-                            AddressLine = "987 Cedar St",
-                            City = "Can Tho",
-                            Country = "Vietnam",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 6",
-                            IsDeleted = false,
-                            Ward = "Ward 6"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1111111-1111-1111-1111-111111111117"),
-                            AddressLine = "159 Birch St",
-                            City = "Hai Phong",
-                            Country = "Vietnam",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 7",
-                            IsDeleted = false,
-                            Ward = "Ward 7"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1111111-1111-1111-1111-111111111118"),
-                            AddressLine = "753 Spruce St",
-                            City = "Nha Trang",
-                            Country = "Vietnam",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 8",
-                            IsDeleted = false,
-                            Ward = "Ward 8"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1111111-1111-1111-1111-111111111119"),
-                            AddressLine = "852 Fir St",
-                            City = "Da Lat",
-                            Country = "Vietnam",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 9",
-                            IsDeleted = false,
-                            Ward = "Ward 9"
-                        },
-                        new
-                        {
-                            Id = new Guid("e1111111-1111-1111-1111-111111111120"),
-                            AddressLine = "951 Ash St",
-                            City = "Vung Tau",
-                            Country = "Vietnam",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            District = "District 10",
-                            IsDeleted = false,
-                            Ward = "Ward 10"
                         });
                 });
 

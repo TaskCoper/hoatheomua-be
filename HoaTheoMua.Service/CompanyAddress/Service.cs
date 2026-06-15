@@ -29,7 +29,6 @@ public class Service : IService
             query = query.Where(x =>
                 x.AddressLine.ToLower().Contains(keyword)
                 || (x.Ward != null && x.Ward.ToLower().Contains(keyword))
-                || (x.District != null && x.District.ToLower().Contains(keyword))
                 || x.City.ToLower().Contains(keyword)
                 || x.Country.ToLower().Contains(keyword)
             );
@@ -55,13 +54,13 @@ public class Service : IService
                 Id = x.Id,
                 AddressLine = x.AddressLine,
                 Ward = x.Ward,
-                District = x.District,
                 City = x.City,
                 Country = x.Country,
                 Latitude = x.Latitude,
                 Longitude = x.Longitude,
                 CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt
+                UpdatedAt = x.UpdatedAt,
+                MapId = x.MapId,
             })
             .ToListAsync();
 
@@ -91,7 +90,7 @@ public class Service : IService
                 Id = x.Id,
                 AddressLine = x.AddressLine,
                 Ward = x.Ward,
-                District = x.District,
+                MapId = x.MapId,
                 City = x.City,
                 Country = x.Country,
                 Latitude = x.Latitude,
@@ -129,7 +128,7 @@ public class Service : IService
                 Id = Guid.NewGuid(),
                 AddressLine = request.AddressLine.Trim(),
                 Ward = request.Ward?.Trim(),
-                District = request.District?.Trim(),
+                MapId = request.MapId.Trim(),
                 City = request.City.Trim(),
                 Country = request.Country.Trim(),
                 Latitude = request.Latitude,
@@ -149,7 +148,7 @@ public class Service : IService
                 Id = companyAddress.Id,
                 AddressLine = companyAddress.AddressLine,
                 Ward = companyAddress.Ward,
-                District = companyAddress.District,
+                MapId = companyAddress.MapId,
                 City = companyAddress.City,
                 Country = companyAddress.Country,
                 Latitude = companyAddress.Latitude,
@@ -165,9 +164,7 @@ public class Service : IService
         }
     }
 
-    public async Task<string> UpdateCompanyAddress(
-        Guid id,
-        Request.UpdateCompanyAddressRequest request)
+    public async Task<string> UpdateCompanyAddress(Guid id, Request.UpdateCompanyAddressRequest request)
     {
         if (id == Guid.Empty)
         {
@@ -188,7 +185,7 @@ public class Service : IService
         {
             companyAddress.AddressLine = request.AddressLine.Trim();
             companyAddress.Ward = request.Ward?.Trim();
-            companyAddress.District = request.District?.Trim();
+            companyAddress.MapId =  request.MapId.Trim();
             companyAddress.City = request.City.Trim();
             companyAddress.Country = request.Country.Trim();
             companyAddress.Latitude = request.Latitude;

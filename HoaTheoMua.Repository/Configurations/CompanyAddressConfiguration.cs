@@ -15,7 +15,7 @@ public class CompanyAddressConfiguration: IEntityTypeConfiguration<CompanyAddres
         builder.Property(ca => ca.Ward)
             .IsRequired()
             .HasMaxLength(100);
-        builder.Property(ca => ca.District)
+        builder.Property(ca => ca.MapId)
             .HasMaxLength(100);
         builder.Property(ca => ca.City)
             .HasMaxLength(100);
