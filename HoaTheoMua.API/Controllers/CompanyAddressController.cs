@@ -17,17 +17,15 @@ public class CompanyAddressController : ControllerBase
     {
         _companyAddressService = companyAddressService;
     }
-
     [HttpGet]
-    public async Task<IActionResult> GetCompanyAddresses(
-        [FromQuery] Request.GetCompanyAddressesRequest request)
+    public async Task<IActionResult> GetCompanyAddress()
     {
-        var result = await _companyAddressService.GetCompanyAddresses(request);
+        var result = await _companyAddressService.GetCompanyAddress();
 
         return Ok(ApiResponseFactory.Base(
             result,
             true,
-            "Lấy danh sách địa chỉ công ty thành công.",
+            "Lấy địa chỉ công ty thành công.",
             HttpContext.TraceIdentifier
         ));
     }
@@ -46,7 +44,7 @@ public class CompanyAddressController : ControllerBase
     }
     
     [HttpPost]
-    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    //[Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> CreateCompanyAddress(
         [FromBody] Request.CreateCompanyAddressRequest request)
     {

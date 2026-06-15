@@ -13,42 +13,11 @@ public class Service : IService
         _dbContext = dbContext;
     }
 
-    public async Task<Response.GetCompanyAddressesResponse> GetCompanyAddresses(
-        Request.GetCompanyAddressesRequest request)
+    public async Task<Response.CompanyAddressResponse> GetCompanyAddress()
     {
-        var page = request.Page;
-        var pageSize = request.PageSize;
-
-        var query = _dbContext.CompanyAddresses
-            .Where(x => !x.IsDeleted);
-
-        if (!string.IsNullOrWhiteSpace(request.Keyword))
-        {
-            var keyword = request.Keyword.Trim().ToLower();
-
-            query = query.Where(x =>
-                x.AddressLine.ToLower().Contains(keyword)
-                || (x.Ward != null && x.Ward.ToLower().Contains(keyword))
-                || x.City.ToLower().Contains(keyword)
-                || x.Country.ToLower().Contains(keyword)
-            );
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.City))
-        {
-            var city = request.City.Trim().ToLower();
-
-            query = query.Where(x => x.City.ToLower().Contains(city));
-        }
-
-        var totalItems = await query.CountAsync();
-
-        var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-
-        var items = await query
+        var result = await _dbContext.CompanyAddresses
+            .Where(x => !x.IsDeleted)
             .OrderByDescending(x => x.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .Select(x => new Response.CompanyAddressResponse
             {
                 Id = x.Id,
@@ -62,18 +31,14 @@ public class Service : IService
                 UpdatedAt = x.UpdatedAt,
                 MapId = x.MapId,
             })
-            .ToListAsync();
+            .FirstOrDefaultAsync();
 
-        return new Response.GetCompanyAddressesResponse
+        if (result == null)
         {
-            Items = items,
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = totalItems,
-            TotalPages = totalPages,
-            PreviousPage = page > 1 ? page - 1 : null,
-            NextPage = page < totalPages ? page + 1 : null
-        };
+            throw new NotFoundException("Không tìm thấy địa chỉ công ty");
+        }
+
+        return result;
     }
 
     public async Task<Response.CompanyAddressResponse> GetCompanyAddressById(Guid id)
@@ -123,6 +88,18 @@ public class Service : IService
 
         try
         {
+            // var now = DateTimeOffset.UtcNow;
+            //
+            // var activeAddresses = await _dbContext.CompanyAddresses
+            //     .Where(x => !x.IsDeleted)
+            //     .ToListAsync();
+            //
+            // foreach (var address in activeAddresses)
+            // {
+            //     address.IsDeleted = true;
+            //     address.UpdatedAt = now;
+            // }
+
             var companyAddress = new Repository.Entity.CompanyAddress
             {
                 Id = Guid.NewGuid(),
@@ -164,7 +141,9 @@ public class Service : IService
         }
     }
 
-    public async Task<string> UpdateCompanyAddress(Guid id, Request.UpdateCompanyAddressRequest request)
+    public async Task<string> UpdateCompanyAddress(
+        Guid id,
+        Request.UpdateCompanyAddressRequest request)
     {
         if (id == Guid.Empty)
         {
