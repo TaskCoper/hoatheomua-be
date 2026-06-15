@@ -24,21 +24,4 @@ public class Response
 
         public DateTimeOffset? UpdatedAt { get; set; }
     }
-
-    public class GetCompanyAddressesResponse
-    {
-        public List<CompanyAddressResponse> Items { get; set; } = new();
-
-        public int PageIndex { get; set; }
-
-        public int PageSize { get; set; }
-
-        public int TotalItems { get; set; }
-
-        public int TotalPages { get; set; }
-
-        public int? PreviousPage { get; set; }
-
-        public int? NextPage { get; set; }
-    }
 }

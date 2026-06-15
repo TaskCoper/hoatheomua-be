@@ -4,19 +4,6 @@ namespace HoaTheoMua.Service.CompanyAddress;
 
 public class Request
 {
-    public class GetCompanyAddressesRequest
-    {
-        public string? Keyword { get; set; }
-
-        public string? City { get; set; }
-
-        [Range(1, int.MaxValue, ErrorMessage = "Page phải lớn hơn hoặc bằng 1")]
-        public int PageIndex { get; set; } = 1;
-        
-        [Range(1, 100, ErrorMessage = "PageSize phải từ 1 đến 100")]
-        public int PageSize { get; set; } = 10;
-    }
-
     public class CreateCompanyAddressRequest
     {
         [Required(ErrorMessage = "Địa chỉ không được để trống")]

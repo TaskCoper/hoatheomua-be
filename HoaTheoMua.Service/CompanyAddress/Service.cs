@@ -13,69 +13,33 @@ public class Service : IService
         _dbContext = dbContext;
     }
 
-   public async Task<Response.GetCompanyAddressesResponse> GetCompanyAddresses(
-    Request.GetCompanyAddressesRequest request)
-{
-    var pageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
-    var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
-
-    var query = _dbContext.CompanyAddresses
-        .Where(x => !x.IsDeleted);
-
-    if (!string.IsNullOrWhiteSpace(request.Keyword))
+    public async Task<Response.CompanyAddressResponse> GetCompanyAddress()
     {
-        var keyword = request.Keyword.Trim().ToLower();
+        var result = await _dbContext.CompanyAddresses
+            .Where(x => !x.IsDeleted)
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new Response.CompanyAddressResponse
+            {
+                Id = x.Id,
+                AddressLine = x.AddressLine,
+                Ward = x.Ward,
+                District = x.District,
+                City = x.City,
+                Country = x.Country,
+                Latitude = x.Latitude,
+                Longitude = x.Longitude,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt
+            })
+            .FirstOrDefaultAsync();
 
-        query = query.Where(x =>
-            x.AddressLine.ToLower().Contains(keyword)
-            || (x.Ward != null && x.Ward.ToLower().Contains(keyword))
-            || (x.District != null && x.District.ToLower().Contains(keyword))
-            || x.City.ToLower().Contains(keyword)
-            || x.Country.ToLower().Contains(keyword)
-        );
-    }
-
-    if (!string.IsNullOrWhiteSpace(request.City))
-    {
-        var city = request.City.Trim().ToLower();
-
-        query = query.Where(x => x.City.ToLower().Contains(city));
-    }
-
-    var totalItems = await query.CountAsync();
-
-    var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-
-    var items = await query
-        .OrderByDescending(x => x.CreatedAt)
-        .Skip((pageIndex - 1) * pageSize)
-        .Take(pageSize)
-        .Select(x => new Response.CompanyAddressResponse
+        if (result == null)
         {
-            Id = x.Id,
-            AddressLine = x.AddressLine,
-            Ward = x.Ward,
-            District = x.District,
-            City = x.City,
-            Country = x.Country,
-            Latitude = x.Latitude,
-            Longitude = x.Longitude,
-            CreatedAt = x.CreatedAt,
-            UpdatedAt = x.UpdatedAt
-        })
-        .ToListAsync();
+            throw new NotFoundException("Không tìm thấy địa chỉ công ty");
+        }
 
-    return new Response.GetCompanyAddressesResponse
-    {
-        Items = items,
-        PageIndex = pageIndex,
-        PageSize = pageSize,
-        TotalItems = totalItems,
-        TotalPages = totalPages,
-        PreviousPage = pageIndex > 1 ? pageIndex - 1 : null,
-        NextPage = pageIndex < totalPages ? pageIndex + 1 : null
-    };
-}
+        return result;
+    }
 
     public async Task<Response.CompanyAddressResponse> GetCompanyAddressById(Guid id)
     {
@@ -116,6 +80,18 @@ public class Service : IService
 
         try
         {
+            var now = DateTimeOffset.UtcNow;
+
+            var activeAddresses = await _dbContext.CompanyAddresses
+                .Where(x => !x.IsDeleted)
+                .ToListAsync();
+
+            foreach (var address in activeAddresses)
+            {
+                address.IsDeleted = true;
+                address.UpdatedAt = now;
+            }
+
             var companyAddress = new Repository.Entity.CompanyAddress
             {
                 Id = Guid.NewGuid(),
@@ -126,7 +102,7 @@ public class Service : IService
                 Country = request.Country.Trim(),
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
-                CreatedAt = DateTimeOffset.UtcNow,
+                CreatedAt = now,
                 UpdatedAt = null,
                 IsDeleted = false
             };
