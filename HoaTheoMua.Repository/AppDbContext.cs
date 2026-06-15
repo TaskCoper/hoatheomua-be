@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<Config> Configs { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -10,10 +10,7 @@ public class HangfireJobService : IJobService
     private readonly IRecurringJobManager _recurringJobManager;
     private readonly ILogger<HangfireJobService> _logger;
 
-    public HangfireJobService(
-        IBackgroundJobClient backgroundJobClient,
-        IRecurringJobManager recurringJobManager,
-        ILogger<HangfireJobService> logger)
+    public HangfireJobService(IBackgroundJobClient backgroundJobClient, IRecurringJobManager recurringJobManager, ILogger<HangfireJobService> logger)
     {
         _backgroundJobClient = backgroundJobClient;
         _recurringJobManager = recurringJobManager;
@@ -36,11 +33,7 @@ public class HangfireJobService : IJobService
         return jobId;
     }
 
-    public void AddOrUpdateRecurring<TJob>(
-        string recurringJobId,
-        Expression<Func<TJob, Task>> methodCall,
-        string cronExpression,
-        string queue = "default")
+    public void AddOrUpdateRecurring<TJob>(string recurringJobId, Expression<Func<TJob, Task>> methodCall, string cronExpression, string queue = "default")
     {
         _recurringJobManager.AddOrUpdate(
             recurringJobId,

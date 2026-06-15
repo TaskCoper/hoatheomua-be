@@ -11,10 +11,7 @@ public class DistributedCacheService : ICacheService
     private readonly ILogger<DistributedCacheService> _logger;
     private readonly TimeSpan _defaultExpiration;
 
-    public DistributedCacheService(
-        IDistributedCache cache,
-        IConfiguration configuration,
-        ILogger<DistributedCacheService> logger)
+    public DistributedCacheService(IDistributedCache cache, IConfiguration configuration, ILogger<DistributedCacheService> logger)
     {
         _cache = cache;
         _logger = logger;
@@ -42,11 +39,7 @@ public class DistributedCacheService : ICacheService
         }
     }
 
-    public async Task SetAsync<T>(
-        string key,
-        T value,
-        TimeSpan? absoluteExpirationRelativeToNow = null,
-        CancellationToken cancellationToken = default)
+    public async Task SetAsync<T>(string key, T value, TimeSpan? absoluteExpirationRelativeToNow = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -76,11 +69,7 @@ public class DistributedCacheService : ICacheService
         }
     }
 
-    public async Task<T> GetOrSetAsync<T>(
-        string key,
-        Func<CancellationToken, Task<T>> factory,
-        TimeSpan? absoluteExpirationRelativeToNow = null,
-        CancellationToken cancellationToken = default)
+    public async Task<T> GetOrSetAsync<T>(string key, Func<CancellationToken, Task<T>> factory, TimeSpan? absoluteExpirationRelativeToNow = null, CancellationToken cancellationToken = default)
     {
         var cached = await GetAsync<T>(key, cancellationToken);
 
