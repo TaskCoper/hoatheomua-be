@@ -39,6 +39,8 @@ builder.Services.ConfigureRateLimiter();
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddRedisCacheServices(builder.Configuration);
+builder.Services.AddHangfireServices(builder.Configuration);
 
 builder.Services.AddScoped<MailService.IService, MailService.Service>();
 builder.Services.AddScoped<JwtService.IService, JwtService.Service>();
@@ -85,6 +87,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 
 app.UseAuthorization();
+app.UseHangfireDashboardIfEnabled(builder.Configuration);
 
 app.MapControllers();
 
