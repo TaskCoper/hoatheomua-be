@@ -88,17 +88,17 @@ public class Service : IService
 
         try
         {
-            var now = DateTimeOffset.UtcNow;
-
-            var activeAddresses = await _dbContext.CompanyAddresses
-                .Where(x => !x.IsDeleted)
-                .ToListAsync();
-
-            foreach (var address in activeAddresses)
-            {
-                address.IsDeleted = true;
-                address.UpdatedAt = now;
-            }
+            // var now = DateTimeOffset.UtcNow;
+            //
+            // var activeAddresses = await _dbContext.CompanyAddresses
+            //     .Where(x => !x.IsDeleted)
+            //     .ToListAsync();
+            //
+            // foreach (var address in activeAddresses)
+            // {
+            //     address.IsDeleted = true;
+            //     address.UpdatedAt = now;
+            // }
 
             var companyAddress = new Repository.Entity.CompanyAddress
             {
