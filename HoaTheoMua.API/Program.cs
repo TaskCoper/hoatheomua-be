@@ -1,3 +1,4 @@
+using Amazon.S3;
 using FluentValidation;
 using HoaTheoMua.Extension;
 using HoaTheoMua.Extentions;
@@ -15,6 +16,7 @@ using NewService = HoaTheoMua.Service.New;
 
 using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
+using StorageService = HoaTheoMua.Service.Storage;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +40,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.ConfigureRateLimiter();
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions("AWS"));
+builder.Services.AddAWSService<IAmazonS3>();
+builder.Services.Configure<StorageService.StorageOption>(builder.Configuration.GetSection("AWS"));
+builder.Services.AddHostedService<StorageService.CleanupPendingUploadsJob>();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<MailService.IService, MailService.Service>();
@@ -49,6 +55,7 @@ builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
+builder.Services.AddScoped<StorageService.IService, StorageService.Service>();
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 

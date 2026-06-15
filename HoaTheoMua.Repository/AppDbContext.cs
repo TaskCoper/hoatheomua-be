@@ -19,7 +19,8 @@ public class AppDbContext : DbContext
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Order> Orders { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
-    
+    public DbSet<FileMetadata> FileMetadata { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // base.OnModelCreating(modelBuilder);
