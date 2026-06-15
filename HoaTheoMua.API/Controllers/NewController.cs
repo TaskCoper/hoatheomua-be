@@ -9,7 +9,6 @@ namespace HoaTheoMua.Controllers;
 
 [ApiController]
 [Route("api/v1/news")]
-[Authorize]
 public class NewController : ControllerBase
 {
     private readonly NewService.IService _newService;
