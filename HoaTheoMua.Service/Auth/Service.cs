@@ -62,6 +62,17 @@ public class Service : IService
         return check;
     }
 
+    private void DeleteAuthCookies()
+    {
+        var cookies = _httpContext.HttpContext?.Response.Cookies;
+        if (cookies == null)
+        {
+            return;
+        }
+        cookies.Delete("HTM-Access-Token");
+        cookies.Delete("HTM-Refresh-Token");
+    }
+
     public async Task<string> Register(Request.RegisterRequest request)
     {
         if (request.Password != request.ConfirmPassword)
@@ -69,11 +80,13 @@ public class Service : IService
             throw new BadRequestException("Mật khẩu xác nhận không trùng khớp!");
         }
 
+        var email = request.Email.Trim().ToLower();
+
         var transaction = await _dbContext.Database.BeginTransactionAsync();
         try
         {
             var isExistEmail = await _dbContext.Users
-                .AnyAsync(x => x.Email.ToLower() == request.Email.ToLower() );
+                .AnyAsync(x => x.Email.ToLower() == email );
             if (isExistEmail)
             {
                 throw new ConflictException($"Email {request.Email} đã tồn tại trong hệ thống.");            }
@@ -85,7 +98,7 @@ public class Service : IService
             var newUser = new Repository.Entity.User()
             {
                 Id = Guid.NewGuid(),
-                Email = request.Email,
+                Email = email,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 HashPassword = hashedPassword,
@@ -99,12 +112,13 @@ public class Service : IService
             {
                 new Claim("UserId", newUser.Id.ToString()),
                 new Claim("IsVerify", newUser.IsVerify.ToString().ToLower()),
+                new Claim("Email", newUser.Email),
             };
             var emailToken = _jwtService.GenerateEmailVerificationToken(newClaims, 2);
 
             await _mailService.SendMail(new MailContent
             {
-                To = request.Email,
+                To = email,
                 Subject = "Hoa Theo Mua",
                 Body = MailTemplate.EmailContainToken(emailToken),
             });
@@ -170,6 +184,7 @@ public class Service : IService
 
         if (storedToken == null)
         {
+            DeleteAuthCookies();
             throw new ExpiredRefreshTokenException();
         }
 
@@ -177,6 +192,7 @@ public class Service : IService
 
         if (!isActive)
         {
+            DeleteAuthCookies();
             throw new ExpiredRefreshTokenException();
         }
 
@@ -309,11 +325,16 @@ public class Service : IService
         return Guid.Empty;
     }
 
-    public async Task<Response.GetMeResponse> GetMe()
+    public async Task<Response.GetMeResponse?> GetMe()
     {
         var userId = CheckAccessToken();
         if (userId == Guid.Empty)
         {
+            _httpContext.HttpContext!.Request.Cookies.TryGetValue("HTM-Refresh-Token", out var refreshToken);
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return null;
+            }
             throw new MissingAccessTokenException();
         }
 
@@ -327,6 +348,7 @@ public class Service : IService
                 Avatar = y.Avatar,
                 IsVerify =  y.IsVerify,
                 Role = y.Role.ToString(),
+                UserId = y.Id,
             }).FirstOrDefaultAsync();
 
         if (query == null)
@@ -363,7 +385,7 @@ public class Service : IService
                 Message = "LOGOUT_SUCCESSFUL",
             };
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedException)
         {
             throw;
         }
@@ -379,14 +401,14 @@ public class Service : IService
         var httpContext = _httpContext.HttpContext;
         var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown IP";
         var userAgent = httpContext?.Request.Headers.UserAgent.ToString() ?? "Unknown Device";
-        var email = request.Email.Trim();
+        var email = request.Email.Trim().ToLower();
 
         var user = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower() && !x.IsDeleted);
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == email && !x.IsDeleted);
 
         if (user == null)
         {
-            throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+            throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
         }
 
         var pepperPassword = request.Password + _securityOptions.Pepper;
@@ -399,7 +421,7 @@ public class Service : IService
 
         if (!isPasswordValid)
         {
-            throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+            throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
         }
 
        

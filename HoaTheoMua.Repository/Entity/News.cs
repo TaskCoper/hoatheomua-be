@@ -11,6 +11,7 @@ public class News: BaseEntity<Guid>, IAuditableEntity
     public int ViewCount { get; set; }
     public string CoverImage { get; set; } = null!;
     public NewsStatus Status { get; set; }
+    public string? slug { get; set; }
     
     public Guid UserId { get; set; }
     public User User { get; set; }

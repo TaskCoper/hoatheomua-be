@@ -34,6 +34,8 @@ public class GlobalExceptionHandlerMiddleware : IMiddleware
                 throw;
             }
             
+            
+            //context.Response.Clear();
             context.Response.ContentType = "application/json";
             
             AppException appEx = ex switch

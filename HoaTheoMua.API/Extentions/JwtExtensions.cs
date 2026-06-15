@@ -1,7 +1,9 @@
 ﻿using System.Security.Claims;
 using System.Text;
+using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.JwtService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
 namespace HoaTheoMua.Extentions;
@@ -51,11 +53,25 @@ public static class JwtExtensions
 
                         
                         return Task.CompletedTask;
+                    },
+                    OnAuthenticationFailed = context =>
+                    {
+                        if (context.Exception is SecurityTokenExpiredException)
+                        {
+                            throw new ExpiredAccessTokenException();
+                        }
+                        return Task.CompletedTask;
                     }
                 };
             });
         services.AddAuthorization(options =>
         {
+            //đây là cấu hình mặc định của Author có nghĩ là khi bạn đặt chữ [Authorize] vào bất kì endpoint nào thì nó sẽ lôi thằng này ra kiểm tra
+            //và khi dùng nhiều lần khai báo thì nó sẽ kiểm tra nhiều điều kiện (AND) thỏa mãn hết thì người dùng mới được sử dụng endpoint đó
+            options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .RequireClaim("IsVerify").Build();
+            
             options.AddPolicy(AdminPolicy, policy =>
                 policy.RequireRole("Admin"));
             // [Authorize(Policy = JwtExtensions.AdminPolicy)]

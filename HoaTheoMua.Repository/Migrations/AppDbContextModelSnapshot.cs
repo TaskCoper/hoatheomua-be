@@ -797,6 +797,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<string>("slug")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
@@ -923,6 +926,159 @@ namespace HoaTheoMua.Repository.Migrations
                             Title = "Travel Destinations",
                             UserId = new Guid("22222222-2222-2222-2222-222222222222"),
                             ViewCount = 950
+                        });
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AhahaMoveOrderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AhahaMoveTrackingUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhanhOrderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhanhTrackingUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TrackNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Orders");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444441"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Pending",
+                            TrackNumber = "TRK1001",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444442"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Paid",
+                            TrackNumber = "TRK1002",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333334")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444443"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Shipped",
+                            TrackNumber = "TRK1003",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333335")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444444"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Delivered",
+                            TrackNumber = "TRK1004",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333336")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444445"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Cancelled",
+                            TrackNumber = "TRK1005",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333337")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444446"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Pending",
+                            TrackNumber = "TRK1006",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333338")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444447"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Paid",
+                            TrackNumber = "TRK1007",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333339")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444448"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Pending",
+                            TrackNumber = "TRK1008",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444449"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Paid",
+                            TrackNumber = "TRK1009",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
+                        },
+                        new
+                        {
+                            Id = new Guid("44444444-4444-4444-4444-444444444450"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            Metadata = "{}",
+                            Status = "Shipped",
+                            TrackNumber = "TRK1010",
+                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
                         });
                 });
 
@@ -1116,6 +1272,277 @@ namespace HoaTheoMua.Repository.Migrations
                             RefreshTokenHash = "hash10",
                             UserAgent = "Edge",
                             UserId = new Guid("33333333-3333-3333-3333-333333333340")
+                        });
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("Accumulated")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Gateway")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReferenceCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("SePayId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SubAccount")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("TransferAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("TransferType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("Transactions");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555551"),
+                            AccountNumber = "123456789",
+                            Accumulated = 100000m,
+                            Code = "SEP1001",
+                            Content = "Payment for TRK1001",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444441"),
+                            ReferenceCode = "REF1001",
+                            SePayId = 1001L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 100000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555552"),
+                            AccountNumber = "123456789",
+                            Accumulated = 250000m,
+                            Code = "SEP1002",
+                            Content = "Payment for TRK1002",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444442"),
+                            ReferenceCode = "REF1002",
+                            SePayId = 1002L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 150000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555553"),
+                            AccountNumber = "123456789",
+                            Accumulated = 450000m,
+                            Code = "SEP1003",
+                            Content = "Payment for TRK1003",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444443"),
+                            ReferenceCode = "REF1003",
+                            SePayId = 1003L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 200000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555554"),
+                            AccountNumber = "123456789",
+                            Accumulated = 700000m,
+                            Code = "SEP1004",
+                            Content = "Payment for TRK1004",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444444"),
+                            ReferenceCode = "REF1004",
+                            SePayId = 1004L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 250000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555555"),
+                            AccountNumber = "123456789",
+                            Accumulated = 650000m,
+                            Code = "SEP1005",
+                            Content = "Refund for TRK1005",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444445"),
+                            ReferenceCode = "REF1005",
+                            SePayId = 1005L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 50000m,
+                            TransferType = "OUT"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555556"),
+                            AccountNumber = "123456789",
+                            Accumulated = 750000m,
+                            Code = "SEP1006",
+                            Content = "Payment for TRK1006",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444446"),
+                            ReferenceCode = "REF1006",
+                            SePayId = 1006L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 100000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555557"),
+                            AccountNumber = "123456789",
+                            Accumulated = 1050000m,
+                            Code = "SEP1007",
+                            Content = "Payment for TRK1007",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444447"),
+                            ReferenceCode = "REF1007",
+                            SePayId = 1007L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 300000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555558"),
+                            AccountNumber = "123456789",
+                            Accumulated = 1400000m,
+                            Code = "SEP1008",
+                            Content = "Payment for TRK1008",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444448"),
+                            ReferenceCode = "REF1008",
+                            SePayId = 1008L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 350000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555559"),
+                            AccountNumber = "123456789",
+                            Accumulated = 1800000m,
+                            Code = "SEP1009",
+                            Content = "Payment for TRK1009",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444449"),
+                            ReferenceCode = "REF1009",
+                            SePayId = 1009L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 400000m,
+                            TransferType = "IN"
+                        },
+                        new
+                        {
+                            Id = new Guid("55555555-5555-5555-5555-555555555560"),
+                            AccountNumber = "123456789",
+                            Accumulated = 2250000m,
+                            Code = "SEP1010",
+                            Content = "Payment for TRK1010",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Test",
+                            Gateway = "SePay",
+                            IsDeleted = false,
+                            OrderId = new Guid("44444444-4444-4444-4444-444444444450"),
+                            ReferenceCode = "REF1010",
+                            SePayId = 1010L,
+                            SubAccount = "",
+                            TransactionDate = new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            TransferAmount = 450000m,
+                            TransferType = "IN"
                         });
                 });
 
@@ -1383,6 +1810,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
+                        .WithMany("Orders")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
@@ -1392,6 +1830,17 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
+                        .WithMany("Transactions")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>
@@ -1406,6 +1855,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("CategoryNewsDetail");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.User", b =>
                 {
                     b.Navigation("AuditLog");
@@ -1413,6 +1867,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("CategoryNews");
 
                     b.Navigation("News");
+
+                    b.Navigation("Orders");
 
                     b.Navigation("RefreshToken");
 

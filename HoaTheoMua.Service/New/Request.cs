@@ -3,11 +3,8 @@ using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Service.New;
 
-public class CreateNewRequest : UpdateNewRequest
-{
-    [Required]
-    public Guid UserId { get; set; }
-}
+public class CreateNewRequest : UpdateNewRequest;
+
 
 public class UpdateNewRequest
 {
