@@ -19,7 +19,7 @@ public class Response
 
         public decimal? Longitude { get; set; }
         
-        public string? MapId { get; set; }
+        public required string MapId { get; set; }
 
         public DateTimeOffset CreatedAt { get; set; }
 
