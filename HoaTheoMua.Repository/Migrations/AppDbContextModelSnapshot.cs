@@ -71,7 +71,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
 
                     b.HasData(
                         new
@@ -240,7 +240,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CategoryNewsList");
+                    b.ToTable("CategoryNewsList", (string)null);
 
                     b.HasData(
                         new
@@ -359,7 +359,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("CategoryNewsId", "NewsId")
                         .IsUnique();
 
-                    b.ToTable("CategoryNewsDetails");
+                    b.ToTable("CategoryNewsDetails", (string)null);
 
                     b.HasData(
                         new
@@ -480,8 +480,8 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<string>("MapId")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -493,7 +493,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CompanyAddresses");
+                    b.ToTable("CompanyAddresses", (string)null);
 
                     b.HasData(
                         new
@@ -541,7 +541,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Configs");
+                    b.ToTable("Configs", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.ForgotPassword", b =>
@@ -583,7 +583,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ResetPasswords");
+                    b.ToTable("ResetPasswords", (string)null);
 
                     b.HasData(
                         new
@@ -740,7 +740,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("NewsList");
+                    b.ToTable("NewsList", (string)null);
 
                     b.HasData(
                         new
@@ -952,7 +952,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
@@ -1002,7 +1002,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderDetails");
+                    b.ToTable("OrderDetails", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
@@ -1063,7 +1063,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
 
                     b.HasData(
                         new
@@ -1274,7 +1274,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Transactions", (string)null);
 
                     b.HasData(
                         new
@@ -1528,7 +1528,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
 
                     b.HasData(
                         new

@@ -204,40 +204,35 @@ public partial class Service : IService
                     Remarks = order.Remarks,
                 },
             },
+            ServiceId = "SGN-BIKE",
+            Requests = new List<AhamoveService.Request.ItemsRequest>()
+            {
+                new AhamoveService.Request.ItemsRequest()
+                {
+                    Id = "SGN-BIKE-SMS",
+                },
+                new AhamoveService.Request.ItemsRequest()
+                {
+                    Id = "SGN-BIKE-D2D",
+                },
+                new AhamoveService.Request.ItemsRequest()
+                {
+                    Id = "SGN-BIKE-FRAGILE",
+                },
+                new AhamoveService.Request.ItemsRequest()
+                {
+                    Id = "SGN-BIKE-BULKY",
+                    TierCode = "TIER_2"
+                },
+            },
             PaymentMethod = "CASH",
             Remarks = order.Remarks,
             Items = itemsRequest,
             PackageDetail = packageDetailRequest,
-            Services = new List<AhamoveService.Request.ServiceRequest>()
-            {
-                new AhamoveService.Request.ServiceRequest()
-                {
-                    Id = "SGN-BIKE",
-                    Requests = new List<AhamoveService.Request.ItemsRequest>()
-                    {
-                        new AhamoveService.Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-SMS",
-                        },
-                        new AhamoveService.Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-D2D",
-                        },
-                        new AhamoveService.Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-FRAGILE",
-                        },
-                        new AhamoveService.Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-BULKY",
-                            TierCode = "TIER_2"
-                        },
-                    }
-                },
-            }
         };
 
-        var ahamoveApi = _ahamoveOption.BaseUrl + "/v3/orders";
+        // var ahamoveApi = _ahamoveOption.BaseUrl + "/v3/orders";
+        var ahamoveApi = "https://partner-apistg.ahamove.com/v3/orders";
         var ahamoveToken = _ahamoveOption.Token;
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);

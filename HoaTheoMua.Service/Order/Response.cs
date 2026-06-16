@@ -29,9 +29,9 @@ public class Response
         public string Status { get; set; }
         public string TrackNumber { get; set; }
         public int? NhanhOrderId { get; set; } 
-        public string NhanhTrackingUrl { get; set; } = string.Empty;
-        public string AhahaMoveOrderId { get; set; } = string.Empty;
-        public string AhahaMoveTrackingUrl { get; set; } = string.Empty;
+        public string? NhanhTrackingUrl { get; set; } = string.Empty;
+        public string? AhahaMoveOrderId { get; set; } = string.Empty;
+        public string? AhahaMoveTrackingUrl { get; set; } = string.Empty;
         public string QrCodeUrl { get; set; } = string.Empty;
         
         public OrderTransactionResponse? Transaction { get; set; }

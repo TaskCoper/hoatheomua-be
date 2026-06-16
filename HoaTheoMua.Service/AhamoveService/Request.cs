@@ -35,6 +35,9 @@ public class Request
       // THAY ĐỔI TẠI ĐÂY: Nhận mảng services thay vì một chuỗi đơn lẻ
       [JsonPropertyName("services")] 
       public List<ServiceRequest>? Services { get; set; }
+      [JsonPropertyName("service_id")] 
+      public string? ServiceId { get; set; }
+      public List<ItemsRequest>? Requests { get; set; } = new List<ItemsRequest>();
 
       [JsonPropertyName("payment_method")] 
       public string PaymentMethod { get; set; } = "CASH";

@@ -230,7 +230,7 @@ public class Service : IService
             }
         };
         
-        var ahamoveApi =  _ahamoveAhamoveOption.BaseUrl+"/v3/orders/estimates";
+        var ahamoveApi =  _ahamoveAhamoveOption.BaseUrl +"/v3/orders/estimates";
         var ahamoveToken = _ahamoveAhamoveOption.Token;
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
@@ -348,10 +348,10 @@ public class Service : IService
             Status = orders.Status,
             TrackNumber = orders.TrackNumber,
             QrCodeUrl = qrCodeUrl,
-            NhanhOrderId = (int)orders.NhanhOrderId!,
-            NhanhTrackingUrl = orders.NhanhTrackingUrl!,
-            AhahaMoveOrderId = orders.AhahaMoveOrderId!,
-            AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl!,
+            NhanhOrderId = orders.NhanhOrderId,
+            NhanhTrackingUrl = orders.NhanhTrackingUrl,
+            AhahaMoveOrderId = orders.AhahaMoveOrderId,
+            AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl,
 
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
