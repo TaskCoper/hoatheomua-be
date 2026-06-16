@@ -25,7 +25,7 @@ public class CompanyAddressController : ControllerBase
         return Ok(ApiResponseFactory.Base(
             result,
             true,
-            "Lấy địa chỉ công ty thành công.",
+            result == null ? "Không tìm thấy địa chỉ công ty." : "Lấy địa chỉ công ty thành công.",
             HttpContext.TraceIdentifier
         ));
     }
@@ -38,7 +38,7 @@ public class CompanyAddressController : ControllerBase
         return Ok(ApiResponseFactory.Base(
             result,
             true,
-            "Lấy địa chỉ công ty thành công.",
+            result == null ? "Không tìm thấy địa chỉ công ty." : "Lấy địa chỉ công ty thành công.",
             HttpContext.TraceIdentifier
         ));
     }
