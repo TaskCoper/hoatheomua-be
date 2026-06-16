@@ -688,6 +688,89 @@ namespace HoaTheoMua.Repository.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("avatarUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("coverImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("employmentType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("level")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("location")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<float?>("maxExperienceYears")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("minExperienceYears")
+                        .HasColumnType("real");
+
+                    b.Property<int>("openings")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<float?>("salaryMax")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("salaryMin")
+                        .HasColumnType("real");
+
+                    b.Property<bool>("salaryNegotiable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("slug")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("title")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("slug")
+                        .IsUnique();
+
+                    b.ToTable("JobDescriptions");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.News", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1016,6 +1099,53 @@ namespace HoaTheoMua.Repository.Migrations
                             TrackNumber = "TRK1010",
                             UserId = new Guid("33333333-3333-3333-3333-333333333333")
                         });
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("JobDescriptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("attachments")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("coverLetter")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("isRead")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobDescriptionId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RecruitmentRequest");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
@@ -1768,6 +1898,25 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.JobDescriptions", "JobDescription")
+                        .WithMany("recruitmentRequests")
+                        .HasForeignKey("JobDescriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
+                        .WithMany("RecruitmentRequests")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("JobDescription");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
@@ -1797,6 +1946,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("ChildCategoryNews");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
+                {
+                    b.Navigation("recruitmentRequests");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.News", b =>
                 {
                     b.Navigation("CategoryNewsDetail");
@@ -1818,6 +1972,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("News");
 
                     b.Navigation("Orders");
+
+                    b.Navigation("RecruitmentRequests");
 
                     b.Navigation("RefreshToken");
 

@@ -1,0 +1,49 @@
+using HoaTheoMua.Service.Models;
+
+namespace HoaTheoMua.Service.RecruitmentRequests;
+
+public class Response
+{
+    public class UserDto
+    {
+        public Guid userId { get; set; }
+        public string fullName { get; set; } = null!;
+        public string email { get; set; } = null!;
+        public string? phoneNumber { get; set; }
+        public string? avatar { get; set; }
+    }
+
+    public class JobDto
+    {
+        public Guid id { get; set; }
+        public string title { get; set; } = null!;
+    }
+
+    public class RecruitmentRequestItem
+    {
+        public Guid id { get; set; }
+        public string title { get; set; } = null!;
+        public string coverLetter { get; set; } = null!;
+        public string attachments { get; set; } = null!;
+        public bool isRead { get; set; }
+        public DateTimeOffset createdAt { get; set; }
+        public UserDto user { get; set; } = null!;
+        public JobDto jobDescription { get; set; } = null!;
+    }
+
+    public class MarkAsReadResponse
+    {
+        public Guid id { get; set; }
+        public bool isRead { get; set; }
+        public DateTimeOffset? updatedAt { get; set; }
+    }
+
+    public class CreateRecruitmentResponse
+    {
+        public Guid id { get; set; }
+        public Guid jobDescriptionId { get; set; }
+        public string title { get; set; } = null!;
+        public bool isRead { get; set; }
+        public DateTimeOffset createdAt { get; set; }
+    }
+}

@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
     public DbSet<Order> Orders { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<Config> Configs { get; set; }
+    public DbSet<JobDescriptions> JobDescriptions { get; set; }
+    public DbSet<RecruitmentRequest> RecruitmentRequests { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
