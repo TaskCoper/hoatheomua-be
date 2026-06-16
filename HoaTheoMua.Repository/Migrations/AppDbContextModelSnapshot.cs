@@ -480,8 +480,8 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<string>("MapId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
