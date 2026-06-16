@@ -871,10 +871,18 @@ namespace HoaTheoMua.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("AhahaMoveOrderId")
                         .HasColumnType("text");
 
                     b.Property<string>("AhahaMoveTrackingUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("City")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -882,12 +890,18 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("Metadata")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<decimal>("Latitude")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Longitude")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("NhanhOrderId")
                         .HasColumnType("text");
@@ -895,9 +909,30 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("NhanhTrackingUrl")
                         .HasColumnType("text");
 
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("ProductFree")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("ShippingFee")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ShortAddress")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<decimal>("TotalFee")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("TrackNumber")
                         .IsRequired()
@@ -909,113 +944,65 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Ward")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("Orders");
+                });
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444441"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Pending",
-                            TrackNumber = "TRK1001",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444442"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Paid",
-                            TrackNumber = "TRK1002",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333334")
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444443"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Shipped",
-                            TrackNumber = "TRK1003",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333335")
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444444"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Delivered",
-                            TrackNumber = "TRK1004",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333336")
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444445"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Cancelled",
-                            TrackNumber = "TRK1005",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333337")
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444446"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Pending",
-                            TrackNumber = "TRK1006",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333338")
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444447"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Paid",
-                            TrackNumber = "TRK1007",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333339")
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444448"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Pending",
-                            TrackNumber = "TRK1008",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444449"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Paid",
-                            TrackNumber = "TRK1009",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444450"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            Metadata = "{}",
-                            Status = "Shipped",
-                            TrackNumber = "TRK1010",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
-                        });
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double>("Height")
+                        .HasColumnType("double precision");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("Length")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double>("Weight")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Width")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("OrderDetails");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
@@ -1768,6 +1755,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
+                        .WithMany("OrderDetails")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
@@ -1804,6 +1802,8 @@ namespace HoaTheoMua.Repository.Migrations
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
                 {
+                    b.Navigation("OrderDetails");
+
                     b.Navigation("Transactions");
                 });
 

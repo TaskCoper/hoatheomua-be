@@ -13,12 +13,14 @@ public class Service: IService
 {
     private readonly HttpClient _httpClient;
     private readonly AhamoveOption _ahamoveAhamoveOption = new();
+    private readonly NhanhVnOption _nhanhVnOption = new();
     private readonly AppDbContext _appDbContext;
 
     public Service(HttpClient httpClient, IConfiguration configuration,  AppDbContext appDbContext)
     {
         _httpClient = httpClient;
         configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveAhamoveOption);
+        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         _appDbContext = appDbContext;
     }
 
@@ -36,11 +38,10 @@ public class Service: IService
         // }
         
         // Call NhanhVn de tim gia tien cua Item
-        var appId = "77683";
-        var businessId = "126981";
-        var token = "qC6szW89FwrjJTiwHGT7FtJOjW4tNSRwrp080cT9klzcIq7IWW54nH4C4JZL3jU9yrBlQ71jZ952BBu1nswx1eLrIZoNRxDN4JxIgFdn6yUsAXbcTByGH1J8ue3FonfdL0Jc9OmGK4rDBA8f7tnhjUGVP3f8QPj4I8Jh5Ly9RkZPncG0QwyE7kEvO97vrc";
-        var nhanhApi = "https://pos.open.nhanh.vn/v3.0/product/list?appId="+ appId + "&businessId="+ businessId;
-
+        var appId = _nhanhVnOption.AppId;
+        var businessId = _nhanhVnOption.BusinessId;
+        var token = _nhanhVnOption.Token;
+        var nhanhApi = _nhanhVnOption.BaseUrl + "/product/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
             Filters = new NhanhVnRequest.NhanhFilters()
@@ -172,10 +173,8 @@ public class Service: IService
             }
         };
 
-        var ahamoveApi = "https://partner-apistg.ahamove.com/v3/orders/estimates";
-        var ahamoveToken =
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXAiOiJ1c2VyIiwiY2lkIjoiODQ5Nzk5MDE1NTAiLCJzdGF0dXMiOiJBQ1RJVkFUSU5HIiwiZW9jIjoiaW5mb0B2bnpkbmEuY29tIiwibm9jIjoiUElFRFRFQU0gQWRtaW4iLCJjdHkiOiJTR04iLCJ0eXBlIjoiYXBpIiwicGFydG5lciI6InBpZWR0ZWFtIiwiZXhwIjoxODQ0NjQ4MzAyLCJpYXQiOjE3ODE1NzYzMDIsImlzcyI6ImFoYSJ9.Mt92x4_9d4DabC0bERtQCsxj704P3oGqh9TE_-z_WxY";
-        
+        var ahamoveApi =  _ahamoveAhamoveOption.BaseUrl+"/v3/orders/estimates";
+        var ahamoveToken = _ahamoveAhamoveOption.Token;
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
