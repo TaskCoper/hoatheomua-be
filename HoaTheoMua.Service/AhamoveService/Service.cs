@@ -68,4 +68,85 @@ public class Service: IService
 
             return  totalFee;
     }
+
+    public async Task<string> CreateOrder(Request.CreateOrderRequestAhamove request)
+    {
+        if (request.Path == null || request.Path.Count != 2)
+        {
+            throw new ArgumentException("Đơn hàng phải gồm ít nhất 1 điểm lấy và 1 điểm giao.");
+        }
+
+        var ahamoveRequestBody = new
+        {
+            order_time = request.OrderTime,
+            service_id = request.ServiceId,
+            payment_method = "BALANCE",
+            remarks = request.Remarks,
+            promo_code = request.PromoCode,
+
+            path = request.Path.Select(p => new
+            {
+                lat = double.TryParse(p.Lat.ToString(), out var latVal) ? latVal : 0,
+                lng = double.TryParse(p.Lng.ToString(), out var lngVal) ? lngVal : 0,
+                address = p.Address,
+                short_address = p.ShortAddress ?? p.Address,
+                name = p.Name,
+                mobile = p.Mobile,
+                cod = p.Cod,
+                item_value = p.ItemValue,
+                tracking_number = p.TrackingNumber,
+                remarks = p.Remarks
+            }).ToList(),
+            
+            requests = request.Requests?.Select(r => new
+            {
+                _id = r.Id,
+                num = r.Num,
+                tier_code = r.TierCode
+            }).ToList(),
+            
+            items = request.Items?.Select(i => new
+            {
+                _id = i.Id,
+                num = i.Num,
+                name = i.Name,
+                price = i.Price
+            }).ToList(),
+            
+            package_detail = request.PackageDetail?.Select(p => new
+            {
+                weight = p.Weight,
+                length = p.Length,
+                width = p.Width,
+                height = p.Height,
+                description = p.Description
+            }).ToList()
+        };
+        
+        var fullUrl = $"{_ahamoveAhamoveOption.BaseUrl}/v3/orders";
+
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, fullUrl);
+        httpRequest.Headers.Add("Authorization", $"Bearer {_ahamoveAhamoveOption.Token}");
+        httpRequest.Content = JsonContent.Create(ahamoveRequestBody);
+
+        var httpResponse = await _httpClient.SendAsync(httpRequest);
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var error = await httpResponse.Content.ReadAsStringAsync();
+            throw new BadGatewayException($"Ahamove từ chối tạo đơn thật: {error}");
+        }
+
+        var jsonString = await httpResponse.Content.ReadAsStringAsync();
+        using var jsonDoc = JsonDocument.Parse(jsonString);
+        var root = jsonDoc.RootElement;
+        
+        if (root.TryGetProperty("order_id", out var orderIdNode))
+        {
+            return orderIdNode.GetString() ?? string.Empty;
+        }
+
+        return jsonString;
+        
+      
+    }
 }
