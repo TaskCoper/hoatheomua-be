@@ -50,6 +50,7 @@ builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 
+
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 
 builder.Services.AddCors(options =>
