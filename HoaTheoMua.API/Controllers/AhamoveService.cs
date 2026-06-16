@@ -15,19 +15,19 @@ public class AhamoveService: ControllerBase
     }
     
     [HttpPost("/api/v1/ahamove/estimate")]
-    public async Task<IActionResult> EstimateShippingFee([FromBody] Request.EstimateFeeRequest request)
+    public async Task<IActionResult> EstimateShippingFee([FromBody] Request.EstimateShippingFeeRequest request)
     {
-        var result = await _ahamoveService.EstimateFee(request);
+        var result = await _ahamoveService.EstimateShippingFee(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
-    [HttpPost("/api/v1/ahamove/orders")]
-    public async Task<IActionResult> CreateOrder([FromBody] Request.CreateOrderRequestAhamove request)
-    {
-        var result = await _ahamoveService.CreateOrder(request);
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
-    }
-    
+    // [HttpPost("/api/v1/ahamove/orders")]
+    // public async Task<IActionResult> CreateOrder([FromBody] Request.CreateOrderRequestAhamove request)
+    // {
+    //     var result = await _ahamoveService.CreateOrder(request);
+    //     return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    // }
+    //
     
     
 }

@@ -1,7 +1,9 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using ArgumentException = HoaTheoMua.Service.Exceptions.ArgumentException;
 
@@ -11,142 +13,191 @@ public class Service: IService
 {
     private readonly HttpClient _httpClient;
     private readonly AhamoveOption _ahamoveAhamoveOption = new();
+    private readonly AppDbContext _appDbContext;
 
-    public Service(HttpClient httpClient, IConfiguration configuration)
+    public Service(HttpClient httpClient, IConfiguration configuration,  AppDbContext appDbContext)
     {
         _httpClient = httpClient;
         configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveAhamoveOption);
+        _appDbContext = appDbContext;
     }
 
-    public async Task<decimal> EstimateFee(Request.EstimateFeeRequest request)
+
+    public async Task<object> EstimateShippingFee(Request.EstimateShippingFeeRequest request)
     {
-            if(request.Points == null || request.Points.Count != 2)
+        // Call DB Tim Address cua Shop
+        // var companyAddress = await _appDbContext.CompanyAddresses
+        //     .Where(x => x.IsDeleted == false)
+        //     .FirstOrDefaultAsync();
+        
+        // if (companyAddress == null)
+        // {
+        //     throw new Exception("Company address not found");
+        // }
+        
+        // Call NhanhVn de tim gia tien cua Item
+        var appId = "77683";
+        var businessId = "126981";
+        var token = "qC6szW89FwrjJTiwHGT7FtJOjW4tNSRwrp080cT9klzcIq7IWW54nH4C4JZL3jU9yrBlQ71jZ952BBu1nswx1eLrIZoNRxDN4JxIgFdn6yUsAXbcTByGH1J8ue3FonfdL0Jc9OmGK4rDBA8f7tnhjUGVP3f8QPj4I8Jh5Ly9RkZPncG0QwyE7kEvO97vrc";
+        var nhanhApi = "https://pos.open.nhanh.vn/v3.0/product/list?appId="+ appId + "&businessId="+ businessId;
+
+        var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
+        {
+            Filters = new NhanhVnRequest.NhanhFilters()
             {
-                throw new ArgumentException("Dữ liệu không hợp lệ. Đơn hàng bắt buộc phải gồm đúng 1 điểm lấy và 1 điểm giao.");
-            }
-
-            var ahamoveRequestBody = new{
-                service_id = request.ServiceId,
-                payment_method = "BALANCE",
-                path = request.Points.Select(p => new {
-                    address = p.Address,
-                    lat = double.TryParse(p.Lat, out var latVal) ? latVal : 0,
-                    lng = double.TryParse(p.Lng, out var lngVal) ? lngVal : 0,
-                    name = p.Name,
-                    mobile = p.Mobile,
-                    remarks = p.Remarks
-                }).ToList()
-            };
-
-            var fullUrl  = $"{_ahamoveAhamoveOption.BaseUrl}/v3/orders/estimates";
-
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, fullUrl);
-            httpRequest.Headers.Add("Authorization", $"Bearer {_ahamoveAhamoveOption.Token}");
-            httpRequest.Content = JsonContent.Create(ahamoveRequestBody);
-
-            var httpResponse = await _httpClient.SendAsync(httpRequest);
-            if (!httpResponse.IsSuccessStatusCode)
+                Id = request.Items.Select(x => x.ItemId).ToList(),
+                Status = [1,2]
+            },
+            Paginator =  new NhanhVnRequest.NhanhPaginator()
             {
-                var error = await httpResponse.Content.ReadAsStringAsync();
-                if (httpResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                Size = 50,
+                Sort = new Dictionary<string, string>()
                 {
-                    throw new UnauthorizedException("Kết nối đối tác vận chuyển thất bại do lỗi xác thực Token.");
-                }
-
-                throw new BadGatewayException($"Bên vận chuyển Ahamove từ chối tính phí: {error}");
+                    { "id", "desc" }
+                },
+                Next = new Dictionary<string, int>()
+                {
+                    { "id", 0 }
+                },
             }
-            
-            var jsonString = await httpResponse.Content.ReadAsStringAsync();
-            using var jsonDoc = JsonDocument.Parse(jsonString);
-            var root = jsonDoc.RootElement;
-
-            decimal totalFee = 0;
-            if (root.TryGetProperty("total_fee", out var totalFeeValue))
-            {
-                totalFee = totalFeeValue.GetDecimal();
-            }
-
-            return  totalFee;
-    }
-
-    public async Task<string> CreateOrder(Request.CreateOrderRequestAhamove request)
-    {
-        if (request.Path == null || request.Path.Count != 2)
-        {
-            throw new ArgumentException("Đơn hàng phải gồm ít nhất 1 điểm lấy và 1 điểm giao.");
-        }
-
-        var ahamoveRequestBody = new
-        {
-            order_time = request.OrderTime,
-            service_id = request.ServiceId,
-            payment_method = "BALANCE",
-            remarks = request.Remarks,
-            promo_code = request.PromoCode,
-
-            path = request.Path.Select(p => new
-            {
-                lat = double.TryParse(p.Lat.ToString(), out var latVal) ? latVal : 0,
-                lng = double.TryParse(p.Lng.ToString(), out var lngVal) ? lngVal : 0,
-                address = p.Address,
-                short_address = p.ShortAddress ?? p.Address,
-                name = p.Name,
-                mobile = p.Mobile,
-                cod = p.Cod,
-                item_value = p.ItemValue,
-                tracking_number = p.TrackingNumber,
-                remarks = p.Remarks
-            }).ToList(),
-            
-            requests = request.Requests?.Select(r => new
-            {
-                _id = r.Id,
-                num = r.Num,
-                tier_code = r.TierCode
-            }).ToList(),
-            
-            items = request.Items?.Select(i => new
-            {
-                _id = i.Id,
-                num = i.Num,
-                name = i.Name,
-                price = i.Price
-            }).ToList(),
-            
-            package_detail = request.PackageDetail?.Select(p => new
-            {
-                weight = p.Weight,
-                length = p.Length,
-                width = p.Width,
-                height = p.Height,
-                description = p.Description
-            }).ToList()
         };
         
-        var fullUrl = $"{_ahamoveAhamoveOption.BaseUrl}/v3/orders";
+        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
+        nhanhHttpRequest.Headers.Add("Authorization", token);
+        nhanhHttpRequest.Content = JsonContent.Create(nhanhVnProductRequest);
+        
+        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, fullUrl);
-        httpRequest.Headers.Add("Authorization", $"Bearer {_ahamoveAhamoveOption.Token}");
-        httpRequest.Content = JsonContent.Create(ahamoveRequestBody);
-
-        var httpResponse = await _httpClient.SendAsync(httpRequest);
-        if (!httpResponse.IsSuccessStatusCode)
+        NhanhProductListResponse? productNhanhResult = null;
+        
+        if (nhanhVnResponse.IsSuccessStatusCode)
         {
-            var error = await httpResponse.Content.ReadAsStringAsync();
-            throw new BadGatewayException($"Ahamove từ chối tạo đơn thật: {error}");
+            productNhanhResult = await nhanhVnResponse.Content.ReadFromJsonAsync<NhanhProductListResponse>();
+        }
+        else
+        {
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
-        var jsonString = await httpResponse.Content.ReadAsStringAsync();
-        using var jsonDoc = JsonDocument.Parse(jsonString);
-        var root = jsonDoc.RootElement;
-        
-        if (root.TryGetProperty("order_id", out var orderIdNode))
+        if (productNhanhResult == null || productNhanhResult.Data == null)
         {
-            return orderIdNode.GetString() ?? string.Empty;
+            throw new Exception("NhanhVnResponse returned null or empty data");
         }
-
-        return jsonString;
         
-      
+        var itemsRequest = productNhanhResult.Data.Select(
+            x => new Request.AhamoveItem()
+            {
+                Id = x.Id.ToString(),
+                Name = x.Name,
+                Price = (int)x.Prices.Retail,
+                Num = request.Items.First(item => item.ItemId.Equals(x.Id)).Number
+            }
+        ).ToList();
+        
+        var packageDetailRequest = productNhanhResult.Data.Select(
+            x => new Request.PackageDetail()
+            {
+                Height = x.Shipping.Height,
+                Weight = x.Shipping.Weight,
+                Length = x.Shipping.Length,
+                Width =  x.Shipping.Width,
+                Description = "Noi that"
+            }
+        ).ToList();
+        
+        var createRequest = new Request.AhaMoveShippingFeeRequest()
+        {
+            OrderTime = 0,
+            Paths = new List<Request.AhamoveLocationPoint>()
+            {
+                new Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
+                {
+                    // Latitude = companyAddress.Latitude ?? 0,
+                    // Longitude = companyAddress.Longitude ?? 0,
+                    // Address = companyAddress.AddressLine,
+                    // ShortAddress = "",
+                    // FullName = "",
+                    // Phone = "",
+                    // Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
+                    Latitude = (decimal)10.8055952,
+                    Longitude = (decimal)106.6776989,
+                    Address = "Số 13A Đào Duy Anh, Phường 9, Phường Phú Nhuận, Thành phố Hồ Chí Minh",
+                    ShortAddress = "Số 13A Đào Duy Anh, Phường 9, Phường Phú Nhuận, Thành phố Hồ Chí Minh",
+                    FullName = "Hoa Theo Mùa",
+                    Phone = "84908765432",
+                    Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
+                },
+                new Request.AhamoveLocationPoint()
+                {
+                    Latitude =  request.Latitude,
+                    Longitude =  request.Longitude,
+                    Address = request.Address,
+                    ShortAddress =  request.ShortAddress,
+                    FullName =  request.FullName,
+                    Phone =  request.Phone,
+                    Remarks =  request.Remarks,
+                },
+            },
+            PaymentMethod = "CASH",
+            Remarks =  request.Remarks,
+            Items = itemsRequest,
+            PackageDetail = packageDetailRequest,
+            Services = new List<Request.ServiceRequest>()
+            {
+                new Request.ServiceRequest()
+                {
+                    Id = "SGN-BIKE",
+                    Requests = new List<Request.ItemsRequest>()
+                    {
+                        new Request.ItemsRequest()
+                        {
+                            Id = "SGN-BIKE-SMS",
+                        },
+                        new Request.ItemsRequest()
+                        {
+                            Id = "SGN-BIKE-D2D",
+                        },
+                        new Request.ItemsRequest()
+                        {
+                            Id = "SGN-BIKE-FRAGILE",
+                        },
+                        new Request.ItemsRequest()
+                        {
+                            Id = "SGN-BIKE-BULKY",
+                            TierCode = "TIER_2"
+                        },
+                    }
+                },
+            }
+        };
+
+        var ahamoveApi = "https://partner-apistg.ahamove.com/v3/orders/estimates";
+        var ahamoveToken =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXAiOiJ1c2VyIiwiY2lkIjoiODQ5Nzk5MDE1NTAiLCJzdGF0dXMiOiJBQ1RJVkFUSU5HIiwiZW9jIjoiaW5mb0B2bnpkbmEuY29tIiwibm9jIjoiUElFRFRFQU0gQWRtaW4iLCJjdHkiOiJTR04iLCJ0eXBlIjoiYXBpIiwicGFydG5lciI6InBpZWR0ZWFtIiwiZXhwIjoxODQ0NjQ4MzAyLCJpYXQiOjE3ODE1NzYzMDIsImlzcyI6ImFoYSJ9.Mt92x4_9d4DabC0bERtQCsxj704P3oGqh9TE_-z_WxY";
+        
+        var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
+        ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
+        ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
+        
+        HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
+
+        List<ServiceResponse>? ahamoveResult = null;
+        
+        if (ahamoveResponse.IsSuccessStatusCode)
+        {
+            ahamoveResult = await ahamoveResponse.Content.ReadFromJsonAsync<List<ServiceResponse>>();
+        } else
+        {
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+        }
+        
+        if (ahamoveResult == null || ahamoveResult.Any() == false)
+        {
+            throw new Exception("Ahamove returned null or empty data");
+        }
+        
+        return new { ahamoveResult, productNhanhResult};
     }
 }
