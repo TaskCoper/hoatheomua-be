@@ -19,6 +19,12 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.Address)
             .IsRequired();
         
+        builder.Property(o => o.Ward)
+            .IsRequired();
+        
+        builder.Property(o => o.City)
+            .IsRequired();
+        
         builder.Property(o => o.ShortAddress)
             .IsRequired();
         

@@ -965,6 +965,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("AhahaMoveTrackingUrl")
                         .HasColumnType("text");
 
+                    b.Property<int>("City")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -1023,6 +1026,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Ward")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

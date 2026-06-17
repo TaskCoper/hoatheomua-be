@@ -355,8 +355,8 @@ public partial class Service : IService
                 Name = order.FullName,
                 Mobile = order.Phone,
                 Address = order.Address,
-                CityId = 255,
-                WardId = 14178,
+                CityId = order.City,
+                WardId = order.Ward,
                 LocationVersion = "v2"
             },
             Products = productNhanhVnRequest,
