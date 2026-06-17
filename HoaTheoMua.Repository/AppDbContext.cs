@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<JobDescriptions> JobDescriptions { get; set; }
     public DbSet<RecruitmentRequest> RecruitmentRequests { get; set; }
     
+    public DbSet<OrderDetails> OrderDetails { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // base.OnModelCreating(modelBuilder);
