@@ -31,11 +31,14 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("PostgresSql")
-    )
-);
+        var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
+        var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.EnableDynamicJson();
+        var dataSource = dataSourceBuilder.Build();
+
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(dataSource)
+        );
 
 builder.Services.ConfigureRateLimiter();
 builder.Services.AddJwtServices(builder.Configuration);
