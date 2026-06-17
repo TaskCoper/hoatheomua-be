@@ -14,10 +14,17 @@ public class ProductController: ControllerBase
         _productService = productService;
     }
     
-    [HttpPost("/api/v1/products/nhanh-vn/search")]
+    [HttpPost("/api/v1/products/nhanh-vn/list")]
     public async Task<IActionResult> SearchNhanhVnProducts([FromBody] Request.ProductListRequest request)
     {
         var result = await _productService.GetListProducts(request);
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
+    [HttpPost("/api/v1/products/nhanh-vn/details")]
+    public async Task<IActionResult> SearchNhanhVnProducts([FromBody] Request.ProductDetailRequest request)
+    {
+        var result = await _productService.GetProductDetails(request);
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+    }
+    
 }

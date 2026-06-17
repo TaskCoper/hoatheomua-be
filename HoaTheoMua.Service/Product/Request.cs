@@ -7,42 +7,53 @@ public class Request
     public class ProductListRequest
     {
         [JsonPropertyName("filters")]
-        public ProductFilters Filters { get; set; }
+        public ProductFilters? Filters { get; set; } = null;
 
         [JsonPropertyName("paginator")]
-        public ProductPaginator Paginator { get; set; }
+        public ProductPaginator? Paginator { get; set; } = null;
     }
 
     public class ProductFilters
     {
-        [JsonPropertyName("ids")]
-        public List<int> Ids { get; set; }
+        [JsonPropertyName("ids")] public List<int>? Ids { get; set; } = null;
 
         [JsonPropertyName("status")]
-        public List<int> Status { get; set; }
+        public List<int>? Status { get; set; } = null;
     }
 
     public class ProductPaginator
     {
         [JsonPropertyName("size")]
-        public int Size { get; set; } = 50;
+        public int? Size { get; set; } = null;
 
         [JsonPropertyName("sort")]
-        public ProductSort Sort { get; set; }
+        public ProductSort? Sort { get; set; } = null;
 
         [JsonPropertyName("next")]
-        public ProductNextPage? Next { get; set; }
+        public ProductNextPage? Next { get; set; } = null;
     }
     
     public class ProductSort
     {
         [JsonPropertyName("id")]
-        public string Id { get; set; } = "desc"; 
+        public string? Id { get; set; } = null;
     }
     
     public class ProductNextPage
     {
         [JsonPropertyName("id")]
-        public long Id { get; set; } = 100;
+        public int? Id { get; set; } = null;
+    }
+    
+    public class ProductDetailRequest
+    {
+        [JsonPropertyName("filters")]
+        public ProductDetailFilters? Filters { get; set; } = null;
+    }
+
+    public class ProductDetailFilters
+    {
+        [JsonPropertyName("id")]
+        public string? Id { get; set; } = null;
     }
 }

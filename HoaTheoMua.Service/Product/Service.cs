@@ -1,4 +1,6 @@
 ﻿using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
@@ -48,36 +50,60 @@ public class Service: IService
         var businessId = _nhanhVnOption.BusinessId;
         var token = _nhanhVnOption.Token;
         var nhanhApi = _nhanhVnOption.BaseUrl + "/product/list?appId=" + appId + "&businessId=" + businessId;
-        var nhanhProductListRequest = new Request.ProductListRequest()
+        
+        
+        
+        var options = new JsonSerializerOptions
         {
-            Filters = new Request.ProductFilters()
-            {
-                Ids = request.Filters?.Ids ?? new List<int>(),
-                Status = request.Filters?.Status ?? new List<int>()
-            },
-            Paginator = new Request.ProductPaginator()
-            {
-                Size = request.Paginator?.Size ?? 50,
-                Sort = new Request.ProductSort()
-                {
-                    Id = request.Paginator?.Sort.Id ?? "desc"
-                },                                                                                                                                      
-                Next = request.Paginator?.Next != null 
-                    ? new Request.ProductNextPage { Id = request.Paginator.Next.Id }                    
-                    : null
-            }
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
+
+        var json = JsonSerializer.Serialize(request, options);
+
+        var newRequest = JsonSerializer.Deserialize<object>(json);
+
+        Console.WriteLine(
+            $"[DEBUG NHANH.VN RAW DATA]: {JsonSerializer.Serialize(newRequest)}"
+        );
+        
+        
+        // var nhanhProductListRequest = new Request.ProductListRequest()
+        // {
+        //     Filters = new Request.ProductFilters()
+        //     {
+        //         Ids = request.Filters?.Ids ?? new List<int>(),
+        //         Status = request.Filters?.Status ?? new List<int>()
+        //     },
+        //     Paginator = new Request.ProductPaginator()
+        //     {
+        //         Size = request.Paginator?.Size ?? 50,
+        //         Sort = new Request.ProductSort()
+        //         {
+        //             Id = request.Paginator?.Sort.Id ?? "desc"
+        //         },                                                                                                                                      
+        //         Next = request.Paginator?.Next != null 
+        //             ? new Request.ProductNextPage { Id = request.Paginator.Next.Id }                    
+        //             : null
+        //     }
+        // };
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
-        nhanhHttpRequest.Content = JsonContent.Create(nhanhProductListRequest);
+        nhanhHttpRequest.Content = JsonContent.Create(newRequest);
         
         HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
 
-        Response.NhanhVnProductResponse? nhanhProductList = null;
+        ResponseProductList.NhanhVnProductResponse? nhanhProductList = null;
         
         if (nhanhVnResponse.IsSuccessStatusCode)
         {
-            nhanhProductList = await nhanhVnResponse.Content.ReadFromJsonAsync< Response.NhanhVnProductResponse>();
+
+            string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
+
+            // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
+            Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
+
+
+            nhanhProductList = await nhanhVnResponse.Content.ReadFromJsonAsync< ResponseProductList.NhanhVnProductResponse>();
         }
         else
         {
@@ -92,5 +118,88 @@ public class Service: IService
 
         return nhanhProductList;
         
+    }
+
+    public async Task<object> GetProductDetails(Request.ProductDetailRequest request)
+    {
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        var userId = Guid.Parse(user);
+        
+        var existUser = await _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        if (existUser == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+        
+        var appId = _nhanhVnOption.AppId;
+        var businessId = _nhanhVnOption.BusinessId;
+        var token = _nhanhVnOption.Token;
+        var nhanhApi = _nhanhVnOption.BaseUrl + "/product/detail?appId=" + appId + "&businessId=" + businessId;
+        var nhanhProductDetailsRequest = request;
+        
+        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
+        nhanhHttpRequest.Headers.Add("Authorization", token);
+        nhanhHttpRequest.Content = JsonContent.Create(nhanhProductDetailsRequest);
+        
+        
+        
+        
+        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
+        
+        
+        // var options = new JsonSerializerOptions
+        // {
+        //     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        // };
+        //
+        // var json = JsonSerializer.Serialize(request, options);
+        //
+        // var newRequest = JsonSerializer.Deserialize<object>(json);
+        //
+        // Console.WriteLine(
+        //     $"[DEBUG NHANH.VN RAW DATA]: {JsonSerializer.Serialize(newRequest)}"
+        // );
+        
+        
+        
+        ResponseProductDetails.NhanhVnProductDetailResponse? nhanhProductDetails = null;
+        
+        if (nhanhVnResponse.IsSuccessStatusCode)
+        {
+            // nhanhProductDetails = await nhanhVnResponse.Content.ReadFromJsonAsync< ResponseProductDetails.NhanhVnProductDetailResponse>();
+            string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
+    
+            // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
+            Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
+
+            // 2. Cấu hình bắt buộc phải truyền kèm để kích hoạt Custom Converter của bạn
+            var options = new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true,
+                // Ép kiểu số linh hoạt nếu Nhanh.vn trả về string số
+                NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString 
+            };
+
+            // 3. Tiến hành phân rã chuỗi JSON an toàn thông qua bộ options đã có Converter
+            nhanhProductDetails = JsonSerializer.Deserialize<ResponseProductDetails.NhanhVnProductDetailResponse>(rawJsonString, options);
+        }
+        else
+        {
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+        }
+
+        if (nhanhProductDetails == null)
+        {
+            throw new Exception("NhanhVnResponse returned null or empty data");
+        }
+
+        return nhanhProductDetails;
     }
 }

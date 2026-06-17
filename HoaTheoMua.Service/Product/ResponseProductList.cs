@@ -1,10 +1,11 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.Product;
 
-public class Response
+public class ResponseProductList
 {
-        public class NhanhVnProductResponse
+    public class NhanhVnProductResponse
     {
         [JsonPropertyName("code")]
         public int Code { get; set; }
@@ -16,10 +17,17 @@ public class Response
         public List<ProductDetailData> Data { get; set; } = new List<ProductDetailData>();
     }
 
+    // 1. ĐÃ SỬA: Thay đổi cấu trúc Paginator từ string thành Object khớp 100% với JSON thực tế
     public class ProductResponsePaginator
     {
         [JsonPropertyName("next")]
-        public string Next { get; set; } // API trả về ID trang tiếp theo dưới dạng string hoặc số ngầm
+        public PaginatorNext Next { get; set; }
+    }
+
+    public class PaginatorNext
+    {
+        [JsonPropertyName("id")]
+        public long Id { get; set; }
     }
 
     public class ProductDetailData
@@ -60,8 +68,9 @@ public class Response
         [JsonPropertyName("images")]
         public ProductImages Images { get; set; }
 
+        // 2. ĐÃ SỬA: Chuyển sang kiểu dữ liệu 'object?' linh hoạt để nuốt trọn cả mảng [] lẫn Object từ Nhanh.vn
         [JsonPropertyName("warranty")]
-        public ProductWarranty Warranty { get; set; }
+        public object? Warranty { get; set; } 
 
         [JsonPropertyName("brandId")]
         public int BrandId { get; set; }
@@ -127,18 +136,6 @@ public class Response
         public List<string> Others { get; set; } = new List<string>();
     }
 
-    public class ProductWarranty
-    {
-        [JsonPropertyName("month")]
-        public int Month { get; set; }
-
-        [JsonPropertyName("phone")]
-        public string Phone { get; set; }
-
-        [JsonPropertyName("address")]
-        public string Address { get; set; }
-    }
-
     public class ProductShipping
     {
         [JsonPropertyName("width")]
@@ -202,7 +199,7 @@ public class Response
         public string Name { get; set; }
 
         [JsonPropertyName("quantity")]
-        public int Quantity { get; set; }
+        public double Quantity { get; set; } // Sửa sang double vì JSON thực tế có trả về số thập phân (ví dụ: 0.2)
     }
 
     public class ProductInventory
