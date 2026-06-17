@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -48,7 +49,7 @@ public class Service : IService
             {
                 Id = x.Id,
                 Key = x.Key,
-                Value = x.Value, //suat ra value bi 2 dau gach gach "//1234//"
+                Value = StringToJson(x.Value), //suat ra value bi 2 dau gach gach "//1234//"
                 UserId = x.UserId,
 
             });
@@ -87,7 +88,7 @@ public class Service : IService
             {
                 Id = x.Id,
                 Key = x.Key,
-                Value = x.Value,
+                Value = StringToJson(x.Value),
                 UserId =  x.UserId,
             })
             .FirstOrDefaultAsync();
@@ -129,7 +130,7 @@ public class Service : IService
             {
                 Id = result.Id,
                 Key = result.Key,
-                Value = result.Value,
+                Value = StringToJson(result.Value),
                 UserId = result.UserId,
             };
             return query;
@@ -192,5 +193,10 @@ public class Service : IService
         await _dbContext.SaveChangesAsync();
 
         return "Xóa thành công.";
+    }
+    
+    private static JsonElement StringToJson(string value)
+    {
+        return JsonSerializer.Deserialize<JsonElement>(value);
     }
 }
