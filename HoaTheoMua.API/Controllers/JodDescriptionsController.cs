@@ -25,7 +25,7 @@ public class JodDescriptionsController: ControllerBase
     public async Task<IActionResult> CreateJobDescription(Request.CreateRequest request)
     {
         var result = await _jobDescriptionService.CreateJobAsync(request);
-        return CreatedAtAction(nameof(GetJobDescriptionByIdOrSlug), new { key = result.id }, ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+        return CreatedAtAction(nameof(GetJobDescriptionByIdOrSlug), new { key = result.id }, ApiResponseFactory.Base("Success", true, "", HttpContext.TraceIdentifier));
     }
 
     [HttpGet]
