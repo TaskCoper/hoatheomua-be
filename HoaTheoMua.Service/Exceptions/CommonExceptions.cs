@@ -41,3 +41,15 @@ public class UnauthorizedException : AppException
     public UnauthorizedException(string detail)
         : base("Unauthorized", 401, "UNAUTHORIZED", detail) { }
 }
+
+public class ArgumentException : AppException
+{
+    public ArgumentException(string detail)
+        : base("Argument Exception", 400, "ARGUMENT_EXCEPTION", detail) { }
+}
+
+public class BadGatewayException : AppException
+{
+    public BadGatewayException(string detail)
+        : base("Bad Gateway", 502, "BAD_GATEWAY", detail) { }
+}

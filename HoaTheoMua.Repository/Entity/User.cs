@@ -21,6 +21,7 @@ public class User: BaseEntity<Guid>, IAuditableEntity
     public ICollection<RefreshToken> RefreshToken { get; set; } = new List<RefreshToken>();
     public ICollection<Order> Orders { get; set; } = new List<Order>();
     public ICollection<Config> Config { get; set; } = new List<Config>();
+    public ICollection<RecruitmentRequest> RecruitmentRequests { get; set; } = new List<RecruitmentRequest>();
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }

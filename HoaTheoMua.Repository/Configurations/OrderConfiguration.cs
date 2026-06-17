@@ -16,7 +16,22 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.Status)
             .IsRequired();
         
-        builder.Property(o => o.Metadata)
+        builder.Property(o => o.Address)
+            .IsRequired();
+        
+        builder.Property(o => o.ShortAddress)
+            .IsRequired();
+        
+        builder.Property(o => o.FullName)
+            .IsRequired();
+        
+        builder.Property(o => o.Phone)
+            .IsRequired();
+        
+        builder.Property(o => o.Remarks)
+            .IsRequired();
+
+        builder.Property(o => o.TrackNumber)
             .IsRequired();
         
         builder.Property(o => o.CreatedAt)
@@ -25,6 +40,10 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasMany(o => o.Transactions)
             .WithOne(t => t.Order)
             .HasForeignKey(t => t.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.OrderDetails)
+            .WithOne(x => x.Order)
+            .HasForeignKey(x => x.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.SeedOrder();

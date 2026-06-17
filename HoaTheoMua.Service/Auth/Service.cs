@@ -154,6 +154,7 @@ public class Service : IService
         {
             new Claim("UserId", user.Id.ToString()),
             new Claim("IsVerify", user.IsVerify.ToString().ToLower()),
+            new Claim("Email", user.Email),
         };
         var emailToken = _jwtService.GenerateEmailVerificationToken(claims, 2);
 
@@ -216,9 +217,21 @@ public class Service : IService
         _dbContext.RefreshTokens.Add(newRefreshTokenEntity);
         await _dbContext.SaveChangesAsync();
 
+        var userId = CheckAccessToken();
+        
+        if (userId == Guid.Empty)
+        {
+            throw new NotFoundException("USER_NOT_FOUND");
+        }
+        
+        var role = await _dbContext.Users
+            .Where(x => x.Id == userId)
+            .Select(x => x.Role).FirstOrDefaultAsync();
+        
         var claimsForNewToken = new List<Claim>
         {
             new Claim("UserId", storedToken.User.Id.ToString()),
+            new Claim(ClaimTypes.Role, role.ToString()),
             new Claim("IsVerify", storedToken.User.IsVerify.ToString().ToLower()),
         };
         string newAccessToken = _jwtService.GenerateAccessToken(claimsForNewToken);
@@ -265,10 +278,13 @@ public class Service : IService
             user.IsVerify = true;
             _dbContext.Users.Update(user);
             user.UpdatedAt = DateTimeOffset.UtcNow;
+            
+            
 
             var authClaims = new List<Claim>
             {
                 new Claim("UserId", user.Id.ToString()),
+                new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim("IsVerify", user.IsVerify.ToString().ToLower()),
             };
 
@@ -424,12 +440,12 @@ public class Service : IService
             throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
         }
 
-       
-
+        
         var claims = new List<Claim>
         {
             new Claim("UserId", user.Id.ToString()),
-            new Claim("isVerify", user.IsVerify.ToString())
+            new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new Claim("IsVerify", user.IsVerify.ToString().ToLower())
         };
 
         var accessToken = _jwtService.GenerateAccessToken(claims);

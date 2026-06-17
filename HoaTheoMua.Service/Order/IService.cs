@@ -13,5 +13,8 @@ public interface IService
     Task<string> CreateOrder(Request.CreateOrderRequest request);
     Task<BaseResponse> GetOrderById (Guid id);
     Task<string> GetStatusOrder(Guid id);
-    Task<string> UpdateOrderById(Guid id, Request.UpdateOrderByIdRequest request);
+    
+    
+    Task<object?> GetOrderNhanhVn(int pageIndex, int pageSize);
+    Task<object> GetShippingLocation(Request.LocationFilters filter);
 }

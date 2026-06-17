@@ -45,6 +45,16 @@ x-api-env: &api-env
   # Security
   SecurityOption__Pepper: ${SECURITY_PEPPER}
 
+  # Ahamove
+  AhamoveOption__Token: ${AHAMOVE_TOKEN}
+  AhamoveOption__BaseUrl: ${AHAMOVE_BASE_URL}
+
+  # NhanhVn
+  NhanhVnOption__Token: ${NHANHVN_TOKEN}
+  NhanhVnOption__AppId: ${NHANHVN_APP_ID}
+  NhanhVnOption__BusinessId: ${NHANHVN_BUSINESS_ID}
+  NhanhVnOption__BaseUrl: ${NHANHVN_BASE_URL}
+
   AllowedHosts: "*"
 
 x-api-base: &api-base

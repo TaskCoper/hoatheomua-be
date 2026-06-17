@@ -62,6 +62,16 @@ services:
       # Security Configuration
       SecurityOption__Pepper: ${SECURITY_PEPPER}
 
+      # Ahamove Configuration
+      AhamoveOption__Token: ${AHAMOVE_TOKEN}
+      AhamoveOption__BaseUrl: ${AHAMOVE_BASE_URL}
+
+      # NhanhVn Configuration
+      NhanhVnOption__Token: ${NHANHVN_TOKEN}
+      NhanhVnOption__AppId: ${NHANHVN_APP_ID}
+      NhanhVnOption__BusinessId: ${NHANHVN_BUSINESS_ID}
+      NhanhVnOption__BaseUrl: ${NHANHVN_BASE_URL}
+
       # Allowed Hosts
       AllowedHosts: "*"
     networks:

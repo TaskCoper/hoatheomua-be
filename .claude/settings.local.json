@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build *)",
+<<<<<<< HEAD
       "Bash(dotnet restore *)"
+=======
+      "Bash(dotnet ef *)",
+      "Bash(PGPASSWORD='MyStrongPassword123@' psql -h localhost -p 5433 -U postgres -d hoatheomua -c \"SELECT \\\\\"NhanhOrderId\\\\\", count\\(*\\) FROM \\\\\"Orders\\\\\" GROUP BY \\\\\"NhanhOrderId\\\\\" ORDER BY 2 DESC LIMIT 20;\")"
+>>>>>>> c6ff5820854d845a8ac7a7dbba11bd8a9e658054
     ]
   }
 }
