@@ -17,6 +17,7 @@ using RecruitmentRequestService = HoaTheoMua.Service.RecruitmentRequests;
 using AhamoveService = HoaTheoMua.Service.AhamoveService;
 using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
+using ProductService = HoaTheoMua.Service.Product;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,6 +58,8 @@ builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>();
+builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
+
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 
