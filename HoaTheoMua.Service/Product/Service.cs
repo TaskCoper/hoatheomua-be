@@ -31,21 +31,6 @@ public class Service: IService
     
     public async Task<object> GetListProducts(Request.ProductListRequest request)
     {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        if (existUser == null)
-        {
-            throw new NotFoundException("User not found");
-        }
-        
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
         var token = _nhanhVnOption.Token;
@@ -122,20 +107,6 @@ public class Service: IService
 
     public async Task<object> GetProductDetails(Request.ProductDetailRequest request)
     {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        if (existUser == null)
-        {
-            throw new NotFoundException("User not found");
-        }
         
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
