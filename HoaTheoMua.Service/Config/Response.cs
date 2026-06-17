@@ -10,8 +10,5 @@ public class Response
         public required string Key { get; set; }
         public JsonElement Value { get; set; }
         public  Guid UserId { get; set; }
-        public DateTimeOffset CreatedAt { get; set; }
-        public DateTimeOffset? UpdatedAt { get; set; }
-        public bool IsDeleted { get; set; } 
     }
 }

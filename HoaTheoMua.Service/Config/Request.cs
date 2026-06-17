@@ -8,10 +8,12 @@ public class Request
     {
         public required string Key { get; set; }
         public required JsonElement Value { get; set; }
+        
     }
     public class UpdateConfigRequest
     {
         public required string Key { get; set; }
         public required JsonElement Value { get; set; }
     }
+    
 }

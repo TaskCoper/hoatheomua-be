@@ -17,21 +17,24 @@ public class ConfigController : ControllerBase
     }
 
     [HttpGet("list")]
-    public async Task<IActionResult> GetConfigList()
+    public async Task<IActionResult> GetConfigList(int pageIndex, int paegSize)
     {
-        return Ok();
+        var result = await _configService.GetConfig(pageIndex, paegSize);
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetConfig([FromRoute] Guid id)
     {
-        return Ok();
+        var result = await _configService.GetConfigById(id);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateConfig([FromBody] Request.CreateConfigRequest request)
     {
-        return Ok();
+        var result = await _configService.CreateConfig(request);
+        return StatusCode(201, ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
     }
 
     [HttpPut("{id:guid}")]
@@ -39,12 +42,14 @@ public class ConfigController : ControllerBase
         [FromRoute] Guid id,
         [FromBody] Request.UpdateConfigRequest request)
     {
-        return Ok();
+        var result = await _configService.UpdateConfig (id, request);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteConfig([FromRoute] Guid id)
     {
-        return Ok();
+        var result = await _configService.DeleteConfig(id);
+        return Ok(ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
     }
 }
