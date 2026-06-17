@@ -28,15 +28,21 @@ public class Request
         public int Size { get; set; } = 50;
 
         [JsonPropertyName("sort")]
-        public Dictionary<string, string> Sort { get; set; } = new Dictionary<string, string> { { "id", "desc" } };
+        public ProductSort Sort { get; set; }
 
         [JsonPropertyName("next")]
-        public ProductNextPage Next { get; set; }
+        public ProductNextPage? Next { get; set; }
     }
-
+    
+    public class ProductSort
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = "desc"; 
+    }
+    
     public class ProductNextPage
     {
         [JsonPropertyName("id")]
-        public long Id { get; set; }
+        public long Id { get; set; } = 100;
     }
 }

@@ -15,6 +15,7 @@ using NewService = HoaTheoMua.Service.New;
 using AhamoveService = HoaTheoMua.Service.AhamoveService;
 using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
+using ProductService = HoaTheoMua.Service.Product;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +51,8 @@ builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>();
+builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
+
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 
