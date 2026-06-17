@@ -12,13 +12,14 @@ public class Service : IService
     private readonly AppDbContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public Service(AppDbContext context,  IHttpContextAccessor httpContextAccessor)
+    public Service(AppDbContext context, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<BasePaginationResponse> GetPagedRecruitmentRequestsAsync(int pageIndex, int pageSize, bool? isRead)
+    public async Task<BasePaginationResponse> GetPagedRecruitmentRequestsAsync(int pageIndex, int pageSize,
+        bool? isRead)
     {
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
@@ -39,9 +40,31 @@ public class Service : IService
             .OrderByDescending(r => r.CreatedAt)
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize)
+            .Select(x => new Response.RecruitmentRequestItem
+            {
+                id = x.Id,
+                title = x.title,
+                coverLetter = x.coverLetter,
+                attachments = x.attachments,
+                isRead = x.isRead,
+                createdAt = x.CreatedAt,
+                user = new Response.UserDto
+                {
+                    userId = x.User.Id,
+                    fullName = $"{x.User.FirstName} {x.User.LastName}".Trim(),
+                    email = x.User.Email,
+                    phoneNumber = x.User.PhoneNumber,
+                    avatar = x.User.Avatar
+                },
+                jobDescription = new Response.JobDto
+                {
+                    id = x.JobDescription.Id,
+                    title = x.JobDescription.title
+                }
+            })
             .ToListAsync();
 
-        var items = requests.Select(MapToResponse).ToList();
+        var items = requests.ToList();
 
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
@@ -56,16 +79,37 @@ public class Service : IService
         var request = await _context.RecruitmentRequests
             .Include(r => r.User)
             .Include(r => r.JobDescription)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
+            .Where(a => a.Id== id && !a.IsDeleted)
+            .Select(x => new Response.RecruitmentRequestItem
+            {
+                id = x.Id,
+                title = x.title,
+                coverLetter = x.coverLetter,
+                attachments = x.attachments,
+                isRead = x.isRead,
+                createdAt = x.CreatedAt,
+                user = new Response.UserDto
+                {
+                    userId = x.User.Id,
+                    fullName = $"{x.User.FirstName} {x.User.LastName}".Trim(),
+                    email = x.User.Email,
+                    phoneNumber = x.User.PhoneNumber,
+                    avatar = x.User.Avatar
+                },
+                jobDescription = new Response.JobDto
+                {
+                    id = x.JobDescription.Id,
+                    title = x.JobDescription.title
+                }
+            })
+            .FirstOrDefaultAsync();
 
         if (request == null)
         {
             throw new Exceptions.NotFoundException("RECRUITMENT_REQUEST_NOT_FOUND");
         }
 
-        var response = MapToResponse(request);
-        return ApiResponseFactory.Base(response);
+        return ApiResponseFactory.Base(request);
     }
 
     public async Task<BaseResponse> MarkAsReadAsync(Guid id)
@@ -91,7 +135,8 @@ public class Service : IService
         return ApiResponseFactory.Base(response);
     }
 
-    public async Task<Response.CreateRecruitmentResponse> CreateRecruitmentRequestAsync(Request.CreateRecruitmentRequest request)
+    public async Task<Response.CreateRecruitmentResponse> CreateRecruitmentRequestAsync(
+        Request.CreateRecruitmentRequest request)
     {
         var userId = getUserId();
 
@@ -99,10 +144,10 @@ public class Service : IService
         {
             throw new NotFoundException("USER_NOT_FOUND");
         }
-        
-        var jobExistsAndOpen = await _context.JobDescriptions.AnyAsync(j => 
-            j.Id == request.jobDescriptionId && 
-            !j.IsDeleted && 
+
+        var jobExistsAndOpen = await _context.JobDescriptions.AnyAsync(j =>
+            j.Id == request.jobDescriptionId &&
+            !j.IsDeleted &&
             j.status == Repository.Enum.StatusJobDescriptions.Open);
 
         if (!jobExistsAndOpen)
@@ -110,9 +155,9 @@ public class Service : IService
             throw new Exceptions.NotFoundException("JOB_DESCRIPTION_NOT_FOUND_OR_NOT_OPEN");
         }
 
-        bool isSpam = await _context.RecruitmentRequests.AnyAsync(r => 
-            r.UserId == userId && 
-            r.JobDescriptionId == request.jobDescriptionId && 
+        bool isSpam = await _context.RecruitmentRequests.AnyAsync(r =>
+            r.UserId == userId &&
+            r.JobDescriptionId == request.jobDescriptionId &&
             !r.isRead);
 
         if (isSpam)
@@ -147,32 +192,6 @@ public class Service : IService
 
         return responseData;
     }
-    private static Response.RecruitmentRequestItem MapToResponse(Repository.Entity.RecruitmentRequest request)
-    {
-        return new Response.RecruitmentRequestItem
-        {
-            id = request.Id,
-            title = request.title,
-            coverLetter = request.coverLetter,
-            attachments = request.attachments,
-            isRead = request.isRead,
-            createdAt = request.CreatedAt,
-            user = new Response.UserDto
-            {
-                userId = request.User.Id,
-                fullName = $"{request.User.FirstName} {request.User.LastName}".Trim(),
-                email = request.User.Email,
-                phoneNumber = request.User.PhoneNumber,
-                avatar = request.User.Avatar
-            },
-            jobDescription = new Response.JobDto
-            {
-                id = request.JobDescription.Id,
-                title = request.JobDescription.title
-            }
-        };
-    }
-
 
     private Guid getUserId()
     {

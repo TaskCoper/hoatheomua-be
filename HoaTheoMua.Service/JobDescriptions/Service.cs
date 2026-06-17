@@ -115,7 +115,20 @@ public class Service : IService
             .OrderByDescending(job => job.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(job => MapToResponse(job))
+            .Select(job => new Response.JobListItem
+            {
+                id = job.Id,
+                slug = job.slug,
+                title = job.title,
+                avatarUrl = job.avatarUrl,
+                location = job.location,
+                employmentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
+                salaryMin = job.salaryMin,
+                salaryMax = job.salaryMax,
+                salaryNegotiable = job.salaryNegotiable,
+                openings = job.openings,
+                status = job.status == StatusJobDescriptions.Open ? "open" : "closed"
+            })
             .ToListAsync();
 
         return ApiResponseFactory.BasePagination(items, page, pageSize, totalCount);
@@ -123,15 +136,15 @@ public class Service : IService
 
     public async Task<BaseResponse> GetJobByIdOrSlugAsync(string idOrSlug)
     {
-        var job = await GetJobByIdOrSlugQuery(idOrSlug)
+        var responseData = await GetJobByIdOrSlugQuery(idOrSlug)
+            .Select(ProjectToDetail)
             .FirstOrDefaultAsync();
 
-        if (job is null)
+        if (responseData is null)
         {
             throw new NotFoundException("JOB_DESCRIPTION_NOT_FOUND");
         }
 
-        var responseData = MapToDetailResponse(job);
         return ApiResponseFactory.Base(responseData);
     }
 
@@ -142,16 +155,15 @@ public class Service : IService
             .AsNoTracking()
             .Where(job => !job.IsDeleted && job.status == StatusJobDescriptions.Open);
 
-        var job = Guid.TryParse(normalizedKey, out var id)
-            ? await query.FirstOrDefaultAsync(job => job.Id == id)
-            : await query.FirstOrDefaultAsync(job => job.slug == normalizedKey);
+        var responseData = Guid.TryParse(normalizedKey, out var id)
+            ? await query.Where(job => job.Id == id).Select(ProjectToDetail).FirstOrDefaultAsync()
+            : await query.Where(job => job.slug == normalizedKey).Select(ProjectToDetail).FirstOrDefaultAsync();
 
-        if (job is null)
+        if (responseData is null)
         {
             throw new NotFoundException("JOB_DESCRIPTION_NOT_FOUND");
         }
 
-        var responseData = MapToDetailResponse(job);
         return ApiResponseFactory.Base(responseData);
     }
 
@@ -197,7 +209,31 @@ public class Service : IService
         _context.JobDescriptions.Update(job);
         await _context.SaveChangesAsync();
 
-        var responseData = MapToDetailResponse(job);
+        var responseData = new Response.JobDetailResponse
+        {
+            id = job.Id,
+            slug = job.slug,
+            title = job.title,
+            location = job.location,
+            avatarUrl = job.avatarUrl,
+            coverImageUrl = job.coverImageUrl,
+            minExperienceYears = job.minExperienceYears,
+            maxExperienceYears = job.maxExperienceYears,
+            level = job.level == LevelJobDescriptions.intern ? "intern"
+                  : job.level == LevelJobDescriptions.fresher ? "fresher"
+                  : job.level == LevelJobDescriptions.junior ? "junior"
+                  : job.level == LevelJobDescriptions.middle ? "middle"
+                  : "senior",
+            employmentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
+            salaryMin = job.salaryMin,
+            salaryMax = job.salaryMax,
+            salaryNegotiable = job.salaryNegotiable,
+            openings = job.openings,
+            description = job.description,
+            createdAt = job.CreatedAt,
+            updatedAt = job.UpdatedAt ?? job.CreatedAt,
+            status = job.status == StatusJobDescriptions.Open ? "open" : "closed"
+        };
         return ApiResponseFactory.Base(responseData);
     }
 
@@ -316,49 +352,30 @@ public class Service : IService
         }
     }
 
-    private Response.JobDetailResponse MapToDetailResponse(Repository.Entity.JobDescriptions job)
+    private static readonly System.Linq.Expressions.Expression<Func<Repository.Entity.JobDescriptions, Response.JobDetailResponse>> ProjectToDetail = job => new Response.JobDetailResponse
     {
-        return new Response.JobDetailResponse
-        {
-            id = job.Id,
-            slug = job.slug,
-            title = job.title,
-            location = job.location,
-            avatarUrl = job.avatarUrl,
-            coverImageUrl = job.coverImageUrl,
-            minExperienceYears = job.minExperienceYears,
-            maxExperienceYears = job.maxExperienceYears,
+        id = job.Id,
+        slug = job.slug,
+        title = job.title,
+        location = job.location,
+        avatarUrl = job.avatarUrl,
+        coverImageUrl = job.coverImageUrl,
+        minExperienceYears = job.minExperienceYears,
+        maxExperienceYears = job.maxExperienceYears,
+        level = job.level == LevelJobDescriptions.intern ? "intern"
+              : job.level == LevelJobDescriptions.fresher ? "fresher"
+              : job.level == LevelJobDescriptions.junior ? "junior"
+              : job.level == LevelJobDescriptions.middle ? "middle"
+              : "senior",
+        employmentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
+        salaryMin = job.salaryMin,
+        salaryMax = job.salaryMax,
+        salaryNegotiable = job.salaryNegotiable,
+        openings = job.openings,
+        description = job.description,
+        status = job.status == StatusJobDescriptions.Open ? "open" : "closed",
+        createdAt = job.CreatedAt,
+        updatedAt = job.UpdatedAt ?? job.CreatedAt
+    };
 
-            // Chuyển đổi Enum PascalCase sang chuỗi camelCase chuẩn JSON
-            level = JsonNamingPolicy.CamelCase.ConvertName(job.level.ToString()),
-            employmentType = JsonNamingPolicy.CamelCase.ConvertName(job.employmentType.ToString()),
-            status = JsonNamingPolicy.CamelCase.ConvertName(job.status.ToString()),
-
-            salaryMin = job.salaryMin,
-            salaryMax = job.salaryMax,
-            salaryNegotiable = job.salaryNegotiable,
-            openings = job.openings,
-            description = job.description,
-            createdAt = job.CreatedAt,
-            updatedAt = job.UpdatedAt ?? job.CreatedAt
-        };
-    }
-
-    private static Response.JobListItem MapToResponse(Repository.Entity.JobDescriptions job)
-    {
-        return new Response.JobListItem
-        {
-            id = job.Id,
-            slug = job.slug,
-            title = job.title,
-            avatarUrl = job.avatarUrl,
-            location = job.location,
-            employmentType = JsonNamingPolicy.CamelCase.ConvertName(job.employmentType.ToString()),
-            salaryMin = job.salaryMin,
-            salaryMax = job.salaryMax,
-            salaryNegotiable = job.salaryNegotiable,
-            openings = job.openings,
-            status = JsonNamingPolicy.CamelCase.ConvertName(job.status.ToString())
-        };
-    }
 }

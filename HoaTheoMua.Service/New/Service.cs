@@ -50,7 +50,20 @@ public class Service : IService
             .OrderByDescending(news => news.CreatedAt)
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize)
-            .Select(news => MapToResponse(news))
+            .Select(news => new NewResponse
+            {
+                Id = news.Id,
+                Title = news.Title,
+                Description = news.Description,
+                ViewCount = news.ViewCount,
+                PictureUrl = news.CoverImage,
+                slug = news.slug,
+                Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
+                UserId = news.UserId,
+                CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+                CreatedAt = news.CreatedAt,
+                UpdatedAt = news.UpdatedAt
+            })
             .ToListAsync();
 
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
@@ -61,19 +74,48 @@ public class Service : IService
         var normalizedKey = NormalizeLookupKey(key);
         var query = _dbContext.NewsList
             .AsNoTracking()
-            .Include(news => news.CategoryNewsDetail)
             .Where(news => !news.IsDeleted);
 
-        var news = Guid.TryParse(normalizedKey, out var id)
-            ? await query.FirstOrDefaultAsync(news => news.Id == id)
-            : await query.FirstOrDefaultAsync(news => news.slug == normalizedKey);
+        var newsResponse = Guid.TryParse(normalizedKey, out var id)
+            ? await query.Where(news => news.Id == id)
+                .Select(news => new NewResponse
+                {
+                    Id = news.Id,
+                    Title = news.Title,
+                    Description = news.Description,
+                    ViewCount = news.ViewCount,
+                    PictureUrl = news.CoverImage,
+                    slug = news.slug,
+                    Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
+                    UserId = news.UserId,
+                    CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+                    CreatedAt = news.CreatedAt,
+                    UpdatedAt = news.UpdatedAt
+                })
+                .FirstOrDefaultAsync()
+            : await query.Where(news => news.slug == normalizedKey)
+                .Select(news => new NewResponse
+                {
+                    Id = news.Id,
+                    Title = news.Title,
+                    Description = news.Description,
+                    ViewCount = news.ViewCount,
+                    PictureUrl = news.CoverImage,
+                    slug = news.slug,
+                    Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
+                    UserId = news.UserId,
+                    CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+                    CreatedAt = news.CreatedAt,
+                    UpdatedAt = news.UpdatedAt
+                })
+                .FirstOrDefaultAsync();
 
-        if (news is null)
+        if (newsResponse is null)
         {
             throw new NotFoundException("NEW_NOT_FOUND");
         }
 
-        return MapToResponse(news);
+        return newsResponse;
     }
 
     public async Task<NewResponse> CreateNewAsync(CreateNewRequest request)
@@ -122,7 +164,20 @@ public class Service : IService
             NewsId = news.Id
         }).ToList();
 
-        return MapToResponse(news);
+        return new NewResponse
+        {
+            Id = news.Id,
+            Title = news.Title,
+            Description = news.Description,
+            ViewCount = news.ViewCount,
+            PictureUrl = news.CoverImage,
+            slug = news.slug,
+            Status = news.Status.ToString(),
+            UserId = news.UserId,
+            CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+            CreatedAt = news.CreatedAt,
+            UpdatedAt = news.UpdatedAt
+        };
     }
 
     public async Task<NewResponse?> UpdateNewAsync(Guid id, UpdateNewRequest request)
@@ -172,7 +227,20 @@ public class Service : IService
         await _dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return MapToResponse(news);
+        return new NewResponse
+        {
+            Id = news.Id,
+            Title = news.Title,
+            Description = news.Description,
+            ViewCount = news.ViewCount,
+            PictureUrl = news.CoverImage,
+            slug = news.slug,
+            Status = news.Status.ToString(),
+            UserId = news.UserId,
+            CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+            CreatedAt = news.CreatedAt,
+            UpdatedAt = news.UpdatedAt
+        };
     }
 
     public async Task<bool> DeleteNewAsync(Guid id)
@@ -274,23 +342,7 @@ public class Service : IService
         return string.IsNullOrWhiteSpace(slug) ? Guid.NewGuid().ToString("N") : slug;
     }
 
-    private static NewResponse MapToResponse(News news)
-    {
-        return new NewResponse
-        {
-            Id = news.Id,
-            Title = news.Title,
-            Description = news.Description,
-            ViewCount = news.ViewCount,
-            PictureUrl = news.CoverImage,
-            slug = news.slug,
-            Status = news.Status.ToString(),
-            UserId = news.UserId,
-            CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
-            CreatedAt = news.CreatedAt,
-            UpdatedAt = news.UpdatedAt
-        };
-    }
+
     private Guid CheckAccessToken()
     {
         var accessToken = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
