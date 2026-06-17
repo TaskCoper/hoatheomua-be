@@ -12,7 +12,7 @@ using AuthService = HoaTheoMua.Service.Auth;
 using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
 using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
 using NewService = HoaTheoMua.Service.New;
-
+using AhamoveService = HoaTheoMua.Service.AhamoveService;
 using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
 
@@ -49,6 +49,7 @@ builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
+builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>();
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 
