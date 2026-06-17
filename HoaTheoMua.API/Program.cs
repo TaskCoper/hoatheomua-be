@@ -12,6 +12,8 @@ using AuthService = HoaTheoMua.Service.Auth;
 using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
 using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
 using NewService = HoaTheoMua.Service.New;
+using JobDescriptionService = HoaTheoMua.Service.JobDescriptions;
+using RecruitmentRequestService = HoaTheoMua.Service.RecruitmentRequests;
 using AhamoveService = HoaTheoMua.Service.AhamoveService;
 using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
@@ -30,11 +32,14 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("PostgresSql")
-    )
-);
+        var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
+        var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.EnableDynamicJson();
+        var dataSource = dataSourceBuilder.Build();
+
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(dataSource)
+        );
 
 builder.Services.ConfigureRateLimiter();
 builder.Services.AddJwtServices(builder.Configuration);
@@ -50,6 +55,8 @@ builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
+builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
+builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>();
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 

@@ -22,7 +22,7 @@ public class CategoryNewController:ControllerBase
     public async Task<IActionResult> CreateCate([FromBody]Request.CreateCategoriesRequest request) 
     {
         var result = await _categoryService.CreateCate(request);
-        return Ok(ApiResponseFactory.Base(result,true, "", HttpContext.TraceIdentifier));
+        return CreatedAtAction(nameof(GetCategory), new { id = result.categoryId }, ApiResponseFactory.Base("Success", true, "Tạo bài viết tin tức mới thành công.", HttpContext.TraceIdentifier));
     }
 
     [HttpGet]
