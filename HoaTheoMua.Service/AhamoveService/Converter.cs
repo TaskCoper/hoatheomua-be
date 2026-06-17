@@ -1,7 +1,7 @@
-﻿using System;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using HoaTheoMua.Service.AhamoveService;
+
+namespace HoaTheoMua.Service.AhamoveService;
 
 public class NhanhWarrantyConverter : JsonConverter<NhanhWarranty>
 {

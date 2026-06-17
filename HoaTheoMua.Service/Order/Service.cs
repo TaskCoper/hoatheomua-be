@@ -393,4 +393,117 @@ public class Service : IService
         
         return order.Status;
     }
+
+    public async Task<object?> GetOrderNhanhVn(int pageIndex, int pageSize)
+    {
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        var userId = Guid.Parse(user);
+        
+        var existUser = await _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        if (existUser == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+        
+        
+        var appId = _nhanhVnOption.AppId;
+        var businessId = _nhanhVnOption.BusinessId;
+        var token = _nhanhVnOption.Token;
+        var nhanhApi = _nhanhVnOption.BaseUrl + "/order/list?appId=" + appId + "&businessId=" + businessId;
+        var nhanhVnOrderSrcRequest = new OrderListRequest()
+        {
+            Filters = new OrderFilter(),
+            Paginator =  new OrderPaginator()
+            {
+                Size = pageSize > 0 ?  pageSize : 50,
+            },
+            DataOptions =  new OrderDataOptions(),
+        };
+        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
+        nhanhHttpRequest.Headers.Add("Authorization", token);
+        nhanhHttpRequest.Content = JsonContent.Create(nhanhVnOrderSrcRequest);
+        
+        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
+
+        OrderListRootResponse? orderListRootResponse = null;
+        
+        if (nhanhVnResponse.IsSuccessStatusCode)
+        {
+            orderListRootResponse = await nhanhVnResponse.Content.ReadFromJsonAsync<OrderListRootResponse>();
+        }
+        else
+        {
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+        }
+
+        if (orderListRootResponse == null)
+        {
+            throw new Exception("NhanhVnResponse returned null or empty data");
+        }
+
+        return orderListRootResponse;
+    }
+
+    public async Task<object> GetShippingLocation(Request.LocationFilters filter)
+    {
+        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+  
+        if (user == null)  
+        {            
+            throw new UnauthorizedException("User not found");  
+        }
+        var userId = Guid.Parse(user);
+        
+        var existUser = await _dbContext.Users
+            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        if (existUser == null)
+        {
+            throw new NotFoundException("User not found");
+        }
+        
+        var appId = _nhanhVnOption.AppId;
+        var businessId = _nhanhVnOption.BusinessId;
+        var token = _nhanhVnOption.Token;
+        var nhanhApi = _nhanhVnOption.BaseUrl + "/shipping/location?appId=" + appId + "&businessId=" + businessId;
+        var nhanhVnOrderSrcRequest = new Request.LocationRequest()
+        {
+            Filters = new Request.LocationFilters()
+            {
+                LocationVersion = filter.LocationVersion,
+                Type = filter.Type,
+                ParentId = filter.ParentId,
+            }
+        };
+        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
+        nhanhHttpRequest.Headers.Add("Authorization", token);
+        nhanhHttpRequest.Content = JsonContent.Create(nhanhVnOrderSrcRequest);
+        
+        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
+
+        Response.NhanhVnLocationResponse? shippingLocation = null;
+        
+        if (nhanhVnResponse.IsSuccessStatusCode)
+        {
+            shippingLocation = await nhanhVnResponse.Content.ReadFromJsonAsync< Response.NhanhVnLocationResponse>();
+        }
+        else
+        {
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+        }
+
+        if (shippingLocation == null)
+        {
+            throw new Exception("NhanhVnResponse returned null or empty data");
+        }
+
+        return shippingLocation;
+    }
 }

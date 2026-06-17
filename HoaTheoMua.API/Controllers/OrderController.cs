@@ -43,6 +43,19 @@ public class OrderController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
+    [HttpGet("/api/v1/orders/nhanh-vn")]
+    public async Task<IActionResult> GetNhanhVnOrders([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 50)
+    {
+        var result = await _orderService.GetOrderNhanhVn(pageIndex, pageSize);
+        return Ok(result);
+    }
+    
+    [HttpPost("/api/v1/orders/shipping-location")]
+    public async Task<IActionResult> GetShippingLocation([FromBody] Request.LocationFilters filter)
+    {
+        var result = await _orderService.GetShippingLocation(filter);
+        return Ok(result);
+    }
     
     // [HttpGet("/api/v1/orders")]
     // public async Task<IActionResult> GetAllOrderTransport(int pageIndex, int pageSize)
