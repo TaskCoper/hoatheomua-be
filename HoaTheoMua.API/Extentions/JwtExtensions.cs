@@ -1,5 +1,6 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.JwtService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -73,22 +74,22 @@ public static class JwtExtensions
                 .RequireClaim("IsVerify").Build();
             
             options.AddPolicy(AdminPolicy, policy =>
-                policy.RequireRole("Admin"));
+                policy.RequireRole(Role.Admin.ToString()));
             // [Authorize(Policy = JwtExtensions.AdminPolicy)]
         
             options.AddPolicy(StaffPolicy, policy =>
-                policy.RequireRole("Staff"));
+                policy.RequireRole(Role.Staff.ToString()));
             // [Authorize(Policy = JwtExtensions.StaffPolicy)]
         
             options.AddPolicy(UserPolicy, policy =>
-                policy.RequireRole("User"));
+                policy.RequireRole(Role.User.ToString()));
         
             options.AddPolicy(StaffOrAdminPolicy, policy =>
-                policy.RequireRole("Staff", "Admin"));
+                policy.RequireRole(Role.Staff.ToString(), Role.Admin.ToString()));
             // [Authorize(Policy = JwtExtensions.StaffOrAdminPolicy)]
             
             options.AddPolicy(UserVerifiedPolicy, policy =>
-                policy.RequireRole("User")
+                policy.RequireRole(Role.User.ToString())
                     .RequireClaim("IsVerify", "true"));
         });
     }
