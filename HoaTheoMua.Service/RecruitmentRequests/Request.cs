@@ -7,6 +7,6 @@ public class Request
         public Guid jobDescriptionId { get; set; }
         public string title { get; set; } = null!;
         public string coverLetter { get; set; } = null!;
-        public string attachments { get; set; } = null!;
+        public List<string> attachments { get; set; } = new();
     }
 }

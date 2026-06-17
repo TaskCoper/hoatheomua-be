@@ -12,17 +12,16 @@ public class Request
         public required string coverImageUrl { get; set; }
         public float? minExperienceYears { get; set; }
         public float? maxExperienceYears { get; set; }
-        public required LevelJobDescriptions level { get; set; } 
-        public required EmploymentType employmentType { get; set; } 
+        public required LevelJobDescriptions level { get; set; }
+        public required EmploymentType employmentType { get; set; }
         public float? salaryMin { get; set; }
         public float? salaryMax { get; set; }
         public required bool salaryNegotiable { get; set; }
         public required string description { get; set; }
-        public required StatusJobDescriptions status { get; set; } 
+        public required StatusJobDescriptions status { get; set; }
         public int openings { get; set; } = 1;
-        public string? slug { get; set; } 
     }
-    
+
     public class UpdateRequest : CreateRequest
     {
     }

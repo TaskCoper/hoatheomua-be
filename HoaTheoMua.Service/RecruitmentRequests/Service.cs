@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -34,33 +35,13 @@ public class Service : IService
 
         var totalCount = await query.CountAsync();
 
-        var items = await query
+        var requests = await query
             .OrderByDescending(r => r.CreatedAt)
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize)
-            .Select(r => new Response.RecruitmentRequestItem
-            {
-                id = r.Id,
-                title = r.title,
-                coverLetter = r.coverLetter,
-                attachments = r.attachments,
-                isRead = r.isRead,
-                createdAt = r.CreatedAt,
-                user = new Response.UserDto
-                {
-                    userId = r.User.Id,
-                    fullName = $"{r.User.FirstName} {r.User.LastName}".Trim(),
-                    email = r.User.Email,
-                    phoneNumber = r.User.PhoneNumber,
-                    avatar = r.User.Avatar
-                },
-                jobDescription = new Response.JobDto
-                {
-                    id = r.JobDescription.Id,
-                    title = r.JobDescription.title
-                }
-            })
             .ToListAsync();
+
+        var items = requests.Select(MapToResponse).ToList();
 
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
@@ -83,29 +64,7 @@ public class Service : IService
             throw new Exceptions.NotFoundException("RECRUITMENT_REQUEST_NOT_FOUND");
         }
 
-        var response = new Response.RecruitmentRequestItem
-        {
-            id = request.Id,
-            title = request.title,
-            coverLetter = request.coverLetter,
-            attachments = request.attachments,
-            isRead = request.isRead,
-            createdAt = request.CreatedAt,
-            user = new Response.UserDto
-            {
-                userId = request.User.Id,
-                fullName = $"{request.User.FirstName} {request.User.LastName}".Trim(),
-                email = request.User.Email,
-                phoneNumber = request.User.PhoneNumber,
-                avatar = request.User.Avatar
-            },
-            jobDescription = new Response.JobDto
-            {
-                id = request.JobDescription.Id,
-                title = request.JobDescription.title
-            }
-        };
-
+        var response = MapToResponse(request);
         return ApiResponseFactory.Base(response);
     }
 
@@ -167,7 +126,7 @@ public class Service : IService
             UserId = userId,
             title = request.title,
             coverLetter = request.coverLetter,
-            attachments = request.attachments,
+            attachments = SerializeAttachments(request.attachments),
             isRead = false,
             CreatedAt = DateTimeOffset.UtcNow,
             IsDeleted = false
@@ -181,12 +140,66 @@ public class Service : IService
             id = newRequest.Id,
             jobDescriptionId = newRequest.JobDescriptionId,
             title = newRequest.title,
+            attachments = ParseAttachments(newRequest.attachments),
             isRead = newRequest.isRead,
             createdAt = newRequest.CreatedAt
         };
 
         return responseData;
     }
+    private static Response.RecruitmentRequestItem MapToResponse(Repository.Entity.RecruitmentRequest request)
+    {
+        return new Response.RecruitmentRequestItem
+        {
+            id = request.Id,
+            title = request.title,
+            coverLetter = request.coverLetter,
+            attachments = ParseAttachments(request.attachments),
+            isRead = request.isRead,
+            createdAt = request.CreatedAt,
+            user = new Response.UserDto
+            {
+                userId = request.User.Id,
+                fullName = $"{request.User.FirstName} {request.User.LastName}".Trim(),
+                email = request.User.Email,
+                phoneNumber = request.User.PhoneNumber,
+                avatar = request.User.Avatar
+            },
+            jobDescription = new Response.JobDto
+            {
+                id = request.JobDescription.Id,
+                title = request.JobDescription.title
+            }
+        };
+    }
+
+    private static string SerializeAttachments(List<string> attachments)
+    {
+        var values = attachments
+            .Where(attachment => !string.IsNullOrWhiteSpace(attachment))
+            .Select(attachment => attachment.Trim())
+            .ToList();
+
+        return JsonSerializer.Serialize(values);
+    }
+
+    private static List<string> ParseAttachments(string attachments)
+    {
+        if (string.IsNullOrWhiteSpace(attachments))
+        {
+            return new List<string>();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(attachments) ?? new List<string>();
+        }
+        catch (JsonException)
+        {
+            return new List<string> { attachments };
+        }
+    }
+
     private Guid getUserId()
     {
         var result = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;

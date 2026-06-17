@@ -1,4 +1,4 @@
-﻿namespace HoaTheoMua.Service.JobDescriptions;
+namespace HoaTheoMua.Service.JobDescriptions;
 
 public class Response
 {
@@ -7,6 +7,7 @@ public class Response
         public Guid id { get; set; }
         public required string slug { get; set; }
         public required string title { get; set; }
+        public required string status { get; set; }
         public DateTimeOffset createdAt { get; set; }
         public DateTimeOffset? updatedAt { get; set; }
     }
@@ -23,6 +24,7 @@ public class Response
         public float? salaryMax { get; set; }
         public bool salaryNegotiable { get; set; }
         public int openings { get; set; }
+        public string status { get; set; } = null!;
     }
 
     public class JobDetailResponse

@@ -1,9 +1,11 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using FluentValidation;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
+using HoaTheoMua.Service.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace HoaTheoMua.Service.JobDescriptions;
@@ -11,62 +13,20 @@ namespace HoaTheoMua.Service.JobDescriptions;
 public class Service : IService
 {
     private readonly AppDbContext _context;
+    private readonly IValidator<Request.CreateRequest> _validator;
 
-    public Service(AppDbContext context)
+    public Service(AppDbContext context, IValidator<Request.CreateRequest> validator)
     {
         _context = context;
+        _validator = validator;
     }
 
-    public static string GenerateSlug(string phrase)
-    {
-        if (string.IsNullOrEmpty(phrase)) return string.Empty;
-
-        string str = phrase.ToLowerInvariant();
-
-        string[] arr1 = new string[]
-        {
-            "á", "à", "ả", "ã", "ạ", "â", "ấ", "ầ", "ẩ", "ẫ", "ậ", "ă", "ắ", "ằ", "ẳ", "ẵ", "ặ",
-            "đ", "é", "è", "ẻ", "ẽ", "ẹ", "ê", "ế", "ề", "ể", "ễ", "ệ",
-            "í", "ì", "ỉ", "ĩ", "ị", "ó", "ò", "ỏ", "õ", "ọ", "ô", "ố", "ồ", "ổ", "ỗ", "ộ", "ơ", "ớ", "ờ", "ở", "ỡ",
-            "ợ",
-            "ú", "ù", "ủ", "ũ", "ụ", "ư", "ứ", "ừ", "ử", "ữ", "ự", "ý", "ỳ", "ỷ", "ỹ", "ỵ"
-        };
-        string[] arr2 = new string[]
-        {
-            "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
-            "d", "e", "e", "e", "e", "e", "e", "e", "e", "e", "e", "e",
-            "i", "i", "i", "i", "i", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o",
-            "o",
-            "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "y", "y", "y", "y", "y"
-        };
-
-        for (int i = 0; i < arr1.Length; i++)
-        {
-            str = str.Replace(arr1[i], arr2[i]);
-        }
-
-        str = Regex.Replace(str, @"[^a-z0-9\s-]", "");
-        str = Regex.Replace(str, @"\s+", " ").Trim();
-        str = str.Replace(" ", "-");
-
-        return str;
-    }
 
     public async Task<Response.CreateResponse> CreateJobAsync(Request.CreateRequest request)
     {
-        ValidateJobRequest(request);
+        await ValidateJobRequestAsync(request);
 
-        string finalSlug = string.IsNullOrWhiteSpace(request.slug)
-            ? GenerateSlug(request.title)
-            : GenerateSlug(request.slug);
-
-        bool isSlugExists = await _context.JobDescriptions
-            .AnyAsync(x => x.slug == finalSlug);
-
-        if (isSlugExists)
-        {
-            finalSlug = $"{finalSlug}-{DateTimeOffset.UtcNow.Ticks % 10000}";
-        }
+        string finalSlug = await GenerateUniqueSlugAsync(request.title);
 
         var newJob = new Repository.Entity.JobDescriptions()
         {
@@ -98,6 +58,7 @@ public class Service : IService
             id = newJob.Id,
             slug = newJob.slug,
             title = newJob.title,
+            status = JsonNamingPolicy.CamelCase.ConvertName(newJob.status.ToString()),
             createdAt = newJob.CreatedAt,
             updatedAt = newJob.UpdatedAt
         };
@@ -160,38 +121,30 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(items, page, pageSize, totalCount);
     }
 
-    public async Task<BaseResponse> GetJobByIdAsync(Guid id)
+    public async Task<BaseResponse> GetJobByIdOrSlugAsync(string idOrSlug)
     {
-        if (id == Guid.Empty)
+        var job = await GetJobByIdOrSlugQuery(idOrSlug)
+            .FirstOrDefaultAsync();
+
+        if (job is null)
         {
-            throw new BadRequestException("INVALID_JOB_ID");
+            throw new NotFoundException("JOB_DESCRIPTION_NOT_FOUND");
         }
 
+        var responseData = MapToDetailResponse(job);
+        return ApiResponseFactory.Base(responseData);
+    }
+
+    public async Task<BaseResponse> GetPublicJobByIdOrSlugAsync(string idOrSlug)
+    {
+        var normalizedKey = NormalizeLookupKey(idOrSlug);
         var query = _context.JobDescriptions
             .AsNoTracking()
-            .Where(job => !job.IsDeleted);
+            .Where(job => !job.IsDeleted && job.status == StatusJobDescriptions.Open);
 
-        var job = await query.FirstOrDefaultAsync(job => job.Id == id);
-
-        if (job is null)
-        {
-            throw new NotFoundException("JOB_DESCRIPTION_NOT_FOUND");
-        }
-        var responseData = MapToDetailResponse(job);
-        
-        return ApiResponseFactory.Base(responseData);
-    }
-
-    public async Task<BaseResponse> GetPublicJobByIdAsync(Guid id)
-    {
-        if (id == Guid.Empty)
-        {
-            throw new BadRequestException("INVALID_JOB_ID");
-        }
-
-        var job = await _context.JobDescriptions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(job => job.Id == id && !job.IsDeleted && job.status == StatusJobDescriptions.Open);
+        var job = Guid.TryParse(normalizedKey, out var id)
+            ? await query.FirstOrDefaultAsync(job => job.Id == id)
+            : await query.FirstOrDefaultAsync(job => job.slug == normalizedKey);
 
         if (job is null)
         {
@@ -202,23 +155,6 @@ public class Service : IService
         return ApiResponseFactory.Base(responseData);
     }
 
-    public async Task<BaseResponse> GetJobBySlugAsync(string slug)
-    {
-        var query = _context.JobDescriptions
-            .AsNoTracking()
-            .Where(job => !job.IsDeleted && job.status == Repository.Enum.StatusJobDescriptions.Open);
-
-        var job = await query.FirstOrDefaultAsync(job => job.slug == slug);
-
-        if (job is null)
-        {
-            throw new NotFoundException("JOB_DESCRIPTION_NOT_FOUND");
-        }
-        var responseData = MapToDetailResponse(job);
-        
-        return ApiResponseFactory.Base(responseData);
-    }
-    
     public async Task<BaseResponse> UpdateJobAsync(Guid id, Request.UpdateRequest request)
     {
         if (id == Guid.Empty)
@@ -226,7 +162,7 @@ public class Service : IService
             throw new BadRequestException("INVALID_JOB_ID");
         }
 
-        ValidateJobRequest(request);
+        await ValidateJobRequestAsync(request);
 
         var job = await _context.JobDescriptions
             .Where(j => !j.IsDeleted)
@@ -237,17 +173,9 @@ public class Service : IService
             throw new NotFoundException("JOB_DESCRIPTION_NOT_FOUND");
         }
 
-        if (!string.IsNullOrWhiteSpace(request.slug) && request.slug != job.slug)
+        if (!string.Equals(request.title, job.title, StringComparison.Ordinal))
         {
-            string finalSlug = GenerateSlug(request.slug);
-            bool isSlugExists = await _context.JobDescriptions
-                .AnyAsync(x => x.slug == finalSlug && x.Id != id);
-
-            if (isSlugExists)
-            {
-                finalSlug = $"{finalSlug}-{DateTimeOffset.UtcNow.Ticks % 10000}";
-            }
-            job.slug = finalSlug;
+            job.slug = await GenerateUniqueSlugAsync(request.title, id);
         }
 
         job.title = request.title;
@@ -272,6 +200,7 @@ public class Service : IService
         var responseData = MapToDetailResponse(job);
         return ApiResponseFactory.Base(responseData);
     }
+
     public async Task DeleteJobAsync(Guid id)
     {
         if (id == Guid.Empty)
@@ -302,25 +231,74 @@ public class Service : IService
         await _context.SaveChangesAsync();
     }
 
-    private static void ValidateJobRequest(Request.CreateRequest request)
+    private IQueryable<Repository.Entity.JobDescriptions> GetJobByIdOrSlugQuery(string idOrSlug)
     {
-        if (request.minExperienceYears.HasValue && request.minExperienceYears.Value < 0 ||
-            request.maxExperienceYears.HasValue && request.maxExperienceYears.Value < 0)
+        var normalizedKey = NormalizeLookupKey(idOrSlug);
+        var query = _context.JobDescriptions
+            .AsNoTracking()
+            .Where(job => !job.IsDeleted);
+
+        return Guid.TryParse(normalizedKey, out var id)
+            ? query.Where(job => job.Id == id)
+            : query.Where(job => job.slug == normalizedKey);
+    }
+
+    private static string NormalizeLookupKey(string key)
+    {
+        var normalizedKey = Uri.UnescapeDataString(key.Trim());
+
+        if (string.IsNullOrWhiteSpace(normalizedKey) || normalizedKey.Length > 300)
         {
-            throw new BadRequestException("EXPERIENCE_CANNOT_BE_NEGATIVE");
+            throw new BadRequestException("JOB_DESCRIPTION_LOOKUP_KEY_INVALID");
         }
 
-        if (request.minExperienceYears.HasValue && request.maxExperienceYears.HasValue
-                                                && request.minExperienceYears.Value > request.maxExperienceYears.Value)
+        if (Guid.TryParse(normalizedKey, out var id))
         {
-            throw new BadRequestException("MIN_EXPERIENCE_GREATER_THAN_MAX_EXPERIENCE");
+            if (id == Guid.Empty)
+            {
+                throw new BadRequestException("JOB_DESCRIPTION_LOOKUP_KEY_INVALID");
+            }
+
+            return normalizedKey;
         }
 
-        ValidateSalaryRange(request.salaryMin, request.salaryMax);
+        normalizedKey = normalizedKey.ToLowerInvariant();
 
-        if (request.openings <= 0)
+        if (!Regex.IsMatch(normalizedKey, @"^[a-z0-9]+(?:-[a-z0-9]+)*$"))
         {
-            throw new BadRequestException("OPENINGS_MUST_BE_GREATER_THAN_ZERO");
+            throw new BadRequestException("JOB_DESCRIPTION_LOOKUP_KEY_INVALID");
+        }
+
+        return normalizedKey;
+    }
+
+    private async Task<string> GenerateUniqueSlugAsync(string title, Guid? excludeId = null)
+    {
+        var baseSlug = Slug.GenerateSlug(title);
+        if (string.IsNullOrWhiteSpace(baseSlug))
+        {
+            throw new BadRequestException("INVALID_JOB_TITLE");
+        }
+
+        var finalSlug = baseSlug;
+        var suffix = 1;
+
+        while (await _context.JobDescriptions.AnyAsync(job =>
+                   job.slug == finalSlug && (!excludeId.HasValue || job.Id != excludeId.Value)))
+        {
+            suffix++;
+            finalSlug = $"{baseSlug}-{suffix}";
+        }
+
+        return finalSlug;
+    }
+
+    private async Task ValidateJobRequestAsync(Request.CreateRequest request)
+    {
+        var validationResult = await _validator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            throw new ValidationExceptionError(validationResult.Errors.First().ErrorMessage);
         }
     }
 
@@ -350,12 +328,12 @@ public class Service : IService
             coverImageUrl = job.coverImageUrl,
             minExperienceYears = job.minExperienceYears,
             maxExperienceYears = job.maxExperienceYears,
-            
+
             // Chuyển đổi Enum PascalCase sang chuỗi camelCase chuẩn JSON
             level = JsonNamingPolicy.CamelCase.ConvertName(job.level.ToString()),
             employmentType = JsonNamingPolicy.CamelCase.ConvertName(job.employmentType.ToString()),
             status = JsonNamingPolicy.CamelCase.ConvertName(job.status.ToString()),
-            
+
             salaryMin = job.salaryMin,
             salaryMax = job.salaryMax,
             salaryNegotiable = job.salaryNegotiable,
@@ -379,7 +357,8 @@ public class Service : IService
             salaryMin = job.salaryMin,
             salaryMax = job.salaryMax,
             salaryNegotiable = job.salaryNegotiable,
-            openings = job.openings
+            openings = job.openings,
+            status = JsonNamingPolicy.CamelCase.ConvertName(job.status.ToString())
         };
     }
 }

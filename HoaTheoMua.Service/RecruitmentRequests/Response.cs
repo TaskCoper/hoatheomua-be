@@ -24,7 +24,7 @@ public class Response
         public Guid id { get; set; }
         public string title { get; set; } = null!;
         public string coverLetter { get; set; } = null!;
-        public string attachments { get; set; } = null!;
+        public List<string> attachments { get; set; } = new();
         public bool isRead { get; set; }
         public DateTimeOffset createdAt { get; set; }
         public UserDto user { get; set; } = null!;
@@ -43,6 +43,7 @@ public class Response
         public Guid id { get; set; }
         public Guid jobDescriptionId { get; set; }
         public string title { get; set; } = null!;
+        public List<string> attachments { get; set; } = new();
         public bool isRead { get; set; }
         public DateTimeOffset createdAt { get; set; }
     }
