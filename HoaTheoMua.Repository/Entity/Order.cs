@@ -7,8 +7,8 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     
     public decimal Latitude { get; set; }
     public decimal Longitude { get; set; }
-    // public required string Ward { get; set; }
-    // public required string City { get; set; }
+    public required int Ward { get; set; }
+    public required int City { get; set; }
     public required string Address { get; set; }
     public required string ShortAddress { get; set; }
     public required string FullName {get; set; }
