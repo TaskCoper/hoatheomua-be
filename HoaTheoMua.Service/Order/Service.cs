@@ -394,7 +394,7 @@ public class Service : IService
         return order.Status;
     }
 
-    public async Task<object?> GetOrderNhanhVn(int pageIndex, int pageSize)
+    public async Task<OrderListRootResponse?> GetOrderNhanhVn(int pageIndex, int pageSize)
     {
         var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
   
@@ -451,7 +451,7 @@ public class Service : IService
         return orderListRootResponse;
     }
 
-    public async Task<object> GetShippingLocation(Request.LocationFilters filter)
+    public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)
     {
         var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
   
