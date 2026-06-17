@@ -109,7 +109,7 @@ public class Service : IService
         query.Key = request.Key;
         query.Value = request.Value.GetRawText();
         
-        await _dbContext.Configs.AddAsync(query);
+        // await _dbContext.Configs.AddAsync(query);
         await _dbContext.SaveChangesAsync();
 
         return ("Cập nhật thành công");
