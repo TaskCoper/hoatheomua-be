@@ -49,6 +49,6 @@ public class RecruitmentRequestsController : ControllerBase
     public async Task<IActionResult> CreateRecruitmentRequest([FromBody] Request.CreateRecruitmentRequest request)
     {
         var result = await _recruitmentRequestService.CreateRecruitmentRequestAsync(request);
-        return CreatedAtAction(nameof(GetRecruitmentRequests), new { id = result.id }, ApiResponseFactory.Base(result, true, null, HttpContext.TraceIdentifier));
+        return CreatedAtAction(nameof(GetRecruitmentRequestById), new { id = result.id }, ApiResponseFactory.Base("Success", true, null, HttpContext.TraceIdentifier));
     }
 }
