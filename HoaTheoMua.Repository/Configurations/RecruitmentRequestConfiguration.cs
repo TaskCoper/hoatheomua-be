@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -12,7 +12,7 @@ public class RecruitmentRequestConfiguration : IEntityTypeConfiguration<Recruitm
 
         builder.Property(x => x.title).IsRequired();
         builder.Property(x => x.coverLetter).IsRequired();
-        builder.Property(x => x.attachments).IsRequired();
+        builder.Property(x => x.attachments).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.isRead).HasDefaultValue(false);
     }
 }

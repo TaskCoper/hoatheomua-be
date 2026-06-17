@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Repository.Abtraction;
+using HoaTheoMua.Repository.Abtraction;
 
 namespace HoaTheoMua.Repository.Entity;
 
@@ -8,7 +8,7 @@ public class RecruitmentRequest: BaseEntity<Guid>, IAuditableEntity
     
     public required string coverLetter { get; set; }
     
-    public required string attachments { get; set; }
+    public required List<string> attachments { get; set; } = new();
 
     public required bool isRead { get; set; } = false;
     

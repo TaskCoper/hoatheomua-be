@@ -126,7 +126,7 @@ public class Service : IService
             UserId = userId,
             title = request.title,
             coverLetter = request.coverLetter,
-            attachments = SerializeAttachments(request.attachments),
+            attachments = request.attachments ?? new List<string>(),
             isRead = false,
             CreatedAt = DateTimeOffset.UtcNow,
             IsDeleted = false
@@ -140,7 +140,7 @@ public class Service : IService
             id = newRequest.Id,
             jobDescriptionId = newRequest.JobDescriptionId,
             title = newRequest.title,
-            attachments = ParseAttachments(newRequest.attachments),
+            attachments = newRequest.attachments,
             isRead = newRequest.isRead,
             createdAt = newRequest.CreatedAt
         };
@@ -154,7 +154,7 @@ public class Service : IService
             id = request.Id,
             title = request.title,
             coverLetter = request.coverLetter,
-            attachments = ParseAttachments(request.attachments),
+            attachments = request.attachments,
             isRead = request.isRead,
             createdAt = request.CreatedAt,
             user = new Response.UserDto
@@ -173,32 +173,6 @@ public class Service : IService
         };
     }
 
-    private static string SerializeAttachments(List<string> attachments)
-    {
-        var values = attachments
-            .Where(attachment => !string.IsNullOrWhiteSpace(attachment))
-            .Select(attachment => attachment.Trim())
-            .ToList();
-
-        return JsonSerializer.Serialize(values);
-    }
-
-    private static List<string> ParseAttachments(string attachments)
-    {
-        if (string.IsNullOrWhiteSpace(attachments))
-        {
-            return new List<string>();
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<List<string>>(attachments) ?? new List<string>();
-        }
-        catch (JsonException)
-        {
-            return new List<string> { attachments };
-        }
-    }
 
     private Guid getUserId()
     {
