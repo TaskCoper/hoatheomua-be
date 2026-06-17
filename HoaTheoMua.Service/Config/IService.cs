@@ -1,9 +1,6 @@
-using HoaTheoMua.Service.CategoryNew;
-
-namespace HoaTheoMua.Service.TableConfiguration;
+namespace HoaTheoMua.Service.Config;
 
 public class IService
 {
-    
     
 }

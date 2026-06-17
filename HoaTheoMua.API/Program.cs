@@ -1,5 +1,4 @@
 using FluentValidation;
-using HoaTheoMua.Extension;
 using HoaTheoMua.Extentions;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
@@ -49,8 +48,6 @@ builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
-
-
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 
 builder.Services.AddCors(options =>
