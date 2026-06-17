@@ -67,6 +67,16 @@ jobs:
       # Security
       SECURITY_PEPPER: ${{ secrets.SECURITY_PEPPER }}
 
+      # Ahamove
+      AHAMOVE_TOKEN: ${{ secrets.AHAMOVE_TOKEN }}
+      AHAMOVE_BASE_URL: ${{ secrets.AHAMOVE_BASE_URL }}
+
+      # NhanhVn
+      NHANHVN_TOKEN: ${{ secrets.NHANHVN_TOKEN }}
+      NHANHVN_APP_ID: ${{ secrets.NHANHVN_APP_ID }}
+      NHANHVN_BUSINESS_ID: ${{ secrets.NHANHVN_BUSINESS_ID }}
+      NHANHVN_BASE_URL: ${{ secrets.NHANHVN_BASE_URL }}
+
       # Cloudflare
       CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
 
