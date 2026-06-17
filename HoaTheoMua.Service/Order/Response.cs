@@ -1,4 +1,5 @@
-﻿using System.Transactions;
+﻿using System.Text.Json.Serialization;
+using System.Transactions;
 using HoaTheoMua.Repository.Entity;
 
 namespace HoaTheoMua.Service.Order;
@@ -44,6 +45,24 @@ public class Response
         public string? Gateway { get; set; }        
         public DateTime TransactionDate { get; set; }
         
+    }
+    
+    public class NhanhVnLocationResponse
+    {
+        [JsonPropertyName("code")]
+        public int Code { get; set; }
+
+        [JsonPropertyName("data")]
+        public List<LocationData> Data { get; set; } = new List<LocationData>();
+    }
+
+    public class LocationData
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
     }
     
 }

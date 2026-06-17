@@ -50,6 +50,13 @@ public class OrderController: ControllerBase
         return Ok(result);
     }
     
+    [HttpPost("/api/v1/orders/shipping-location")]
+    public async Task<IActionResult> GetShippingLocation([FromBody] Request.LocationFilters filter)
+    {
+        var result = await _orderService.GetShippingLocation(filter);
+        return Ok(result);
+    }
+    
     // [HttpGet("/api/v1/orders")]
     // public async Task<IActionResult> GetAllOrderTransport(int pageIndex, int pageSize)
     // {

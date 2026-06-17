@@ -16,4 +16,5 @@ public interface IService
     
     
     Task<object?> GetOrderNhanhVn(int pageIndex, int pageSize);
+    Task<object> GetShippingLocation(Request.LocationFilters filter);
 }
