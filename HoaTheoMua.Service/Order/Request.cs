@@ -2,10 +2,7 @@
 
 public class Request
 {
-    public class CreateOrderRequest
-    {
-        public dynamic Metadata { get; set; } = null!;
-    }
+    public class CreateOrderRequest : AhamoveService.Request.EstimateShippingFeeRequest;
 
     public class UpdateOrderRequest
     {

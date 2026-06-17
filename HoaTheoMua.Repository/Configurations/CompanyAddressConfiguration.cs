@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace HoaTheoMua.Repository.Configurations;
 
-public class CompanyAddressConfiguration: IEntityTypeConfiguration<CompanyAddress>
+public class CompanyAddressConfiguration : IEntityTypeConfiguration<CompanyAddress>
 {
     public void Configure(EntityTypeBuilder<CompanyAddress> builder)
     {
@@ -16,7 +16,7 @@ public class CompanyAddressConfiguration: IEntityTypeConfiguration<CompanyAddres
             .IsRequired()
             .HasMaxLength(100);
         builder.Property(ca => ca.MapId)
-            .HasMaxLength(100);
+            .HasMaxLength(300);
         builder.Property(ca => ca.City)
             .HasMaxLength(100);
         builder.Property(ca => ca.Country)
@@ -25,5 +25,5 @@ public class CompanyAddressConfiguration: IEntityTypeConfiguration<CompanyAddres
             .HasDefaultValueSql("now()");
         builder.SeedCompanyAddress();
     }
-    
+
 }

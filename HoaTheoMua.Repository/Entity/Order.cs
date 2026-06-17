@@ -5,19 +5,30 @@ namespace HoaTheoMua.Repository.Entity;
 public class Order: BaseEntity<Guid>,IAuditableEntity
 {
     
-    public string TrackNumber { get; set; }
-    public string Status { get; set; }
-    public string Metadata { get; set; }
-    public string? NhanhOrderId { get; set; }
-    public string? NhanhTrackingUrl { get; set; }
-    public string? AhahaMoveOrderId { get; set; }
-    public string? AhahaMoveTrackingUrl { get; set; }
-
+    public decimal Latitude { get; set; }
+    public decimal Longitude { get; set; }
+    // public required string Ward { get; set; }
+    // public required string City { get; set; }
+    public required string Address { get; set; }
+    public required string ShortAddress { get; set; }
+    public required string FullName {get; set; }
+    public required string Phone { get; set; }
+    public required string Remarks { get; set; }
+    public required string Status { get; set; }
+    public required string TrackNumber { get; set; }
+    //public string Metadata { get; set; }
+    public int? NhanhOrderId { get; set; }
+    public  string? NhanhTrackingUrl { get; set; }
+    public  string? AhahaMoveOrderId { get; set; }
+    public  string? AhahaMoveTrackingUrl { get; set; }
+    public decimal ShippingFee { get; set; }
+    public decimal ProductFree { get; set; }
+    public decimal TotalFee { get; set; }
+    
     public Guid UserId { get; set; }
     public User User  { get; set; }
-    
+    public ICollection<OrderDetails> OrderDetails { get; set; } = new List<OrderDetails>();
+    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
-
-    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 }

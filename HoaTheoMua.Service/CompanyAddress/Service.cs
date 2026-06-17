@@ -33,11 +33,6 @@ public class Service : IService
             })
             .FirstOrDefaultAsync();
 
-        if (result == null)
-        {
-            throw new NotFoundException("Không tìm thấy địa chỉ công ty");
-        }
-
         return result;
     }
 
@@ -65,11 +60,6 @@ public class Service : IService
             })
             .FirstOrDefaultAsync();
 
-        if (result == null)
-        {
-            throw new NotFoundException("Không tìm thấy địa chỉ công ty");
-        }
-
         return result;
     }
 
@@ -88,18 +78,6 @@ public class Service : IService
 
         try
         {
-            // var now = DateTimeOffset.UtcNow;
-            //
-            // var activeAddresses = await _dbContext.CompanyAddresses
-            //     .Where(x => !x.IsDeleted)
-            //     .ToListAsync();
-            //
-            // foreach (var address in activeAddresses)
-            // {
-            //     address.IsDeleted = true;
-            //     address.UpdatedAt = now;
-            // }
-
             var companyAddress = new Repository.Entity.CompanyAddress
             {
                 Id = Guid.NewGuid(),

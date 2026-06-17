@@ -43,12 +43,6 @@ public class OrderController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
-    [HttpPut("/api/v1/orders/{id}")]
-    public async Task<IActionResult> UpdateOrderById(Guid id, [FromBody]Request.UpdateOrderByIdRequest request)
-    {
-        var result = await _orderService.UpdateOrderById(id, request);
-        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
-    }
     
     // [HttpGet("/api/v1/orders")]
     // public async Task<IActionResult> GetAllOrderTransport(int pageIndex, int pageSize)

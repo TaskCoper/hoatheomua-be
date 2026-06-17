@@ -14,6 +14,7 @@ using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
 using NewService = HoaTheoMua.Service.New;
 using JobDescriptionService = HoaTheoMua.Service.JobDescriptions;
 using RecruitmentRequestService = HoaTheoMua.Service.RecruitmentRequests;
+using AhamoveService = HoaTheoMua.Service.AhamoveService;
 using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
 
@@ -52,6 +53,7 @@ builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
+builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>();
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 
