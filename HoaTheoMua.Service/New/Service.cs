@@ -29,6 +29,7 @@ public class Service : IService
 
         var query = _dbContext.NewsList
             .AsNoTracking()
+            .Include(news => news.User)
             .Include(news => news.CategoryNewsDetail)
             .Where(news => !news.IsDeleted);
 
@@ -60,7 +61,10 @@ public class Service : IService
                 slug = news.slug,
                 Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
                 UserId = news.UserId,
+                UserFirstName = news.User.FirstName,
+                UserLastName = news.User.LastName,
                 CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+                CategoryName = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNews.Title).ToList(),
                 CreatedAt = news.CreatedAt,
                 UpdatedAt = news.UpdatedAt
             })
@@ -74,6 +78,8 @@ public class Service : IService
         var normalizedKey = NormalizeLookupKey(key);
         var query = _dbContext.NewsList
             .AsNoTracking()
+            .Include(news => news.User)
+            .Include(news => news.CategoryNewsDetail)
             .Where(news => !news.IsDeleted);
 
         var newsResponse = Guid.TryParse(normalizedKey, out var id)
@@ -88,7 +94,10 @@ public class Service : IService
                     slug = news.slug,
                     Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
                     UserId = news.UserId,
+                    UserFirstName = news.User.FirstName,
+                    UserLastName = news.User.LastName,
                     CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+                    CategoryName = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNews.Title).ToList(),
                     CreatedAt = news.CreatedAt,
                     UpdatedAt = news.UpdatedAt
                 })
@@ -104,7 +113,10 @@ public class Service : IService
                     slug = news.slug,
                     Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
                     UserId = news.UserId,
+                    UserFirstName = news.User.FirstName,
+                    UserLastName = news.User.LastName,
                     CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+                    CategoryName = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNews.Title).ToList(),
                     CreatedAt = news.CreatedAt,
                     UpdatedAt = news.UpdatedAt
                 })
@@ -118,7 +130,7 @@ public class Service : IService
         return newsResponse;
     }
 
-    public async Task<NewResponse> CreateNewAsync(CreateNewRequest request)
+    public async Task<NewResponseV2> CreateNewAsync(CreateNewRequest request)
     {
         var userId = CheckAccessToken();
         if (userId == Guid.Empty)
@@ -164,7 +176,7 @@ public class Service : IService
             NewsId = news.Id
         }).ToList();
 
-        return new NewResponse
+        return new NewResponseV2
         {
             Id = news.Id,
             Title = news.Title,
@@ -180,7 +192,7 @@ public class Service : IService
         };
     }
 
-    public async Task<NewResponse?> UpdateNewAsync(Guid id, UpdateNewRequest request)
+    public async Task<NewResponseV2?> UpdateNewAsync(Guid id, UpdateNewRequest request)
     {
         var categoryIds = NormalizeCategoryIds(request.CategoryIds);
         await EnsureCategoriesExistAsync(categoryIds);
@@ -227,7 +239,7 @@ public class Service : IService
         await _dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return new NewResponse
+        return new NewResponseV2
         {
             Id = news.Id,
             Title = news.Title,
