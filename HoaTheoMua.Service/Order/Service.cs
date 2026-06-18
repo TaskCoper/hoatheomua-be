@@ -455,20 +455,20 @@ public class Service : IService
 
     public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)
     {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        if (existUser == null)
-        {
-            throw new NotFoundException("User not found");
-        }
+        // var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+        //
+        // if (user == null)  
+        // {            
+        //     throw new UnauthorizedException("User not found");  
+        // }
+        // var userId = Guid.Parse(user);
+        //
+        // var existUser = await _dbContext.Users
+        //     .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        // if (existUser == null)
+        // {
+        //     throw new NotFoundException("User not found");
+        // }
         
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
