@@ -2,30 +2,47 @@
 
 namespace HoaTheoMua.Service.Order;
 
-public class OrderListRequest
+public class NhanhVnOrderListRequest
 {
-    [JsonPropertyName("filters")]
-    public OrderFilter Filters { get; set; } = new OrderFilter();
+    public class OrderListRequest
+    {
+        [JsonPropertyName("filters")]
+        public OrderFilter Filters { get; set; } = new OrderFilter();
 
-    [JsonPropertyName("paginator")]
-    public OrderPaginator Paginator { get; set; }
+        [JsonPropertyName("paginator")]
+        public OrderPaginator? Paginator { get; set; }
 
-    [JsonPropertyName("dataOptions")]
-    public OrderDataOptions DataOptions { get; set; } = new OrderDataOptions();
-}
+        [JsonPropertyName("dataOptions")]
+        public OrderDataOptions DataOptions { get; set; } = new OrderDataOptions();
+    }
 
-public class OrderFilter
-{
-    // Bạn có thể thêm các thuộc tính lọc như Id, Status... vào đây nếu sau này cần dùng
-}
+    public class OrderFilter
+    {
+        // Thêm: Thời gian tạo từ ngày (định dạng timestamp)
+        [JsonPropertyName("createdAtFrom")]
+        public long? CreatedAtFrom { get; set; } = null;
 
-public class OrderPaginator
-{
-    [JsonPropertyName("size")]
-    public int Size { get; set; }
-}
+        // Thêm: Thời gian tạo đến ngày (định dạng timestamp)
+        [JsonPropertyName("createdAtTo")]
+        public long? CreatedAtTo { get; set; } = null;
 
-public class OrderDataOptions
-{
-    // Khai báo các option mở rộng của Nhanh.vn nếu cần ở đây
+        // Thêm: Mảng ID đơn hàng
+        [JsonPropertyName("ids")]
+        public List<long>? Ids { get; set; } = null;
+
+        // Thêm: Mảng ID kho hàng
+        [JsonPropertyName("depotIds")]
+        public List<long>? DepotIds { get; set; } = null;
+    }
+
+    public class OrderPaginator
+    {
+        [JsonPropertyName("size")]
+        public int? Size { get; set; }
+    }
+
+    public class OrderDataOptions
+    {
+        // Khai báo các option mở rộng của Nhanh.vn nếu cần ở đây
+    }
 }
