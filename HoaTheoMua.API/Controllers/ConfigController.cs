@@ -16,7 +16,7 @@ public class ConfigController : ControllerBase
         _configService = configService;
     }
 
-    [HttpGet("list")]
+    [HttpGet("")]
     public async Task<IActionResult> GetConfigList(int pageIndex, int paegSize)
     {
         var result = await _configService.GetConfig(pageIndex, paegSize);

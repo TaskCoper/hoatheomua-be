@@ -73,7 +73,7 @@ public class Service : IService
         {
             throw  new UnauthorizedException("User Not Found");
         }
-
+        
         var userId = Guid.Parse(userIdString);
         
         var existUser = await _dbContext.Users.AnyAsync(x => x.Id == userId);
@@ -111,6 +111,12 @@ public class Service : IService
         if (existUser == false)
         {
             throw  new UnauthorizedException("User Not Found");
+        }
+        
+        var existKey = await _dbContext.Configs.AnyAsync(x => x.Key == request.Key);
+        if (existKey == true)
+        {
+            throw  new UnauthorizedException("Key Exists");
         }
 
         var result =  new Repository.Entity.Config()
