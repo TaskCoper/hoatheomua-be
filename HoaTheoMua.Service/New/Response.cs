@@ -14,10 +14,15 @@ public class NewResponse
     public Guid UserId { get; set; }
     public required string UserFirstName { get; set; } = string.Empty;
     public required string UserLastName { get; set; } = string.Empty;
-    public List<Guid> CategoryIds { get; set; } = new();
-    public List<string> CategoryName { get; set; } = new();
+    public required List<CategoryResponse> Categories { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
+}
+
+public class CategoryResponse
+{
+    public required Guid CategoryId { get; set; }
+    public required string CategoryName { get; set; }
 }
 
 public class NewResponseV2
