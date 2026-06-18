@@ -112,6 +112,12 @@ public class Service : IService
         {
             throw  new UnauthorizedException("User Not Found");
         }
+        
+        var existKey = await _dbContext.Configs.AnyAsync(x => x.Key == request.Key);
+        if (existKey == true)
+        {
+            throw  new UnauthorizedException("Key Exists");
+        }
 
         var result =  new Repository.Entity.Config()
         {
