@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
@@ -45,8 +46,9 @@ public class Service : IService
         {
             query = query.Where(news => news.Status == status.Value);
         }
-
+        
         var totalCount = await query.CountAsync();
+        
         var items = await query
             .OrderByDescending(news => news.CreatedAt)
             .Skip((pageIndex - 1) * pageSize)
@@ -59,14 +61,26 @@ public class Service : IService
                 ViewCount = news.ViewCount,
                 PictureUrl = news.CoverImage,
                 slug = news.slug,
-                Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
+                Status = news.Status == NewsStatus.Published
+                    ? "Published"
+                    : "Draft",
                 UserId = news.UserId,
                 UserFirstName = news.User.FirstName,
                 UserLastName = news.User.LastName,
-                CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
-                CategoryName = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNews.Title).ToList(),
+                // CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId)
+                //     .ToList(),
+                // CategoryName = news.CategoryNewsDetail
+                //     .Select(categoryNewsDetail => categoryNewsDetail.CategoryNews.Title)
+                //     .ToList(),
                 CreatedAt = news.CreatedAt,
-                UpdatedAt = news.UpdatedAt
+                UpdatedAt = news.UpdatedAt,
+                Categories = news.CategoryNewsDetail
+                    .Select(x => new CategoryResponse
+                    {
+                        CategoryId = x.CategoryNews.Id,
+                        CategoryName = x.CategoryNews.Title
+                    })
+                    .ToList()
             })
             .ToListAsync();
 
@@ -92,14 +106,21 @@ public class Service : IService
                     ViewCount = news.ViewCount,
                     PictureUrl = news.CoverImage,
                     slug = news.slug,
-                    Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
+                    Status = news.Status == NewsStatus.Published
+                        ? "Published"
+                        : "Draft",
                     UserId = news.UserId,
                     UserFirstName = news.User.FirstName,
                     UserLastName = news.User.LastName,
-                    CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
-                    CategoryName = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNews.Title).ToList(),
                     CreatedAt = news.CreatedAt,
-                    UpdatedAt = news.UpdatedAt
+                    UpdatedAt = news.UpdatedAt,
+                    Categories = news.CategoryNewsDetail
+                        .Select(x => new CategoryResponse
+                        {
+                            CategoryId = x.CategoryNews.Id,
+                            CategoryName = x.CategoryNews.Title
+                        })
+                        .ToList()
                 })
                 .FirstOrDefaultAsync()
             : await query.Where(news => news.slug == normalizedKey)
@@ -111,14 +132,21 @@ public class Service : IService
                     ViewCount = news.ViewCount,
                     PictureUrl = news.CoverImage,
                     slug = news.slug,
-                    Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
+                    Status = news.Status == NewsStatus.Published
+                        ? "Published"
+                        : "Draft",
                     UserId = news.UserId,
                     UserFirstName = news.User.FirstName,
                     UserLastName = news.User.LastName,
-                    CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
-                    CategoryName = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNews.Title).ToList(),
                     CreatedAt = news.CreatedAt,
-                    UpdatedAt = news.UpdatedAt
+                    UpdatedAt = news.UpdatedAt,
+                    Categories = news.CategoryNewsDetail
+                        .Select(x => new CategoryResponse
+                        {
+                            CategoryId = x.CategoryNews.Id,
+                            CategoryName = x.CategoryNews.Title
+                        })
+                        .ToList()
                 })
                 .FirstOrDefaultAsync();
 
