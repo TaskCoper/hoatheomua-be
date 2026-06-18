@@ -212,6 +212,10 @@ public class Service: IService
         
         HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
 
+        
+        string rawJson = await ahamoveResponse.Content.ReadAsStringAsync();
+        Console.WriteLine("AhaMove JSON: " + rawJson);
+        
         AhaMoveResponse.ServiceDetailsResponse? createAhamoveOrderResult = null;
 
         if (ahamoveResponse.IsSuccessStatusCode)
