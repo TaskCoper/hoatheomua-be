@@ -83,7 +83,7 @@ public class Service : IService
         }
         
         var result = await _dbContext.Configs
-            .Where(x => x.Id == id && !x.IsDeleted && x.UserId == userId)
+            .Where(x => x.Id == id && !x.IsDeleted)
             .Select(x => new Response.ConfigResponse()
             {
                 Id = x.Id,
