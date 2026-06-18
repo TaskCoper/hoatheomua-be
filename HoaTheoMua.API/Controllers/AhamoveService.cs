@@ -21,6 +21,14 @@ public class AhamoveService: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
+    [HttpGet("/api/v1/ahamove/service-details")]
+    public async Task<IActionResult> GetNhanhVnOrders()
+    {
+        var result = await _ahamoveService.GetServiceDetailsAhaMove();
+        //return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+        return Ok(result);
+    }
+    
     // [HttpPost("/api/v1/ahamove/orders")]
     // public async Task<IActionResult> CreateOrder([FromBody] Request.CreateOrderRequestAhamove request)
     // {
