@@ -64,10 +64,11 @@ public class Service : IService
             OrderId =  x.Id,
             Status = x.Status.ToString(),
             TrackNumber = x.TrackNumber,
-            NhanhOrderId = x.NhanhOrderId!,
-            NhanhTrackingUrl = x.NhanhTrackingUrl!,
+           // NhanhOrderId = x.NhanhOrderId!,
+           // NhanhTrackingUrl = x.NhanhTrackingUrl!,
             AhahaMoveOrderId = x.AhahaMoveOrderId!,
             AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl!,
+            Remark = x.Remarks,
             CreateAt = x.CreatedAt,
             UpdateAt = x.UpdatedAt,
         }).ToList();
@@ -358,10 +359,11 @@ public class Service : IService
             Status = orders.Status,
             TrackNumber = orders.TrackNumber,
             QrCodeUrl = qrCodeUrl,
-            NhanhOrderId = orders.NhanhOrderId,
-            NhanhTrackingUrl = orders.NhanhTrackingUrl,
+            //NhanhOrderId = orders.NhanhOrderId,
+            //NhanhTrackingUrl = orders.NhanhTrackingUrl,
             AhahaMoveOrderId = orders.AhahaMoveOrderId,
             AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl,
+            Remark = orders.Remarks,
 
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
