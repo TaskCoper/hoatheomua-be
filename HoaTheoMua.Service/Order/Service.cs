@@ -143,6 +143,16 @@ public class Service : IService
             throw new Exception("NhanhVnResponse returned null or empty data");
         }
         
+        foreach (var x in productNhanhResult.Data)
+        {
+            var userItem = request.Items.First(item => item.ItemId == x.Id);
+            var TargetAvailable = x.Inventory.Depots.First(d => d.Id == 129255).Available;
+
+            if (userItem.Number > TargetAvailable)
+            {
+                throw new BadRequestException($"Sản phẩm '{x.Name}' không đủ hàng (Yêu cầu: {userItem.Number}, Kho có: {TargetAvailable})");
+            }
+        }
         var itemsRequest = productNhanhResult.Data.Select(
             x => new AhamoveService.Request.AhamoveItem()
             {
