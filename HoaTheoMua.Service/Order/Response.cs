@@ -16,8 +16,8 @@ public class Response
         public Guid OrderId { get; set; }
         public string Status { get; set; }
         public string TrackNumber { get; set; }
-        public int? NhanhOrderId { get; set; } 
-        public string NhanhTrackingUrl { get; set; } = string.Empty;
+        //public int? NhanhOrderId { get; set; } 
+        //public string NhanhTrackingUrl { get; set; } = string.Empty;
         public string AhahaMoveOrderId { get; set; } = string.Empty;
         public string AhahaMoveTrackingUrl { get; set; } = string.Empty;
         public string? Remark { get; set; }
@@ -30,8 +30,8 @@ public class Response
         public Guid OrderId { get; set; }
         public string Status { get; set; }
         public string TrackNumber { get; set; }
-        public int? NhanhOrderId { get; set; } 
-        public string? NhanhTrackingUrl { get; set; } = string.Empty;
+       // public int? NhanhOrderId { get; set; } 
+       // public string? NhanhTrackingUrl { get; set; } = string.Empty;
         public string? AhahaMoveOrderId { get; set; } = string.Empty;
         public string? AhahaMoveTrackingUrl { get; set; } = string.Empty;
         public string? Remark { get; set; }
