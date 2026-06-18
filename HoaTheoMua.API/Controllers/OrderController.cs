@@ -43,10 +43,10 @@ public class OrderController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
-    [HttpGet("/api/v1/orders/nhanh-vn")]
-    public async Task<IActionResult> GetNhanhVnOrders([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 50)
+    [HttpPost("/api/v1/orders/nhanh-vn")]
+    public async Task<IActionResult> GetNhanhVnOrders([FromBody]NhanhVnOrderListRequest.OrderListRequest request)
     {
-        var result = await _orderService.GetOrderNhanhVn(pageIndex, pageSize);
+        var result = await _orderService.GetOrderNhanhVn(request);
         return Ok(result);
     }
     

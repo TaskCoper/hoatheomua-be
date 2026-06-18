@@ -15,6 +15,6 @@ public interface IService
     Task<string> GetStatusOrder(Guid id);
     
     
-    Task<OrderListRootResponse?> GetOrderNhanhVn(int pageIndex, int pageSize);
+    Task<OrderListRootResponse?> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request);
     Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter);
 }

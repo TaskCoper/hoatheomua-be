@@ -404,37 +404,29 @@ public class Service : IService
         return order.Status;
     }
 
-    public async Task<OrderListRootResponse?> GetOrderNhanhVn(int pageIndex, int pageSize)
+    public async Task<OrderListRootResponse?> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request)
     {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        if (existUser == null)
-        {
-            throw new NotFoundException("User not found");
-        }
+        // var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+        //
+        // if (user == null)  
+        // {            
+        //     throw new UnauthorizedException("User not found");  
+        // }
+        // var userId = Guid.Parse(user);
+        //
+        // var existUser = await _dbContext.Users
+        //     .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        // if (existUser == null)
+        // {
+        //     throw new NotFoundException("User not found");
+        // }
         
         
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
         var token = _nhanhVnOption.Token;
         var nhanhApi = _nhanhVnOption.BaseUrl + "/order/list?appId=" + appId + "&businessId=" + businessId;
-        var nhanhVnOrderSrcRequest = new OrderListRequest()
-        {
-            Filters = new OrderFilter(),
-            Paginator =  new OrderPaginator()
-            {
-                Size = pageSize > 0 ?  pageSize : 50,
-            },
-            DataOptions =  new OrderDataOptions(),
-        };
+        var nhanhVnOrderSrcRequest = request;
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhVnOrderSrcRequest);
