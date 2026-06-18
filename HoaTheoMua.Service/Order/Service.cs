@@ -68,6 +68,7 @@ public class Service : IService
             NhanhTrackingUrl = x.NhanhTrackingUrl!,
             AhahaMoveOrderId = x.AhahaMoveOrderId!,
             AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl!,
+            Remark = x.Remarks,
             CreateAt = x.CreatedAt,
             UpdateAt = x.UpdatedAt,
         }).ToList();
@@ -352,6 +353,7 @@ public class Service : IService
             NhanhTrackingUrl = orders.NhanhTrackingUrl,
             AhahaMoveOrderId = orders.AhahaMoveOrderId,
             AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl,
+            Remark = orders.Remarks,
 
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
