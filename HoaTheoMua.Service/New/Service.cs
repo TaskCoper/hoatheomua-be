@@ -64,14 +64,6 @@ public class Service : IService
                 Status = news.Status == NewsStatus.Published
                     ? "Published"
                     : "Draft",
-                UserId = news.UserId,
-                UserFirstName = news.User.FirstName,
-                UserLastName = news.User.LastName,
-                // CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId)
-                //     .ToList(),
-                // CategoryName = news.CategoryNewsDetail
-                //     .Select(categoryNewsDetail => categoryNewsDetail.CategoryNews.Title)
-                //     .ToList(),
                 CreatedAt = news.CreatedAt,
                 UpdatedAt = news.UpdatedAt,
                 Categories = news.CategoryNewsDetail
@@ -80,7 +72,15 @@ public class Service : IService
                         CategoryId = x.CategoryNews.Id,
                         CategoryName = x.CategoryNews.Title
                     })
-                    .ToList()
+                    .ToList(),
+                User = new UserResponse
+                {
+                    UserId = news.UserId,
+                    Email = news.User.Email,
+                    UserAvatar = news.User.Avatar,
+                    UserFirstName = news.User.FirstName,
+                    UserLastName = news.User.LastName,
+                }
             })
             .ToListAsync();
 
@@ -109,9 +109,6 @@ public class Service : IService
                     Status = news.Status == NewsStatus.Published
                         ? "Published"
                         : "Draft",
-                    UserId = news.UserId,
-                    UserFirstName = news.User.FirstName,
-                    UserLastName = news.User.LastName,
                     CreatedAt = news.CreatedAt,
                     UpdatedAt = news.UpdatedAt,
                     Categories = news.CategoryNewsDetail
@@ -120,7 +117,15 @@ public class Service : IService
                             CategoryId = x.CategoryNews.Id,
                             CategoryName = x.CategoryNews.Title
                         })
-                        .ToList()
+                        .ToList(),
+                    User = new UserResponse
+                    {
+                        UserId = news.UserId,
+                        Email = news.User.Email,
+                        UserAvatar = news.User.Avatar,
+                        UserFirstName = news.User.FirstName,
+                        UserLastName = news.User.LastName,
+                    }
                 })
                 .FirstOrDefaultAsync()
             : await query.Where(news => news.slug == normalizedKey)
@@ -135,9 +140,6 @@ public class Service : IService
                     Status = news.Status == NewsStatus.Published
                         ? "Published"
                         : "Draft",
-                    UserId = news.UserId,
-                    UserFirstName = news.User.FirstName,
-                    UserLastName = news.User.LastName,
                     CreatedAt = news.CreatedAt,
                     UpdatedAt = news.UpdatedAt,
                     Categories = news.CategoryNewsDetail
@@ -146,7 +148,15 @@ public class Service : IService
                             CategoryId = x.CategoryNews.Id,
                             CategoryName = x.CategoryNews.Title
                         })
-                        .ToList()
+                        .ToList(),
+                    User = new UserResponse
+                    {
+                        UserId = news.UserId,
+                        Email = news.User.Email,
+                        UserAvatar = news.User.Avatar,
+                        UserFirstName = news.User.FirstName,
+                        UserLastName = news.User.LastName,
+                    }
                 })
                 .FirstOrDefaultAsync();
 
