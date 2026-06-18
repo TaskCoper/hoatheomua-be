@@ -2,6 +2,7 @@
 using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Webhook;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -12,14 +13,14 @@ namespace HoaTheoMua.Service.AhamoveService;
 public class Service: IService
 {
     private readonly HttpClient _httpClient;
-    private readonly AhamoveOption _ahamoveAhamoveOption = new();
+    private readonly AhamoveOption _ahamoveOption = new();
     private readonly NhanhVnOption _nhanhVnOption = new();
     private readonly AppDbContext _appDbContext;
 
     public Service(HttpClient httpClient, IConfiguration configuration,  AppDbContext appDbContext)
     {
         _httpClient = httpClient;
-        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveAhamoveOption);
+        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         _appDbContext = appDbContext;
     }
@@ -173,8 +174,8 @@ public class Service: IService
             }
         };
 
-        var ahamoveApi =  _ahamoveAhamoveOption.BaseUrl+"/v3/orders/estimates";
-        var ahamoveToken = _ahamoveAhamoveOption.Token;
+        var ahamoveApi =  _ahamoveOption.BaseUrl+"/v3/orders/estimates";
+        var ahamoveToken = _ahamoveOption.Token;
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -198,5 +199,37 @@ public class Service: IService
         }
         
         return new { ahamoveResult, productNhanhResult};
+    }
+
+    public async Task<AhaMoveResponse.ServiceDetailsResponse> GetServiceDetailsAhaMove()
+    {
+        var ahamoveApi = _ahamoveOption.BaseUrl + "/v3/services/SGN-BIKE";
+        var ahamoveToken = _ahamoveOption.Token;
+        var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Get, ahamoveApi);
+        ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
+        
+        //ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
+        
+        HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
+
+        AhaMoveResponse.ServiceDetailsResponse? createAhamoveOrderResult = null;
+
+        if (ahamoveResponse.IsSuccessStatusCode)
+        {
+            createAhamoveOrderResult =
+                await ahamoveResponse.Content.ReadFromJsonAsync<AhaMoveResponse.ServiceDetailsResponse>();
+        }
+        else
+        {
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+        }
+
+        if (createAhamoveOrderResult == null)
+        {
+            throw new Exception("Ahamove returned null or empty data");
+        }
+
+        return new AhaMoveResponse.ServiceDetailsResponse();
     }
 }
