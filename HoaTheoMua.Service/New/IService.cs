@@ -7,7 +7,7 @@ public interface IService
 {
     Task<BasePaginationResponse> GetNewsAsync(int pageIndex, int pageSize, string? keyword, NewsStatus? status);
     Task<NewResponse?> GetNewByIdAsync(string key);
-    Task<NewResponse> CreateNewAsync(CreateNewRequest request);
-    Task<NewResponse?> UpdateNewAsync(Guid id, UpdateNewRequest request);
+    Task<NewResponseV2> CreateNewAsync(CreateNewRequest request);
+    Task<NewResponseV2?> UpdateNewAsync(Guid id, UpdateNewRequest request);
     Task<bool> DeleteNewAsync(Guid id);
 }
