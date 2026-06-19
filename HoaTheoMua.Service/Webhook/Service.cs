@@ -419,7 +419,11 @@ public partial class Service : IService
         {
             throw new Exception("NhanhVnResponse returned null or empty data");
         }
-
+        
+        if (createOrderNhanhResult.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
+        }
         order.NhanhOrderId = createOrderNhanhResult.Data.Id;
         order.NhanhTrackingUrl = createOrderNhanhResult.Data.TrackingUrl;
         

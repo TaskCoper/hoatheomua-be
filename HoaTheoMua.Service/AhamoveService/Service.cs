@@ -85,6 +85,11 @@ public class Service: IService
         {
             throw new Exception("NhanhVnResponse returned null or empty data");
         }
+
+        if (productNhanhResult.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
+        }
         
         var itemsRequest = productNhanhResult.Data.Select(
             x => new Request.AhamoveItem()

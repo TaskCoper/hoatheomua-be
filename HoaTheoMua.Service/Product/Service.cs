@@ -93,12 +93,17 @@ public class Service: IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
         if (nhanhProductList == null)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
+        }
+        
+        if (nhanhProductList.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
         }
 
         return nhanhProductList;
@@ -163,14 +168,18 @@ public class Service: IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
         if (nhanhProductDetails == null)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
         }
-
+        if (nhanhProductDetails.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
+        }
+        
         return nhanhProductDetails;
     }
 }

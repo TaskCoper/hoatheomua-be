@@ -451,6 +451,10 @@ public class Service : IService
         {
             throw new Exception("NhanhVnResponse returned null or empty data");
         }
+        if (orderListRootResponse.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
+        }
 
         return orderListRootResponse;
     }
@@ -506,6 +510,10 @@ public class Service : IService
         if (shippingLocation == null)
         {
             throw new Exception("NhanhVnResponse returned null or empty data");
+        }
+        if (shippingLocation.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
         }
 
         return shippingLocation;
