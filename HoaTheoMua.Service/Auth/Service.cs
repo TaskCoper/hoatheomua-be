@@ -171,11 +171,11 @@ public class Service : IService
     public async Task<Response.AuthResponse> RefreshToken()
     {
         // Trả về false tức là: CÒN ACCESS VÀ CÒN HẠN
-        bool isMissingAccessToken = CheckExpiredAccessToken();
-
-        if (!isMissingAccessToken)
-        {// Nếu trả về true: Nghĩa là KHÔNG CÓ ACCESS TOKEN -> Luồng tự động trôi xuống bước 2
-            throw new BadRequestException("Access token vẫn còn hiệu lực, không cần làm mới.");        } 
+        // bool isMissingAccessToken = CheckExpiredAccessToken();
+        //
+        // if (!isMissingAccessToken)
+        // {// Nếu trả về true: Nghĩa là KHÔNG CÓ ACCESS TOKEN -> Luồng tự động trôi xuống bước 2
+        //     throw new BadRequestException("Access token vẫn còn hiệu lực, không cần làm mới.");        } 
 
         var rawRefreshToken = CheckRefreshToken();
 
