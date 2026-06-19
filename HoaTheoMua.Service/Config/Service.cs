@@ -122,7 +122,7 @@ public class Service : IService
         var key = request.Key.Trim().ToLower();
 
         var existKey = await _dbContext.Configs
-            .AnyAsync(x => x.Key == key && !x.IsDeleted);
+            .AnyAsync(x => x.Key.Trim().ToLower() == key && !x.IsDeleted);
 
         if (existKey)
         {
@@ -182,7 +182,7 @@ public class Service : IService
         var key = request.Key.Trim().ToLower();
 
         var existKey = await _dbContext.Configs
-            .AnyAsync(x => x.Key == key && !x.IsDeleted);
+            .AnyAsync(x => x.Key.Trim().ToLower() == key && !x.IsDeleted);
 
         if (existKey)
         {
