@@ -34,7 +34,7 @@ public class ConfigController : ControllerBase
     public async Task<IActionResult> CreateConfig([FromBody] Request.CreateConfigRequest request)
     {
         var result = await _configService.CreateConfig(request);
-        return StatusCode(200, ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
     }
 
     [HttpPut("{id:guid}")]
