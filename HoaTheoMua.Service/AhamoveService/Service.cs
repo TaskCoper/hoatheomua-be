@@ -78,12 +78,12 @@ public class Service: IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
         if (productNhanhResult == null || productNhanhResult.Data == null)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
         }
 
         if (productNhanhResult.Code == 0)
@@ -194,12 +194,12 @@ public class Service: IService
         } else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+            throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
         }
         
         if (ahamoveResult == null || ahamoveResult.Any() == false)
         {
-            throw new Exception("Ahamove returned null or empty data");
+            throw new BadRequestException("Ahamove returned null or empty data");
         }
         
         return new { ahamoveResult, productNhanhResult};
@@ -230,12 +230,12 @@ public class Service: IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+            throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
         }
 
         if (getServiceDetailsAhaMove == null)
         {
-            throw new Exception("Ahamove returned null or empty data");
+            throw new BadRequestException("Ahamove returned null or empty data");
         }
 
         return getServiceDetailsAhaMove;
