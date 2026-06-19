@@ -27,6 +27,11 @@ public class Response
         public string status { get; set; } = null!;
     }
 
+    public class HighestSalaryResponse
+    {
+        public float? salary { get; set; }
+    }
+
     public class JobDetailResponse
     {
         public Guid id { get; set; }
