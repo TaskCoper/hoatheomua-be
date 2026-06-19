@@ -44,9 +44,9 @@ public class OrderController: ControllerBase
     }
     
     [HttpPost("/api/v1/orders/nhanh-vn")]
-    public async Task<IActionResult> GetNhanhVnOrders([FromBody]NhanhVnOrderListRequest.OrderListRequest request)
+    public async Task<IActionResult> GetNhanhVnOrders([FromBody]NhanhVnOrderListRequest.OrderListRequest request,[FromQuery]int pageIndex, int pageSize)
     {
-        var result = await _orderService.GetOrderNhanhVn(request);
+        var result = await _orderService.GetOrderNhanhVn(request, pageIndex, pageSize);
         return Ok(result);
     }
     
@@ -54,7 +54,7 @@ public class OrderController: ControllerBase
     public async Task<IActionResult> GetShippingLocation([FromBody] Request.LocationFilters filter)
     {
         var result = await _orderService.GetShippingLocation(filter);
-        return Ok(result);
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
     // [HttpGet("/api/v1/orders")]
