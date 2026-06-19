@@ -82,8 +82,14 @@ public class Service : IService
             throw  new UnauthorizedException("User Not Found");
         }
         
+        var isExistConfig = await _dbContext.Configs.AnyAsync(x => x.Id == id && !x.IsDeleted);
+        if (isExistConfig == false)
+        {
+            throw new BadRequestException(" Id Not Exists");
+        }
+        
         var result = await _dbContext.Configs
-            .Where(x => x.Id == id && !x.IsDeleted)
+            .Where(x => x.Id == id && !x.IsDeleted )
             .Select(x => new Response.ConfigResponse()
             {
                 Id = x.Id,
@@ -113,15 +119,20 @@ public class Service : IService
             throw  new UnauthorizedException("User Not Found");
         }
         
-        var existKey = await _dbContext.Configs.AnyAsync(x => x.Key == request.Key);
-        if (existKey == true)
-        {
-            throw  new UnauthorizedException("Key Exists");
-        }
+        var key = request.Key.Trim().ToLower();
 
+        var existKey = await _dbContext.Configs
+            .AnyAsync(x => x.Key == key && !x.IsDeleted);
+
+        if (existKey)
+        {
+            throw new ConflictException("Key exists");
+        }
+        
         var result =  new Repository.Entity.Config()
         {
-                Key = request.Key,
+                
+                Key = key,
                 Value = request.Value.GetRawText(),
                 UserId = userId,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -162,6 +173,23 @@ public class Service : IService
             throw  new UnauthorizedException("User Not Found");
         }
         
+        var isExistConfig = await _dbContext.Configs.AnyAsync(x => x.Id == id && !x.IsDeleted);
+        if (isExistConfig == false)
+        {
+            throw new BadRequestException(" Id Not Exists");
+        }
+        
+        var key = request.Key.Trim().ToLower();
+
+        var existKey = await _dbContext.Configs
+            .AnyAsync(x => x.Key == key && !x.IsDeleted);
+
+        if (existKey)
+        {
+            throw new ConflictException("key exists");
+        }
+        
+        
         var query = await _dbContext.Configs
             .Where(x => x.Id == id && !x.IsDeleted).FirstOrDefaultAsync();
         
@@ -190,6 +218,12 @@ public class Service : IService
         if (existUser == false)
         {
             throw  new UnauthorizedException("User Not Found");
+        }
+        
+        var isExistConfig = await _dbContext.Configs.AnyAsync(x => x.Id == id && !x.IsDeleted);
+        if (isExistConfig == false)
+        {
+            throw new BadRequestException(" Id Not Exists");
         }
         
        var query = await _dbContext.Configs.Where(x => x.Id == id && !x.IsDeleted).FirstOrDefaultAsync();
