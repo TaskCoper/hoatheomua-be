@@ -3,6 +3,7 @@ using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -83,23 +84,39 @@ public class Service : IService
             throw  new UnauthorizedException("User Not Found");
         }
         
-        var isIdExist = await _dbContext.Configs.AnyAsync(x => x.Id == id && !x.IsDeleted);
-        if (isIdExist == false)
-        {
-            throw new BadRequestException(" Id Not Exists");
-        }
-        
+        // var isIdExist = await _dbContext.Configs.AnyAsync(x => x.Id == id && !x.IsDeleted);
+        // if (isIdExist == false)
+        // {
+        //     throw new BadRequestException(" Id Not Exists");
+        // }
+        //
+        // var result = await _dbContext.Configs
+        //     .Where(x => x.Id == id && !x.IsDeleted )
+        //     .Select(x => new Response.ConfigResponse()
+        //     {
+        //         Id = x.Id,
+        //         Key = x.Key,
+        //         Value = StringToJson(x.Value),
+        //         UserId =  x.UserId,
+        //     })
+        //     .FirstOrDefaultAsync();
+
         var result = await _dbContext.Configs
-            .Where(x => x.Id == id && !x.IsDeleted )
+            .Where(x => x.Id == id && !x.IsDeleted)
             .Select(x => new Response.ConfigResponse()
             {
                 Id = x.Id,
                 Key = x.Key,
                 Value = StringToJson(x.Value),
-                UserId =  x.UserId,
+                UserId = x.UserId,
             })
             .FirstOrDefaultAsync();
 
+        if (result == null)
+        {
+            throw  new BadRequestException("  Id Not Found");
+        }
+        
         return result;
     }
 
@@ -123,9 +140,9 @@ public class Service : IService
         var key = request.Key.Trim().ToLower();
 
         var existKey = await _dbContext.Configs
-            .AnyAsync(x => x.Key.Trim().ToLower() != key && !x.IsDeleted);
+            .AnyAsync(x => x.Key.Trim().ToLower() == key && !x.IsDeleted);
 
-        if (existKey == false)
+        if (existKey)
         {
             throw new BadRequestException("Key is exists");
         }
@@ -133,25 +150,25 @@ public class Service : IService
         var result =  new Repository.Entity.Config()
         {
                 
-                Key = key,
-                Value = request.Value.GetRawText(),
-                UserId = userId,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = null,
-                IsDeleted = false
-            };
-            
-            await _dbContext.Configs.AddAsync(result);
-            await _dbContext.SaveChangesAsync();
+            Key = key,
+            Value = request.Value.GetRawText(),
+            UserId = userId,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = null,
+            IsDeleted = false
+        };
+        
+        await _dbContext.Configs.AddAsync(result);
+        await _dbContext.SaveChangesAsync();
 
-            var query = new Response.ConfigResponse()
-            {
-                Id = result.Id,
-                Key = result.Key,
-                Value = StringToJson(result.Value),
-                UserId = result.UserId,
-            };
-            return query;
+        var query = new Response.ConfigResponse()
+        {
+            Id = result.Id,
+            Key = result.Key,
+            Value = StringToJson(result.Value),
+            UserId = result.UserId,
+        };
+        return query;
 
     }
 
@@ -212,11 +229,13 @@ public class Service : IService
             throw  new UnauthorizedException("User Not Found");
         }
         
-        var isIdExist = await _dbContext.Configs.Where(x => x.Id == id && !x.IsDeleted).FirstOrDefaultAsync();
+        var isIdExist = await _dbContext.Configs.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
         if (isIdExist == null)
         {
             throw new BadRequestException(" Id Not Exists");
         } 
+        isIdExist.IsDeleted = true;
+        
         await _dbContext.SaveChangesAsync();
 
         return "Xóa thành công.";
