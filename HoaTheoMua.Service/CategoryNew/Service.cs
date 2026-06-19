@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Repository;
+using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
@@ -219,7 +219,7 @@ public class Service : IService
             .ToListAsync();
 
         var newsCount = await _dbContext.CategoryNewsDetails
-            .Where(x => x.CategoryNewsId == categoryId).CountAsync();
+            .Where(x => x.CategoryNewsId == categoryId && !x.IsDeleted).CountAsync();
 
         result.children = childCategories;
         result.count = newsCount;

@@ -210,7 +210,7 @@ public class NhanhCombo
     public string Name { get; set; }
 
     [JsonPropertyName("quantity")]
-    public int Quantity { get; set; }
+    public decimal Quantity { get; set; }
 }
 
 public class NhanhInventory

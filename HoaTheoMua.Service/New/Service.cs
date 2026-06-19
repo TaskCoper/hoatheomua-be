@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
@@ -29,6 +30,7 @@ public class Service : IService
 
         var query = _dbContext.NewsList
             .AsNoTracking()
+            .Include(news => news.User)
             .Include(news => news.CategoryNewsDetail)
             .Where(news => !news.IsDeleted);
 
@@ -44,8 +46,9 @@ public class Service : IService
         {
             query = query.Where(news => news.Status == status.Value);
         }
-
+        
         var totalCount = await query.CountAsync();
+        
         var items = await query
             .OrderByDescending(news => news.CreatedAt)
             .Skip((pageIndex - 1) * pageSize)
@@ -58,11 +61,26 @@ public class Service : IService
                 ViewCount = news.ViewCount,
                 PictureUrl = news.CoverImage,
                 slug = news.slug,
-                Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
-                UserId = news.UserId,
-                CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+                Status = news.Status == NewsStatus.Published
+                    ? "Published"
+                    : "Draft",
                 CreatedAt = news.CreatedAt,
-                UpdatedAt = news.UpdatedAt
+                UpdatedAt = news.UpdatedAt,
+                Categories = news.CategoryNewsDetail
+                    .Select(x => new CategoryResponse
+                    {
+                        CategoryId = x.CategoryNews.Id,
+                        CategoryName = x.CategoryNews.Title
+                    })
+                    .ToList(),
+                User = new UserResponse
+                {
+                    UserId = news.UserId,
+                    Email = news.User.Email,
+                    UserAvatar = news.User.Avatar,
+                    UserFirstName = news.User.FirstName,
+                    UserLastName = news.User.LastName,
+                }
             })
             .ToListAsync();
 
@@ -74,6 +92,8 @@ public class Service : IService
         var normalizedKey = NormalizeLookupKey(key);
         var query = _dbContext.NewsList
             .AsNoTracking()
+            .Include(news => news.User)
+            .Include(news => news.CategoryNewsDetail)
             .Where(news => !news.IsDeleted);
 
         var newsResponse = Guid.TryParse(normalizedKey, out var id)
@@ -86,11 +106,26 @@ public class Service : IService
                     ViewCount = news.ViewCount,
                     PictureUrl = news.CoverImage,
                     slug = news.slug,
-                    Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
-                    UserId = news.UserId,
-                    CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+                    Status = news.Status == NewsStatus.Published
+                        ? "Published"
+                        : "Draft",
                     CreatedAt = news.CreatedAt,
-                    UpdatedAt = news.UpdatedAt
+                    UpdatedAt = news.UpdatedAt,
+                    Categories = news.CategoryNewsDetail
+                        .Select(x => new CategoryResponse
+                        {
+                            CategoryId = x.CategoryNews.Id,
+                            CategoryName = x.CategoryNews.Title
+                        })
+                        .ToList(),
+                    User = new UserResponse
+                    {
+                        UserId = news.UserId,
+                        Email = news.User.Email,
+                        UserAvatar = news.User.Avatar,
+                        UserFirstName = news.User.FirstName,
+                        UserLastName = news.User.LastName,
+                    }
                 })
                 .FirstOrDefaultAsync()
             : await query.Where(news => news.slug == normalizedKey)
@@ -102,11 +137,26 @@ public class Service : IService
                     ViewCount = news.ViewCount,
                     PictureUrl = news.CoverImage,
                     slug = news.slug,
-                    Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
-                    UserId = news.UserId,
-                    CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+                    Status = news.Status == NewsStatus.Published
+                        ? "Published"
+                        : "Draft",
                     CreatedAt = news.CreatedAt,
-                    UpdatedAt = news.UpdatedAt
+                    UpdatedAt = news.UpdatedAt,
+                    Categories = news.CategoryNewsDetail
+                        .Select(x => new CategoryResponse
+                        {
+                            CategoryId = x.CategoryNews.Id,
+                            CategoryName = x.CategoryNews.Title
+                        })
+                        .ToList(),
+                    User = new UserResponse
+                    {
+                        UserId = news.UserId,
+                        Email = news.User.Email,
+                        UserAvatar = news.User.Avatar,
+                        UserFirstName = news.User.FirstName,
+                        UserLastName = news.User.LastName,
+                    }
                 })
                 .FirstOrDefaultAsync();
 
@@ -118,7 +168,7 @@ public class Service : IService
         return newsResponse;
     }
 
-    public async Task<NewResponse> CreateNewAsync(CreateNewRequest request)
+    public async Task<NewResponseV2> CreateNewAsync(CreateNewRequest request)
     {
         var userId = CheckAccessToken();
         if (userId == Guid.Empty)
@@ -164,7 +214,7 @@ public class Service : IService
             NewsId = news.Id
         }).ToList();
 
-        return new NewResponse
+        return new NewResponseV2
         {
             Id = news.Id,
             Title = news.Title,
@@ -180,7 +230,7 @@ public class Service : IService
         };
     }
 
-    public async Task<NewResponse?> UpdateNewAsync(Guid id, UpdateNewRequest request)
+    public async Task<NewResponseV2?> UpdateNewAsync(Guid id, UpdateNewRequest request)
     {
         var categoryIds = NormalizeCategoryIds(request.CategoryIds);
         await EnsureCategoriesExistAsync(categoryIds);
@@ -202,32 +252,32 @@ public class Service : IService
         news.Status = request.Status;
         news.UpdatedAt = DateTimeOffset.UtcNow;
 
+        var categoryIdSet = categoryIds.ToHashSet();
         var currentCategoryDetails = news.CategoryNewsDetail.ToList();
-        var currentCategoryIds = currentCategoryDetails.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList();
+        var currentCategoryIdSet = currentCategoryDetails
+            .Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId)
+            .ToHashSet();
         var categoryDetailsToRemove = currentCategoryDetails
-            .Where(categoryNewsDetail => !categoryIds.Contains(categoryNewsDetail.CategoryNewsId))
+            .Where(categoryNewsDetail => !categoryIdSet.Contains(categoryNewsDetail.CategoryNewsId))
             .ToList();
-        var categoryIdsToAdd = categoryIds
-            .Where(categoryId => !currentCategoryIds.Contains(categoryId))
+        var categoryIdsToAdd = categoryIdSet
+            .Where(categoryId => !currentCategoryIdSet.Contains(categoryId))
             .ToList();
 
         _dbContext.CategoryNewsDetails.RemoveRange(categoryDetailsToRemove);
-        foreach (var categoryId in categoryIdsToAdd)
+        _dbContext.CategoryNewsDetails.AddRange(categoryIdsToAdd.Select(categoryId => new CategoryNewsDetail
         {
-            news.CategoryNewsDetail.Add(new CategoryNewsDetail
-            {
-                Id = Guid.NewGuid(),
-                CategoryNewsId = categoryId,
-                NewsId = news.Id,
-                IsDeleted = false,
-                CreatedAt = DateTimeOffset.UtcNow
-            });
-        }
+            Id = Guid.NewGuid(),
+            CategoryNewsId = categoryId,
+            NewsId = news.Id,
+            IsDeleted = false,
+            CreatedAt = DateTimeOffset.UtcNow
+        }));
 
         await _dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return new NewResponse
+        return new NewResponseV2
         {
             Id = news.Id,
             Title = news.Title,

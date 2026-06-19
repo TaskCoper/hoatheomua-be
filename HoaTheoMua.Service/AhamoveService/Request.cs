@@ -8,8 +8,8 @@ public class Request
    {
       public decimal Latitude { get; set; }
       public decimal Longitude { get; set; }
-      // public string Ward { get; set; }
-      // public string City { get; set; }
+      public int Ward { get; set; }
+      public int City { get; set; }
       public string Address { get; set; }
       public string ShortAddress { get; set; }
       public string FullName { get; set; }

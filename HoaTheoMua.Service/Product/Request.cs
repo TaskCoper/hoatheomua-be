@@ -15,11 +15,32 @@ public class Request
 
     public class ProductFilters
     {
-        [JsonPropertyName("ids")] public List<int>? Ids { get; set; } = null;
+        [JsonPropertyName("ids")] 
+        public List<int>? Ids { get; set; } = null;
 
         [JsonPropertyName("status")]
         public List<int>? Status { get; set; } = null;
+        
+        // Thêm trường name (Tên, mã, mã vạch sản phẩm)
+        [JsonPropertyName("name")]
+        public string? Name { get; set; } = null;
+
+        // Thêm trường categoryIds (Mảng ID danh mục sản phẩm)
+        [JsonPropertyName("categoryIds")]
+        public List<int>? CategoryIds { get; set; } = null;
+        
+        [JsonPropertyName("price")]
+        public List<decimal>? Price { get; set; } = null;
     }
+    
+    // public class PriceRange
+    // {
+    //     [JsonPropertyName("from")]
+    //     public decimal? From { get; set; } = null;
+    //
+    //     [JsonPropertyName("to")]
+    //     public decimal? To { get; set; } = null;
+    // }
 
     public class ProductPaginator
     {

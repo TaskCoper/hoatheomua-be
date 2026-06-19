@@ -3,4 +3,5 @@
 public interface IService
 {
     Task<object> EstimateShippingFee(Request.EstimateShippingFeeRequest request); 
+    Task<ServiceDetailsResponse> GetServiceDetailsAhaMove();
 }

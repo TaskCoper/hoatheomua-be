@@ -64,10 +64,11 @@ public class Service : IService
             OrderId =  x.Id,
             Status = x.Status.ToString(),
             TrackNumber = x.TrackNumber,
-            NhanhOrderId = x.NhanhOrderId!,
-            NhanhTrackingUrl = x.NhanhTrackingUrl!,
+           // NhanhOrderId = x.NhanhOrderId!,
+           // NhanhTrackingUrl = x.NhanhTrackingUrl!,
             AhahaMoveOrderId = x.AhahaMoveOrderId!,
             AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl!,
+            Remark = x.Remarks,
             CreateAt = x.CreatedAt,
             UpdateAt = x.UpdatedAt,
         }).ToList();
@@ -143,6 +144,16 @@ public class Service : IService
             throw new Exception("NhanhVnResponse returned null or empty data");
         }
         
+        foreach (var x in productNhanhResult.Data)
+        {
+            var userItem = request.Items.First(item => item.ItemId == x.Id);
+            var TargetAvailable = x.Inventory.Depots.First(d => d.Id == 129255).Available;
+
+            if (userItem.Number > TargetAvailable)
+            {
+                throw new BadRequestException($"Sản phẩm '{x.Name}' không đủ hàng (Yêu cầu: {userItem.Number}, Kho có: {TargetAvailable})");
+            }
+        }
         var itemsRequest = productNhanhResult.Data.Select(
             x => new AhamoveService.Request.AhamoveItem()
             {
@@ -266,8 +277,8 @@ public class Service : IService
             Latitude = request.Latitude,
             Longitude = request.Longitude,
             Address = request.Address,
-            // Ward =  request.Ward,
-            // City =  request.City,
+            Ward =  request.Ward,
+            City =  request.City,
             ShortAddress = request.ShortAddress,
             FullName = request.FullName,
             Phone = request.Phone,
@@ -348,10 +359,11 @@ public class Service : IService
             Status = orders.Status,
             TrackNumber = orders.TrackNumber,
             QrCodeUrl = qrCodeUrl,
-            NhanhOrderId = orders.NhanhOrderId,
-            NhanhTrackingUrl = orders.NhanhTrackingUrl,
+            //NhanhOrderId = orders.NhanhOrderId,
+            //NhanhTrackingUrl = orders.NhanhTrackingUrl,
             AhahaMoveOrderId = orders.AhahaMoveOrderId,
             AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl,
+            Remark = orders.Remarks,
 
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
@@ -394,37 +406,29 @@ public class Service : IService
         return order.Status;
     }
 
-    public async Task<object?> GetOrderNhanhVn(int pageIndex, int pageSize)
+    public async Task<OrderListRootResponse?> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request)
     {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        if (existUser == null)
-        {
-            throw new NotFoundException("User not found");
-        }
+        // var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+        //
+        // if (user == null)  
+        // {            
+        //     throw new UnauthorizedException("User not found");  
+        // }
+        // var userId = Guid.Parse(user);
+        //
+        // var existUser = await _dbContext.Users
+        //     .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        // if (existUser == null)
+        // {
+        //     throw new NotFoundException("User not found");
+        // }
         
         
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
         var token = _nhanhVnOption.Token;
         var nhanhApi = _nhanhVnOption.BaseUrl + "/order/list?appId=" + appId + "&businessId=" + businessId;
-        var nhanhVnOrderSrcRequest = new OrderListRequest()
-        {
-            Filters = new OrderFilter(),
-            Paginator =  new OrderPaginator()
-            {
-                Size = pageSize > 0 ?  pageSize : 50,
-            },
-            DataOptions =  new OrderDataOptions(),
-        };
+        var nhanhVnOrderSrcRequest = request;
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhVnOrderSrcRequest);
@@ -451,22 +455,22 @@ public class Service : IService
         return orderListRootResponse;
     }
 
-    public async Task<object> GetShippingLocation(Request.LocationFilters filter)
+    public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)
     {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        if (existUser == null)
-        {
-            throw new NotFoundException("User not found");
-        }
+        // var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
+        //
+        // if (user == null)  
+        // {            
+        //     throw new UnauthorizedException("User not found");  
+        // }
+        // var userId = Guid.Parse(user);
+        //
+        // var existUser = await _dbContext.Users
+        //     .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
+        // if (existUser == null)
+        // {
+        //     throw new NotFoundException("User not found");
+        // }
         
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
