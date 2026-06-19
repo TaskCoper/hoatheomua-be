@@ -6,7 +6,7 @@ public class Request
 {
     public class ProductListRequest
     {
-        [JsonPropertyName("filter")]
+        [JsonPropertyName("filters")]
         public ProductFilters? Filters { get; set; } = null;
 
         [JsonPropertyName("paginator")]
