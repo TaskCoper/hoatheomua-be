@@ -167,6 +167,19 @@ public class Service : IService
         return ApiResponseFactory.Base(responseData);
     }
 
+    public async Task<BaseResponse> GetHighestSalaryAsync()
+    {
+        var highestSalary = await _context.JobDescriptions
+            .AsNoTracking()
+            .Where(job =>job.salaryMax.HasValue)
+            .MaxAsync(job => (float?)job.salaryMax);
+
+        return ApiResponseFactory.Base(new Response.HighestSalaryResponse
+        {
+            salary = highestSalary
+        });
+    }
+
     public async Task<BaseResponse> UpdateJobAsync(Guid id, Request.UpdateRequest request)
     {
         if (id == Guid.Empty)

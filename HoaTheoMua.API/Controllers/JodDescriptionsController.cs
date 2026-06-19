@@ -30,9 +30,18 @@ public class JodDescriptionsController: ControllerBase
 
     [HttpGet]
     [Authorize (Policy = JwtExtensions.AdminPolicy)]
-    public async Task<IActionResult> GetJobDescription( int page = 1,  int pageSize = 10,  string? title = null,  string? location = null,  EmploymentType? employmentType = null,  float? salaryMin = null, float? salaryMax = null)
+    public async Task<IActionResult> GetJobDescription( int page = 1,  int pageSize = 10,  string? title = null,  string? location = null,  EmploymentType? employmentType = null,  float? salaryMin = null, float? salaryMax = null, StatusJobDescriptions? status = null)
     {
-        var result = await _jobDescriptionService.GetPagedJobsAsync(page, pageSize, title, location, employmentType, salaryMin, salaryMax);
+        var result = await _jobDescriptionService.GetPagedJobsAsync(page, pageSize, title, location, employmentType, salaryMin, salaryMax, status);
+        result.TraceId = HttpContext.TraceIdentifier;
+        return Ok(result);
+    }
+
+    [HttpGet("highest-salary")]
+    [Authorize (Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetHighestSalary()
+    {
+        var result = await _jobDescriptionService.GetHighestSalaryAsync();
         result.TraceId = HttpContext.TraceIdentifier;
         return Ok(result);
     }
