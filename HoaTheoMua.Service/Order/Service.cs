@@ -406,7 +406,7 @@ public class Service : IService
         return order.Status;
     }
 
-    public async Task<OrderListRootResponse?> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request)
+    public async Task<BasePaginationResponse> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request, int pageIndex, int pageSize)
     {
         // var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
         //
@@ -451,8 +451,27 @@ public class Service : IService
         {
             throw new Exception("NhanhVnResponse returned null or empty data");
         }
+        
+        int totalRequests = orderListRootResponse.Data.Count(x => x.Info != null);    
+        
+        int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        int actualPageSize = pageSize < 1 ? 10 : pageSize;
+        
+        var result = orderListRootResponse.Data
+            .Where(x => x.Info != null)
+            .Skip((actualPageIndex - 1) * actualPageSize)
+            .Take(actualPageSize)
+            .ToList();
 
-        return orderListRootResponse;
+        var paginationResult = ApiResponseFactory.BasePagination(
+            items: result, 
+            pageIndex: actualPageIndex, 
+            pageSize: actualPageSize, 
+            totalCount: totalRequests
+        );
+        
+        return paginationResult;
+        
     }
 
     public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)

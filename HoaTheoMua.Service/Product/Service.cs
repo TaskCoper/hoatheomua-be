@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -29,7 +30,7 @@ public class Service: IService
         _httpClient = httpClient;
     }
     
-    public async Task<object> GetListProducts(Request.ProductListRequest request)
+    public async Task<BasePaginationResponse> GetListProducts(Request.ProductListRequest request, int  pageIndex, int pageSize)
     {
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
@@ -101,7 +102,25 @@ public class Service: IService
             throw new Exception("NhanhVnResponse returned null or empty data");
         }
 
-        return nhanhProductList;
+        int totalRequests = nhanhProductList.Data.Count(x => true);
+        
+        int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        int actualPageSize = pageSize < 1 ? 10 : pageSize;
+        
+        var result = nhanhProductList.Data
+            .Where(x => true)
+            .Skip((actualPageIndex - 1) * actualPageSize)
+            .Take(actualPageSize)
+            .ToList();
+
+        var paginationResult = ApiResponseFactory.BasePagination(
+            items: result, 
+            pageIndex: actualPageIndex, 
+            pageSize: actualPageSize, 
+            totalCount: totalRequests
+        );
+        
+        return paginationResult;
         
     }
 
