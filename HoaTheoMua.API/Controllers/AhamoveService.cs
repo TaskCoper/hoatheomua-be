@@ -22,9 +22,9 @@ public class AhamoveService: ControllerBase
     }
     
     [HttpGet("/api/v1/ahamove/service-details")]
-    public async Task<IActionResult> GetNhanhVnOrders()
+    public async Task<IActionResult> GetNhanhVnOrders([FromQuery] int pageIndex, int pageSize)
     {
-        var result = await _ahamoveService.GetServiceDetailsAhaMove();
+        var result = await _ahamoveService.GetServiceDetailsAhaMove(pageIndex, pageSize);
         //return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
         return Ok(result);
     }
