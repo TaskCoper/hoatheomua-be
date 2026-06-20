@@ -5,6 +5,7 @@ using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.Cache;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
@@ -16,75 +17,84 @@ public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICacheService _cache;
 
-    public Service(AppDbContext dbContext, IHttpContextAccessor httpContextAccessor)
+    public Service(AppDbContext dbContext, IHttpContextAccessor httpContextAccessor, ICacheService cache)
     {
         _dbContext = dbContext;
         _httpContextAccessor = httpContextAccessor;
+        _cache = cache;
     }
 
-    public async Task<BasePaginationResponse> GetNewsAsync(int pageIndex, int pageSize, string? keyword, NewsStatus? status)
+    public async Task<BasePaginationResponse> GetNewsAsync(int pageIndex, int pageSize, string? keyword,
+        NewsStatus? status)
     {
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
-        var query = _dbContext.NewsList
-            .AsNoTracking()
-            .Include(news => news.User)
-            .Include(news => news.CategoryNewsDetail)
-            .Where(news => !news.IsDeleted);
+        var cacheKey = $"News:GetNews:{pageIndex}:{pageSize}:{keyword ?? ""}:{status?.ToString() ?? ""}";
 
-        if (!string.IsNullOrWhiteSpace(keyword))
-        {
-            var searchKeyword = keyword.Trim().ToLower();
-            query = query.Where(news =>
-                news.Title.ToLower().Contains(searchKeyword) ||
-                news.Description.ToLower().Contains(searchKeyword));
-        }
-    
-        if (status.HasValue)
-        {
-            query = query.Where(news => news.Status == status.Value);
-        }
-        
-        var totalCount = await query.CountAsync();
-        
-        var items = await query
-            .OrderByDescending(news => news.CreatedAt)
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
-            .Select(news => new NewResponse
+        return await _cache.GetOrSetAsync(cacheKey, async _ =>
             {
-                Id = news.Id,
-                Title = news.Title,
-                Description = news.Description,
-                ViewCount = news.ViewCount,
-                PictureUrl = news.CoverImage,
-                slug = news.slug,
-                Status = news.Status == NewsStatus.Published
-                    ? "Published"
-                    : "Draft",
-                CreatedAt = news.CreatedAt,
-                UpdatedAt = news.UpdatedAt,
-                Categories = news.CategoryNewsDetail
-                    .Select(x => new CategoryResponse
-                    {
-                        CategoryId = x.CategoryNews.Id,
-                        CategoryName = x.CategoryNews.Title
-                    })
-                    .ToList(),
-                User = new UserResponse
-                {
-                    UserId = news.UserId,
-                    Email = news.User.Email,
-                    UserAvatar = news.User.Avatar,
-                    UserFirstName = news.User.FirstName,
-                    UserLastName = news.User.LastName,
-                }
-            })
-            .ToListAsync();
+                var query = _dbContext.NewsList
+                    .AsNoTracking()
+                    .Include(news => news.User)
+                    .Include(news => news.CategoryNewsDetail)
+                    .Where(news => !news.IsDeleted);
 
-        return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+                if (!string.IsNullOrWhiteSpace(keyword))
+                {
+                    var searchKeyword = keyword.Trim().ToLower();
+                    query = query.Where(news =>
+                        news.Title.ToLower().Contains(searchKeyword) ||
+                        news.Description.ToLower().Contains(searchKeyword));
+                }
+
+                if (status.HasValue)
+                {
+                    query = query.Where(news => news.Status == status.Value);
+                }
+
+                var totalCount = await query.CountAsync();
+
+                var items = await query
+                    .OrderByDescending(news => news.CreatedAt)
+                    .Skip((pageIndex - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(news => new NewResponse
+                    {
+                        Id = news.Id,
+                        Title = news.Title,
+                        Description = news.Description,
+                        ViewCount = news.ViewCount,
+                        PictureUrl = news.CoverImage,
+                        slug = news.slug,
+                        Status = news.Status == NewsStatus.Published
+                            ? "Published"
+                            : "Draft",
+                        CreatedAt = news.CreatedAt,
+                        UpdatedAt = news.UpdatedAt,
+                        Categories = news.CategoryNewsDetail
+                            .Select(x => new CategoryResponse
+                            {
+                                CategoryId = x.CategoryNews.Id,
+                                CategoryName = x.CategoryNews.Title
+                            })
+                            .ToList(),
+                        User = new UserResponse
+                        {
+                            UserId = news.UserId,
+                            Email = news.User.Email,
+                            UserAvatar = news.User.Avatar,
+                            UserFirstName = news.User.FirstName,
+                            UserLastName = news.User.LastName,
+                        }
+                    })
+                    .ToListAsync();
+
+                return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+            }, TimeSpan.FromMinutes(30)
+        );
     }
 
     public async Task<NewResponse?> GetNewByIdAsync(string key)
@@ -175,6 +185,7 @@ public class Service : IService
         {
             throw new NotFoundException("USER_NOT_FOUND");
         }
+
         var categoryIds = NormalizeCategoryIds(request.CategoryIds);
         await EnsureCategoriesExistAsync(categoryIds);
         var slug = await GenerateUniqueSlugAsync(request.Title);
@@ -224,7 +235,8 @@ public class Service : IService
             slug = news.slug,
             Status = news.Status.ToString(),
             UserId = news.UserId,
-            CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+            CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId)
+                .ToList(),
             CreatedAt = news.CreatedAt,
             UpdatedAt = news.UpdatedAt
         };
@@ -287,7 +299,8 @@ public class Service : IService
             slug = news.slug,
             Status = news.Status.ToString(),
             UserId = news.UserId,
-            CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId).ToList(),
+            CategoryIds = news.CategoryNewsDetail.Select(categoryNewsDetail => categoryNewsDetail.CategoryNewsId)
+                .ToList(),
             CreatedAt = news.CreatedAt,
             UpdatedAt = news.UpdatedAt
         };
