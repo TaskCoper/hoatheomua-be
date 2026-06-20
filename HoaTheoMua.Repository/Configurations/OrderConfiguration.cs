@@ -40,6 +40,9 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.TrackNumber)
             .IsRequired();
         
+        builder.Property(o => o.OrderTime)
+            .IsRequired();
+        
         builder.Property(o => o.CreatedAt)
             .HasDefaultValueSql("now()");
 

@@ -24,6 +24,7 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     public decimal ShippingFee { get; set; }
     public decimal ProductFree { get; set; }
     public decimal TotalFee { get; set; }
+    public required long OrderTime { get; set; } = 0; 
     
     public Guid UserId { get; set; }
     public User User  { get; set; }

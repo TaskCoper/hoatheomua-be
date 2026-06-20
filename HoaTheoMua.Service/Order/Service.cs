@@ -177,7 +177,9 @@ public class Service : IService
         
         var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
         {
-            OrderTime = 0,
+            OrderTime = request.OrderTime,                               
+            IdleUntil = request.OrderTime > 0 ? request.OrderTime : null,
+            // OrderTime = 0,
             Paths = new List<AhamoveService.Request.AhamoveLocationPoint>()
             {
                 new AhamoveService.Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
@@ -283,6 +285,7 @@ public class Service : IService
             FullName = request.FullName,
             Phone = request.Phone,
             Remarks = request.Remarks,
+            OrderTime = request.OrderTime,
             CreatedAt = DateTime.UtcNow,
             ShippingFee = totalShippingFee,
             ProductFree = totalProductFee,
