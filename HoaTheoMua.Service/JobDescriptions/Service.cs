@@ -121,6 +121,7 @@ public class Service : IService
                 Slug = job.slug,
                 Title = job.title,
                 Description = job.description,
+                CoverImageUrl = job.coverImageUrl,
                 AvatarUrl = job.avatarUrl,
                 Location = job.location,
                 EmploymentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",

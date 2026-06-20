@@ -18,6 +18,7 @@ public class Response
         public string Slug { get; set; } = null!;
         public string Title { get; set; } = null!;
         public required string Description { get; set; } 
+        public string CoverImageUrl { get; set; } = null!;
         public string AvatarUrl { get; set; } = null!;
         public string Location { get; set; } = null!;
         public string EmploymentType { get; set; } = null!;
