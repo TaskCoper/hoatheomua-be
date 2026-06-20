@@ -42,12 +42,12 @@ public static class HangfireExtensions
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
                 // Chỉ lưu tên Assembly ngắn gọn giúp tránh lỗi mismatch phiên bản class khi deploy bản build mới.
                 .UseSimpleAssemblyNameTypeSerializer()
-                // Cài đặt Newtonsoft.Json tối ưu hóa cho Hangfire để serialize/deserialize job.
+                // Cấu hình Newtonsoft.Json tối ưu nhất giúp chuyển đổi các cây biểu thức (Lambda Expressions) thành text JSON
                 .UseRecommendedSerializerSettings()
-                // Cấu hình Redis làm nơi lưu trữ dữ liệu thay vì RDBMS
+                // Chuyển giao toàn bộ dữ liệu trạng thái sang lưu giữ trên các cấu trúc List, Hash, Sorted Set của Redis
                 .UseRedisStorage(connectionString, new RedisStorageOptions
                 {
-                    Prefix = prefix
+                    Prefix = prefix// Đảm bảo gom cụm toàn bộ Key của Hangfire
                 });
         });
 

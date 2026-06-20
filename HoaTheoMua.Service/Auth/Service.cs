@@ -3,6 +3,7 @@ using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Jobs;
 using HoaTheoMua.Service.MailService;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
@@ -19,16 +20,18 @@ public class Service : IService
     private readonly JwtService.IService _jwtService;
     private readonly MailService.IService _mailService;
     private readonly IHttpContextAccessor _httpContext;
+    private readonly IJobService _jobService;
 
     public Service(AppDbContext dbContext, IConfiguration configuration,
         MailService.IService mailService, IHttpContextAccessor httpContextAccessor,
-        JwtService.IService jwtService)
+        JwtService.IService jwtService, IJobService jobService)
     {
         _dbContext = dbContext;
         configuration.GetSection(nameof(SecurityOption)).Bind(_securityOptions);
         _jwtService = jwtService;
         _mailService = mailService;
         _httpContext = httpContextAccessor;
+        _jobService = jobService;
     }
     
     private bool CheckExpiredAccessToken()
@@ -116,15 +119,17 @@ public class Service : IService
             };
             var emailToken = _jwtService.GenerateEmailVerificationToken(newClaims, 2);
 
-            await _mailService.SendMail(new MailContent
-            {
-                To = email,
-                Subject = "Hoa Theo Mua",
-                Body = MailTemplate.EmailContainToken(emailToken),
-            });
+            await transaction.CommitAsync();// dòng lệnh này để ngắt khoảng phần trên và thông báo cho DB là phần trên hợp lệ rồi
 
-
-            await transaction.CommitAsync();
+            _jobService.Enqueue<MailService.IService>(mailService =>
+                mailService.SendMail(new MailContent
+                    {
+                        To = email,
+                        Subject = "Hoa Theo Mua",
+                        Body = MailTemplate.EmailContainToken(emailToken),
+                    }
+                )
+            );
             return "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.";
         }
         catch
