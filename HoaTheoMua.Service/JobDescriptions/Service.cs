@@ -56,11 +56,11 @@ public class Service : IService
         var responseData = new Response.CreateResponse
         {
             id = newJob.Id,
-            slug = newJob.slug,
-            title = newJob.title,
-            status = JsonNamingPolicy.CamelCase.ConvertName(newJob.status.ToString()),
-            createdAt = newJob.CreatedAt,
-            updatedAt = newJob.UpdatedAt
+            Slug = newJob.slug,
+            Title = newJob.title,
+            Status = JsonNamingPolicy.CamelCase.ConvertName(newJob.status.ToString()),
+            CreatedAt = newJob.CreatedAt,
+            UpdatedAt = newJob.UpdatedAt
         };
         return responseData;
     }
@@ -117,17 +117,18 @@ public class Service : IService
             .Take(pageSize)
             .Select(job => new Response.JobListItem
             {
-                id = job.Id,
-                slug = job.slug,
-                title = job.title,
-                avatarUrl = job.avatarUrl,
-                location = job.location,
-                employmentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
-                salaryMin = job.salaryMin,
-                salaryMax = job.salaryMax,
-                salaryNegotiable = job.salaryNegotiable,
-                openings = job.openings,
-                status = job.status == StatusJobDescriptions.Open ? "open" : "closed"
+                Id = job.Id,
+                Slug = job.slug,
+                Title = job.title,
+                Description = job.description,
+                AvatarUrl = job.avatarUrl,
+                Location = job.location,
+                EmploymentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
+                SalaryMin = job.salaryMin,
+                SalaryMax = job.salaryMax,
+                SalaryNegotiable = job.salaryNegotiable,
+                Openings = job.openings,
+                Status = job.status == StatusJobDescriptions.Open ? "open" : "closed"
             })
             .ToListAsync();
 
@@ -176,7 +177,7 @@ public class Service : IService
 
         return ApiResponseFactory.Base(new Response.HighestSalaryResponse
         {
-            salary = highestSalary
+            Salary = highestSalary
         });
     }
 
@@ -224,28 +225,28 @@ public class Service : IService
 
         var responseData = new Response.JobDetailResponse
         {
-            id = job.Id,
-            slug = job.slug,
-            title = job.title,
-            location = job.location,
-            avatarUrl = job.avatarUrl,
-            coverImageUrl = job.coverImageUrl,
-            minExperienceYears = job.minExperienceYears,
-            maxExperienceYears = job.maxExperienceYears,
-            level = job.level == LevelJobDescriptions.intern ? "intern"
+            Id = job.Id,
+            Slug = job.slug,
+            Title = job.title,
+            Location = job.location,
+            AvatarUrl = job.avatarUrl,
+            CoverImageUrl = job.coverImageUrl,
+            MinExperienceYears = job.minExperienceYears,
+            MaxExperienceYears = job.maxExperienceYears,
+            Level  = job.level == LevelJobDescriptions.intern ? "intern"
                   : job.level == LevelJobDescriptions.fresher ? "fresher"
                   : job.level == LevelJobDescriptions.junior ? "junior"
                   : job.level == LevelJobDescriptions.middle ? "middle"
                   : "senior",
-            employmentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
-            salaryMin = job.salaryMin,
-            salaryMax = job.salaryMax,
-            salaryNegotiable = job.salaryNegotiable,
-            openings = job.openings,
-            description = job.description,
-            createdAt = job.CreatedAt,
-            updatedAt = job.UpdatedAt ?? job.CreatedAt,
-            status = job.status == StatusJobDescriptions.Open ? "open" : "closed"
+            EmploymentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
+            SalaryMin = job.salaryMin,
+            SalaryMax = job.salaryMax,
+            SalaryNegotiable = job.salaryNegotiable,
+            Openings = job.openings,
+            Description = job.description,
+            CreatedAt = job.CreatedAt,
+            UpdatedAt = job.UpdatedAt ?? job.CreatedAt,
+            Status = job.status == StatusJobDescriptions.Open ? "open" : "closed"
         };
         return ApiResponseFactory.Base(responseData);
     }
@@ -365,30 +366,31 @@ public class Service : IService
         }
     }
 
+    
     private static readonly System.Linq.Expressions.Expression<Func<Repository.Entity.JobDescriptions, Response.JobDetailResponse>> ProjectToDetail = job => new Response.JobDetailResponse
     {
-        id = job.Id,
-        slug = job.slug,
-        title = job.title,
-        location = job.location,
-        avatarUrl = job.avatarUrl,
-        coverImageUrl = job.coverImageUrl,
-        minExperienceYears = job.minExperienceYears,
-        maxExperienceYears = job.maxExperienceYears,
-        level = job.level == LevelJobDescriptions.intern ? "intern"
+        Id = job.Id,
+        Slug = job.slug,
+        Title = job.title,
+        Location = job.location,
+        AvatarUrl = job.avatarUrl,
+        CoverImageUrl = job.coverImageUrl,
+        MinExperienceYears = job.minExperienceYears,
+        MaxExperienceYears = job.maxExperienceYears,
+        Level = job.level == LevelJobDescriptions.intern ? "intern"
               : job.level == LevelJobDescriptions.fresher ? "fresher"
               : job.level == LevelJobDescriptions.junior ? "junior"
               : job.level == LevelJobDescriptions.middle ? "middle"
               : "senior",
-        employmentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
-        salaryMin = job.salaryMin,
-        salaryMax = job.salaryMax,
-        salaryNegotiable = job.salaryNegotiable,
-        openings = job.openings,
-        description = job.description,
-        status = job.status == StatusJobDescriptions.Open ? "open" : "closed",
-        createdAt = job.CreatedAt,
-        updatedAt = job.UpdatedAt ?? job.CreatedAt
+        EmploymentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
+        SalaryMin = job.salaryMin,
+        SalaryMax = job.salaryMax,
+        SalaryNegotiable = job.salaryNegotiable,
+        Openings = job.openings,
+        Description = job.description,
+        Status = job.status == StatusJobDescriptions.Open ? "open" : "closed",
+        CreatedAt = job.CreatedAt,
+        UpdatedAt = job.UpdatedAt ?? job.CreatedAt
     };
 
 }
