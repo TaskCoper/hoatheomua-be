@@ -30,7 +30,7 @@ public class Service: IService
         _httpClient = httpClient;
     }
     
-    public async Task<BasePaginationResponse> GetListProducts(Request.ProductListRequest request, int  pageIndex, int pageSize)
+    public async Task<ResponseProductList.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
     {
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
@@ -107,25 +107,25 @@ public class Service: IService
             throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
         }
 
-        int totalRequests = nhanhProductList.Data.Count(x => true);
+        // int totalRequests = nhanhProductList.Data.Count(x => true);
+        //
+        // int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        // int actualPageSize = pageSize < 1 ? 10 : pageSize;
+        //
+        // var result = nhanhProductList.Data
+        //     .Where(x => true)
+        //     .Skip((actualPageIndex - 1) * actualPageSize)
+        //     .Take(actualPageSize)
+        //     .ToList();
+        //
+        // var paginationResult = ApiResponseFactory.BasePagination(
+        //     items: result, 
+        //     pageIndex: actualPageIndex, 
+        //     pageSize: actualPageSize, 
+        //     totalCount: totalRequests
+        // );
         
-        int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
-        int actualPageSize = pageSize < 1 ? 10 : pageSize;
-        
-        var result = nhanhProductList.Data
-            .Where(x => true)
-            .Skip((actualPageIndex - 1) * actualPageSize)
-            .Take(actualPageSize)
-            .ToList();
-
-        var paginationResult = ApiResponseFactory.BasePagination(
-            items: result, 
-            pageIndex: actualPageIndex, 
-            pageSize: actualPageSize, 
-            totalCount: totalRequests
-        );
-        
-        return paginationResult;
+        return nhanhProductList;
         
     }
 
