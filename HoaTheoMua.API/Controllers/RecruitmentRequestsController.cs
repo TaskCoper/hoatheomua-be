@@ -26,6 +26,15 @@ public class RecruitmentRequestsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<IActionResult> GetMyRecruitmentRequests(int pageIndex = 1, int pageSize = 10)
+    {
+        var result = await _recruitmentRequestService.GetMyRecruitmentRequestsAsync(pageIndex, pageSize);
+        result.TraceId = HttpContext.TraceIdentifier;
+        return Ok(result);
+    }
+
     [HttpGet("{id}")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetRecruitmentRequestById(Guid id)
