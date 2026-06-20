@@ -84,7 +84,7 @@ public class ContactController: ControllerBase
 
         var internalMail = new MailContent
         {
-            To = "phantanhungpy2006@gmail.com",
+            To = "info@vnzdna.com",
             Subject = $"[Internal-Copy] {request.Topic}",
             Body = internalBody
         };
