@@ -168,13 +168,13 @@ public class Service : IService
             {
                 if (listCateId.TryGetValue(item.parentId.Value, out var parentItem))
                 {
-                    parentItem.children = new List<Response.CategoryResponse>();
+                    parentItem.children ??= new List<Response.CategoryResponse>();
                     parentItem.children.Add(item);
                 }
             }
         }
         
-        var count = categoryList.Count();
+        var count = parentCate.Count;
         
         var catePageResponse = parentCate.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList();
 

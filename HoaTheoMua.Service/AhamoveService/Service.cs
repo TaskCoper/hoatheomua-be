@@ -2,6 +2,7 @@
 using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -200,7 +201,7 @@ public class Service: IService
         return new { ahamoveResult, productNhanhResult};
     }
     
-    public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()
+    public async Task<BasePaginationResponse> GetServiceDetailsAhaMove(int pageIndex, int pageSize)
     {
         var ahamoveApi = _ahamoveOption.BaseUrl + "/v3/services/SGN-BIKE";
         var ahamoveToken = _ahamoveOption.Token;
@@ -232,7 +233,24 @@ public class Service: IService
         {
             throw new Exception("Ahamove returned null or empty data");
         }
+        
+        int totalRequests = getServiceDetailsAhaMove.Requests.Count();
+        
+        int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        int actualPageSize = pageSize < 1 ? 10 : pageSize;
+        
+        var result = getServiceDetailsAhaMove.Requests
+            .Skip((actualPageIndex - 1) * actualPageSize)
+            .Take(actualPageSize)
+            .ToList();
 
-        return getServiceDetailsAhaMove;
+        var paginationResult = ApiResponseFactory.BasePagination(
+            items: result, 
+            pageIndex: actualPageIndex, 
+            pageSize: actualPageSize, 
+            totalCount: totalRequests
+        );
+        
+        return paginationResult;
     }
 }

@@ -31,7 +31,7 @@ jobs:
       profile: dev
       environment: dev
       tag: dev-latest
-      run-on: linhdanhthue
+      run-on: hoatheomua
       pull-profile: dev-pull
     secrets: inherit
 
@@ -49,7 +49,7 @@ jobs:
       profile: prod
       environment: prod
       tag: prod-latest
-      run-on: linhdanhthue
+      run-on: hoatheomua
       pull-profile: prod-pull
     secrets: inherit
 
