@@ -21,16 +21,18 @@ public class Service : IService
     private readonly AhamoveOption _ahamoveAhamoveOption = new();
     private readonly IHttpContextAccessor _httpContext;
     private readonly HttpClient _httpClient;
+    private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
 
     public Service(AppDbContext dbContext, 
         IHttpContextAccessor httpContext, 
-        IConfiguration configuration, HttpClient httpClient)
+        IConfiguration configuration, HttpClient httpClient,  HoaTheoMua.Service.Product.IService serviceProduct)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveAhamoveOption);
         _httpClient = httpClient;
+        _serviceProduct = serviceProduct;
     }
     
 
@@ -145,16 +147,61 @@ public class Service : IService
             throw new BadRequestException("NhanhVnResponse returned null or empty data");
         }
         
-        foreach (var x in productNhanhResult.Data)
-        {
-            var userItem = request.Items.First(item => item.ItemId == x.Id);
-            var TargetAvailable = x.Inventory.Depots.First(d => d.Id == 129255).Available;
+        // foreach (var x in productNhanhResult.Data)
+        // {
+        //     var userItem = request.Items.First(item => item.ItemId == x.Id);
+        //     //var targetAvailable = x.Inventory.Available;
+        //     
+        //     var targetAvailable =  _serviceProduct.GetProductDetails(userItem);
+        //
+        //     
+        //     Console.WriteLine("Hhuhu: " + targetAvailable);
+        //
+        //     if (userItem.Number > targetAvailable)
+        //     {
+        //         throw new BadRequestException($"Sản phẩm '{x.Name}' không đủ hàng (Yêu cầu: {userItem.Number}, Kho có: {targetAvailable})");
+        //     }
+        //     
+        //     
+        // }
 
-            if (userItem.Number > TargetAvailable)
+        foreach (var item in request.Items)
+        {
+            var productDetailRequest = new HoaTheoMua.Service.Product.Request.ProductDetailRequest
             {
-                throw new BadRequestException($"Sản phẩm '{x.Name}' không đủ hàng (Yêu cầu: {userItem.Number}, Kho có: {TargetAvailable})");
+                Filters = new HoaTheoMua.Service.Product.Request.ProductDetailFilters
+                {
+                    Id = item.ItemId.ToString()
+                }
+            };
+
+            var objectItems = await _serviceProduct.GetProductDetails(productDetailRequest);
+
+            var json = JsonConvert.SerializeObject(objectItems);
+            var jObject = JObject.Parse(json);
+
+            var depots = jObject["Data"]?["Inventory"]?["Depots"] as JArray;
+
+            if (depots == null || depots.Count == 0)
+            {
+                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho");
+            }
+
+            var targetDepot = depots.FirstOrDefault(d => (int?)d["Id"] == 129255);
+
+            if (targetDepot == null)
+            {
+                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot 129255");
+            }
+
+            double available = (double)targetDepot["Available"]!;
+
+            if (item.Number > available)
+            {
+                throw new BadRequestException($"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {available})");
             }
         }
+        
         var itemsRequest = productNhanhResult.Data.Select(
             x => new AhamoveService.Request.AhamoveItem()
             {
