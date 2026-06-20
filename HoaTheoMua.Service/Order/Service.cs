@@ -136,12 +136,12 @@ public class Service : IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
         if (productNhanhResult == null || productNhanhResult.Data == null)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
         }
         
         foreach (var x in productNhanhResult.Data)
@@ -257,12 +257,12 @@ public class Service : IService
         } else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+            throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
         }
         
         if (ahamoveResult == null || ahamoveResult.Any() == false)
         {
-            throw new Exception("Ahamove returned null or empty data");
+            throw new BadRequestException("Ahamove returned null or empty data");
         }
 
         var totalShippingFee = ahamoveResult[0].Data.TotalPrice;
@@ -444,12 +444,16 @@ public class Service : IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
         if (orderListRootResponse == null)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
+        }
+        if (orderListRootResponse.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
         }
         
         int totalRequests = orderListRootResponse.Data.Count(x => x.Info != null);    
@@ -519,12 +523,16 @@ public class Service : IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
         if (shippingLocation == null)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
+        }
+        if (shippingLocation.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
         }
 
         return shippingLocation;
