@@ -123,12 +123,17 @@ public class Service : IService
                 Description = job.description,
                 AvatarUrl = job.avatarUrl,
                 Location = job.location,
-                EmploymentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
+                EmploymentType = job.employmentType == EmploymentType.FullTime
+                    ? "fullTime"
+                    : "partTime",
                 SalaryMin = job.salaryMin,
                 SalaryMax = job.salaryMax,
                 SalaryNegotiable = job.salaryNegotiable,
                 Openings = job.openings,
-                Status = job.status == StatusJobDescriptions.Open ? "open" : "closed"
+                Status = job.status == StatusJobDescriptions.Open
+                    ? "open"
+                    : "closed",
+                CoverImageUrl = job.coverImageUrl,
             })
             .ToListAsync();
 
