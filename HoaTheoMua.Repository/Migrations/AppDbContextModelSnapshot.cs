@@ -992,6 +992,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("NhanhTrackingUrl")
                         .HasColumnType("text");
 
+                    b.Property<long>("OrderTime")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasColumnType("text");

@@ -21,6 +21,7 @@ public class Response
         public string AhahaMoveOrderId { get; set; } = string.Empty;
         public string AhahaMoveTrackingUrl { get; set; } = string.Empty;
         public string? Remark { get; set; }
+        public long OrderTime { get; set; }
         public DateTimeOffset CreateAt { get; set; }
         public DateTimeOffset? UpdateAt { get; set; }
     }
@@ -35,6 +36,7 @@ public class Response
         public string? AhahaMoveOrderId { get; set; } = string.Empty;
         public string? AhahaMoveTrackingUrl { get; set; } = string.Empty;
         public string? Remark { get; set; }
+        public long OrderTime { get; set; }
         public string QrCodeUrl { get; set; } = string.Empty;
         
         public OrderTransactionResponse? Transaction { get; set; }

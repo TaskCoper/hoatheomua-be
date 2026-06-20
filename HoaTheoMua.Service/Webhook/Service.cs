@@ -145,7 +145,10 @@ public partial class Service : IService
 
         decimal itemAmount = 0;
         decimal shippingFee = 0;
-
+        if (request.TransferAmount != order.TotalFee)
+        {
+            throw new BadRequestException("Số tiền không khớp");
+        }
 
         order.Status = "Paid";
 
@@ -173,7 +176,8 @@ public partial class Service : IService
 
         var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
         {
-            OrderTime = 0,
+            OrderTime = order.OrderTime,                               
+            IdleUntil = order.OrderTime > 0 ? order.OrderTime : null,
             Paths = new List<AhamoveService.Request.AhamoveLocationPoint>()
             {
                 new AhamoveService.Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
