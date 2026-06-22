@@ -6,7 +6,7 @@ using Request = HoaTheoMua.Service.Config.Request;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Route("api/v1/config")]
+[Route("api/v1/configs")]
 public class ConfigController : ControllerBase
 {
     private readonly ConfigService.IService _configService;
