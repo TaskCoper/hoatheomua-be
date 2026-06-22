@@ -3,6 +3,7 @@ using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -18,51 +19,43 @@ public class Service : IService
     {
         _dbContext = dbContext;
         _httpContextAccessor = httpContextAccessor;
+        
     }
     
 
-    public async Task<BasePaginationResponse> GetConfig(int pageIndex, int pageSize)
+    public async Task<List<Response.ConfigResponse>> GetConfig()
     {
-        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
-        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
-        
-        
-        // var userIdString = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
-        // if (userIdString == null)
-        // {
-        //     throw  new UnauthorizedException("User Not Found");
-        // }
-        // var userId = Guid.Parse(userIdString!);
-        //
-        // var existUser = await _dbContext.Users.AnyAsync(x => x.Id == userId);
-        //
-        // if (existUser == false)
-        // {
-        //     throw  new UnauthorizedException("User Not Found");
-        // }
-        
-        //anh phải lấy được cái config của user thông qua accessToken
-        var result = _dbContext.Configs
+        var userIdString = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
+        if (userIdString == null)
+        {
+            throw new UnauthorizedException("User Not Found");
+        }
+
+        var userId = Guid.Parse(userIdString);
+
+        var existUser = await _dbContext.Users.AnyAsync(x => x.Id == userId);
+
+        if (existUser == false)
+        {
+            throw new UnauthorizedException("User Not Found");
+        }
+
+        var configs = await _dbContext.Configs
             .Where(x => !x.IsDeleted)
             .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync();
+
+        var result = configs
             .Select(x => new Response.ConfigResponse
             {
                 Id = x.Id,
                 Key = x.Key,
-                Value = StringToJson(x.Value), //suat ra value bi 2 dau gach gach "//1234//"
+                Value = StringToJson(x.Value),
                 UserId = x.UserId,
+            })
+            .ToList();
 
-            });
-            
-
-        var count = await result.CountAsync();
-        var items = await result
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-        
-        return(ApiResponseFactory.BasePagination(items, pageIndex, pageSize, count));
-        
+        return result;
     }
 
     public async Task<Response.ConfigResponse> GetConfigById(Guid id)
@@ -82,6 +75,23 @@ public class Service : IService
             throw  new UnauthorizedException("User Not Found");
         }
         
+        // var isIdExist = await _dbContext.Configs.AnyAsync(x => x.Id == id && !x.IsDeleted);
+        // if (isIdExist == false)
+        // {
+        //     throw new BadRequestException(" Id Not Exists");
+        // }
+        //
+        // var result = await _dbContext.Configs
+        //     .Where(x => x.Id == id && !x.IsDeleted )
+        //     .Select(x => new Response.ConfigResponse()
+        //     {
+        //         Id = x.Id,
+        //         Key = x.Key,
+        //         Value = StringToJson(x.Value),
+        //         UserId =  x.UserId,
+        //     })
+        //     .FirstOrDefaultAsync();
+
         var result = await _dbContext.Configs
             .Where(x => x.Id == id && !x.IsDeleted)
             .Select(x => new Response.ConfigResponse()
@@ -89,10 +99,15 @@ public class Service : IService
                 Id = x.Id,
                 Key = x.Key,
                 Value = StringToJson(x.Value),
-                UserId =  x.UserId,
+                UserId = x.UserId,
             })
             .FirstOrDefaultAsync();
 
+        if (result == null)
+        {
+            throw  new BadRequestException("  Id Not Found");
+        }
+        
         return result;
     }
 
@@ -113,33 +128,38 @@ public class Service : IService
             throw  new UnauthorizedException("User Not Found");
         }
         
-        var existKey = await _dbContext.Configs.AnyAsync(x => x.Key == request.Key);
-        if (existKey == true)
-        {
-            throw  new UnauthorizedException("Key Exists");
-        }
+        var key = request.Key.Trim().ToLower();
 
+        var existKey = await _dbContext.Configs
+            .AnyAsync(x => x.Key.Trim().ToLower() == key && !x.IsDeleted);
+
+        if (existKey)
+        {
+            throw new BadRequestException("Key is exists");
+        }
+        
         var result =  new Repository.Entity.Config()
         {
-                Key = request.Key,
-                Value = request.Value.GetRawText(),
-                UserId = userId,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = null,
-                IsDeleted = false
-            };
-            
-            await _dbContext.Configs.AddAsync(result);
-            await _dbContext.SaveChangesAsync();
+                
+            Key = key,
+            Value = request.Value.GetRawText(),
+            UserId = userId,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = null,
+            IsDeleted = false
+        };
+        
+        await _dbContext.Configs.AddAsync(result);
+        await _dbContext.SaveChangesAsync();
 
-            var query = new Response.ConfigResponse()
-            {
-                Id = result.Id,
-                Key = result.Key,
-                Value = StringToJson(result.Value),
-                UserId = result.UserId,
-            };
-            return query;
+        var query = new Response.ConfigResponse()
+        {
+            Id = result.Id,
+            Key = result.Key,
+            Value = StringToJson(result.Value),
+            UserId = result.UserId,
+        };
+        return query;
 
     }
 
@@ -148,22 +168,30 @@ public class Service : IService
         Request.UpdateConfigRequest request)
     {
         
-        // var userIdString = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
-        // if (userIdString == null)
-        // {
-        //     throw  new UnauthorizedException("User Not Found");
-        // }
-        // var userId = Guid.Parse(userIdString!);
-        //
-        // var existUser = await _dbContext.Users.AnyAsync(x => x.Id == userId);
-        //
-        // if (existUser == false)
-        // {
-        //     throw  new UnauthorizedException("User Not Found");
-        // }
-        //
+        var userIdString = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
+        if (userIdString == null)
+        {
+            throw  new UnauthorizedException("User Not Found");
+        }
+        var userId = Guid.Parse(userIdString!);
+        
+        var existUser = await _dbContext.Users.AnyAsync(x => x.Id == userId);
+        
+        if (existUser == false)
+        {
+            throw  new UnauthorizedException("User Not Found");
+        }
+        
+        var key = request.Key.Trim().ToLower();
+
         var query = await _dbContext.Configs
-            .Where(x => x.Id == id && !x.IsDeleted).FirstOrDefaultAsync();
+            .Where(x => x.Id == id  && x.Key.Trim().ToLower() != key && !x.IsDeleted)
+            .FirstOrDefaultAsync();
+
+        if (query == null)
+        {
+            throw  new BadRequestException("  Id/Key Not Found");
+        }
         
         query.Key = request.Key;
         query.Value = request.Value.GetRawText();
@@ -178,24 +206,27 @@ public class Service : IService
     public async Task<string> DeleteConfig(Guid id)
     {
         
-        // var userIdString = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
-        // if (userIdString == null)
-        // {
-        //     throw  new UnauthorizedException("User Not Found");
-        // }
-        // var userId = Guid.Parse(userIdString!);
-        //
-        // var existUser = await _dbContext.Users.AnyAsync(x => x.Id == userId);
-        //
-        // if (existUser == false)
-        // {
-        //     throw  new UnauthorizedException("User Not Found");
-        // }
+        var userIdString = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
+        if (userIdString == null)
+        {
+            throw  new UnauthorizedException("User Not Found");
+        }
+        var userId = Guid.Parse(userIdString!);
         
-       var query = await _dbContext.Configs.Where(x => x.Id == id && !x.IsDeleted).FirstOrDefaultAsync();
-       query.IsDeleted = true;
-       
-        _dbContext.Configs.Update(query);
+        var existUser = await _dbContext.Users.AnyAsync(x => x.Id == userId);
+        
+        if (existUser == false)
+        {
+            throw  new UnauthorizedException("User Not Found");
+        }
+        
+        var isIdExist = await _dbContext.Configs.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+        if (isIdExist == null)
+        {
+            throw new BadRequestException(" Id Not Exists");
+        } 
+        isIdExist.IsDeleted = true;
+        
         await _dbContext.SaveChangesAsync();
 
         return "Xóa thành công.";

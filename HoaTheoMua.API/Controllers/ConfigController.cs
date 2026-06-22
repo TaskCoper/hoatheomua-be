@@ -6,7 +6,7 @@ using Request = HoaTheoMua.Service.Config.Request;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Route("api/v1/config")]
+[Route("api/v1/configs")]
 public class ConfigController : ControllerBase
 {
     private readonly ConfigService.IService _configService;
@@ -17,9 +17,9 @@ public class ConfigController : ControllerBase
     }
 
     [HttpGet("")]
-    public async Task<IActionResult> GetConfigList(int pageIndex, int paegSize)
+    public async Task<IActionResult> GetConfigList()
     {
-        var result = await _configService.GetConfig(pageIndex, paegSize);
+        var result = await _configService.GetConfig();
         return Ok(result);
     }
 
@@ -34,7 +34,7 @@ public class ConfigController : ControllerBase
     public async Task<IActionResult> CreateConfig([FromBody] Request.CreateConfigRequest request)
     {
         var result = await _configService.CreateConfig(request);
-        return StatusCode(201, ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
     }
 
     [HttpPut("{id:guid}")]
