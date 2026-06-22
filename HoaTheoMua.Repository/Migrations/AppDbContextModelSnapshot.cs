@@ -520,6 +520,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasColumnType("text");
@@ -868,6 +871,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("NhanhTrackingUrl")
                         .HasColumnType("text");
+
+                    b.Property<long>("OrderTime")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Phone")
                         .IsRequired()

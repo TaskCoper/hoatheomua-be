@@ -5,47 +5,54 @@ public class Response
     public class CreateResponse
     {
         public Guid id { get; set; }
-        public required string slug { get; set; }
-        public required string title { get; set; }
-        public required string status { get; set; }
-        public DateTimeOffset createdAt { get; set; }
-        public DateTimeOffset? updatedAt { get; set; }
+        public required string Slug { get; set; }
+        public required string Title { get; set; }
+        public required string Status { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
     }
 
     public class JobListItem
     {
-        public Guid id { get; set; }
-        public string slug { get; set; } = null!;
-        public string title { get; set; } = null!;
-        public string avatarUrl { get; set; } = null!;
-        public string location { get; set; } = null!;
-        public string employmentType { get; set; } = null!;
-        public float? salaryMin { get; set; }
-        public float? salaryMax { get; set; }
-        public bool salaryNegotiable { get; set; }
-        public int openings { get; set; }
-        public string status { get; set; } = null!;
+        public Guid Id { get; set; }
+        public string Slug { get; set; } = null!;
+        public string Title { get; set; } = null!;
+        public required string Description { get; set; } 
+        public string CoverImageUrl { get; set; } = null!;
+        public string AvatarUrl { get; set; } = null!;
+        public string Location { get; set; } = null!;
+        public string EmploymentType { get; set; } = null!;
+        public float? SalaryMin { get; set; }
+        public float? SalaryMax { get; set; }
+        public bool SalaryNegotiable { get; set; }
+        public int Openings { get; set; }
+        public string Status { get; set; } = null!;
+    }
+
+    public class HighestSalaryResponse
+    {
+        public float? Salary { get; set; }
     }
 
     public class JobDetailResponse
     {
-        public Guid id { get; set; }
-        public string slug { get; set; } = null!;
-        public string title { get; set; } = null!;
-        public string location { get; set; } = null!;
-        public string avatarUrl { get; set; } = null!;
-        public string coverImageUrl { get; set; } = null!;
-        public float? minExperienceYears { get; set; }
-        public float? maxExperienceYears { get; set; }
-        public string level { get; set; } = null!; 
-        public string employmentType { get; set; } = null!;
-        public float? salaryMin { get; set; }
-        public float? salaryMax { get; set; }
-        public bool salaryNegotiable { get; set; }
-        public int openings { get; set; }
-        public string description { get; set; } = null!;
-        public string status { get; set; } = null!; 
-        public DateTimeOffset createdAt { get; set; }
-        public DateTimeOffset? updatedAt { get; set; }
+        public Guid Id { get; set; }
+        public string Slug { get; set; } = null!;
+        public string Title { get; set; } = null!;
+        public string Location { get; set; } = null!;
+        public string AvatarUrl { get; set; } = null!;
+        public string CoverImageUrl { get; set; } = null!;
+        public float? MinExperienceYears { get; set; }
+        public float? MaxExperienceYears { get; set; }
+        public string Level { get; set; } = null!; 
+        public string EmploymentType { get; set; } = null!;
+        public float? SalaryMin { get; set; }
+        public float? SalaryMax { get; set; }
+        public bool SalaryNegotiable { get; set; }
+        public int Openings { get; set; }
+        public string Description { get; set; } = null!;
+        public string Status { get; set; } = null!; 
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
     }
 }

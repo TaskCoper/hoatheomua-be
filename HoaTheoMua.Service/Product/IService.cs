@@ -1,7 +1,9 @@
-﻿namespace HoaTheoMua.Service.Product;
+﻿using HoaTheoMua.Service.Models;
+
+namespace HoaTheoMua.Service.Product;
 
 public interface IService
 {
-    Task<object> GetListProducts(Request.ProductListRequest request);
+    Task<ResponseProductList.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request);
     Task<object> GetProductDetails(Request.ProductDetailRequest request);
 }

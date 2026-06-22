@@ -67,6 +67,57 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
 
+    public async Task<BasePaginationResponse> GetMyRecruitmentRequestsAsync(int pageIndex, int pageSize)
+    {
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+
+        var userId = getUserId();
+        if (userId == Guid.Empty)
+        {
+            throw new BadRequestException("INVALID_ACCESS_TOKEN");
+        }
+        
+        var checkUser = await _context.Users
+            .Where(x => x.Id == userId && !x.IsDeleted)
+            .Select(x => x.Id)
+            .FirstOrDefaultAsync();
+
+        if (checkUser == Guid.Empty)
+        {
+            throw new NotFoundException("USER_NOT_FOUND");
+        }
+
+        var query = _context.RecruitmentRequests
+            .Include(r => r.JobDescription)
+            .Where(r => r.UserId == userId && !r.IsDeleted)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new Response.MyRecruitmentRequestItem
+            {
+                id = x.Id,
+                title = x.title,
+                coverLetter = x.coverLetter,
+                attachments = x.attachments,
+                isRead = x.isRead,
+                createdAt = x.CreatedAt,
+                jobDescription = new Response.JobDto
+                {
+                    id = x.JobDescription.Id,
+                    title = x.JobDescription.title
+                }
+            })
+            .ToListAsync();
+
+        return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+    }
+
     public async Task<BaseResponse> GetRecruitmentRequestByIdAsync(Guid id)
     {
         if (id == Guid.Empty)

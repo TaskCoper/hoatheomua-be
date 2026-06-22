@@ -33,6 +33,17 @@ public class Response
         public JobDto jobDescription { get; set; } = null!;
     }
 
+    public class MyRecruitmentRequestItem
+    {
+        public Guid id { get; set; }
+        public string title { get; set; } = null!;
+        public string coverLetter { get; set; } = null!;
+        public List<string> attachments { get; set; } = new();
+        public bool isRead { get; set; }
+        public DateTimeOffset createdAt { get; set; }
+        public JobDto jobDescription { get; set; } = null!;
+    }
+
     public class MarkAsReadResponse
     {
         public Guid id { get; set; }

@@ -54,7 +54,7 @@ public class OrderController: ControllerBase
     public async Task<IActionResult> GetShippingLocation([FromBody] Request.LocationFilters filter)
     {
         var result = await _orderService.GetShippingLocation(filter);
-        return Ok(result);
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
     
     // [HttpGet("/api/v1/orders")]

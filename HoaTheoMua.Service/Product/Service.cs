@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -29,7 +30,7 @@ public class Service: IService
         _httpClient = httpClient;
     }
     
-    public async Task<object> GetListProducts(Request.ProductListRequest request)
+    public async Task<ResponseProductList.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
     {
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
@@ -93,14 +94,37 @@ public class Service: IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
         if (nhanhProductList == null)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
+        }
+        
+        if (nhanhProductList.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
         }
 
+        // int totalRequests = nhanhProductList.Data.Count(x => true);
+        //
+        // int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        // int actualPageSize = pageSize < 1 ? 10 : pageSize;
+        //
+        // var result = nhanhProductList.Data
+        //     .Where(x => true)
+        //     .Skip((actualPageIndex - 1) * actualPageSize)
+        //     .Take(actualPageSize)
+        //     .ToList();
+        //
+        // var paginationResult = ApiResponseFactory.BasePagination(
+        //     items: result, 
+        //     pageIndex: actualPageIndex, 
+        //     pageSize: actualPageSize, 
+        //     totalCount: totalRequests
+        // );
+        
         return nhanhProductList;
         
     }
@@ -163,14 +187,18 @@ public class Service: IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
         if (nhanhProductDetails == null)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
         }
-
+        if (nhanhProductDetails.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
+        }
+        
         return nhanhProductDetails;
     }
 }

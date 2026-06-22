@@ -2,6 +2,7 @@
 using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -78,12 +79,17 @@ public class Service: IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
         if (productNhanhResult == null || productNhanhResult.Data == null)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
+        }
+
+        if (productNhanhResult.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
         }
         
         var itemsRequest = productNhanhResult.Data.Select(
@@ -109,7 +115,8 @@ public class Service: IService
         
         var createRequest = new Request.AhaMoveShippingFeeRequest()
         {
-            OrderTime = 0,
+            OrderTime = request.OrderTime,                               
+            IdleUntil = request.OrderTime > 0 ? request.OrderTime : null,
             Paths = new List<Request.AhamoveLocationPoint>()
             {
                 new Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
@@ -189,18 +196,18 @@ public class Service: IService
         } else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+            throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
         }
         
         if (ahamoveResult == null || ahamoveResult.Any() == false)
         {
-            throw new Exception("Ahamove returned null or empty data");
+            throw new BadRequestException("Ahamove returned null or empty data");
         }
         
         return new { ahamoveResult, productNhanhResult};
     }
     
-    public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()
+    public async Task<BasePaginationResponse> GetServiceDetailsAhaMove(int pageIndex, int pageSize)
     {
         var ahamoveApi = _ahamoveOption.BaseUrl + "/v3/services/SGN-BIKE";
         var ahamoveToken = _ahamoveOption.Token;
@@ -225,14 +232,31 @@ public class Service: IService
         else
         {
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+            throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
         }
 
         if (getServiceDetailsAhaMove == null)
         {
-            throw new Exception("Ahamove returned null or empty data");
+            throw new BadRequestException("Ahamove returned null or empty data");
         }
+        
+        int totalRequests = getServiceDetailsAhaMove.Requests.Count();
+        
+        int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        int actualPageSize = pageSize < 1 ? 10 : pageSize;
+        
+        var result = getServiceDetailsAhaMove.Requests
+            .Skip((actualPageIndex - 1) * actualPageSize)
+            .Take(actualPageSize)
+            .ToList();
 
-        return getServiceDetailsAhaMove;
+        var paginationResult = ApiResponseFactory.BasePagination(
+            items: result, 
+            pageIndex: actualPageIndex, 
+            pageSize: actualPageSize, 
+            totalCount: totalRequests
+        );
+        
+        return paginationResult;
     }
 }

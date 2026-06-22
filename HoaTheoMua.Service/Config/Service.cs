@@ -19,34 +19,26 @@ public class Service : IService
         _dbContext = dbContext;
         _currentUser = currentUser;
     }
-    
 
-    public async Task<BasePaginationResponse> GetConfig(int pageIndex, int pageSize)
+
+    public async Task<List<Response.ConfigResponse>> GetConfig()
     {
-        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
-        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
-
-        var result = _dbContext.Configs
+        var query = _dbContext.Configs
             .Where(x => !x.IsDeleted)
-            .OrderByDescending(x => x.CreatedAt)
+            .OrderByDescending(x => x.CreatedAt);
+
+        var result = await query
             .Select(x => new Response.ConfigResponse
             {
                 Id = x.Id,
                 Key = x.Key,
-                Value = StringToJson(x.Value), //suat ra value bi 2 dau gach gach "//1234//"
+                IsPublic = x.IsPublic,
+                Value = StringToJson(x.Value),
                 UserId = x.UserId,
-
-            });
-            
-
-        var count = await result.CountAsync();
-        var items = await result
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
+            })
             .ToListAsync();
-        
-        return(ApiResponseFactory.BasePagination(items, pageIndex, pageSize, count));
-        
+
+        return result;
     }
 
     public async Task<Response.ConfigResponse> GetConfigById(Guid id)
@@ -60,10 +52,16 @@ public class Service : IService
             {
                 Id = x.Id,
                 Key = x.Key,
+                IsPublic = x.IsPublic,
                 Value = StringToJson(x.Value),
-                UserId =  x.UserId,
+                UserId = x.UserId,
             })
             .FirstOrDefaultAsync();
+
+        if (result == null)
+        {
+            throw new BadRequestException("Id Not Found");
+        }
 
         return result;
     }
@@ -73,33 +71,40 @@ public class Service : IService
     {
         var userId = _currentUser.GetRequiredUserId();
 
-        var existKey = await _dbContext.Configs.AnyAsync(x => x.Key == request.Key);
-        if (existKey == true)
+        var key = request.Key.Trim().ToLower();
+
+        var existKey = await _dbContext.Configs
+            .AnyAsync(x => x.Key.Trim().ToLower() == key && !x.IsDeleted);
+
+        if (existKey)
         {
-            throw  new UnauthorizedException("Key Exists");
+            throw new BadRequestException("Key is exists");
         }
 
-        var result =  new Repository.Entity.Config()
+        var result = new Repository.Entity.Config()
         {
-                Key = request.Key,
-                Value = request.Value.GetRawText(),
-                UserId = userId,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = null,
-                IsDeleted = false
-            };
-            
-            await _dbContext.Configs.AddAsync(result);
-            await _dbContext.SaveChangesAsync();
 
-            var query = new Response.ConfigResponse()
-            {
-                Id = result.Id,
-                Key = result.Key,
-                Value = StringToJson(result.Value),
-                UserId = result.UserId,
-            };
-            return query;
+            Key = key,
+            Value = request.Value.GetRawText(),
+            IsPublic = true,
+            UserId = userId,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = null,
+            IsDeleted = false
+        };
+
+        await _dbContext.Configs.AddAsync(result);
+        await _dbContext.SaveChangesAsync();
+
+        var query = new Response.ConfigResponse()
+        {
+            Id = result.Id,
+            Key = result.Key,
+            IsPublic = result.IsPublic,
+            Value = StringToJson(result.Value),
+            UserId = result.UserId,
+        };
+        return query;
 
     }
 
@@ -107,12 +112,24 @@ public class Service : IService
         Guid id,
         Request.UpdateConfigRequest request)
     {
+        var key = request.Key.Trim().ToLower();
+
         var query = await _dbContext.Configs
-            .Where(x => x.Id == id && !x.IsDeleted).FirstOrDefaultAsync();
-        
+            .Where(x => x.Id == id && x.Key.Trim().ToLower() != key && !x.IsDeleted)
+            .FirstOrDefaultAsync();
+
+        if (query == null)
+        {
+            throw new BadRequestException("Id/Key Not Found");
+        }
+
         query.Key = request.Key;
         query.Value = request.Value.GetRawText();
-        
+        if (request.IsPublic.HasValue)
+        {
+            query.IsPublic = request.IsPublic.GetValueOrDefault();
+        }
+
         // await _dbContext.Configs.AddAsync(query);
         _dbContext.Configs.Update(query);
         await _dbContext.SaveChangesAsync();
@@ -122,15 +139,41 @@ public class Service : IService
 
     public async Task<string> DeleteConfig(Guid id)
     {
-       var query = await _dbContext.Configs.Where(x => x.Id == id && !x.IsDeleted).FirstOrDefaultAsync();
-       query.IsDeleted = true;
-       
+        var query = await _dbContext.Configs.Where(x => x.Id == id && !x.IsDeleted).FirstOrDefaultAsync();
+
+        if (query == null)
+        {
+            throw new BadRequestException("Id Not Found");
+        }
+
+        query.IsDeleted = true;
+
         _dbContext.Configs.Update(query);
         await _dbContext.SaveChangesAsync();
 
         return "Xóa thành công.";
     }
-    
+
+    public async Task<List<Response.ConfigResponse>> GetConfigIsPublic()
+    {
+        var query = _dbContext.Configs.Where(x => x.IsPublic == true);
+
+        var result = await query.Select(x => new Response.ConfigResponse
+        {
+            Id = x.Id,
+            Key = x.Key,
+            IsPublic = x.IsPublic,
+            Value = StringToJson(x.Value),
+            UserId = x.UserId,
+        }).ToListAsync();
+
+        if (result.Count == 0)
+        {
+            throw new NotFoundException("DONT_HAVE_ANY_CONFIG");
+        }
+        return result;
+    }
+
     private static JsonElement StringToJson(string value)
     {
         return JsonSerializer.Deserialize<JsonElement>(value);

@@ -15,6 +15,7 @@ public class Request
       public string FullName { get; set; }
       public string Phone { get; set; }
       public string Remarks { get; set; }
+      public long OrderTime { get; set; } = 0;  
       public List<Items> Items { get; set; } = new List<Items>();
    }
 
@@ -28,6 +29,9 @@ public class Request
    {
       [JsonPropertyName("order_time")] 
       public long OrderTime { get; set; } = 0;
+      
+      [JsonPropertyName("idle_until")]           
+      public long? IdleUntil { get; set; }   
 
       [JsonPropertyName("path")] 
       public List<AhamoveLocationPoint> Paths { get; set; } = new();

@@ -4,7 +4,7 @@ namespace HoaTheoMua.Service.Config;
 
 public interface IService
 {
-    Task<BasePaginationResponse> GetConfig(int pageIndex, int paegSize);
+    Task<List<Response.ConfigResponse>> GetConfig();
 
     Task<Response.ConfigResponse?> GetConfigById(Guid id);
 
@@ -13,4 +13,6 @@ public interface IService
     Task<string> UpdateConfig(Guid id, Request.UpdateConfigRequest request);
 
     Task<string> DeleteConfig(Guid id);
+    
+    Task<List<Response.ConfigResponse>> GetConfigIsPublic();
 }
