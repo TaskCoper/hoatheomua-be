@@ -72,21 +72,7 @@ public class Service : IService
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
-        var userId = getUserId();
-        if (userId == Guid.Empty)
-        {
-            throw new BadRequestException("INVALID_ACCESS_TOKEN");
-        }
-        
-        var checkUser = await _context.Users
-            .Where(x => x.Id == userId && !x.IsDeleted)
-            .Select(x => x.Id)
-            .FirstOrDefaultAsync();
-
-        if (checkUser == Guid.Empty)
-        {
-            throw new NotFoundException("USER_NOT_FOUND");
-        }
+        var userId = _currentUser.GetRequiredUserId();
 
         var query = _context.RecruitmentRequests
             .Include(r => r.JobDescription)
@@ -127,7 +113,7 @@ public class Service : IService
 
         var request = await _context.RecruitmentRequests
             .Include(r => r.JobDescription)
-            .Where(a => a.Id== id && !a.IsDeleted)
+            .Where(a => a.Id == id && !a.IsDeleted)
             .Select(x => new Response.RecruitmentRequestItem
             {
                 id = x.Id,
