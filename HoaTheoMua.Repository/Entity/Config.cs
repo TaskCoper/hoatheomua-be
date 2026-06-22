@@ -9,6 +9,7 @@ public class Config: BaseEntity<Guid>, IAuditableEntity
     public required string Key { get; set; }
     [Column(TypeName = "jsonb")]
     public required string Value { get; set; }
+    public bool IsPublic { get; set; }
 
     public Guid UserId { get; set; }
     public User User { get; set; }

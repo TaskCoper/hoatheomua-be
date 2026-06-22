@@ -50,6 +50,7 @@ public class Service : IService
             {
                 Id = x.Id,
                 Key = x.Key,
+                IsPublic = x.IsPublic,
                 Value = StringToJson(x.Value),
                 UserId = x.UserId,
             })
@@ -98,6 +99,7 @@ public class Service : IService
             {
                 Id = x.Id,
                 Key = x.Key,
+                IsPublic = x.IsPublic,
                 Value = StringToJson(x.Value),
                 UserId = x.UserId,
             })
@@ -143,6 +145,7 @@ public class Service : IService
                 
             Key = key,
             Value = request.Value.GetRawText(),
+            IsPublic = true,
             UserId = userId,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = null,
@@ -156,6 +159,7 @@ public class Service : IService
         {
             Id = result.Id,
             Key = result.Key,
+            IsPublic = result.IsPublic,
             Value = StringToJson(result.Value),
             UserId = result.UserId,
         };
@@ -195,6 +199,10 @@ public class Service : IService
         
         query.Key = request.Key;
         query.Value = request.Value.GetRawText();
+        if (request.IsPublic.HasValue)
+        {
+            query.IsPublic = request.IsPublic.GetValueOrDefault();
+        }
         
         // await _dbContext.Configs.AddAsync(query);
         _dbContext.Configs.Update(query);
@@ -231,7 +239,27 @@ public class Service : IService
 
         return "Xóa thành công.";
     }
-    
+
+    public async Task<List<Response.ConfigResponse>> GetConfigIsPublic()
+    {
+        var query = _dbContext.Configs.Where(x => x.IsPublic == true);
+
+        var result = await query.Select(x => new Response.ConfigResponse
+        {
+            Id = x.Id,
+            Key = x.Key,
+            IsPublic = x.IsPublic,
+            Value =  StringToJson(x.Value),
+            UserId = x.UserId,
+        }).ToListAsync();
+
+        if (result.Count == 0)
+        {
+            throw  new NotFoundException("DONT_HAVE_ANY_CONFIG");
+        }
+        return result;
+    }
+
     private static JsonElement StringToJson(string value)
     {
         return JsonSerializer.Deserialize<JsonElement>(value);

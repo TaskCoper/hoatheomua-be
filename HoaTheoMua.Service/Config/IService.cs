@@ -13,4 +13,6 @@ public interface IService
     Task<string> UpdateConfig(Guid id, Request.UpdateConfigRequest request);
 
     Task<string> DeleteConfig(Guid id);
+    
+    Task<List<Response.ConfigResponse>> GetConfigIsPublic();
 }
