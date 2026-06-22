@@ -186,9 +186,15 @@ public class Service : IService
         var count = parentCate.Count;
         
         var catePageResponse = parentCate.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList();
-
+        
+        var response = catePageResponse;
+        if (keyword != null)
+        {
+            response = catePageResponse.Where(x =>  x.title.Trim().ToLower().Contains(keyword.Trim().ToLower())).ToList();
+        }
+        
         return ApiResponseFactory.BasePagination(
-            items: catePageResponse,
+            items: response,
             pageIndex: pageIndex,
             pageSize: pageSize,
             totalCount: count);
