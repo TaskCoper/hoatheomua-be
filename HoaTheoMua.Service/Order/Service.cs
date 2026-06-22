@@ -85,9 +85,9 @@ public class Service : IService
         
         var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
   
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
+        if (user == null)
+        {
+            throw new BadRequestException("INVALID_ACCESS_TOKEN");
         }
         var userId = Guid.Parse(user);
         
@@ -95,7 +95,7 @@ public class Service : IService
             .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
         if (existUser == null)
         {
-            throw new NotFoundException("User not found");
+            throw new NotFoundException("USER_NOT_FOUND");
         }
         
         
@@ -368,14 +368,23 @@ public class Service : IService
         
         var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
   
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
+        if (user == null)
+        {
+            throw new BadRequestException("INVALID_ACCESS_TOKEN");
         }
         
         var userId = Guid.Parse(user);
         
+        var checkUser = await _dbContext.Users
+            .Where(x => x.Id == userId && !x.IsDeleted)
+            .Select(x => x.Id)
+            .FirstOrDefaultAsync();
 
+        if (checkUser == Guid.Empty)
+        {
+            throw new NotFoundException("USER_NOT_FOUND");
+        }
+        
         var orders = await _dbContext.Orders
             .Include(x => x.Transactions)
             .FirstOrDefaultAsync(x => 
@@ -435,7 +444,7 @@ public class Service : IService
   
         if (user == null)  
         {            
-            throw new UnauthorizedException("User not found");  
+            throw new BadRequestException("INVALID_ACCESS_TOKEN");
         }
         var userId = Guid.Parse(user);
         
@@ -444,7 +453,7 @@ public class Service : IService
                 x.Id == userId && x.IsVerify);
         if (existUser == null)
         {
-            throw new NotFoundException("User not found");
+            throw new NotFoundException("USER_NOT_FOUND");
         }
         
         var order = await _dbContext.Orders

@@ -221,6 +221,16 @@ public class Service : IService
         
         if (userId == Guid.Empty)
         {
+            throw new BadRequestException("INVALID_ACCESS_TOKEN");
+        }
+        
+        var checkUser = await _dbContext.Users
+            .Where(x => x.Id == userId && !x.IsDeleted)
+            .Select(x => x.Id)
+            .FirstOrDefaultAsync();
+
+        if (checkUser == Guid.Empty)
+        {
             throw new NotFoundException("USER_NOT_FOUND");
         }
         
