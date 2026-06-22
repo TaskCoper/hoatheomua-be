@@ -49,23 +49,11 @@ jobs:
       POSTGRES_MAX_OPEN_CONNS: ${{ secrets.POSTGRES_MAX_OPEN_CONNS }}
       POSTGRES_CONN_MAX_LIFETIME: ${{ secrets.POSTGRES_CONN_MAX_LIFETIME }}
 
-      # SMTP
-      MAIL_ADDRESS: ${{ secrets.MAIL_ADDRESS }}
-      MAIL_DISPLAY_NAME: ${{ secrets.MAIL_DISPLAY_NAME }}
-      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-      MAIL_HOST: ${{ secrets.MAIL_HOST }}
-      MAIL_PORT: ${{ secrets.MAIL_PORT }}
-
-      # JWT
+      # JWT (validation only — taskcoper-be issues tokens.
+      # These three secrets MUST equal taskcoper-be's for cross-service validation.)
       JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
       JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
       JWT_ACCESS_TOKEN_KEY: ${{ secrets.JWT_ACCESS_TOKEN_KEY }}
-      JWT_ACCESS_TOKEN_EXPIRE_MIN: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRE_MIN }}
-      JWT_REFRESH_TOKEN_KEY: ${{ secrets.JWT_REFRESH_TOKEN_KEY }}
-      JWT_REFRESH_TOKEN_EXPIRE_MIN: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRE_MIN }}
-
-      # Security
-      SECURITY_PEPPER: ${{ secrets.SECURITY_PEPPER }}
 
       # Ahamove
       AHAMOVE_TOKEN: ${{ secrets.AHAMOVE_TOKEN }}

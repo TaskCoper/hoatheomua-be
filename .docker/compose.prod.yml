@@ -34,23 +34,11 @@ services:
       PostgresOption__MaxOpenConns: ${POSTGRES_MAX_OPEN_CONNS}
       PostgresOption__ConnMaxLifetime: ${POSTGRES_CONN_MAX_LIFETIME}
 
-      # Mail Configuration
-      MailOption__Mail: ${MAIL_ADDRESS}
-      MailOption__DisplayName: ${MAIL_DISPLAY_NAME}
-      MailOption__Password: ${MAIL_PASSWORD}
-      MailOption__Host: ${MAIL_HOST}
-      MailOption__Port: ${MAIL_PORT}
-
-      # JWT Configuration
+      # JWT Configuration (validation only — taskcoper-be issues tokens.
+      # These three MUST match taskcoper-be's values for cross-service validation.)
       JwtOption__Issuer: ${JWT_ISSUER}
       JwtOption__Audience: ${JWT_AUDIENCE}
       JwtOption__AccessTokenKey: ${JWT_ACCESS_TOKEN_KEY}
-      JwtOption__AccessTokenExpireMin: ${JWT_ACCESS_TOKEN_EXPIRE_MIN}
-      JwtOption__RefreshTokenKey: ${JWT_REFRESH_TOKEN_KEY}
-      JwtOption__RefreshTokenExpireMin: ${JWT_REFRESH_TOKEN_EXPIRE_MIN}
-
-      # Security Configuration
-      SecurityOption__Pepper: ${SECURITY_PEPPER}
 
       # Ahamove Configuration
       AhamoveOption__Token: ${AHAMOVE_TOKEN}

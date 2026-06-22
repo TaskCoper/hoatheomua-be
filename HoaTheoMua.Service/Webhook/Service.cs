@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
@@ -403,25 +404,42 @@ public partial class Service : IService
         
         HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
 
-        OrderResponse? createOrderNhanhResult = null;
-                
-        if (nhanhVnResponse.IsSuccessStatusCode)
+        // NhanhVn replies with HTTP 200 even when it rejects the order (code != 1), and in that case
+        // `data` comes back as an empty array [] instead of an object. A direct
+        // ReadFromJsonAsync<OrderResponse>() then blows up with a cryptic
+        // "could not be converted to OrderData. Path: $.data". Read the raw body and inspect it
+        // defensively so we surface NhanhVn's real error (in `messages`) instead of a 500.
+        var nhanhRawContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+
+        if (!nhanhVnResponse.IsSuccessStatusCode)
         {
-            createOrderNhanhResult = await nhanhVnResponse.Content.ReadFromJsonAsync<OrderResponse>();
-        }
-        else
-        {
-            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode}): {nhanhRawContent}");
         }
 
-        if (createOrderNhanhResult == null || createOrderNhanhResult.Data == null)
+        using var nhanhDoc = JsonDocument.Parse(nhanhRawContent);
+        var nhanhRoot = nhanhDoc.RootElement;
+
+        var nhanhCode = nhanhRoot.TryGetProperty("code", out var nhanhCodeElement)
+                        && nhanhCodeElement.ValueKind == JsonValueKind.Number
+            ? nhanhCodeElement.GetInt32()
+            : 0;
+
+        // Only a code==1 response with `data` as an object is a successful order creation.
+        if (nhanhCode != 1
+            || !nhanhRoot.TryGetProperty("data", out var nhanhDataElement)
+            || nhanhDataElement.ValueKind != JsonValueKind.Object)
         {
-            throw new Exception("NhanhVnResponse returned null or empty data");
+            throw new Exception($"NhanhVn order creation failed: {nhanhRawContent}");
         }
 
-        order.NhanhOrderId = createOrderNhanhResult.Data.Id;
-        order.NhanhTrackingUrl = createOrderNhanhResult.Data.TrackingUrl;
+        var createOrderNhanhResult = nhanhDataElement.Deserialize<OrderData>();
+        if (createOrderNhanhResult == null)
+        {
+            throw new Exception($"NhanhVn order creation failed: {nhanhRawContent}");
+        }
+
+        order.NhanhOrderId = createOrderNhanhResult.Id;
+        order.NhanhTrackingUrl = createOrderNhanhResult.TrackingUrl;
         
         _dbContext.Orders.Update(order);
 

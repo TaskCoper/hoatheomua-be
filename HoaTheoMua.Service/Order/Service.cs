@@ -3,10 +3,10 @@ using System.Net.Http.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Webhook;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -19,15 +19,15 @@ public class Service : IService
     private readonly AppDbContext _dbContext;
     private readonly NhanhVnOption _nhanhVnOption = new();
     private readonly AhamoveOption _ahamoveAhamoveOption = new();
-    private readonly IHttpContextAccessor _httpContext;
+    private readonly ICurrentUserService _currentUser;
     private readonly HttpClient _httpClient;
 
-    public Service(AppDbContext dbContext, 
-        IHttpContextAccessor httpContext, 
+    public Service(AppDbContext dbContext,
+        ICurrentUserService currentUser,
         IConfiguration configuration, HttpClient httpClient)
     {
         _dbContext = dbContext;
-        _httpContext = httpContext;
+        _currentUser = currentUser;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveAhamoveOption);
         _httpClient = httpClient;
@@ -38,17 +38,9 @@ public class Service : IService
     {        
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
-        
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-    
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        
-        var userId = Guid.Parse(user);
-        
-    
+
+        var userId = _currentUser.GetRequiredUserId();
+
         var orders = _dbContext.Orders
             .Where(x => x.IsDeleted == false && x.UserId == userId);
         var totalCount = await orders.CountAsync();
@@ -79,23 +71,14 @@ public class Service : IService
     //------------
     public async Task<string> CreateOrder(Request.CreateOrderRequest request)
     {
-        
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        if (existUser == null)
+        var userId = _currentUser.GetRequiredUserId();
+
+        // Email-verification is now asserted by the token, not a Users-table lookup.
+        if (!_currentUser.IsVerified)
         {
-            throw new NotFoundException("User not found");
+            throw new UnauthorizedException("User is not verified");
         }
-        
-        
+
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
         var token = _nhanhVnOption.Token;
@@ -314,16 +297,7 @@ public class Service : IService
 
     public async Task<BaseResponse> GetOrderById(Guid id)
     {
-        
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        
-        var userId = Guid.Parse(user);
-        
+        var userId = _currentUser.GetRequiredUserId();
 
         var orders = await _dbContext.Orders
             .Include(x => x.Transactions)
@@ -379,22 +353,13 @@ public class Service : IService
 
     public async Task<string> GetStatusOrder(Guid id)
     {
-        var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-  
-        if (user == null)  
-        {            
-            throw new UnauthorizedException("User not found");  
-        }
-        var userId = Guid.Parse(user);
-        
-        var existUser = await _dbContext.Users
-            .FirstOrDefaultAsync(x => 
-                x.Id == userId && x.IsVerify);
-        if (existUser == null)
+        var userId = _currentUser.GetRequiredUserId();
+
+        if (!_currentUser.IsVerified)
         {
-            throw new NotFoundException("User not found");
+            throw new UnauthorizedException("User is not verified");
         }
-        
+
         var order = await _dbContext.Orders
             .FirstOrDefaultAsync(o => 
                 o.Id == id && o.UserId == userId);
@@ -408,22 +373,6 @@ public class Service : IService
 
     public async Task<OrderListRootResponse?> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request)
     {
-        // var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-        //
-        // if (user == null)  
-        // {            
-        //     throw new UnauthorizedException("User not found");  
-        // }
-        // var userId = Guid.Parse(user);
-        //
-        // var existUser = await _dbContext.Users
-        //     .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        // if (existUser == null)
-        // {
-        //     throw new NotFoundException("User not found");
-        // }
-        
-        
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
         var token = _nhanhVnOption.Token;
@@ -457,21 +406,6 @@ public class Service : IService
 
     public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)
     {
-        // var user = _httpContext.HttpContext?.User.FindFirst("UserId")?.Value;  
-        //
-        // if (user == null)  
-        // {            
-        //     throw new UnauthorizedException("User not found");  
-        // }
-        // var userId = Guid.Parse(user);
-        //
-        // var existUser = await _dbContext.Users
-        //     .FirstOrDefaultAsync(x => x.Id == userId && x.IsVerify);
-        // if (existUser == null)
-        // {
-        //     throw new NotFoundException("User not found");
-        // }
-        
         var appId = _nhanhVnOption.AppId;
         var businessId = _nhanhVnOption.BusinessId;
         var token = _nhanhVnOption.Token;

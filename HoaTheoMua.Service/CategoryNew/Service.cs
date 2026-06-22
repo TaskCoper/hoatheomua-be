@@ -1,9 +1,8 @@
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
-using HoaTheoMua.Repository.Enum;
+using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace HoaTheoMua.Service.CategoryNew;
@@ -11,38 +10,13 @@ namespace HoaTheoMua.Service.CategoryNew;
 public class Service : IService
 {
     private readonly AppDbContext _dbContext;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserService _currentUser;
 
-    public Service(AppDbContext dbContext, IHttpContextAccessor httpContextAccessor)
+    public Service(AppDbContext dbContext, ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
-        _httpContextAccessor = httpContextAccessor;
+        _currentUser = currentUser;
     }
-
-    private Guid GetUserId()
-    {
-        var userId = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
-        if (userId != null)
-        {
-            return Guid.Parse(userId);
-        }
-
-        return Guid.Empty;
-    }
-    //
-    // private async Task<bool> checkAdmin(Guid userId)
-    // {
-    //     var checkUser = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
-    //     if (checkUser != null)
-    //     {
-    //         if (checkUser.Role == Role.Admin)
-    //         {
-    //             return true;
-    //         }
-    //     }
-    //
-    //     return false;
-    // }
 
     private async Task<bool> checkExistedCategory(Guid categoryId)
     {
@@ -73,17 +47,7 @@ public class Service : IService
 
     public async Task<Response.CreateCategoryResponse> CreateCate(Request.CreateCategoriesRequest request)
     {
-        var userId = GetUserId();
-        if (userId == Guid.Empty)
-        {
-            throw new NotFoundException("USER_NOT_FOUND");
-        }
-        //
-        // var isAdmin = await checkAdmin(userId);
-        // if (!isAdmin)
-        // {
-        //     throw new UnauthorizedAccessException();
-        // }
+        var userId = _currentUser.GetRequiredUserId();
 
         if (string.IsNullOrWhiteSpace(request.title))
         {

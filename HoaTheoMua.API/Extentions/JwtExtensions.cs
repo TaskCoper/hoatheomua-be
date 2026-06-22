@@ -41,6 +41,7 @@ public static class JwtExtensions
                     IssuerSigningKey = new SymmetricSecurityKey(key),
                     NameClaimType = ClaimTypes.NameIdentifier,
                     RoleClaimType = ClaimTypes.Role,
+                    ClockSkew = TimeSpan.Zero, // match taskcoper-be (the issuer)
                 };
                 options.Events = new JwtBearerEvents
                 {
@@ -71,7 +72,7 @@ public static class JwtExtensions
             //và khi dùng nhiều lần khai báo thì nó sẽ kiểm tra nhiều điều kiện (AND) thỏa mãn hết thì người dùng mới được sử dụng endpoint đó
             options.DefaultPolicy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
-                .RequireClaim("IsVerify").Build();
+                .RequireClaim("IsVerified", "true").Build();
             
             options.AddPolicy(AdminPolicy, policy =>
                 policy.RequireRole(Role.Admin.ToString()));
@@ -90,7 +91,7 @@ public static class JwtExtensions
             
             options.AddPolicy(UserVerifiedPolicy, policy =>
                 policy.RequireRole(Role.User.ToString())
-                    .RequireClaim("IsVerify", "true"));
+                    .RequireClaim("IsVerified", "true"));
         });
     }
 }

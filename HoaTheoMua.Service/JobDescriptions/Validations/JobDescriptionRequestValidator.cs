@@ -1,8 +1,8 @@
 using FluentValidation;
 
-namespace HoaTheoMua.Service.Auth.Validations;
+namespace HoaTheoMua.Service.JobDescriptions.Validations;
 
-public class JobDescriptionRequestValidator : AbstractValidator<JobDescriptions.Request.CreateRequest>
+public class JobDescriptionRequestValidator : AbstractValidator<Request.CreateRequest>
 {
     public JobDescriptionRequestValidator()
     {

@@ -12,8 +12,8 @@ public class AuditLog: BaseEntity<Guid>, IAuditableEntity
     
     public string? EntityType { get; set; }
     public Guid? EntityId { get; set; }
-    
-    public User? User { get; set; }
+
+    // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }
     
     public DateTimeOffset CreatedAt { get; set; }

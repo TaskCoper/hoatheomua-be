@@ -13,8 +13,12 @@ public class News: BaseEntity<Guid>, IAuditableEntity
     public NewsStatus Status { get; set; }
     public string? slug { get; set; }
     
+    // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }
-    public User User { get; set; }
+    // Author profile snapshot, captured from the JWT claims at write time.
+    public string? AuthorName { get; set; }
+    public string? AuthorEmail { get; set; }
+    public string? AuthorAvatar { get; set; }
     public ICollection<CategoryNewsDetail> CategoryNewsDetail { get; set; } = new List<CategoryNewsDetail>();
     
     public DateTimeOffset CreatedAt { get; set; }

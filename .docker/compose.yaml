@@ -27,23 +27,11 @@ x-api-env: &api-env
   PostgresOption__MaxOpenConns: ${POSTGRES_MAX_OPEN_CONNS}
   PostgresOption__ConnMaxLifetime: ${POSTGRES_CONN_MAX_LIFETIME}
 
-  # Mail
-  MailOption__Mail: ${MAIL_ADDRESS}
-  MailOption__DisplayName: ${MAIL_DISPLAY_NAME}
-  MailOption__Password: ${MAIL_PASSWORD}
-  MailOption__Host: ${MAIL_HOST}
-  MailOption__Port: ${MAIL_PORT}
-
-  # JWT
+  # JWT (validation only — this service no longer issues tokens; taskcoper-be does.
+  # These three MUST be identical to taskcoper-be's values for cross-service tokens to validate.)
   JwtOption__Issuer: ${JWT_ISSUER}
   JwtOption__Audience: ${JWT_AUDIENCE}
   JwtOption__AccessTokenKey: ${JWT_ACCESS_TOKEN_KEY}
-  JwtOption__AccessTokenExpireMin: ${JWT_ACCESS_TOKEN_EXPIRE_MIN}
-  JwtOption__RefreshTokenKey: ${JWT_REFRESH_TOKEN_KEY}
-  JwtOption__RefreshTokenExpireMin: ${JWT_REFRESH_TOKEN_EXPIRE_MIN}
-
-  # Security
-  SecurityOption__Pepper: ${SECURITY_PEPPER}
 
   # Ahamove
   AhamoveOption__Token: ${AHAMOVE_TOKEN}

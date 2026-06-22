@@ -1,8 +1,7 @@
-using System.Text.Json;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace HoaTheoMua.Service.RecruitmentRequests;
@@ -10,12 +9,12 @@ namespace HoaTheoMua.Service.RecruitmentRequests;
 public class Service : IService
 {
     private readonly AppDbContext _context;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserService _currentUser;
 
-    public Service(AppDbContext context, IHttpContextAccessor httpContextAccessor)
+    public Service(AppDbContext context, ICurrentUserService currentUser)
     {
         _context = context;
-        _httpContextAccessor = httpContextAccessor;
+        _currentUser = currentUser;
     }
 
     public async Task<BasePaginationResponse> GetPagedRecruitmentRequestsAsync(int pageIndex, int pageSize,
@@ -25,7 +24,6 @@ public class Service : IService
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
         var query = _context.RecruitmentRequests
-            .Include(r => r.User)
             .Include(r => r.JobDescription)
             .AsNoTracking();
 
@@ -50,11 +48,11 @@ public class Service : IService
                 createdAt = x.CreatedAt,
                 user = new Response.UserDto
                 {
-                    userId = x.User.Id,
-                    fullName = $"{x.User.FirstName} {x.User.LastName}".Trim(),
-                    email = x.User.Email,
-                    phoneNumber = x.User.PhoneNumber,
-                    avatar = x.User.Avatar
+                    userId = x.UserId,
+                    fullName = x.AuthorName,
+                    email = x.AuthorEmail,
+                    phoneNumber = null,
+                    avatar = x.AuthorAvatar
                 },
                 jobDescription = new Response.JobDto
                 {
@@ -77,7 +75,6 @@ public class Service : IService
         }
 
         var request = await _context.RecruitmentRequests
-            .Include(r => r.User)
             .Include(r => r.JobDescription)
             .Where(a => a.Id== id && !a.IsDeleted)
             .Select(x => new Response.RecruitmentRequestItem
@@ -90,11 +87,11 @@ public class Service : IService
                 createdAt = x.CreatedAt,
                 user = new Response.UserDto
                 {
-                    userId = x.User.Id,
-                    fullName = $"{x.User.FirstName} {x.User.LastName}".Trim(),
-                    email = x.User.Email,
-                    phoneNumber = x.User.PhoneNumber,
-                    avatar = x.User.Avatar
+                    userId = x.UserId,
+                    fullName = x.AuthorName,
+                    email = x.AuthorEmail,
+                    phoneNumber = null,
+                    avatar = x.AuthorAvatar
                 },
                 jobDescription = new Response.JobDto
                 {
@@ -138,12 +135,7 @@ public class Service : IService
     public async Task<Response.CreateRecruitmentResponse> CreateRecruitmentRequestAsync(
         Request.CreateRecruitmentRequest request)
     {
-        var userId = getUserId();
-
-        if (userId == Guid.Empty)
-        {
-            throw new NotFoundException("USER_NOT_FOUND");
-        }
+        var userId = _currentUser.GetRequiredUserId();
 
         var jobExistsAndOpen = await _context.JobDescriptions.AnyAsync(j =>
             j.Id == request.jobDescriptionId &&
@@ -169,6 +161,10 @@ public class Service : IService
         {
             JobDescriptionId = request.jobDescriptionId,
             UserId = userId,
+            // Author profile snapshot from the JWT claims.
+            AuthorName = _currentUser.FullName,
+            AuthorEmail = _currentUser.Email,
+            AuthorAvatar = _currentUser.Avatar,
             title = request.title,
             coverLetter = request.coverLetter,
             attachments = request.attachments ?? new List<string>(),
@@ -191,16 +187,5 @@ public class Service : IService
         };
 
         return responseData;
-    }
-
-    private Guid getUserId()
-    {
-        var result = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
-        if (result != null)
-        {
-            return Guid.Parse(result);
-        }
-
-        return Guid.Empty;
     }
 }

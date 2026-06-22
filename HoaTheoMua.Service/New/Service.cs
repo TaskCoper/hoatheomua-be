@@ -4,10 +4,9 @@ using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace HoaTheoMua.Service.New;
@@ -15,12 +14,12 @@ namespace HoaTheoMua.Service.New;
 public class Service : IService
 {
     private readonly AppDbContext _dbContext;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserService _currentUser;
 
-    public Service(AppDbContext dbContext, IHttpContextAccessor httpContextAccessor)
+    public Service(AppDbContext dbContext, ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
-        _httpContextAccessor = httpContextAccessor;
+        _currentUser = currentUser;
     }
 
     public async Task<BasePaginationResponse> GetNewsAsync(int pageIndex, int pageSize, string? keyword, NewsStatus? status)
@@ -30,7 +29,6 @@ public class Service : IService
 
         var query = _dbContext.NewsList
             .AsNoTracking()
-            .Include(news => news.User)
             .Include(news => news.CategoryNewsDetail)
             .Where(news => !news.IsDeleted);
 
@@ -76,10 +74,9 @@ public class Service : IService
                 User = new UserResponse
                 {
                     UserId = news.UserId,
-                    Email = news.User.Email,
-                    UserAvatar = news.User.Avatar,
-                    UserFirstName = news.User.FirstName,
-                    UserLastName = news.User.LastName,
+                    Email = news.AuthorEmail,
+                    UserAvatar = news.AuthorAvatar,
+                    UserFullName = news.AuthorName,
                 }
             })
             .ToListAsync();
@@ -92,7 +89,6 @@ public class Service : IService
         var normalizedKey = NormalizeLookupKey(key);
         var query = _dbContext.NewsList
             .AsNoTracking()
-            .Include(news => news.User)
             .Include(news => news.CategoryNewsDetail)
             .Where(news => !news.IsDeleted);
 
@@ -121,10 +117,9 @@ public class Service : IService
                     User = new UserResponse
                     {
                         UserId = news.UserId,
-                        Email = news.User.Email,
-                        UserAvatar = news.User.Avatar,
-                        UserFirstName = news.User.FirstName,
-                        UserLastName = news.User.LastName,
+                        Email = news.AuthorEmail,
+                        UserAvatar = news.AuthorAvatar,
+                        UserFullName = news.AuthorName,
                     }
                 })
                 .FirstOrDefaultAsync()
@@ -152,10 +147,9 @@ public class Service : IService
                     User = new UserResponse
                     {
                         UserId = news.UserId,
-                        Email = news.User.Email,
-                        UserAvatar = news.User.Avatar,
-                        UserFirstName = news.User.FirstName,
-                        UserLastName = news.User.LastName,
+                        Email = news.AuthorEmail,
+                        UserAvatar = news.AuthorAvatar,
+                        UserFullName = news.AuthorName,
                     }
                 })
                 .FirstOrDefaultAsync();
@@ -170,11 +164,7 @@ public class Service : IService
 
     public async Task<NewResponseV2> CreateNewAsync(CreateNewRequest request)
     {
-        var userId = CheckAccessToken();
-        if (userId == Guid.Empty)
-        {
-            throw new NotFoundException("USER_NOT_FOUND");
-        }
+        var userId = _currentUser.GetRequiredUserId();
         var categoryIds = NormalizeCategoryIds(request.CategoryIds);
         await EnsureCategoriesExistAsync(categoryIds);
         var slug = await GenerateUniqueSlugAsync(request.Title);
@@ -190,6 +180,10 @@ public class Service : IService
             Status = request.Status,
             slug = slug,
             UserId = userId,
+            // Author profile snapshot from the JWT claims.
+            AuthorName = _currentUser.FullName,
+            AuthorEmail = _currentUser.Email,
+            AuthorAvatar = _currentUser.Avatar,
             ViewCount = 0,
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow
@@ -390,17 +384,5 @@ public class Service : IService
         slug = Regex.Replace(slug, @"[\s-]+", "-").Trim('-');
 
         return string.IsNullOrWhiteSpace(slug) ? Guid.NewGuid().ToString("N") : slug;
-    }
-
-
-    private Guid CheckAccessToken()
-    {
-        var accessToken = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
-        if (accessToken != null)
-        {
-            return Guid.Parse(accessToken);
-        }
-
-        return Guid.Empty;
     }
 }

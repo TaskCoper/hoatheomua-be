@@ -23,13 +23,13 @@ public class CategoryResponse
     public required string CategoryName { get; set; }
 }
 
+// Author profile snapshot captured from the JWT at write time (no User table).
 public class UserResponse
 {
     public required Guid UserId { get; set; }
-    public required string Email { get; set; }
-    public required string? UserAvatar { get; set; }
-    public required string UserFirstName { get; set; } = string.Empty;
-    public required string UserLastName { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? UserAvatar { get; set; }
+    public string? UserFullName { get; set; }
 }
 
 public class NewResponseV2

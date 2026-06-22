@@ -25,8 +25,8 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     public decimal ProductFree { get; set; }
     public decimal TotalFee { get; set; }
     
+    // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }
-    public User User  { get; set; }
     public ICollection<OrderDetails> OrderDetails { get; set; } = new List<OrderDetails>();
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     public DateTimeOffset CreatedAt { get; set; }

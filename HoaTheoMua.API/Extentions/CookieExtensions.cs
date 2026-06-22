@@ -1,41 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
-
-namespace HoaTheoMua.Extentions;
+﻿namespace HoaTheoMua.Extentions;
 
 public static class CookieExtensions
 {
+    // Kept so JwtExtensions' OnMessageReceived can read a forwarded access-token cookie.
+    // This service no longer issues tokens, so there are no write/delete helpers.
     public const string AccessTokenCookieName = "HTM-Access-Token";
-    public const string RefreshTokenCookieName = "HTM-Refresh-Token";
-
-    
-    public static void WriteAuthCookies(this HttpResponse response, string accessToken, string refreshToken)
-    {
-      
-        var accessOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Lax,
-            Path = "/",
-            Expires = DateTimeOffset.UtcNow.AddMinutes(15)
-        };
-
-        var refreshOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Lax,
-            Path = "/",
-            Expires = DateTimeOffset.UtcNow.AddDays(7)
-        };
-        response.Cookies.Append(AccessTokenCookieName, accessToken, accessOptions);
-        response.Cookies.Append(RefreshTokenCookieName, refreshToken, refreshOptions);
-    }
-    
-    
-    public static void DeleteAuthCookies(this HttpResponse response)
-    {
-        response.Cookies.Delete(AccessTokenCookieName);
-        response.Cookies.Delete(RefreshTokenCookieName);
-    }
 }
