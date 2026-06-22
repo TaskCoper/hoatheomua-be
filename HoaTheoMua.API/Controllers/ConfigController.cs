@@ -17,9 +17,9 @@ public class ConfigController : ControllerBase
     }
 
     [HttpGet("")]
-    public async Task<IActionResult> GetConfigList(int pageIndex, int paegSize)
+    public async Task<IActionResult> GetConfigList()
     {
-        var result = await _configService.GetConfig(pageIndex, paegSize);
+        var result = await _configService.GetConfig();
         return Ok(result);
     }
 

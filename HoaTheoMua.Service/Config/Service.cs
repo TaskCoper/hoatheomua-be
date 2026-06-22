@@ -23,48 +23,39 @@ public class Service : IService
     }
     
 
-    public async Task<BasePaginationResponse> GetConfig(int pageIndex, int pageSize)
+    public async Task<List<Response.ConfigResponse>> GetConfig()
     {
-        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
-        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
-        
-        
         var userIdString = _httpContextAccessor.HttpContext?.User.FindFirst("UserId")?.Value;
         if (userIdString == null)
         {
-            throw  new UnauthorizedException("User Not Found");
+            throw new UnauthorizedException("User Not Found");
         }
-        var userId = Guid.Parse(userIdString!);
-        
+
+        var userId = Guid.Parse(userIdString);
+
         var existUser = await _dbContext.Users.AnyAsync(x => x.Id == userId);
-        
+
         if (existUser == false)
         {
-            throw  new UnauthorizedException("User Not Found");
+            throw new UnauthorizedException("User Not Found");
         }
-        
-        //anh phải lấy được cái config của user thông qua accessToken
-        var result = _dbContext.Configs
+
+        var configs = await _dbContext.Configs
             .Where(x => !x.IsDeleted)
             .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync();
+
+        var result = configs
             .Select(x => new Response.ConfigResponse
             {
                 Id = x.Id,
                 Key = x.Key,
-                Value = StringToJson(x.Value), //suat ra value bi 2 dau gach gach "//1234//"
+                Value = StringToJson(x.Value),
                 UserId = x.UserId,
+            })
+            .ToList();
 
-            });
-            
-
-        var count = await result.CountAsync();
-        var items = await result
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-        
-        return(ApiResponseFactory.BasePagination(items, pageIndex, pageSize, count));
-        
+        return result;
     }
 
     public async Task<Response.ConfigResponse> GetConfigById(Guid id)
