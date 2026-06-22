@@ -20,7 +20,7 @@ public class ConfigController : ControllerBase
     public async Task<IActionResult> GetConfigList()
     {
         var result = await _configService.GetConfig();
-        return Ok(result);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 
     [HttpGet("{id:guid}")]
