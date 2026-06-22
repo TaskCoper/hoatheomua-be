@@ -148,7 +148,7 @@ public class Service : IService
 
         if (keyword != null)
         {
-            categoryList.Where(x => x.Title.Contains(keyword));
+            categoryList.Where(x => x.Title.Trim().ToLower().Contains(keyword.Trim().ToLower()));
         }
 
         await categoryList.ToListAsync();
