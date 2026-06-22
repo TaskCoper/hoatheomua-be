@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260622140208_add-field-ispublic")]
-    partial class addfieldispublic
+    [Migration("20260622195150_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -72,8 +72,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("AuditLogs");
 
@@ -241,8 +239,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ParentCategoryNewsId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("CategoryNewsList");
 
@@ -546,153 +542,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("Configs");
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ForgotPassword", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsUsed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("Otp")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Otp")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ResetPasswords");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = true,
-                            Otp = "123456",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111112"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = false,
-                            Otp = "654321",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333334")
-                        },
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111113"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = true,
-                            Otp = "111222",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333335")
-                        },
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111114"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = false,
-                            Otp = "333444",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333336")
-                        },
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111115"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = true,
-                            Otp = "555666",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333337")
-                        },
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111116"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = false,
-                            Otp = "777888",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333338")
-                        },
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111117"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = true,
-                            Otp = "999000",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333339")
-                        },
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111118"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = false,
-                            Otp = "121212",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333340")
-                        },
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111119"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = true,
-                            Otp = "343434",
-                            UserId = new Guid("11111111-1111-1111-1111-111111111111")
-                        },
-                        new
-                        {
-                            Id = new Guid("f1111111-1111-1111-1111-111111111120"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            ExpiresAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 15, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IsDeleted = false,
-                            IsUsed = false,
-                            Otp = "565656",
-                            UserId = new Guid("22222222-2222-2222-2222-222222222222")
-                        });
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
@@ -784,6 +634,15 @@ namespace HoaTheoMua.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AuthorAvatar")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AuthorEmail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AuthorName")
+                        .HasColumnType("text");
+
                     b.Property<string>("CoverImage")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -828,14 +687,14 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("NewsList");
 
                     b.HasData(
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777771"),
+                            AuthorEmail = "admin@example.com",
+                            AuthorName = "Admin User",
                             CoverImage = "https://example.com/csharp.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "New features in C# 12 include primary constructors...",
@@ -848,6 +707,8 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777772"),
+                            AuthorEmail = "admin@example.com",
+                            AuthorName = "Admin User",
                             CoverImage = "https://example.com/ai.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Generative AI is changing the landscape of software engineering.",
@@ -860,6 +721,8 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777773"),
+                            AuthorEmail = "staff@example.com",
+                            AuthorName = "Staff User",
                             CoverImage = "https://example.com/health.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Top 10 tips for maintaining a balanced diet.",
@@ -872,6 +735,8 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777774"),
+                            AuthorEmail = "staff@example.com",
+                            AuthorName = "Staff User",
                             CoverImage = "https://example.com/workout.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Quick 15-minute workouts for busy people.",
@@ -884,6 +749,8 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777775"),
+                            AuthorEmail = "user@example.com",
+                            AuthorName = "Normal User",
                             CoverImage = "https://example.com/finance.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Tech stocks reach an all-time high.",
@@ -896,6 +763,8 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777776"),
+                            AuthorEmail = "user@example.com",
+                            AuthorName = "Normal User",
                             CoverImage = "https://example.com/movies.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "A review of the best movies released this year.",
@@ -908,6 +777,8 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777777"),
+                            AuthorEmail = "admin@example.com",
+                            AuthorName = "Admin User",
                             CoverImage = "https://example.com/realestate.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "What to expect in the housing market.",
@@ -920,6 +791,8 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777778"),
+                            AuthorEmail = "staff@example.com",
+                            AuthorName = "Staff User",
                             CoverImage = "https://example.com/gadgets.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "The most anticipated gadgets of the season.",
@@ -932,6 +805,8 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777779"),
+                            AuthorEmail = "admin@example.com",
+                            AuthorName = "Admin User",
                             CoverImage = "https://example.com/mentalhealth.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Importance of taking mental health seriously.",
@@ -944,6 +819,8 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777780"),
+                            AuthorEmail = "staff@example.com",
+                            AuthorName = "Staff User",
                             CoverImage = "https://example.com/travel.jpg",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Must-visit places for your next vacation.",
@@ -1041,8 +918,6 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("Orders");
                 });
 
@@ -1102,6 +977,15 @@ namespace HoaTheoMua.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AuthorAvatar")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AuthorEmail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AuthorName")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1138,202 +1022,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("JobDescriptionId");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("RecruitmentRequest", (string)null);
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("DeviceLabel")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<DateTimeOffset>("ExpiredAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("IpAddress")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("RefreshTokenHash")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserAgent")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RefreshTokenHash")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("RefreshTokens");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Desktop",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 1, 31, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.1",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash1",
-                            UserAgent = "Mozilla",
-                            UserId = new Guid("11111111-1111-1111-1111-111111111111")
-                        },
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111112"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Mobile",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.2",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash2",
-                            UserAgent = "Chrome",
-                            UserId = new Guid("22222222-2222-2222-2222-222222222222")
-                        },
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111113"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Tablet",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.3",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash3",
-                            UserAgent = "Safari",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333333")
-                        },
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111114"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Desktop",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.4",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash4",
-                            UserAgent = "Edge",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333334")
-                        },
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111115"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Mobile",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.5",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash5",
-                            UserAgent = "Firefox",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333335")
-                        },
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111116"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Desktop",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.6",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash6",
-                            UserAgent = "Opera",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333336")
-                        },
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111117"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Tablet",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.7",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash7",
-                            UserAgent = "Mozilla",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333337")
-                        },
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111118"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Mobile",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.8",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash8",
-                            UserAgent = "Chrome",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333338")
-                        },
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111119"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Desktop",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.9",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash9",
-                            UserAgent = "Safari",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333339")
-                        },
-                        new
-                        {
-                            Id = new Guid("a1111111-1111-1111-1111-111111111120"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            DeviceLabel = "Tablet",
-                            ExpiredAt = new DateTimeOffset(new DateTime(2026, 2, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            IpAddress = "192.168.1.10",
-                            IsActive = true,
-                            IsDeleted = false,
-                            RefreshTokenHash = "hash10",
-                            UserAgent = "Edge",
-                            UserId = new Guid("33333333-3333-3333-3333-333333333340")
-                        });
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
@@ -1607,211 +1296,6 @@ namespace HoaTheoMua.Repository.Migrations
                         });
                 });
 
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.User", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Avatar")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("HashPassword")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsVerify")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.Property<int>("Role")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
-
-                    b.ToTable("Users");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "admin@example.com",
-                            FirstName = "Admin",
-                            HashPassword = "hashed_password_1",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "User",
-                            PhoneNumber = "0123456780",
-                            Role = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "staff@example.com",
-                            FirstName = "Staff",
-                            HashPassword = "hashed_password_2",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "User",
-                            PhoneNumber = "0123456781",
-                            Role = 2
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 3, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "user@example.com",
-                            FirstName = "Normal",
-                            HashPassword = "hashed_password_3",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "User",
-                            PhoneNumber = "0123456782",
-                            Role = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333334"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 4, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "alice@example.com",
-                            FirstName = "Alice",
-                            HashPassword = "hashed_password_4",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "Smith",
-                            PhoneNumber = "0123456783",
-                            Role = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333335"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "bob@example.com",
-                            FirstName = "Bob",
-                            HashPassword = "hashed_password_5",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "Johnson",
-                            PhoneNumber = "0123456784",
-                            Role = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333336"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "charlie@example.com",
-                            FirstName = "Charlie",
-                            HashPassword = "hashed_password_6",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "Brown",
-                            PhoneNumber = "0123456785",
-                            Role = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333337"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "diana@example.com",
-                            FirstName = "Diana",
-                            HashPassword = "hashed_password_7",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "Prince",
-                            PhoneNumber = "0123456786",
-                            Role = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333338"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "evan@example.com",
-                            FirstName = "Evan",
-                            HashPassword = "hashed_password_8",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "Wright",
-                            PhoneNumber = "0123456787",
-                            Role = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333339"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "fiona@example.com",
-                            FirstName = "Fiona",
-                            HashPassword = "hashed_password_9",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "Gallagher",
-                            PhoneNumber = "0123456788",
-                            Role = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333340"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Email = "george@example.com",
-                            FirstName = "George",
-                            HashPassword = "hashed_password_10",
-                            IsDeleted = false,
-                            IsVerify = true,
-                            LastName = "Lucas",
-                            PhoneNumber = "0123456789",
-                            Role = 1
-                        });
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.AuditLog", b =>
-                {
-                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
-                        .WithMany("AuditLog")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.CategoryNews", "ParentCategoryNews")
@@ -1819,15 +1303,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasForeignKey("ParentCategoryNewsId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
-                        .WithMany("CategoryNews")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("ParentCategoryNews");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNewsDetail", b =>
@@ -1849,50 +1325,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("News");
                 });
 
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Config", b =>
-                {
-                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
-                        .WithMany("Config")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ForgotPassword", b =>
-                {
-                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
-                        .WithMany("ResetPassword")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.News", b =>
-                {
-                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
-                        .WithMany("News")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
-                {
-                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
-                        .WithMany("Orders")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
@@ -1912,26 +1344,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
-                        .WithMany("RecruitmentRequests")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("JobDescription");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.RefreshToken", b =>
-                {
-                    b.HasOne("HoaTheoMua.Repository.Entity.User", "User")
-                        .WithMany("RefreshToken")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
@@ -1967,25 +1380,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("OrderDetails");
 
                     b.Navigation("Transactions");
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.User", b =>
-                {
-                    b.Navigation("AuditLog");
-
-                    b.Navigation("CategoryNews");
-
-                    b.Navigation("Config");
-
-                    b.Navigation("News");
-
-                    b.Navigation("Orders");
-
-                    b.Navigation("RecruitmentRequests");
-
-                    b.Navigation("RefreshToken");
-
-                    b.Navigation("ResetPassword");
                 });
 #pragma warning restore 612, 618
         }

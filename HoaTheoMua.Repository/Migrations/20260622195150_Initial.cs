@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial_ResourceServer : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -86,6 +86,7 @@ namespace HoaTheoMua.Repository.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Key = table.Column<string>(type: "text", nullable: false),
                     Value = table.Column<string>(type: "jsonb", nullable: false),
+                    IsPublic = table.Column<bool>(type: "boolean", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -172,6 +173,7 @@ namespace HoaTheoMua.Repository.Migrations
                     ShippingFee = table.Column<decimal>(type: "numeric", nullable: false),
                     ProductFree = table.Column<decimal>(type: "numeric", nullable: false),
                     TotalFee = table.Column<decimal>(type: "numeric", nullable: false),
+                    OrderTime = table.Column<long>(type: "bigint", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
