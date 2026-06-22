@@ -134,15 +134,21 @@ public class Service : IService
     }
 
 
-    public async Task<BasePaginationResponse> GetCategories(int pageIndex, int pageSize)
+    public async Task<BasePaginationResponse> GetCategories(int pageIndex, int pageSize, string? keyword)
     {
         
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
-        var categoryList = await _dbContext.CategoryNewsList
-            .Where(x => x.IsDeleted == false)
-            .ToListAsync();
+        var categoryList = _dbContext.CategoryNewsList
+            .Where(x => x.IsDeleted == false);
+
+        if (keyword != null)
+        {
+            categoryList.Where(x => x.Title.Contains(keyword));
+        }
+
+        await categoryList.ToListAsync();
 
         var cateResponse = categoryList.Select(x => new Response.CategoryResponse()
         {

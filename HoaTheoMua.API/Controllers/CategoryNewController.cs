@@ -26,9 +26,9 @@ public class CategoryNewController:ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetCategories(int pageIndex, int pageSize)
+    public async Task<IActionResult> GetCategories(int pageIndex, int pageSize, string? keyword)
     {
-        var result = await _categoryService.GetCategories(pageIndex, pageSize);
+        var result = await _categoryService.GetCategories(pageIndex, pageSize, keyword);
         return Ok(result);
     }
 
