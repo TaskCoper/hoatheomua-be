@@ -150,16 +150,14 @@ public class Service : IService
         {
             categoryList.Where(x => x.Title.Trim().ToLower().Contains(keyword.Trim().ToLower()));
         }
-
-        await categoryList.ToListAsync();
-
-        var cateResponse = categoryList.Select(x => new Response.CategoryResponse()
+        
+        var cateResponse = await categoryList.Select(x => new Response.CategoryResponse()
         {
             categoryId = x.Id,
             title = x.Title,
             userId = x.UserId,
             parentId = x.ParentCategoryNewsId,
-        }).ToList();
+        }).ToListAsync();
         
         
         
