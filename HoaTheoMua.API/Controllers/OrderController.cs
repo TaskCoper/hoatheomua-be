@@ -44,9 +44,9 @@ public class OrderController: ControllerBase
     }
     
     [HttpPost("/api/v1/orders/nhanh-vn")]
-    public async Task<IActionResult> GetNhanhVnOrders([FromBody]NhanhVnOrderListRequest.OrderListRequest request,[FromQuery]int pageIndex, int pageSize)
+    public async Task<IActionResult> GetNhanhVnOrders([FromBody]NhanhVnOrderListRequest.OrderListRequest request)
     {
-        var result = await _orderService.GetOrderNhanhVn(request, pageIndex, pageSize);
+        var result = await _orderService.GetOrderNhanhVn(request);
         return Ok(result);
     }
     
