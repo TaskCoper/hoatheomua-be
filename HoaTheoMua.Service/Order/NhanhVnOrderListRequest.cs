@@ -18,19 +18,15 @@ public class NhanhVnOrderListRequest
 
     public class OrderFilter
     {
-        // Thêm: Thời gian tạo từ ngày (định dạng timestamp)
         [JsonPropertyName("createdAtFrom")]
         public long? CreatedAtFrom { get; set; } = null;
 
-        // Thêm: Thời gian tạo đến ngày (định dạng timestamp)
         [JsonPropertyName("createdAtTo")]
         public long? CreatedAtTo { get; set; } = null;
 
-        // Thêm: Mảng ID đơn hàng
         [JsonPropertyName("ids")]
         public List<long>? Ids { get; set; } = null;
 
-        // Thêm: Mảng ID kho hàng
         [JsonPropertyName("depotIds")]
         public List<long>? DepotIds { get; set; } = null;
     }
@@ -39,6 +35,17 @@ public class NhanhVnOrderListRequest
     {
         [JsonPropertyName("size")]
         public int? Size { get; set; }
+
+        // Thêm thuộc tính next trỏ đến class NextPage bên dưới
+        [JsonPropertyName("next")]
+        public NextPage? Next { get; set; }
+    }
+
+    // Tạo thêm class này để hứng object {"id": "xxx"}
+    public class NextPage
+    {
+        [JsonPropertyName("id")]
+        public long? Id { get; set; }
     }
 
     public class OrderDataOptions
