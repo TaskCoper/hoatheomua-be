@@ -1,4 +1,6 @@
+using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ConfigService = HoaTheoMua.Service.Config;
 using Request = HoaTheoMua.Service.Config.Request;
@@ -17,6 +19,7 @@ public class ConfigController : ControllerBase
     }
 
     [HttpGet("")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetConfigList()
     {
         var result = await _configService.GetConfig();
@@ -24,6 +27,7 @@ public class ConfigController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetConfig([FromRoute] Guid id)
     {
         var result = await _configService.GetConfigById(id);
@@ -31,6 +35,7 @@ public class ConfigController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> CreateConfig([FromBody] Request.CreateConfigRequest request)
     {
         var result = await _configService.CreateConfig(request);
@@ -38,6 +43,7 @@ public class ConfigController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UpdateConfig(
         [FromRoute] Guid id,
         [FromBody] Request.UpdateConfigRequest request)
@@ -47,9 +53,17 @@ public class ConfigController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> DeleteConfig([FromRoute] Guid id)
     {
         var result = await _configService.DeleteConfig(id);
         return Ok(ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
+    }
+
+    [HttpGet("public")]
+    public async Task<IActionResult> GetPublicConfig()
+    {
+        var result = await _configService.GetConfigIsPublic();
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 }
