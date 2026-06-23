@@ -13,7 +13,7 @@ public class Service : IService
         _dbContext = dbContext;
     }
 
-    public async Task<Response.CompanyAddressResponse> GetCompanyAddress()
+    public async Task<Response.CompanyAddressResponse?> GetCompanyAddress()
     {
         var result = await _dbContext.CompanyAddresses
             .Where(x => !x.IsDeleted)
@@ -36,7 +36,7 @@ public class Service : IService
         return result;
     }
 
-    public async Task<Response.CompanyAddressResponse> GetCompanyAddressById(Guid id)
+    public async Task<Response.CompanyAddressResponse?> GetCompanyAddressById(Guid id)
     {
         if (id == Guid.Empty)
         {
@@ -83,7 +83,7 @@ public class Service : IService
                 Id = Guid.NewGuid(),
                 AddressLine = request.AddressLine.Trim(),
                 Ward = request.Ward?.Trim(),
-                MapId = request.MapId.Trim(),
+                MapId = request.MapId?.Trim(),
                 City = request.City.Trim(),
                 Country = request.Country.Trim(),
                 Latitude = request.Latitude,
@@ -142,7 +142,7 @@ public class Service : IService
         {
             companyAddress.AddressLine = request.AddressLine.Trim();
             companyAddress.Ward = request.Ward?.Trim();
-            companyAddress.MapId =  request.MapId.Trim();
+            companyAddress.MapId = request.MapId?.Trim();
             companyAddress.City = request.City.Trim();
             companyAddress.Country = request.Country.Trim();
             companyAddress.Latitude = request.Latitude;

@@ -80,8 +80,8 @@ services:
     environment:
       <<: *api-env
       ConnectionStrings__PostgresSql: Host=hoatheomua-postgres-dev;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
-    ports:
-      - "${HTTP_PORT}:8080"
+    # ports:
+    #   - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-dev]
     profiles: [dev, api-dev, api, dev-pull]
 
@@ -92,8 +92,8 @@ services:
     environment:
       <<: *api-env
       ConnectionStrings__PostgresSql: Host=hoatheomua-postgres-prod;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
-    ports:
-      - "${HTTP_PORT}:8080"
+    # ports:
+    #   - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-prod]
     profiles: [prod, api-prod, api, prod-pull]
 

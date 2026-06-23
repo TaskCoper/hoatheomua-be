@@ -41,7 +41,7 @@ public class Service : IService
         return result;
     }
 
-    public async Task<Response.ConfigResponse> GetConfigById(Guid id)
+    public async Task<Response.ConfigResponse?> GetConfigById(Guid id)
     {
         // Require an authenticated caller; identity comes from the token, not a Users lookup.
         _ = _currentUser.GetRequiredUserId();
