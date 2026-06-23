@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using HoaTheoMua.Constants;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.JwtService;
@@ -16,13 +17,13 @@ public static class JwtExtensions
     public const string UserPolicy = "UserPolicy";
     public const string StaffOrAdminPolicy = "StaffOrAdminPolicy";
     public const string UserVerifiedPolicy = "UserVerifiedPolicy";
-    
+
     public static void AddJwtServices(this IServiceCollection services, IConfiguration configuration)
     {
         JwtOption jwtOption = new JwtOption();
         configuration.GetSection(nameof(JwtOption)).Bind(jwtOption);
         var key = Encoding.UTF8.GetBytes(jwtOption.AccessTokenKey);
-    
+
         services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -47,13 +48,13 @@ public static class JwtExtensions
                 {
                     OnMessageReceived = context =>
                     {
-                        
+
                         if (context.Request.Cookies.TryGetValue(CookieExtensions.AccessTokenCookieName, out var token))
                         {
-                            context.Token = token; 
+                            context.Token = token;
                         }
 
-                        
+
                         return Task.CompletedTask;
                     },
                     OnAuthenticationFailed = context =>
@@ -73,24 +74,24 @@ public static class JwtExtensions
             options.DefaultPolicy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
                 .RequireClaim("IsVerified", "true").Build();
-            
+
             options.AddPolicy(AdminPolicy, policy =>
-                policy.RequireRole(Role.Admin.ToString()));
+                policy.RequireRole(RoleNames.Admin));
             // [Authorize(Policy = JwtExtensions.AdminPolicy)]
-        
+
             options.AddPolicy(StaffPolicy, policy =>
-                policy.RequireRole(Role.Staff.ToString()));
+                policy.RequireRole(RoleNames.Staff));
             // [Authorize(Policy = JwtExtensions.StaffPolicy)]
-        
+
             options.AddPolicy(UserPolicy, policy =>
-                policy.RequireRole(Role.User.ToString()));
-        
+                policy.RequireRole(RoleNames.User));
+
             options.AddPolicy(StaffOrAdminPolicy, policy =>
-                policy.RequireRole(Role.Staff.ToString(), Role.Admin.ToString()));
+                policy.RequireRole(RoleNames.Staff, RoleNames.Admin));
             // [Authorize(Policy = JwtExtensions.StaffOrAdminPolicy)]
-            
+
             options.AddPolicy(UserVerifiedPolicy, policy =>
-                policy.RequireRole(Role.User.ToString())
+                policy.RequireRole(RoleNames.User)
                     .RequireClaim("IsVerified", "true"));
         });
     }
