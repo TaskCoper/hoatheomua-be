@@ -1,4 +1,6 @@
-﻿using HoaTheoMua.Extentions;
+﻿using FluentValidation;
+using HoaTheoMua.Extentions;
+using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Order;
 using Microsoft.AspNetCore.Authorization;
@@ -10,10 +12,13 @@ namespace HoaTheoMua.Controllers;
 public class OrderController : ControllerBase
 {
     private readonly IService _orderService;
-
-    public OrderController(IService orderService)
+    private readonly IValidator<Request.CreateOrderRequest> _validatorCreateOrder; 
+    
+    public OrderController(IService orderService, 
+        IValidator<Request.CreateOrderRequest> validator)
     {
         _orderService = orderService;
+        _validatorCreateOrder = validator;
     }
 
     [HttpGet("/api/v1/orders")]
@@ -24,11 +29,16 @@ public class OrderController : ControllerBase
     }
 
     [HttpPost("/api/v1/orders")]
-    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
-    public async Task<IActionResult> CreateOrder([FromBody] Request.CreateOrderRequest request)
+    public async Task<IActionResult> CreateOrder([FromBody]Request.CreateOrderRequest request)
     {
+        var validationResult = await _validatorCreateOrder.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var errorMessage = string.Join(" | ", validationResult.Errors.Select(e => e.ErrorMessage));
+            throw new ValidationExceptionError(errorMessage);
+        }
         var result = await _orderService.CreateOrder(request);
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
 
     [HttpGet("/api/v1/orders/{id}")]
