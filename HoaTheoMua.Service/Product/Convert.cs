@@ -94,4 +94,29 @@ public class NhanhVnDataListConverter : JsonConverter<List<ResponseProductList.P
         // Ghi đè phương thức serialize khi cần trả data ngược lại
         JsonSerializer.Serialize(writer, value, options);
     }
+    public class NhanhVnUnitsListConverter : JsonConverter<Dictionary<string, List<ResponseProductDetails.UnitDetail>>>
+    {
+        public override Dictionary<string, List<ResponseProductDetails.UnitDetail>>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            // Nếu API trả về mảng rỗng []
+            if (reader.TokenType == JsonTokenType.StartArray)
+            {
+                reader.Skip(); 
+                return new Dictionary<string, List<ResponseProductDetails.UnitDetail>>(); 
+            }
+
+            // Nếu API trả về dạng Object chuẩn { "id": [...] }
+            if (reader.TokenType == JsonTokenType.StartObject)
+            {
+                return JsonSerializer.Deserialize<Dictionary<string, List<ResponseProductDetails.UnitDetail>>>(ref reader, options);
+            }
+
+            return null;
+        }
+
+        public override void Write(Utf8JsonWriter writer, Dictionary<string, List<ResponseProductDetails.UnitDetail>> value, JsonSerializerOptions options)
+        {
+            JsonSerializer.Serialize(writer, value, options);
+        }
+    }
 }

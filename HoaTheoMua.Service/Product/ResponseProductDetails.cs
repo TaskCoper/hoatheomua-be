@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.Product;
@@ -11,7 +13,6 @@ public class ResponseProductDetails
         public int Code { get; set; }
 
         [JsonPropertyName("data")]
-        // ĐÃ XÓA BỎ JsonConverter lỗi kiểu dữ liệu ở đây để tránh crash loop ngầm
         public ProductDetailData? Data { get; set; }
     }
 
@@ -38,7 +39,7 @@ public class ResponseProductDetails
         [JsonPropertyName("category")]
         public ProductCategory? Category { get; set; }
 
-        [JsonPropertyName("categoryId")] // Bổ sung hứng ID danh mục số gốc ở JSON
+        [JsonPropertyName("categoryId")] 
         public int CategoryId { get; set; }
 
         [JsonPropertyName("internalCategory")]
@@ -58,6 +59,9 @@ public class ResponseProductDetails
 
         [JsonPropertyName("brand")]
         public ProductCommonInfo? Brand { get; set; }
+
+        [JsonPropertyName("brandId")] // Bổ sung để hứng thêm brandId dạng số lẻ
+        public int? BrandId { get; set; }
 
         [JsonPropertyName("type")]
         public ProductCommonInfo? Type { get; set; }
@@ -122,13 +126,13 @@ public class ResponseProductDetails
         [JsonPropertyName("retail")]
         public decimal Retail { get; set; }
 
-        [JsonPropertyName("retailVat")] // ĐÃ BỔ SUNG: Khớp dữ liệu hóa đơn kế toán VAT lẻ
+        [JsonPropertyName("retailVat")] 
         public decimal RetailVat { get; set; }
 
         [JsonPropertyName("import")]
         public decimal Import { get; set; }
 
-        [JsonPropertyName("importVat")] // ĐÃ BỔ SUNG
+        [JsonPropertyName("importVat")] 
         public decimal ImportVat { get; set; }
 
         [JsonPropertyName("old")]
@@ -179,8 +183,10 @@ public class ResponseProductDetails
         [JsonPropertyName("name")]
         public string? Name { get; set; }
 
+        // ĐÃ FIX: Thêm Custom Converter để tự động gánh cả Array [] lẫn Object {} từ API
         [JsonPropertyName("list")]
-        public List<UnitDetail> List { get; set; } = new List<UnitDetail>();
+        [JsonConverter(typeof(NhanhVnDataListConverter.NhanhVnUnitsListConverter))]
+        public Dictionary<string, List<UnitDetail>>? List { get; set; }
     }
 
     public class UnitDetail
@@ -242,8 +248,9 @@ public class ResponseProductDetails
         [JsonPropertyName("transfering")]
         public double Transfering { get; set; }
 
+        // ĐÃ FIX: Chuyển sang JsonElement? để không bị sập khi API đổi từ Số (0) sang Object {"remain":0...}
         [JsonPropertyName("warranty")]
-        public double Warranty { get; set; }
+        public JsonElement? Warranty { get; set; }
 
         [JsonPropertyName("warrantyHolding")]
         public double WarrantyHolding { get; set; }
@@ -281,8 +288,9 @@ public class ResponseProductDetails
         [JsonPropertyName("transfering")]
         public double Transfering { get; set; }
 
+        // ĐÃ FIX: Đồng bộ JsonElement? tại đây
         [JsonPropertyName("warranty")]
-        public double Warranty { get; set; }
+        public JsonElement? Warranty { get; set; }
 
         [JsonPropertyName("warrantyHolding")]
         public double WarrantyHolding { get; set; }
