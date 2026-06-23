@@ -17,6 +17,7 @@ public static class JwtExtensions
     public const string UserPolicy = "UserPolicy";
     public const string StaffOrAdminPolicy = "StaffOrAdminPolicy";
     public const string UserVerifiedPolicy = "UserVerifiedPolicy";
+    public const string CustomerPolicy = "CustomerPolicy";
 
     public static void AddJwtServices(this IServiceCollection services, IConfiguration configuration)
     {
@@ -95,6 +96,11 @@ public static class JwtExtensions
             options.AddPolicy(UserVerifiedPolicy, policy =>
                 policy.RequireRole(RoleNames.User)
                     .RequireClaim("IsVerified", "true"));
+
+            // Customer is issued by taskcoper-be at registration; only the storefront (this service) consumes it.
+            options.AddPolicy(CustomerPolicy, policy =>
+                policy.RequireRole(RoleNames.Customer));
+            // [Authorize(Policy = JwtExtensions.CustomerPolicy)]
         });
     }
 }

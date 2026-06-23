@@ -14,4 +14,7 @@ public class RoleNames
     // Added for hoatheomua-be unification (it owns Staff-gated endpoints).
     public const string Staff = nameof(Staff);
     public const string StaffOrAdmin = nameof(StaffOrAdmin);
+
+    // Issued by taskcoper-be at registration; only the storefront (this service) consumes it.
+    public const string Customer = nameof(Customer);
 }

@@ -5,4 +5,5 @@ public enum Role
     Admin,
     User,
     Staff,
+    Customer,
 }
