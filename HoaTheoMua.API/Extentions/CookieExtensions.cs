@@ -2,7 +2,7 @@
 
 public static class CookieExtensions
 {
-    // Kept so JwtExtensions' OnMessageReceived can read a forwarded access-token cookie.
-    // This service no longer issues tokens, so there are no write/delete helpers.
-    public const string AccessTokenCookieName = "HTM-Access-Token";
+    // Must match taskcoper-be's AuthCookieHelper — that service issues the tokens and writes
+    // this cookie; hoatheomua-be only reads the forwarded access-token cookie (no write/delete).
+    public const string AccessTokenCookieName = "accessToken";
 }

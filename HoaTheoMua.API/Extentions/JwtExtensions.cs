@@ -48,12 +48,14 @@ public static class JwtExtensions
                 {
                     OnMessageReceived = context =>
                     {
-
-                        if (context.Request.Cookies.TryGetValue(CookieExtensions.AccessTokenCookieName, out var token))
+                        // Match taskcoper-be: only fall back to the cookie when no bearer token
+                        // was supplied, and ignore an empty/whitespace cookie value.
+                        if (string.IsNullOrWhiteSpace(context.Token)
+                            && context.Request.Cookies.TryGetValue(CookieExtensions.AccessTokenCookieName, out var token)
+                            && !string.IsNullOrWhiteSpace(token))
                         {
                             context.Token = token;
                         }
-
 
                         return Task.CompletedTask;
                     },
