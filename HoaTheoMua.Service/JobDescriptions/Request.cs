@@ -12,7 +12,6 @@ public class Request
         public required string coverImageUrl { get; set; }
         public float? minExperienceYears { get; set; }
         public float? maxExperienceYears { get; set; }
-        public required LevelJobDescriptions level { get; set; }
         public required EmploymentType employmentType { get; set; }
         public float? salaryMin { get; set; }
         public float? salaryMax { get; set; }

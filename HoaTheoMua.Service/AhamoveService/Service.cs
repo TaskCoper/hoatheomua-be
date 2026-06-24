@@ -259,4 +259,51 @@ public class Service: IService
         
         return paginationResult;
     }
+
+    public async Task<DepotResponse> GetDepotDetails(NhanhVnRequest.DepotRequest request)
+    {
+
+        var appId = _nhanhVnOption.AppId;
+        var businessId = _nhanhVnOption.BusinessId;
+        var token = _nhanhVnOption.Token;
+        var nhanhApi = _nhanhVnOption.BaseUrl + "/business/depot?appId=" + appId + "&businessId=" + businessId;  
+        
+        
+        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
+        nhanhHttpRequest.Headers.Add("Authorization", token);
+        nhanhHttpRequest.Content = JsonContent.Create(request);
+        
+        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
+
+        DepotResponse? nhanhProductDepot = null;
+        
+        if (nhanhVnResponse.IsSuccessStatusCode)
+        {
+
+            string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
+
+            // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
+            Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
+
+
+            nhanhProductDepot = await nhanhVnResponse.Content.ReadFromJsonAsync<DepotResponse>();
+        }
+        else
+        {
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+        }
+
+        if (nhanhProductDepot == null)
+        {
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
+        }
+        
+        if (nhanhProductDepot.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
+        }
+
+        return nhanhProductDepot;
+    }
 }

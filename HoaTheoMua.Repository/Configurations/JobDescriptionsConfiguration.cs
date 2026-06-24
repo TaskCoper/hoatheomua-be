@@ -45,10 +45,7 @@ public class JobDescriptionsConfiguration : IEntityTypeConfiguration<JobDescript
 
         builder.Property(x => x.salaryMax)
             .IsRequired(false);
-
-        builder.Property(x => x.level)
-            .IsRequired();
-
+        
         builder.Property(x => x.employmentType)
             .IsRequired();
 
