@@ -100,62 +100,50 @@ public class Service : IService
 
     public async Task<BasePaginationResponse> GetCategories(int pageIndex, int pageSize, string? keyword)
     {
-        
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
-        // var categoryList = _dbContext.CategoryNewsList
-        //     .Where(x => x.IsDeleted == false);
+        var rootQuery = _dbContext.CategoryNewsList
+            .Where(x => !x.IsDeleted && x.ParentCategoryNewsId == null);
 
-        // await categoryList.ToListAsync();
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var kw = keyword.Trim().ToLower();
 
-        var cateResponse = await _dbContext.CategoryNewsList
-            .Where(x => x.IsDeleted == false)
-            .Select(x => new Response.CategoryResponse()
-            {
-                categoryId = x.Id,
-                title = x.Title,
-                userId = x.UserId,
-                parentId = x.ParentCategoryNewsId,
-            }).ToListAsync();
-        
-        
-        
-        var listCateId = cateResponse.ToDictionary(x => x.categoryId);
-        
-        var parentCate = new List<Response.CategoryResponse>();
-        
-        foreach (var item in cateResponse)
-        {
-            if (item.parentId == null)
-            {
-                parentCate.Add(item);
-            }
-            else
-            {
-                if (listCateId.TryGetValue(item.parentId.Value, out var parentItem))
-                {
-                    parentItem.children ??= new List<Response.CategoryResponse>();
-                    parentItem.children.Add(item);
-                }
-            }
+            // Giữ root nếu chính nó khớp HOẶC có con khớp keyword
+            rootQuery = rootQuery.Where(root =>
+                root.Title.ToLower().Contains(kw)
+                || root.ChildCategoryNews.Any(c => !c.IsDeleted && c.Title.ToLower().Contains(kw)));
         }
-        
-        var response = parentCate;
-        if (keyword != null)
-        {
-            response = parentCate.Where(x =>  x.title.Trim().ToLower().Contains(keyword.Trim().ToLower())).ToList();
-        }
-        
-        var count = response.Count;
-        var catePageResponse = response.Skip((pageIndex - 1) * pageSize).Take(pageSize);
-        
+
+        var totalRootCount = await rootQuery.CountAsync();
+
+        var pageRoots = await rootQuery
+            .OrderBy(x => x.Id)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .Include(x => x.ChildCategoryNews.Where(c => !c.IsDeleted))
+            .ToListAsync();
+
+        var response = pageRoots.Select(MapToResponse).ToList();
+
         return ApiResponseFactory.BasePagination(
-            items: catePageResponse.ToList(),
+            items: response,
             pageIndex: pageIndex,
             pageSize: pageSize,
-            totalCount: count);
+            totalCount: totalRootCount);
     }
+
+    private static Response.CategoryResponse MapToResponse(CategoryNews x) => new()
+    {
+        categoryId = x.Id,
+        title = x.Title,
+        userId = x.UserId,
+        parentId = x.ParentCategoryNewsId,
+        children = x.ChildCategoryNews?
+            .Select(MapToResponse)
+            .ToList() ?? new List<Response.CategoryResponse>()
+    };
 
 
     public async Task<Response.CategoryResponse> GetCategory(Guid categoryId)
