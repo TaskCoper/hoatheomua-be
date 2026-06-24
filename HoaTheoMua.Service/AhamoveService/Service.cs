@@ -207,7 +207,7 @@ public class Service: IService
         return new { ahamoveResult, productNhanhResult};
     }
     
-    public async Task<BasePaginationResponse> GetServiceDetailsAhaMove(int pageIndex, int pageSize)
+    public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()
     {
         var ahamoveApi = _ahamoveOption.BaseUrl + "/v3/services/SGN-BIKE";
         var ahamoveToken = _ahamoveOption.Token;
@@ -240,24 +240,24 @@ public class Service: IService
             throw new BadRequestException("Ahamove returned null or empty data");
         }
         
-        int totalRequests = getServiceDetailsAhaMove.Requests.Count();
+        // int totalRequests = getServiceDetailsAhaMove.Requests.Count();
+        //
+        // int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        // int actualPageSize = pageSize < 1 ? 10 : pageSize;
+        //
+        // var result = getServiceDetailsAhaMove.Requests
+        //     .Skip((actualPageIndex - 1) * actualPageSize)
+        //     .Take(actualPageSize)
+        //     .ToList();
+        //
+        // var paginationResult = ApiResponseFactory.BasePagination(
+        //     items: result, 
+        //     pageIndex: actualPageIndex, 
+        //     pageSize: actualPageSize, 
+        //     totalCount: totalRequests
+        // );
         
-        int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
-        int actualPageSize = pageSize < 1 ? 10 : pageSize;
-        
-        var result = getServiceDetailsAhaMove.Requests
-            .Skip((actualPageIndex - 1) * actualPageSize)
-            .Take(actualPageSize)
-            .ToList();
-
-        var paginationResult = ApiResponseFactory.BasePagination(
-            items: result, 
-            pageIndex: actualPageIndex, 
-            pageSize: actualPageSize, 
-            totalCount: totalRequests
-        );
-        
-        return paginationResult;
+        return getServiceDetailsAhaMove;
     }
 
     public async Task<DepotResponse> GetDepotDetails(NhanhVnRequest.DepotRequest request)
