@@ -104,23 +104,22 @@ public class Service : IService
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
-        var categoryList = _dbContext.CategoryNewsList
+        var query = _dbContext.CategoryNewsList
             .Where(x => x.IsDeleted == false);
 
         if (keyword != null)
         {
-            categoryList.Where(x => x.Title.Trim().ToLower().Contains(keyword.Trim().ToLower()));
+            var kw = keyword.Trim().ToLower();
+            query = query.Where(x => x.Title.Trim().ToLower().Contains(kw));
         }
-
-        await categoryList.ToListAsync();
-
-        var cateResponse = categoryList.Select(x => new Response.CategoryResponse()
+        
+        var cateResponse = await query.Select(x => new Response.CategoryResponse()
         {
             categoryId = x.Id,
             title = x.Title,
             userId = x.UserId,
             parentId = x.ParentCategoryNewsId,
-        }).ToList();
+        }).ToListAsync();
         
         
         
@@ -146,7 +145,10 @@ public class Service : IService
         
         var count = parentCate.Count;
         
-        var catePageResponse = parentCate.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList();
+        var catePageResponse = parentCate
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
 
         return ApiResponseFactory.BasePagination(
             items: catePageResponse,
