@@ -104,22 +104,20 @@ public class Service : IService
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
-        var query = _dbContext.CategoryNewsList
-            .Where(x => x.IsDeleted == false);
+        // var categoryList = _dbContext.CategoryNewsList
+        //     .Where(x => x.IsDeleted == false);
 
-        if (keyword != null)
-        {
-            var kw = keyword.Trim().ToLower();
-            query = query.Where(x => x.Title.Trim().ToLower().Contains(kw));
-        }
-        
-        var cateResponse = await query.Select(x => new Response.CategoryResponse()
-        {
-            categoryId = x.Id,
-            title = x.Title,
-            userId = x.UserId,
-            parentId = x.ParentCategoryNewsId,
-        }).ToListAsync();
+        // await categoryList.ToListAsync();
+
+        var cateResponse = await _dbContext.CategoryNewsList
+            .Where(x => x.IsDeleted == false)
+            .Select(x => new Response.CategoryResponse()
+            {
+                categoryId = x.Id,
+                title = x.Title,
+                userId = x.UserId,
+                parentId = x.ParentCategoryNewsId,
+            }).ToListAsync();
         
         
         
@@ -143,19 +141,22 @@ public class Service : IService
             }
         }
         
-        var count = parentCate.Count;
+        var response = parentCate;
+        if (keyword != null)
+        {
+            response = parentCate.Where(x =>  x.title.Trim().ToLower().Contains(keyword.Trim().ToLower())).ToList();
+        }
         
-        var catePageResponse = parentCate
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
+        var count = response.Count;
+        var catePageResponse = response.Skip((pageIndex - 1) * pageSize).Take(pageSize);
+        
         return ApiResponseFactory.BasePagination(
-            items: catePageResponse,
+            items: catePageResponse.ToList(),
             pageIndex: pageIndex,
             pageSize: pageSize,
             totalCount: count);
     }
+
 
     public async Task<Response.CategoryResponse> GetCategory(Guid categoryId)
     {
