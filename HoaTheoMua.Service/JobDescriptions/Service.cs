@@ -36,7 +36,6 @@ public class Service : IService
             coverImageUrl = request.coverImageUrl,
             minExperienceYears = request.minExperienceYears,
             maxExperienceYears = request.maxExperienceYears,
-            level = request.level,
             employmentType = request.employmentType,
             salaryMin = request.salaryMin,
             salaryMax = request.salaryMax,
@@ -211,7 +210,6 @@ public class Service : IService
         job.coverImageUrl = request.coverImageUrl;
         job.minExperienceYears = request.minExperienceYears;
         job.maxExperienceYears = request.maxExperienceYears;
-        job.level = request.level;
         job.employmentType = request.employmentType;
         job.salaryMin = request.salaryMin;
         job.salaryMax = request.salaryMax;
@@ -234,11 +232,6 @@ public class Service : IService
             CoverImageUrl = job.coverImageUrl,
             MinExperienceYears = job.minExperienceYears,
             MaxExperienceYears = job.maxExperienceYears,
-            Level  = job.level == LevelJobDescriptions.intern ? "intern"
-                  : job.level == LevelJobDescriptions.fresher ? "fresher"
-                  : job.level == LevelJobDescriptions.junior ? "junior"
-                  : job.level == LevelJobDescriptions.middle ? "middle"
-                  : "senior",
             EmploymentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
             SalaryMin = job.salaryMin,
             SalaryMax = job.salaryMax,
@@ -378,11 +371,6 @@ public class Service : IService
         CoverImageUrl = job.coverImageUrl,
         MinExperienceYears = job.minExperienceYears,
         MaxExperienceYears = job.maxExperienceYears,
-        Level = job.level == LevelJobDescriptions.intern ? "intern"
-              : job.level == LevelJobDescriptions.fresher ? "fresher"
-              : job.level == LevelJobDescriptions.junior ? "junior"
-              : job.level == LevelJobDescriptions.middle ? "middle"
-              : "senior",
         EmploymentType = job.employmentType == EmploymentType.FullTime ? "fullTime" : "partTime",
         SalaryMin = job.salaryMin,
         SalaryMax = job.salaryMax,
