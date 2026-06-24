@@ -59,6 +59,7 @@ public class OrderController : ControllerBase
     }
 
     [HttpPost("/api/v1/orders/nhanh-vn")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetNhanhVnOrders([FromBody] NhanhVnOrderListRequest.OrderListRequest request)
     {
         var result = await _orderService.GetOrderNhanhVn(request);
@@ -66,7 +67,7 @@ public class OrderController : ControllerBase
     }
 
     [HttpPost("/api/v1/orders/shipping-location")]
-    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
     public async Task<IActionResult> GetShippingLocation([FromBody] Request.LocationFilters filter)
     {
         var result = await _orderService.GetShippingLocation(filter);
