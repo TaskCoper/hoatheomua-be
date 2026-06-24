@@ -115,7 +115,7 @@ public class Service : IService
         var key = request.Key.Trim().ToLower();
 
         var query = await _dbContext.Configs
-            .Where(x => x.Id == id && x.Key.Trim().ToLower() != key && !x.IsDeleted)
+            .Where(x => x.Id == id && !x.IsDeleted)
             .FirstOrDefaultAsync();
 
         if (query == null)
@@ -123,6 +123,16 @@ public class Service : IService
             throw new BadRequestException("Id/Key Not Found");
         }
 
+        var isDuplicate = await _dbContext.Configs
+            .AnyAsync(x => 
+                x.Key.Trim().ToLower() == key && 
+                !x.IsDeleted &&
+                x.Id != id);
+        if (isDuplicate)
+        {
+            throw new BadRequestException("DUPLICATE KEY");
+        }
+        
         query.Key = request.Key;
         query.Value = request.Value.GetRawText();
         if (request.IsPublic.HasValue)
