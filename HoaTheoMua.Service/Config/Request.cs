@@ -12,8 +12,7 @@ public class Request
     }
     public class UpdateConfigRequest
     {
-        public required string Key { get; set; }
-        public bool? IsPublic { get; set; }
+        public bool? IsPublic { get; set; } = false;
         public required JsonElement Value { get; set; }
     }
     
