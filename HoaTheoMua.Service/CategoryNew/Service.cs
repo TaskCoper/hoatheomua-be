@@ -134,16 +134,19 @@ public class Service : IService
             totalCount: totalRootCount);
     }
 
-    private static Response.CategoryResponse MapToResponse(CategoryNews x) => new()
+    private static Response.CategoryResponse MapToResponse(CategoryNews x)
     {
-        categoryId = x.Id,
-        title = x.Title,
-        userId = x.UserId,
-        parentId = x.ParentCategoryNewsId,
-        children = x.ChildCategoryNews?
-            .Select(MapToResponse)
-            .ToList() ?? new List<Response.CategoryResponse>()
-    };
+        return new Response.CategoryResponse
+        {
+            categoryId = x.Id,
+            title = x.Title,
+            userId = x.UserId,
+            parentId = x.ParentCategoryNewsId,
+            children = x.ChildCategoryNews?
+                .Select(MapToResponse)
+                .ToList() ?? new List<Response.CategoryResponse>()
+        };
+    }
 
 
     public async Task<Response.CategoryResponse> GetCategory(Guid categoryId)
