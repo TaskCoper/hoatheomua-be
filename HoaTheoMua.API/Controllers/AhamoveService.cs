@@ -22,20 +22,13 @@ public class AhamoveService: ControllerBase
     }
     
     [HttpGet("/api/v1/ahamove/service-details")]
-    public async Task<IActionResult> GetNhanhVnOrders([FromQuery] int pageIndex, int pageSize)
+    public async Task<IActionResult> GetNhanhVnOrders()
     {
-        var result = await _ahamoveService.GetServiceDetailsAhaMove(pageIndex, pageSize);
+        var result = await _ahamoveService.GetServiceDetailsAhaMove();
         //return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
         return Ok(result);
     }
     
-    [HttpPost("/api/v1/nhanhvn/depot")]
-    public async Task<IActionResult> GetNhanhVnDepot([FromBody] NhanhVnRequest.DepotRequest  request)
-    {
-        var result = await _ahamoveService.GetDepotDetails(request);
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
-        // return Ok(result);
-    }
     // [HttpPost("/api/v1/ahamove/orders")]
     // public async Task<IActionResult> CreateOrder([FromBody] Request.CreateOrderRequestAhamove request)
     // {

@@ -5,6 +5,6 @@ namespace HoaTheoMua.Service.AhamoveService;
 public interface IService
 {
     Task<object> EstimateShippingFee(Request.EstimateShippingFeeRequest request); 
-    Task<BasePaginationResponse> GetServiceDetailsAhaMove(int pageIndex, int pageSize);
+    Task<ServiceDetailsResponse> GetServiceDetailsAhaMove();
     Task<DepotResponse> GetDepotDetails(NhanhVnRequest.DepotRequest request);
 }
