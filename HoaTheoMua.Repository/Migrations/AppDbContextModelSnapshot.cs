@@ -574,9 +574,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<int>("employmentType")
                         .HasColumnType("integer");
 
-                    b.Property<int>("level")
-                        .HasColumnType("integer");
-
                     b.Property<string>("location")
                         .IsRequired()
                         .HasMaxLength(500)
