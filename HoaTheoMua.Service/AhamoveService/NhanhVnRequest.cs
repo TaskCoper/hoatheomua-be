@@ -23,4 +23,17 @@ public class NhanhVnRequest
         public Dictionary<string, string>? Sort { get; set; }
         public Dictionary<string, int>? Next { get; set; }
     }
+    
+    public class DepotRequest
+    {
+        [JsonPropertyName("filters")]
+        public DepotFilters Filters { get; set; } = new();
+    }
+
+    public class DepotFilters
+    {
+        [JsonPropertyName("ids")]
+        public List<int> Ids { get; set; } = new();
+    }
+    
 }

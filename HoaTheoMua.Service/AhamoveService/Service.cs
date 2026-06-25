@@ -207,7 +207,7 @@ public class Service: IService
         return new { ahamoveResult, productNhanhResult};
     }
     
-    public async Task<BasePaginationResponse> GetServiceDetailsAhaMove(int pageIndex, int pageSize)
+    public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()
     {
         var ahamoveApi = _ahamoveOption.BaseUrl + "/v3/services/SGN-BIKE";
         var ahamoveToken = _ahamoveOption.Token;
@@ -240,23 +240,70 @@ public class Service: IService
             throw new BadRequestException("Ahamove returned null or empty data");
         }
         
-        int totalRequests = getServiceDetailsAhaMove.Requests.Count();
+        // int totalRequests = getServiceDetailsAhaMove.Requests.Count();
+        //
+        // int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        // int actualPageSize = pageSize < 1 ? 10 : pageSize;
+        //
+        // var result = getServiceDetailsAhaMove.Requests
+        //     .Skip((actualPageIndex - 1) * actualPageSize)
+        //     .Take(actualPageSize)
+        //     .ToList();
+        //
+        // var paginationResult = ApiResponseFactory.BasePagination(
+        //     items: result, 
+        //     pageIndex: actualPageIndex, 
+        //     pageSize: actualPageSize, 
+        //     totalCount: totalRequests
+        // );
         
-        int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
-        int actualPageSize = pageSize < 1 ? 10 : pageSize;
-        
-        var result = getServiceDetailsAhaMove.Requests
-            .Skip((actualPageIndex - 1) * actualPageSize)
-            .Take(actualPageSize)
-            .ToList();
+        return getServiceDetailsAhaMove;
+    }
 
-        var paginationResult = ApiResponseFactory.BasePagination(
-            items: result, 
-            pageIndex: actualPageIndex, 
-            pageSize: actualPageSize, 
-            totalCount: totalRequests
-        );
+    public async Task<DepotResponse> GetDepotDetails(NhanhVnRequest.DepotRequest request)
+    {
+
+        var appId = _nhanhVnOption.AppId;
+        var businessId = _nhanhVnOption.BusinessId;
+        var token = _nhanhVnOption.Token;
+        var nhanhApi = _nhanhVnOption.BaseUrl + "/business/depot?appId=" + appId + "&businessId=" + businessId;  
         
-        return paginationResult;
+        
+        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
+        nhanhHttpRequest.Headers.Add("Authorization", token);
+        nhanhHttpRequest.Content = JsonContent.Create(request);
+        
+        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
+
+        DepotResponse? nhanhProductDepot = null;
+        
+        if (nhanhVnResponse.IsSuccessStatusCode)
+        {
+
+            string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
+
+            // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
+            Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
+
+
+            nhanhProductDepot = await nhanhVnResponse.Content.ReadFromJsonAsync<DepotResponse>();
+        }
+        else
+        {
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
+        }
+
+        if (nhanhProductDepot == null)
+        {
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
+        }
+        
+        if (nhanhProductDepot.Code == 0)
+        {
+            throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
+        }
+
+        return nhanhProductDepot;
     }
 }
