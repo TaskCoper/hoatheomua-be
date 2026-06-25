@@ -15,6 +15,7 @@ using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
 using ProductService = HoaTheoMua.Service.Product;
 using ConfigService = HoaTheoMua.Service.Config;
+using AddressService = HoaTheoMua.Service.Address;
 
 
 
@@ -55,6 +56,7 @@ builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentReques
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>();
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
+builder.Services.AddScoped<AddressService.IService, AddressService.Service>();
 
 
 
