@@ -89,7 +89,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Addresses", (string)null);
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.AuditLog", b =>
@@ -139,7 +139,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AuditLogs", (string)null);
+                    b.ToTable("AuditLogs");
 
                     b.HasData(
                         new
@@ -306,7 +306,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("ParentCategoryNewsId");
 
-                    b.ToTable("CategoryNewsList", (string)null);
+                    b.ToTable("CategoryNewsList");
 
                     b.HasData(
                         new
@@ -425,7 +425,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("CategoryNewsId", "NewsId")
                         .IsUnique();
 
-                    b.ToTable("CategoryNewsDetails", (string)null);
+                    b.ToTable("CategoryNewsDetails");
 
                     b.HasData(
                         new
@@ -559,7 +559,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CompanyAddresses", (string)null);
+                    b.ToTable("CompanyAddresses");
 
                     b.HasData(
                         new
@@ -608,7 +608,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Configs", (string)null);
+                    b.ToTable("Configs");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
@@ -691,7 +691,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("slug")
                         .IsUnique();
 
-                    b.ToTable("JobDescriptions", (string)null);
+                    b.ToTable("JobDescriptions");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.News", b =>
@@ -753,7 +753,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("NewsList", (string)null);
+                    b.ToTable("NewsList");
 
                     b.HasData(
                         new
@@ -984,7 +984,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
@@ -1034,7 +1034,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderDetails", (string)null);
+                    b.ToTable("OrderDetails");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>
@@ -1167,7 +1167,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("Transactions", (string)null);
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>

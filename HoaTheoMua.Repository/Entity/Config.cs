@@ -9,9 +9,8 @@ public class Config: BaseEntity<Guid>, IAuditableEntity
     public required string Key { get; set; }
     [Column(TypeName = "jsonb")]
     public required string Value { get; set; }
-    public string? Group { get; set; } = null!;
     public bool IsPublic { get; set; } = false;
-
+    public string? Group { get; set; }
     // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }
 

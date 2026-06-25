@@ -12,9 +12,10 @@ public class ConfigConfiguration: IEntityTypeConfiguration<Config>
             .HasColumnType("jsonb")
             .IsRequired();
         builder.Property(x => x.Key)
-            .IsRequired()
-            .HasDefaultValue("false");
-
+            .IsRequired();
+        builder.Property(x => x.IsPublic)
+            .HasDefaultValue(false);
+        builder.HasIndex(x => x.Group);
 
     }
 }
