@@ -28,10 +28,11 @@ public class Service: IService
     
     public async Task<ResponseProductList.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
     {
-        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.app_id", 0);
-        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.business_id123123", 0);
-        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.token", "");
-        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/product/list?appId=" + appId + "&businessId=" + businessId;
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var appId = configs.GetInt("nhanhvn.app_id", 0);
+        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
+        var token = configs.GetString("nhanhvn.token", "");
+        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/list?appId=" + appId + "&businessId=" + businessId;
         
         
         
@@ -128,10 +129,11 @@ public class Service: IService
     public async Task<object> GetProductDetails(Request.ProductDetailRequest request)
     {
         
-        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.app_id", 0);
-        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.business_id123123", 0);
-        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.token", "");
-        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/product/detail?appId=" + appId + "&businessId=" + businessId;
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var appId = configs.GetInt("nhanhvn.app_id", 0);
+        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
+        var token = configs.GetString("nhanhvn.token", "");
+        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/detail?appId=" + appId + "&businessId=" + businessId;
         var nhanhProductDetailsRequest = request;
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);

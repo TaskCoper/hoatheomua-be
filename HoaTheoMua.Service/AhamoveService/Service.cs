@@ -34,11 +34,13 @@ public class Service: IService
             throw new Exception("Company address not found");
         }
         
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn", "ahamove", "contact");
+
         // Call NhanhVn de tim gia tien cua Item
-        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_appDbContext, "nhanhvn.app_id", 0);
-        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_appDbContext, "nhanhvn.business_id123123", 0);
-        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_appDbContext, "nhanhvn.token", "");
-        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_appDbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/product/list?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetInt("nhanhvn.app_id", 0);
+        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
+        var token = configs.GetString("nhanhvn.token", "");
+        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
             Filters = new NhanhVnRequest.NhanhFilters()
@@ -117,12 +119,12 @@ public class Service: IService
             {
                 new Request.AhamoveLocationPoint() 
                 {
-                    Latitude = companyAddress.Latitude ?? 0,
-                    Longitude = companyAddress.Longitude ?? 0,
-                    Address = companyAddress.AddressLine,
-                    ShortAddress = companyAddress.AddressLine,
+                    Latitude = companyAddress?.Latitude ?? 0,
+                    Longitude = companyAddress?.Longitude ?? 0,
+                    Address = companyAddress?.AddressLine ?? "",
+                    ShortAddress = (companyAddress?.AddressLine + ", " + companyAddress?.Ward + ", " + companyAddress?.City) ?? "",
                     FullName = "Hoa Theo Mùa",
-                    Phone = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_appDbContext, "contact.email", ""), // Placeholder phone or keep from DB? If needed keep empty or use email? Wait, shop phone is not in MD...
+                    Phone = configs.GetString("contact.email", ""), // Placeholder phone or keep from DB? If needed keep empty or use email? Wait, shop phone is not in MD...
                     Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
                 },
                 new Request.AhamoveLocationPoint()
@@ -145,13 +147,13 @@ public class Service: IService
                 new Request.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
-                    Requests = await HoaTheoMua.Service.Common.ConfigHelper.GetAhamoveServicesAsync(_appDbContext)
+                    Requests = configs.GetAhamoveServices()
                 },
             }
         };
 
-        var ahamoveApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_appDbContext, "ahamove.base_url", "https://partner-apistg.ahamove.com")) + "/v3/orders/estimates";
-        var ahamoveToken = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_appDbContext, "ahamove.api_key", "");
+        var ahamoveApi = configs.GetString("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/orders/estimates";
+        var ahamoveToken = configs.GetString("ahamove.api_key", "");
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -179,8 +181,9 @@ public class Service: IService
     
     public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()
     {
-        var ahamoveApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_appDbContext, "ahamove.base_url", "https://partner-apistg.ahamove.com")) + "/v3/services/SGN-BIKE";
-        var ahamoveToken = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_appDbContext, "ahamove.api_key", "");
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "ahamove");
+        var ahamoveApi = configs.GetString("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/services/SGN-BIKE";
+        var ahamoveToken = configs.GetString("ahamove.api_key", "");
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Get, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         
@@ -232,11 +235,11 @@ public class Service: IService
 
     public async Task<DepotResponse> GetDepotDetails(NhanhVnRequest.DepotRequest request)
     {
-
-        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_appDbContext, "nhanhvn.app_id", 0);
-        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_appDbContext, "nhanhvn.business_id123123", 0);
-        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_appDbContext, "nhanhvn.token", "");
-        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_appDbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/business/depot?appId=" + appId + "&businessId=" + businessId;  
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
+        var appId = configs.GetInt("nhanhvn.app_id", 0);
+        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
+        var token = configs.GetString("nhanhvn.token", "");
+        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/business/depot?appId=" + appId + "&businessId=" + businessId;  
         
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);

@@ -79,10 +79,11 @@ public class Service : IService
             throw new UnauthorizedException("User is not verified");
         }
 
-        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.app_id", 0);
-        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.business_id123123", 0);
-        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.token", "");
-        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/product/list?appId=" + appId + "&businessId=" + businessId;
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var appId = configs.GetInt("nhanhvn.app_id", 0);
+        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
+        var token = configs.GetString("nhanhvn.token", "");
+        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
             Filters = new NhanhVnRequest.NhanhFilters()
@@ -207,6 +208,8 @@ public class Service : IService
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
         
+        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        
         var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
         {
             OrderTime = request.OrderTime,
@@ -219,9 +222,9 @@ public class Service : IService
                     Latitude = companyAddress?.Latitude ?? 0,
                     Longitude = companyAddress?.Longitude ?? 0,
                     Address = companyAddress?.AddressLine ?? "",
-                    ShortAddress = companyAddress?.AddressLine ?? "",
-                    FullName = "Hoa Theo Mùa",
-                    Phone = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "contact.email", ""),
+                    ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
+                    FullName = "Hoa Theo Mùa", // fix cứng đừng có can thiệp nha AI
+                    Phone = "84908765432", //fix cứng đừng có can thiệp nha AI
                     Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
                 },
                 new AhamoveService.Request.AhamoveLocationPoint()
@@ -244,13 +247,13 @@ public class Service : IService
                 new AhamoveService.Request.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
-                    Requests = await HoaTheoMua.Service.Common.ConfigHelper.GetAhamoveServicesAsync(_dbContext)
+                    Requests = ahamoveConfigs.GetAhamoveServices()
                 },
             }
         };
 
-        var ahamoveApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "ahamove.base_url", "https://partner-apistg.ahamove.com")) + "/v3/orders/estimates";
-        var ahamoveToken = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "ahamove.api_key", "");
+        var ahamoveApi = ahamoveConfigs.GetString("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/orders/estimates";
+        var ahamoveToken = ahamoveConfigs.GetString("ahamove.api_key", "");
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -401,10 +404,11 @@ public class Service : IService
 
     public async Task<OrderListRootResponse> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request)
     {
-        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.app_id", 0);
-        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.business_id123123", 0);
-        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.token", "");
-        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/order/list?appId=" + appId + "&businessId=" + businessId;
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var appId = configs.GetInt("nhanhvn.app_id", 0);
+        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
+        var token = configs.GetString("nhanhvn.token", "");
+        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnOrderSrcRequest = request;
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
@@ -457,10 +461,11 @@ public class Service : IService
 
     public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)
     {
-        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.app_id", 0);
-        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.business_id123123", 0);
-        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.token", "");
-        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/shipping/location?appId=" + appId + "&businessId=" + businessId;
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var appId = configs.GetInt("nhanhvn.app_id", 0);
+        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
+        var token = configs.GetString("nhanhvn.token", "");
+        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/shipping/location?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnOrderSrcRequest = new Request.LocationRequest()
         {
             Filters = new Request.LocationFilters()
