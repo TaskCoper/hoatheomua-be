@@ -112,23 +112,24 @@ public class Service : IService
         Guid id,
         Request.UpdateConfigRequest request)
     {
-        var key = request.Key.Trim().ToLower();
-
         var query = await _dbContext.Configs
-            .Where(x => x.Id == id && x.Key.Trim().ToLower() != key && !x.IsDeleted)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
         if (query == null)
         {
             throw new BadRequestException("Id/Key Not Found");
         }
 
-        query.Key = request.Key;
-        query.Value = request.Value.GetRawText();
-        if (request.IsPublic.HasValue)
+        if (request.IsPublic != null)
         {
-            query.IsPublic = request.IsPublic.GetValueOrDefault();
+            query.IsPublic = request.IsPublic.Value;
         }
+        
+        query.Value = request.Value.GetRawText();
+        // if (request.IsPublic.HasValue)
+        // {
+        //     query.IsPublic = request.IsPublic.GetValueOrDefault();
+        // }
 
         // await _dbContext.Configs.AddAsync(query);
         _dbContext.Configs.Update(query);

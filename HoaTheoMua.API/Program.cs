@@ -15,7 +15,8 @@ using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
 using ProductService = HoaTheoMua.Service.Product;
 using ConfigService = HoaTheoMua.Service.Config;
-
+using AddressService = HoaTheoMua.Service.Address;
+using NhanhVnService = HoaTheoMua.Service.NhanhVnService;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,14 +31,14 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
 
-        var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
-        var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
-        dataSourceBuilder.EnableDynamicJson();
-        var dataSource = dataSourceBuilder.Build();
+var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
+var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
+dataSourceBuilder.EnableDynamicJson();
+var dataSource = dataSourceBuilder.Build();
 
-        builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(dataSource)
-        );
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(dataSource)
+);
 
 builder.Services.ConfigureRateLimiter();
 builder.Services.AddJwtServices(builder.Configuration);
@@ -55,6 +56,8 @@ builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentReques
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>();
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
+builder.Services.AddScoped<AddressService.IService, AddressService.Service>();
+builder.Services.AddScoped<NhanhVnService.IService, NhanhVnService.Service>();
 
 
 

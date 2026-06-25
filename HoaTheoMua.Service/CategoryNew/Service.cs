@@ -103,25 +103,16 @@ public class Service : IService
         
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
-
-        var categoryList = _dbContext.CategoryNewsList
-            .Where(x => x.IsDeleted == false);
-
-        if (keyword != null)
-        {
-            categoryList.Where(x => x.Title.Trim().ToLower().Contains(keyword.Trim().ToLower()));
-        }
-
-        await categoryList.ToListAsync();
-
-        var cateResponse = categoryList.Select(x => new Response.CategoryResponse()
-        {
-            categoryId = x.Id,
-            title = x.Title,
-            userId = x.UserId,
-            parentId = x.ParentCategoryNewsId,
-        }).ToList();
         
+        var cateResponse = await _dbContext.CategoryNewsList
+            .Where(x => x.IsDeleted == false)
+            .Select(x => new Response.CategoryResponse()
+            {
+                categoryId = x.Id,
+                title = x.Title,
+                userId = x.UserId,
+                parentId = x.ParentCategoryNewsId,
+            }).ToListAsync();
         
         
         var listCateId = cateResponse.ToDictionary(x => x.categoryId);
@@ -144,9 +135,18 @@ public class Service : IService
             }
         }
         
+        if (keyword != null)
+        {
+            var kw = keyword.Trim().ToLower();
+            parentCate = parentCate.Where(x => x.title.Trim().ToLower().Contains(kw)).ToList();
+        }
+        
         var count = parentCate.Count;
         
-        var catePageResponse = parentCate.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList();
+        var catePageResponse = parentCate
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
 
         return ApiResponseFactory.BasePagination(
             items: catePageResponse,

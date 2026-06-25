@@ -296,3 +296,85 @@ public class NhanhAttribute
     [JsonPropertyName("codeOther")]
     public string CodeOther { get; set; }
 }
+
+/////////////
+public class DepotResponse
+{
+    [JsonPropertyName("code")]
+    public int Code { get; set; }
+
+    [JsonPropertyName("paginator")]
+    public Paginator? Paginator { get; set; }
+
+    [JsonPropertyName("data")]
+    public List<DepotData> Data { get; set; } = new();
+}
+
+public class Paginator
+{
+    [JsonPropertyName("next")]
+    public string? Next { get; set; }
+}
+
+public class DepotData
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("code")]
+    public string Code { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("mobile")]
+    public string? Mobile { get; set; }
+
+    [JsonPropertyName("location")]
+    public Location Location { get; set; } = new();
+
+    [JsonPropertyName("locationV2")]
+    public LocationV2 LocationV2 { get; set; } = new();
+}
+
+public class Location
+{
+    [JsonPropertyName("cityId")]
+    public int CityId { get; set; }
+
+    [JsonPropertyName("cityName")]
+    public string? CityName { get; set; }
+
+    [JsonPropertyName("districtId")]
+    public int DistrictId { get; set; }
+
+    [JsonPropertyName("districtName")]
+    public string? DistrictName { get; set; }
+
+    [JsonPropertyName("wardId")]
+    public int WardId { get; set; }
+
+    [JsonPropertyName("wardName")]
+    public string? WardName { get; set; }
+
+    [JsonPropertyName("address")]
+    public string? Address { get; set; }
+}
+
+public class LocationV2
+{
+    [JsonPropertyName("cityId")]
+    public int CityId { get; set; }
+
+    [JsonPropertyName("cityName")]
+    public string? CityName { get; set; } // Cho phép null vì Postman thực tế không trả về trường này
+
+    [JsonPropertyName("wardId")]
+    public int WardId { get; set; }
+
+    [JsonPropertyName("wardName")]
+    public string? WardName { get; set; } // Cho phép null vì Postman thực tế không trả về trường này
+
+    [JsonPropertyName("address")]
+    public string? Address { get; set; }
+}
