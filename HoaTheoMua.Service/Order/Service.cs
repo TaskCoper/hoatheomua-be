@@ -17,21 +17,17 @@ namespace HoaTheoMua.Service.Order;
 public class Service : IService
 {
     private readonly AppDbContext _dbContext;
-    private readonly NhanhVnOption _nhanhVnOption = new();
-    private readonly AhamoveOption _ahamoveAhamoveOption = new();
     private readonly ICurrentUserService _currentUser;
     private readonly HttpClient _httpClient;
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
-        IConfiguration configuration, HttpClient httpClient
+        HttpClient httpClient
         , HoaTheoMua.Service.Product.IService serviceProduct)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
-        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
-        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveAhamoveOption);
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
     }
@@ -83,10 +79,10 @@ public class Service : IService
             throw new UnauthorizedException("User is not verified");
         }
 
-        var appId = _nhanhVnOption.AppId;
-        var businessId = _nhanhVnOption.BusinessId;
-        var token = _nhanhVnOption.Token;
-        var nhanhApi = _nhanhVnOption.BaseUrl + "/product/list?appId=" + appId + "&businessId=" + businessId;
+        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.app_id", 0);
+        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.business_id123123", 0);
+        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.token", "");
+        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/product/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
             Filters = new NhanhVnRequest.NhanhFilters()
@@ -207,6 +203,10 @@ public class Service : IService
             }
         ).ToList();
 
+        var companyAddress = await _dbContext.CompanyAddresses
+            .Where(x => x.IsDeleted == false)
+            .FirstOrDefaultAsync();
+        
         var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
         {
             OrderTime = request.OrderTime,
@@ -216,19 +216,12 @@ public class Service : IService
             {
                 new AhamoveService.Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
                 {
-                    // Latitude = companyAddress.Latitude ?? 0,
-                    // Longitude = companyAddress.Longitude ?? 0,
-                    // Address = companyAddress.AddressLine,
-                    // ShortAddress = "",
-                    // FullName = "",
-                    // Phone = "",
-                    // Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
-                    Latitude = (decimal)10.8055952,
-                    Longitude = (decimal)106.6776989,
-                    Address = "Số 13A Đào Duy Anh, Phường 9, Phường Phú Nhuận, Thành phố Hồ Chí Minh",
-                    ShortAddress = "Số 13A Đào Duy Anh, Phường 9, Phường Phú Nhuận, Thành phố Hồ Chí Minh",
+                    Latitude = companyAddress?.Latitude ?? 0,
+                    Longitude = companyAddress?.Longitude ?? 0,
+                    Address = companyAddress?.AddressLine ?? "",
+                    ShortAddress = companyAddress?.AddressLine ?? "",
                     FullName = "Hoa Theo Mùa",
-                    Phone = "84908765432",
+                    Phone = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "contact.email", ""),
                     Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
                 },
                 new AhamoveService.Request.AhamoveLocationPoint()
@@ -251,32 +244,13 @@ public class Service : IService
                 new AhamoveService.Request.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
-                    Requests = new List<AhamoveService.Request.ItemsRequest>()
-                    {
-                        new AhamoveService.Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-SMS",
-                        },
-                        new AhamoveService.Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-D2D",
-                        },
-                        new AhamoveService.Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-FRAGILE",
-                        },
-                        new AhamoveService.Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-BULKY",
-                            TierCode = "TIER_2"
-                        },
-                    }
+                    Requests = await HoaTheoMua.Service.Common.ConfigHelper.GetAhamoveServicesAsync(_dbContext)
                 },
             }
         };
 
-        var ahamoveApi = _ahamoveAhamoveOption.BaseUrl + "/v3/orders/estimates";
-        var ahamoveToken = _ahamoveAhamoveOption.Token;
+        var ahamoveApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "ahamove.base_url", "https://partner-apistg.ahamove.com")) + "/v3/orders/estimates";
+        var ahamoveToken = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "ahamove.api_key", "");
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -427,10 +401,10 @@ public class Service : IService
 
     public async Task<OrderListRootResponse> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request)
     {
-        var appId = _nhanhVnOption.AppId;
-        var businessId = _nhanhVnOption.BusinessId;
-        var token = _nhanhVnOption.Token;
-        var nhanhApi = _nhanhVnOption.BaseUrl + "/order/list?appId=" + appId + "&businessId=" + businessId;
+        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.app_id", 0);
+        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.business_id123123", 0);
+        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.token", "");
+        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/order/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnOrderSrcRequest = request;
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
@@ -483,10 +457,10 @@ public class Service : IService
 
     public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)
     {
-        var appId = _nhanhVnOption.AppId;
-        var businessId = _nhanhVnOption.BusinessId;
-        var token = _nhanhVnOption.Token;
-        var nhanhApi = _nhanhVnOption.BaseUrl + "/shipping/location?appId=" + appId + "&businessId=" + businessId;
+        var appId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.app_id", 0);
+        var businessId = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigIntAsync(_dbContext, "nhanhvn.business_id123123", 0);
+        var token = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.token", "");
+        var nhanhApi = (await HoaTheoMua.Service.Common.ConfigHelper.GetConfigStringAsync(_dbContext, "nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0")) + "/shipping/location?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnOrderSrcRequest = new Request.LocationRequest()
         {
             Filters = new Request.LocationFilters()
