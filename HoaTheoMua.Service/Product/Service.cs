@@ -29,10 +29,10 @@ public class Service: IService
     public async Task<ResponseProductList.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var appId = configs.GetInt("nhanhvn.app_id", 0);
-        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
-        var token = configs.GetString("nhanhvn.token", "");
-        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/list?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/list?appId=" + appId + "&businessId=" + businessId;
         
         
         
@@ -126,14 +126,14 @@ public class Service: IService
         
     }
 
-    public async Task<object> GetProductDetails(Request.ProductDetailRequest request)
+    public async Task<ResponseProductDetails.NhanhVnProductDetailResponse> GetProductDetails(Request.ProductDetailRequest request)
     {
         
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var appId = configs.GetInt("nhanhvn.app_id", 0);
-        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
-        var token = configs.GetString("nhanhvn.token", "");
-        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/detail?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/detail?appId=" + appId + "&businessId=" + businessId;
         var nhanhProductDetailsRequest = request;
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);

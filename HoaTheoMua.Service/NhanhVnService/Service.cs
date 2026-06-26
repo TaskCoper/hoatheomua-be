@@ -20,10 +20,10 @@ public class Service: IService
     public async Task<OrderLabelResponse> GetOrderLabel(OrderLabelRequest orderLabelRequest)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
-        var appId = configs.GetInt("nhanhvn.app_id", 0);
-        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
-        var token = configs.GetString("nhanhvn.token", "");
-        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/tags?appId=" + appId + "&businessId=" + businessId;  
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/tags?appId=" + appId + "&businessId=" + businessId;  
         
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
@@ -67,10 +67,10 @@ public class Service: IService
     public async Task<OrderSourceResponse> GetOrderSource(OrderSourceRequest orderSourceRequest)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
-        var appId = configs.GetInt("nhanhvn.app_id", 0);
-        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
-        var token = configs.GetString("nhanhvn.token", "");
-        var nhanhApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/source?appId=" + appId + "&businessId=" + businessId;  
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/source?appId=" + appId + "&businessId=" + businessId;  
         
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);

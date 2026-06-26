@@ -143,7 +143,10 @@ public partial class Service : IService
         decimal itemAmount = 0;
         decimal shippingFee = 0;
 
-
+        if (order.TotalFee != request.TransferAmount)
+        {
+            throw new ConflictException("Transfer amount must be equal to transfer amount");
+        }
         order.Status = "Paid";
 
         //  var newOrders = await AhaMoveCreateOrder();
@@ -172,11 +175,12 @@ public partial class Service : IService
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
 
-        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove", "contact");
+        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
 
         var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
         {
-            OrderTime = 0,
+            OrderTime = order.OrderTime,
+            IdleUntil = order.OrderTime > 0 ? order.OrderTime : 0,
             Paths = new List<AhamoveService.Request.AhamoveLocationPoint>()
             {
                 new AhamoveService.Request.AhamoveLocationPoint() 
@@ -186,7 +190,7 @@ public partial class Service : IService
                     Address = companyAddress?.AddressLine ?? "",
                     ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
                     FullName = "Hoa Theo Mùa",
-                    Phone = ahamoveConfigs.GetString("contact.email", ""),
+                    Phone = "84908765432",
                     Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
                 },
                 new AhamoveService.Request.AhamoveLocationPoint()
@@ -208,8 +212,8 @@ public partial class Service : IService
             PackageDetail = packageDetailRequest,
         };
 
-        var ahamoveApi = ahamoveConfigs.GetString("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/orders";
-        var ahamoveToken = ahamoveConfigs.GetString("ahamove.api_key", "");
+        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/orders";
+        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", "");
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -369,10 +373,10 @@ public partial class Service : IService
         };
         
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var appId = configs.GetInt("nhanhvn.app_id", 0);
-        var businessId = configs.GetInt("nhanhvn.business_id123123", 0);
-        var token = configs.GetString("nhanhvn.token", "");
-        var createNhanhOrderApi = configs.GetString("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/add?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var createNhanhOrderApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/add?appId=" + appId + "&businessId=" + businessId;
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, createNhanhOrderApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);

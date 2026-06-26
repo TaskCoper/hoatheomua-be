@@ -29,23 +29,35 @@ public class GroupConfig
         }
     }
 
-    public string GetString(string key, string defaultValue = "")
+    public T? GetValue<T>(string key,  T? defaultValue = default)
     {
-        if (_configs.TryGetValue(key, out var val) && val.ValueKind == JsonValueKind.String)
+        if (_configs.TryGetValue(key, out var val))
         {
-            return val.GetString() ?? defaultValue;
+            try
+            {
+                // if (typeof(T) == typeof(string))
+                // {
+                //     if (val.ValueKind == JsonValueKind.String)
+                //         return (T)(object)(val.GetString() ?? string.Empty);
+                //     
+                //     return (T)(object)val.ToString();
+                // }
+
+                var deserialized = JsonSerializer.Deserialize<T>(val.GetRawText());
+                if (deserialized != null)
+                {
+                    return deserialized;
+                }
+            }
+            catch
+            {
+                throw  new ArgumentException("Config value could not be parsed");
+            }
         }
         return defaultValue;
     }
 
-    public int GetInt(string key, int defaultValue = 0)
-    {
-        if (_configs.TryGetValue(key, out var val) && val.ValueKind == JsonValueKind.Number)
-        {
-            return val.GetInt32();
-        }
-        return defaultValue;
-    }
+
     
     public List<Request.ItemsRequest> GetAhamoveServices()
     {
