@@ -586,11 +586,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Group")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsPublic")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Key")
                         .IsRequired()
@@ -607,6 +613,8 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("jsonb");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Group");
 
                     b.ToTable("Configs");
                 });
@@ -641,9 +649,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("text");
 
                     b.Property<int>("employmentType")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("level")
                         .HasColumnType("integer");
 
                     b.Property<string>("location")
