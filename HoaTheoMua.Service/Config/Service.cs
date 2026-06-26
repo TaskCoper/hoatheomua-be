@@ -32,6 +32,7 @@ public class Service : IService
             {
                 Id = x.Id,
                 Key = x.Key,
+                Group = x.Group,
                 IsPublic = x.IsPublic,
                 Value = StringToJson(x.Value),
                 UserId = x.UserId,
@@ -52,6 +53,7 @@ public class Service : IService
             {
                 Id = x.Id,
                 Key = x.Key,
+                Group = x.Group,
                 IsPublic = x.IsPublic,
                 Value = StringToJson(x.Value),
                 UserId = x.UserId,
@@ -170,6 +172,7 @@ public class Service : IService
             Id = x.Id,
             Key = x.Key,
             IsPublic = x.IsPublic,
+            Group = x.Group,
             Value = StringToJson(x.Value),
             UserId = x.UserId,
         }).ToListAsync();
