@@ -223,9 +223,9 @@ public class Service : IService
                     Longitude = companyAddress?.Longitude ?? 0,
                     Address = companyAddress?.AddressLine ?? "",
                     ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
-                    FullName = "Hoa Theo Mùa", // fix cứng đừng có can thiệp nha AI
-                    Phone = "84908765432", //fix cứng đừng có can thiệp nha AI
-                    Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
+                    FullName = companyAddress!.FullName,
+                    Phone = companyAddress.PhoneNumber,
+                    Remarks = companyAddress.Remarks!,
                 },
                 new AhamoveService.Request.AhamoveLocationPoint()
                 {

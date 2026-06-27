@@ -24,6 +24,9 @@ public class Service : IService
                 AddressLine = x.AddressLine,
                 Ward = x.Ward,
                 City = x.City,
+                Phone = x.PhoneNumber,
+                FullName = x.FullName,
+                Remarks = x.Remarks!,
                 Country = x.Country,
                 Latitude = x.Latitude,
                 Longitude = x.Longitude,
@@ -50,15 +53,23 @@ public class Service : IService
                 Id = x.Id,
                 AddressLine = x.AddressLine,
                 Ward = x.Ward,
-                MapId = x.MapId,
                 City = x.City,
+                Phone = x.PhoneNumber,
+                FullName = x.FullName,
+                Remarks = x.Remarks!,
                 Country = x.Country,
                 Latitude = x.Latitude,
                 Longitude = x.Longitude,
                 CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt
+                UpdatedAt = x.UpdatedAt,
+                MapId = x.MapId,
             })
             .FirstOrDefaultAsync();
+            
+        if (result ==  null)
+        {
+            throw new BadRequestException("Id địa chỉ công ty không hợp lệ");
+        }
 
         return result;
     }
@@ -86,6 +97,9 @@ public class Service : IService
                 MapId = request.MapId?.Trim(),
                 City = request.City.Trim(),
                 Country = request.Country.Trim(),
+                FullName = request.FullName.Trim(),
+                PhoneNumber = request.Phone,
+                Remarks = request.Remarks,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -103,6 +117,9 @@ public class Service : IService
                 Id = companyAddress.Id,
                 AddressLine = companyAddress.AddressLine,
                 Ward = companyAddress.Ward,
+                Phone = companyAddress.PhoneNumber,
+                FullName = companyAddress.FullName,
+                Remarks = companyAddress.Remarks!,
                 MapId = companyAddress.MapId,
                 City = companyAddress.City,
                 Country = companyAddress.Country,
@@ -123,10 +140,6 @@ public class Service : IService
         Guid id,
         Request.UpdateCompanyAddressRequest request)
     {
-        if (id == Guid.Empty)
-        {
-            throw new BadRequestException("Id địa chỉ công ty không hợp lệ");
-        }
 
         var companyAddress = await _dbContext.CompanyAddresses
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
@@ -141,10 +154,13 @@ public class Service : IService
         try
         {
             companyAddress.AddressLine = request.AddressLine.Trim();
-            companyAddress.Ward = request.Ward?.Trim();
-            companyAddress.MapId = request.MapId?.Trim();
+            companyAddress.Ward = request.Ward.Trim();
+            companyAddress.MapId = request.MapId.Trim();
             companyAddress.City = request.City.Trim();
             companyAddress.Country = request.Country.Trim();
+            companyAddress.FullName = request.FullName.Trim();
+            companyAddress.Remarks = request.Remarks!.Trim();
+            companyAddress.PhoneNumber = request.Phone;
             companyAddress.Latitude = request.Latitude;
             companyAddress.Longitude = request.Longitude;
             companyAddress.UpdatedAt = DateTimeOffset.UtcNow;
