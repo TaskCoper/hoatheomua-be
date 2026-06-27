@@ -66,4 +66,11 @@ public class ConfigController : ControllerBase
         var result = await _configService.GetConfigIsPublic();
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
+    
+    [HttpGet("group")]
+    public async Task<IActionResult> GetConfigGroups([FromQuery] string groupName)
+    {
+        var result = await _configService.GetConfigGroups(groupName);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
 }

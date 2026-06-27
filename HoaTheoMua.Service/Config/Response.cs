@@ -13,4 +13,10 @@ public class Response
         public required JsonElement Value { get; set; }
         public  Guid UserId { get; set; }
     }
+
+    public class ConfigGroupResponse
+    {
+        public required string Key { get; set; }
+        public required JsonElement Value { get; set; }
+    }
 }
