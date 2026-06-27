@@ -8,6 +8,9 @@ public class CompanyAddress: BaseEntity<Guid>, IAuditableEntity
     public string? Ward { get; set; }// Phường, Xã
     public required string City { get; set; } // Tỉnh/ Thành Phố
     public required string Country { get; set; }
+    public required string FullName { get; set; } 
+    public required string PhoneNumber { get; set; }
+    public  string? Remarks { get; set; }
     
     public string? MapId{get; set;}
     

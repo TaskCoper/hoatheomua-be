@@ -9,7 +9,10 @@ public class Response
         public required string AddressLine { get; set; }
 
         public string? Ward { get; set; }
-
+        
+        public required string Phone { get; set; }
+        public required string Remarks { get; set; }
+        public required string FullName { get; set; }
 
         public required string City { get; set; }
 
