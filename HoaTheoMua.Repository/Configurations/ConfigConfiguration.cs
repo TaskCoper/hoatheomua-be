@@ -16,6 +16,8 @@ public class ConfigConfiguration: IEntityTypeConfiguration<Config>
         builder.Property(x => x.IsPublic)
             .HasDefaultValue(false);
         builder.HasIndex(x => x.Group);
+        builder.Property(x => x.Group)
+            .IsRequired();
 
     }
 }

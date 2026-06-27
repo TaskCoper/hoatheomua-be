@@ -32,6 +32,7 @@ public class Service : IService
             {
                 Id = x.Id,
                 Key = x.Key,
+                Group = x.Group,
                 IsPublic = x.IsPublic,
                 Value = StringToJson(x.Value),
                 UserId = x.UserId,
@@ -52,6 +53,7 @@ public class Service : IService
             {
                 Id = x.Id,
                 Key = x.Key,
+                Group = x.Group,
                 IsPublic = x.IsPublic,
                 Value = StringToJson(x.Value),
                 UserId = x.UserId,
@@ -85,8 +87,9 @@ public class Service : IService
         {
 
             Key = key,
+            Group =  request.Group,
             Value = request.Value.GetRawText(),
-            IsPublic = true,
+            IsPublic = false,
             UserId = userId,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = null,
@@ -100,6 +103,7 @@ public class Service : IService
         {
             Id = result.Id,
             Key = result.Key,
+            Group = result.Group,
             IsPublic = result.IsPublic,
             Value = StringToJson(result.Value),
             UserId = result.UserId,
@@ -124,7 +128,11 @@ public class Service : IService
         {
             query.IsPublic = request.IsPublic.Value;
         }
-        
+
+        if (request.Group != null)
+        {
+            query.Group = request.Group;
+        }
         query.Value = request.Value.GetRawText();
         // if (request.IsPublic.HasValue)
         // {
@@ -164,6 +172,7 @@ public class Service : IService
             Id = x.Id,
             Key = x.Key,
             IsPublic = x.IsPublic,
+            Group = x.Group,
             Value = StringToJson(x.Value),
             UserId = x.UserId,
         }).ToListAsync();

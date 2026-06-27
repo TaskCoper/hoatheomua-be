@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
@@ -13,15 +13,11 @@ namespace HoaTheoMua.Service.AhamoveService;
 public class Service: IService
 {
     private readonly HttpClient _httpClient;
-    private readonly AhamoveOption _ahamoveOption = new();
-    private readonly NhanhVnOption _nhanhVnOption = new();
     private readonly AppDbContext _appDbContext;
 
-    public Service(HttpClient httpClient, IConfiguration configuration,  AppDbContext appDbContext)
+    public Service(HttpClient httpClient, AppDbContext appDbContext)
     {
         _httpClient = httpClient;
-        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
-        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         _appDbContext = appDbContext;
     }
 
@@ -29,20 +25,22 @@ public class Service: IService
     public async Task<object> EstimateShippingFee(Request.EstimateShippingFeeRequest request)
     {
         // Call DB Tim Address cua Shop
-        // var companyAddress = await _appDbContext.CompanyAddresses
-        //     .Where(x => x.IsDeleted == false)
-        //     .FirstOrDefaultAsync();
+        var companyAddress = await _appDbContext.CompanyAddresses
+            .Where(x => x.IsDeleted == false)
+            .FirstOrDefaultAsync();
         
-        // if (companyAddress == null)
-        // {
-        //     throw new Exception("Company address not found");
-        // }
+        if (companyAddress == null)
+        {
+            throw new Exception("Company address not found");
+        }
         
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn", "ahamove", "contact");
+
         // Call NhanhVn de tim gia tien cua Item
-        var appId = _nhanhVnOption.AppId;
-        var businessId = _nhanhVnOption.BusinessId;
-        var token = _nhanhVnOption.Token;
-        var nhanhApi = _nhanhVnOption.BaseUrl + "/product/list?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
             Filters = new NhanhVnRequest.NhanhFilters()
@@ -119,19 +117,12 @@ public class Service: IService
             IdleUntil = request.OrderTime > 0 ? request.OrderTime : null,
             Paths = new List<Request.AhamoveLocationPoint>()
             {
-                new Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
+                new Request.AhamoveLocationPoint() 
                 {
-                    // Latitude = companyAddress.Latitude ?? 0,
-                    // Longitude = companyAddress.Longitude ?? 0,
-                    // Address = companyAddress.AddressLine,
-                    // ShortAddress = "",
-                    // FullName = "",
-                    // Phone = "",
-                    // Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
-                    Latitude = (decimal)10.8055952,
-                    Longitude = (decimal)106.6776989,
-                    Address = "Số 13A Đào Duy Anh, Phường 9, Phường Phú Nhuận, Thành phố Hồ Chí Minh",
-                    ShortAddress = "Số 13A Đào Duy Anh, Phường 9, Phường Phú Nhuận, Thành phố Hồ Chí Minh",
+                    Latitude = companyAddress?.Latitude ?? 0,
+                    Longitude = companyAddress?.Longitude ?? 0,
+                    Address = companyAddress?.AddressLine ?? "",
+                    ShortAddress = (companyAddress?.AddressLine + ", " + companyAddress?.Ward + ", " + companyAddress?.City) ?? "",
                     FullName = "Hoa Theo Mùa",
                     Phone = "84908765432",
                     Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
@@ -156,32 +147,13 @@ public class Service: IService
                 new Request.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
-                    Requests = new List<Request.ItemsRequest>()
-                    {
-                        new Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-SMS",
-                        },
-                        new Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-D2D",
-                        },
-                        new Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-FRAGILE",
-                        },
-                        new Request.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-BULKY",
-                            TierCode = "TIER_2"
-                        },
-                    }
+                    Requests = configs.GetAhamoveServices()
                 },
             }
         };
 
-        var ahamoveApi =  _ahamoveOption.BaseUrl+"/v3/orders/estimates";
-        var ahamoveToken = _ahamoveOption.Token;
+        var ahamoveApi = configs.GetValue("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/orders/estimates";
+        var ahamoveToken = configs.GetValue("ahamove.api_key", "");
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -209,8 +181,9 @@ public class Service: IService
     
     public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()
     {
-        var ahamoveApi = _ahamoveOption.BaseUrl + "/v3/services/SGN-BIKE";
-        var ahamoveToken = _ahamoveOption.Token;
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "ahamove");
+        var ahamoveApi = configs.GetValue("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/services/SGN-BIKE";
+        var ahamoveToken = configs.GetValue("ahamove.api_key", "");
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Get, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         
@@ -262,11 +235,11 @@ public class Service: IService
 
     public async Task<DepotResponse> GetDepotDetails(NhanhVnRequest.DepotRequest request)
     {
-
-        var appId = _nhanhVnOption.AppId;
-        var businessId = _nhanhVnOption.BusinessId;
-        var token = _nhanhVnOption.Token;
-        var nhanhApi = _nhanhVnOption.BaseUrl + "/business/depot?appId=" + appId + "&businessId=" + businessId;  
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/business/depot?appId=" + appId + "&businessId=" + businessId;  
         
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);

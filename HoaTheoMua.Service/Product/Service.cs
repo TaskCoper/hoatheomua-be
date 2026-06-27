@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
@@ -14,28 +14,25 @@ namespace HoaTheoMua.Service.Product;
 public class Service: IService
 {
     private readonly AppDbContext _dbContext;
-    private readonly NhanhVnOption _nhanhVnOption = new();
-    private readonly AhamoveOption _ahamoveAhamoveOption = new();
     private readonly IHttpContextAccessor _httpContext;
     private readonly HttpClient _httpClient;
 
     public Service(AppDbContext dbContext, 
         IHttpContextAccessor httpContext, 
-        IConfiguration configuration, HttpClient httpClient)
+        HttpClient httpClient)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
-        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
-        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveAhamoveOption);
         _httpClient = httpClient;
     }
     
     public async Task<ResponseProductList.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
     {
-        var appId = _nhanhVnOption.AppId;
-        var businessId = _nhanhVnOption.BusinessId;
-        var token = _nhanhVnOption.Token;
-        var nhanhApi = _nhanhVnOption.BaseUrl + "/product/list?appId=" + appId + "&businessId=" + businessId;
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/list?appId=" + appId + "&businessId=" + businessId;
         
         
         
@@ -129,13 +126,14 @@ public class Service: IService
         
     }
 
-    public async Task<object> GetProductDetails(Request.ProductDetailRequest request)
+    public async Task<ResponseProductDetails.NhanhVnProductDetailResponse> GetProductDetails(Request.ProductDetailRequest request)
     {
         
-        var appId = _nhanhVnOption.AppId;
-        var businessId = _nhanhVnOption.BusinessId;
-        var token = _nhanhVnOption.Token;
-        var nhanhApi = _nhanhVnOption.BaseUrl + "/product/detail?appId=" + appId + "&businessId=" + businessId;
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/detail?appId=" + appId + "&businessId=" + businessId;
         var nhanhProductDetailsRequest = request;
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);

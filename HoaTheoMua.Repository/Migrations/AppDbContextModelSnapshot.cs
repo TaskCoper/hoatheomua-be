@@ -587,6 +587,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Group")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")

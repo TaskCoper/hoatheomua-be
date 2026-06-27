@@ -16,15 +16,11 @@ public partial class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly HttpClient _httpClient;
-    private readonly NhanhVnOption _nhanhVnOption = new();
-    private readonly AhamoveOption _ahamoveOption = new();
 
-    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration)
+    public Service(AppDbContext dbContext, HttpClient httpClient)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
-        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
-        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
     }
 
     // Match "HTM" (optional separator) + a GUID. The bank/SePay strips dashes, so the GUID can
@@ -147,7 +143,10 @@ public partial class Service : IService
         decimal itemAmount = 0;
         decimal shippingFee = 0;
 
-
+        if (order.TotalFee != request.TransferAmount)
+        {
+            throw new ConflictException("Transfer amount must be equal to transfer amount");
+        }
         order.Status = "Paid";
 
         //  var newOrders = await AhaMoveCreateOrder();
@@ -172,24 +171,24 @@ public partial class Service : IService
             }
         ).ToList();
 
+        var companyAddress = await _dbContext.CompanyAddresses
+            .Where(x => x.IsDeleted == false)
+            .FirstOrDefaultAsync();
+
+        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+
         var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
         {
-            OrderTime = 0,
+            OrderTime = order.OrderTime,
+            IdleUntil = order.OrderTime > 0 ? order.OrderTime : 0,
             Paths = new List<AhamoveService.Request.AhamoveLocationPoint>()
             {
-                new AhamoveService.Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
+                new AhamoveService.Request.AhamoveLocationPoint() 
                 {
-                    // Latitude = companyAddress.Latitude ?? 0,
-                    // Longitude = companyAddress.Longitude ?? 0,
-                    // Address = companyAddress.AddressLine,
-                    // ShortAddress = "",
-                    // FullName = "",
-                    // Phone = "",
-                    // Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
-                    Latitude = (decimal)10.8055952,
-                    Longitude = (decimal)106.6776989,
-                    Address = "Số 13A Đào Duy Anh, Phường 9, Phường Phú Nhuận, Thành phố Hồ Chí Minh",
-                    ShortAddress = "Số 13A Đào Duy Anh, Phường 9, Phường Phú Nhuận, Thành phố Hồ Chí Minh",
+                    Latitude = companyAddress?.Latitude ?? 0,
+                    Longitude = companyAddress?.Longitude ?? 0,
+                    Address = companyAddress?.AddressLine ?? "",
+                    ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
                     FullName = "Hoa Theo Mùa",
                     Phone = "84908765432",
                     Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
@@ -206,35 +205,15 @@ public partial class Service : IService
                 },
             },
             ServiceId = "SGN-BIKE",
-            Requests = new List<AhamoveService.Request.ItemsRequest>()
-            {
-                new AhamoveService.Request.ItemsRequest()
-                {
-                    Id = "SGN-BIKE-SMS",
-                },
-                new AhamoveService.Request.ItemsRequest()
-                {
-                    Id = "SGN-BIKE-D2D",
-                },
-                new AhamoveService.Request.ItemsRequest()
-                {
-                    Id = "SGN-BIKE-FRAGILE",
-                },
-                new AhamoveService.Request.ItemsRequest()
-                {
-                    Id = "SGN-BIKE-BULKY",
-                    TierCode = "TIER_2"
-                },
-            },
+            Requests = ahamoveConfigs.GetAhamoveServices(),
             PaymentMethod = "CASH",
             Remarks = order.Remarks,
             Items = itemsRequest,
             PackageDetail = packageDetailRequest,
         };
 
-        // var ahamoveApi = _ahamoveOption.BaseUrl + "/v3/orders";
-        var ahamoveApi = "https://partner-apistg.ahamove.com/v3/orders";
-        var ahamoveToken = _ahamoveOption.Token;
+        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/orders";
+        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", "");
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -393,10 +372,11 @@ public partial class Service : IService
             }
         };
         
-        var appId = _nhanhVnOption.AppId;
-        var businessId = _nhanhVnOption.BusinessId;
-        var token = _nhanhVnOption.Token;
-        var createNhanhOrderApi = _nhanhVnOption.BaseUrl + "/order/add?appId=" + appId + "&businessId=" + businessId;
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var appId = configs.GetValue("nhanhvn.app_id", 0);
+        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
+        var token = configs.GetValue("nhanhvn.token", "");
+        var createNhanhOrderApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/add?appId=" + appId + "&businessId=" + businessId;
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, createNhanhOrderApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
