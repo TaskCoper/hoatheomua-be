@@ -25,6 +25,7 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     public decimal ProductFree { get; set; }
     public decimal TotalFee { get; set; }
     public required long OrderTime { get; set; } = 0; 
+    public string? TaxCode  { get; set; }
     
     // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }
