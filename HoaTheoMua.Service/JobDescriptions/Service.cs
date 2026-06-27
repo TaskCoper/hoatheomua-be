@@ -275,6 +275,16 @@ public class Service : IService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<List<string>> GetAllLocation()
+    {
+        var locations = await _context.JobDescriptions
+            .Where(x => !x.IsDeleted && !string.IsNullOrWhiteSpace(x.location))
+            .Select(x => x.location)
+            .Distinct()
+            .ToListAsync();
+        return  locations;
+    }
+
     private IQueryable<Repository.Entity.JobDescriptions> GetJobByIdOrSlugQuery(string idOrSlug)
     {
         var normalizedKey = NormalizeLookupKey(idOrSlug);
