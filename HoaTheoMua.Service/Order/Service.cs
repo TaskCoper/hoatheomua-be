@@ -286,6 +286,7 @@ public class Service : IService
             Id = Guid.NewGuid(),
             UserId = userId,
             Status = "Pending",
+            TaxCode = request.TaxCode,
             TrackNumber = "",
             Latitude = request.Latitude,
             Longitude = request.Longitude,
@@ -363,11 +364,13 @@ public class Service : IService
             OrderId = orders.Id,
             Status = orders.Status,
             TrackNumber = orders.TrackNumber,
+            TaxCode = orders.TaxCode,
             QrCodeUrl = qrCodeUrl,
             //NhanhOrderId = orders.NhanhOrderId,
             //NhanhTrackingUrl = orders.NhanhTrackingUrl,
             AhahaMoveOrderId = orders.AhahaMoveOrderId,
             AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl,
+            
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
 
