@@ -16,6 +16,7 @@ public class Request
       public string Phone { get; set; }
       public string Remarks { get; set; }
       public long OrderTime { get; set; } = 0;  
+      public string TaxCode { get; set; }
       public List<Items> Items { get; set; } = new List<Items>();
    }
 

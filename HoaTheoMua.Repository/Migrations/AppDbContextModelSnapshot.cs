@@ -538,7 +538,8 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("FullName")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -983,6 +984,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaxCode")
                         .HasColumnType("text");
 
                     b.Property<decimal>("TotalFee")
