@@ -40,6 +40,7 @@ public class Response
         public string QrCodeUrl { get; set; } = string.Empty;
         
         public OrderTransactionResponse? Transaction { get; set; }
+        public List<OrderDetailsResponse>  Details { get; set; } = new List<OrderDetailsResponse>();
     }
     
     public class OrderTransactionResponse
@@ -49,6 +50,19 @@ public class Response
         public string? Gateway { get; set; }        
         public DateTime TransactionDate { get; set; }
         
+    }
+
+    public class OrderDetailsResponse
+    {
+        public Guid OrderDetailsId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int ItemId { get; set; }
+        public int Number { get; set; }
+        public decimal Price { get; set; } 
+        public double Weight { get; set; }
+        public double Length { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
     }
     
     public class NhanhVnLocationResponse

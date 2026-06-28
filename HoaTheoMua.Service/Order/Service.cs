@@ -317,6 +317,7 @@ public class Service : IService
             Weight = x.Shipping.Weight,
             Length = x.Shipping.Length,
             Width = x.Shipping.Width,
+            CreatedAt = DateTime.UtcNow,
         });
 
         await _dbContext.Orders.AddAsync(newOrder);
@@ -331,6 +332,7 @@ public class Service : IService
         var userId = _currentUser.GetRequiredUserId();
 
         var orders = await _dbContext.Orders
+            .Include(x => x.OrderDetails)
             .Include(x => x.Transactions)
             .FirstOrDefaultAsync(x =>
                 x.IsDeleted == false &&
@@ -371,9 +373,22 @@ public class Service : IService
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
 
+            Details = orders.OrderDetails.Select(x => new Response.OrderDetailsResponse()
+            {
+                OrderDetailsId = x.Id,
+                Name = x.Name,
+                ItemId = x.ItemId,
+                Number = x.Number,
+                Price = x.Price,
+                Weight = x.Weight,
+                Length = x.Length,
+                Width = x.Width,
+                Height = x.Height,
+            }).ToList(),
+            
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
-                TransferAmount = 0,
+                TransferAmount = lastTransaction.TransferAmount,
                 // TransferAmount =  itemAmount,
                 Code = lastTransaction.Code,
                 TransactionDate = lastTransaction.TransactionDate,
