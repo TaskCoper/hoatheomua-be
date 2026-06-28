@@ -184,6 +184,20 @@ public class Service : IService
         return result;
     }
 
+    public async Task<List<Response.ConfigGroupResponse>> GetConfigGroups(string groupName)
+    {   
+        var key = groupName.ToLower().Trim();
+        var configs = await _dbContext.Configs
+            .Where(x => x.Group.ToLower().Trim().Contains(key) && !x.IsDeleted && x.IsPublic)
+            .Select(x => new Response.ConfigGroupResponse()
+            {
+                Key = x.Key,
+                Value = StringToJson(x.Value),
+            }).ToListAsync();
+
+        return configs;
+    }
+
     private static JsonElement StringToJson(string value)
     {
         return JsonSerializer.Deserialize<JsonElement>(value);
