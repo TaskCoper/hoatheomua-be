@@ -15,7 +15,7 @@ public class Request
     {
         public bool? IsPublic { get; set; } = false;
         public string? Key { get; set; } 
-        public string? Group { get; set; }
+        public required string Group { get; set; }
         public required JsonElement Value { get; set; }
     }
     

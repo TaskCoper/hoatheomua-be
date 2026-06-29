@@ -4,6 +4,9 @@ using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 
 namespace HoaTheoMua.Service.Config;
@@ -83,6 +86,17 @@ public class Service : IService
             throw new BadRequestException("Key is exists");
         }
 
+        if (request.Value.TryGetProperty("group", out JsonElement groupElement)
+            && groupElement.ValueKind == JsonValueKind.String)
+        {
+            var group = groupElement.GetString();
+            if (request.Group != group)
+            {
+                throw new ConflictException("Group phải trùng với giá trị group trong value");
+            }
+        }
+        
+        
         var result = new Repository.Entity.Config()
         {
 
@@ -116,7 +130,17 @@ public class Service : IService
         Guid id,
         Request.UpdateConfigRequest request)
     {
-
+    
+        if (request.Value.TryGetProperty("group", out JsonElement groupElement)
+            && groupElement.ValueKind == JsonValueKind.String)
+        {
+            var group = groupElement.GetString();
+            if (request.Group != group)
+            {
+                throw new ConflictException("Group phải trùng với giá trị group trong value");
+            }
+        }
+        
         if (!string.IsNullOrEmpty(request.Key))
         {
             var existKey = await  _dbContext.Configs
@@ -129,7 +153,9 @@ public class Service : IService
         
         var query = await _dbContext.Configs
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+        
 
+        
         if (query == null)
         {
             throw new BadRequestException("Id/Key Not Found");
@@ -139,11 +165,8 @@ public class Service : IService
         {
             query.IsPublic = request.IsPublic.Value;
         }
-
-        if (request.Group != null)
-        {
-            query.Group = request.Group;
-        }
+        
+        query.Group = request.Group;
         query.Value = request.Value.GetRawText();
         // if (request.IsPublic.HasValue)
         // {
