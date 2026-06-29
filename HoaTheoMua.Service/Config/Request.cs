@@ -14,7 +14,8 @@ public class Request
     public class UpdateConfigRequest
     {
         public bool? IsPublic { get; set; } = false;
-        public string? Group { get; set; }
+        public string? Key { get; set; } 
+        public required string Group { get; set; }
         public required JsonElement Value { get; set; }
     }
     
