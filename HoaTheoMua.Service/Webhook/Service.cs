@@ -7,7 +7,7 @@ using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Webhook;
@@ -19,12 +19,14 @@ public partial class Service : IService
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhamoveOption _ahamoveOption;
 
-    public Service(AppDbContext dbContext, HttpClient httpClient, IOptions<NhanhVnOption> nhanhVnOption, IOptions<AhamoveOption> ahamoveOption)
+    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
-        _nhanhVnOption = nhanhVnOption.Value;
-        _ahamoveOption = ahamoveOption.Value;
+        _nhanhVnOption = new NhanhVnOption();
+        _ahamoveOption = new AhamoveOption();
+        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
+        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
     }
 
     // Match "HTM" (optional separator) + a GUID. The bank/SePay strips dashes, so the GUID can

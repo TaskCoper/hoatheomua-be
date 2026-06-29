@@ -5,7 +5,7 @@ using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using ArgumentException = HoaTheoMua.Service.Exceptions.ArgumentException;
 
 namespace HoaTheoMua.Service.AhamoveService;
@@ -17,12 +17,14 @@ public class Service: IService
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhamoveOption _ahamoveOption;
 
-    public Service(HttpClient httpClient, AppDbContext appDbContext, IOptions<NhanhVnOption> nhanhVnOption, IOptions<AhamoveOption> ahamoveOption)
+    public Service(HttpClient httpClient, AppDbContext appDbContext, IConfiguration configuration)
     {
         _httpClient = httpClient;
         _appDbContext = appDbContext;
-        _nhanhVnOption = nhanhVnOption.Value;
-        _ahamoveOption = ahamoveOption.Value;
+        _nhanhVnOption = new NhanhVnOption();
+        _ahamoveOption = new AhamoveOption();
+        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
+        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
     }
 
 

@@ -7,7 +7,7 @@ using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 
 namespace HoaTheoMua.Service.Product;
 
@@ -21,12 +21,13 @@ public class Service: IService
     public Service(AppDbContext dbContext,
         IHttpContextAccessor httpContext,
         HttpClient httpClient,
-        IOptions<NhanhVnOption> nhanhVnOption)
+        IConfiguration configuration)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
         _httpClient = httpClient;
-        _nhanhVnOption = nhanhVnOption.Value;
+        _nhanhVnOption = new NhanhVnOption();
+        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
     }
     
     public async Task<ResponseProductList.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
