@@ -2,7 +2,7 @@ using System.Net.Http.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 
 namespace HoaTheoMua.Service.NhanhVnService;
 
@@ -12,11 +12,12 @@ public class Service: IService
     private readonly AppDbContext _appDbContext;
     private readonly NhanhVnOption _nhanhVnOption;
 
-    public Service(HttpClient httpClient, AppDbContext appDbContext, IOptions<NhanhVnOption> nhanhVnOption)
+    public Service(HttpClient httpClient, AppDbContext appDbContext, IConfiguration configuration)
     {
         _httpClient = httpClient;
         _appDbContext = appDbContext;
-        _nhanhVnOption = nhanhVnOption.Value;
+        _nhanhVnOption = new NhanhVnOption();
+        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
     }
     
     public async Task<OrderLabelResponse> GetOrderLabel(OrderLabelRequest orderLabelRequest)

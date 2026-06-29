@@ -8,7 +8,7 @@ using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Webhook;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -27,15 +27,16 @@ public class Service : IService
         ICurrentUserService currentUser,
         HttpClient httpClient,
         HoaTheoMua.Service.Product.IService serviceProduct,
-        IOptions<NhanhVnOption> nhanhVnOption,
-        IOptions<AhamoveOption> ahamoveOption)
+        IConfiguration configuration)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
-        _nhanhVnOption = nhanhVnOption.Value;
-        _ahamoveOption = ahamoveOption.Value;
+        _nhanhVnOption = new NhanhVnOption();
+        _ahamoveOption = new AhamoveOption();
+        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
+        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
     }
 
 
