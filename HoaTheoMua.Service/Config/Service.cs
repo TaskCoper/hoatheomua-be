@@ -86,13 +86,15 @@ public class Service : IService
             throw new BadRequestException("Key is exists");
         }
 
+        var keyPrefix = request.Key!.Split('.', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+        
         if (request.Value.TryGetProperty("group", out JsonElement groupElement)
             && groupElement.ValueKind == JsonValueKind.String)
         {
             var group = groupElement.GetString();
-            if (request.Group != group)
+            if (request.Group != group || request.Group != keyPrefix || group !=  keyPrefix)
             {
-                throw new ConflictException("Group phải trùng với giá trị group trong value");
+                throw new ConflictException("group doesn't match");
             }
         }
         
@@ -130,14 +132,16 @@ public class Service : IService
         Guid id,
         Request.UpdateConfigRequest request)
     {
-    
+        
+        var keyPrefix = request.Key!.Split('.', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+        
         if (request.Value.TryGetProperty("group", out JsonElement groupElement)
             && groupElement.ValueKind == JsonValueKind.String)
         {
             var group = groupElement.GetString();
-            if (request.Group != group)
+            if (request.Group != group || request.Group != keyPrefix || group !=  keyPrefix)
             {
-                throw new ConflictException("Group phải trùng với giá trị group trong value");
+                throw new ConflictException("group doesn't match");
             }
         }
         
@@ -166,6 +170,7 @@ public class Service : IService
             query.IsPublic = request.IsPublic.Value;
         }
         
+        query.Key = request.Key;
         query.Group = request.Group;
         query.Value = request.Value.GetRawText();
         // if (request.IsPublic.HasValue)
