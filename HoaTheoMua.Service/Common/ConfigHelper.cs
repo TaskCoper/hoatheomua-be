@@ -59,7 +59,7 @@ public class GroupConfig
 
 
     
-    public List<Request.ItemsRequest> GetAhamoveServices()
+    public List<AhaMoveRequest.ItemsRequest> GetAhamoveServices()
     {
         var keys = new[] { 
             "ahamove.shipping.sgn_bike_bulky", 
@@ -71,7 +71,7 @@ public class GroupConfig
             // "ahamove.shipping.sgn_bike_pod"
         };
         
-        var result = new List<Request.ItemsRequest>();
+        var result = new List<AhaMoveRequest.ItemsRequest>();
         foreach (var key in keys)
         {
             if (_configs.TryGetValue(key, out var val) && val.ValueKind == JsonValueKind.String)
@@ -79,7 +79,7 @@ public class GroupConfig
                 try
                 {
                     var innerDoc = JsonDocument.Parse(val.GetString()!);
-                    var itemReq = new Request.ItemsRequest { Id = "" };
+                    var itemReq = new AhaMoveRequest.ItemsRequest { Id = "" };
 
                     if (innerDoc.RootElement.TryGetProperty("_id", out var idProp))
                         itemReq.Id = idProp.GetString() ?? "";
@@ -109,12 +109,12 @@ public class GroupConfig
             }
         }
         
-        return result.Any() ? result : new List<Request.ItemsRequest>
+        return result.Any() ? result : new List<AhaMoveRequest.ItemsRequest>
         {
-            new Request.ItemsRequest { Id = "SGN-BIKE-SMS" },
-            new Request.ItemsRequest { Id = "SGN-BIKE-D2D" },
-            new Request.ItemsRequest { Id = "SGN-BIKE-FRAGILE" },
-            new Request.ItemsRequest { Id = "SGN-BIKE-BULKY", TierCode = "TIER_2" }
+            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-SMS" },
+            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-D2D" },
+            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-FRAGILE" },
+            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-BULKY", TierCode = "TIER_2" }
         };
     }
 }

@@ -21,7 +21,7 @@ public class Service : IService
     private readonly HttpClient _httpClient;
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly NhanhVnOption _nhanhVnOption;
-    private readonly AhamoveOption _ahamoveOption;
+    private readonly AhaMoveOption _ahaMoveOption;
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
@@ -34,9 +34,9 @@ public class Service : IService
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
         _nhanhVnOption = new NhanhVnOption();
-        _ahamoveOption = new AhamoveOption();
+        _ahaMoveOption = new AhaMoveOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
-        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
+        configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
     }
 
 
@@ -192,7 +192,7 @@ public class Service : IService
         }
 
         var itemsRequest = productNhanhResult.Data.Select(
-            x => new AhaMoveService.Request.AhamoveItem()
+            x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
             {
                 Id = x.Id.ToString(),
                 Name = x.Name,
@@ -202,7 +202,7 @@ public class Service : IService
         ).ToList();
 
         var packageDetailRequest = productNhanhResult.Data.Select(
-            x => new AhaMoveService.Request.PackageDetail()
+            x => new AhaMoveService.AhaMoveRequest.PackageDetail()
             {
                 Height = x.Shipping.Height,
                 Weight = x.Shipping.Weight,
@@ -218,14 +218,14 @@ public class Service : IService
         
         var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         
-        var createRequest = new AhaMoveService.Request.AhaMoveShippingFeeRequest()
+        var createRequest = new AhaMoveService.AhaMoveRequest.AhaMoveShippingFeeRequest()
         {
             OrderTime = request.OrderTime,
             IdleUntil = request.OrderTime > 0 ? request.OrderTime : 0,
             // OrderTime = 0,
-            Paths = new List<AhaMoveService.Request.AhamoveLocationPoint>()
+            Paths = new List<AhaMoveService.AhaMoveRequest.AhamoveLocationPoint>()
             {
-                new AhaMoveService.Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
+                new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
                 {
                     Latitude = companyAddress?.Latitude ?? 0,
                     Longitude = companyAddress?.Longitude ?? 0,
@@ -235,7 +235,7 @@ public class Service : IService
                     Phone = companyAddress.PhoneNumber,
                     Remarks = companyAddress.Remarks!,
                 },
-                new AhaMoveService.Request.AhamoveLocationPoint()
+                new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint()
                 {
                     Latitude =  request.Latitude,
                     Longitude =  request.Longitude,
@@ -250,9 +250,9 @@ public class Service : IService
             Remarks = request.Remarks,
             Items = itemsRequest,
             PackageDetail = packageDetailRequest,
-            Services = new List<AhaMoveService.Request.ServiceRequest>()
+            Services = new List<AhaMoveService.AhaMoveRequest.ServiceRequest>()
             {
-                new AhaMoveService.Request.ServiceRequest()
+                new AhaMoveService.AhaMoveRequest.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
                     Requests = ahamoveConfigs.GetAhamoveServices()
@@ -261,8 +261,8 @@ public class Service : IService
         };
         Console.WriteLine("BUG CHA PA: " + createRequest.OrderTime);
         Console.WriteLine("BUG CHA PA: " + createRequest.IdleUntil);
-        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahamoveOption.BaseUrl) + "/v3/orders/estimates";
-        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahamoveOption.Token);
+        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders/estimates";
+        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);

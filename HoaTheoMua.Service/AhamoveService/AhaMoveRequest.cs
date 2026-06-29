@@ -2,7 +2,7 @@
 
 namespace HoaTheoMua.Service.AhaMoveService;
 
-public class Request
+public class AhaMoveRequest
 {
    public class EstimateShippingFeeRequest
    {
