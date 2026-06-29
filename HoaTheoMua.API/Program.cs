@@ -41,6 +41,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 
 builder.Services.ConfigureRateLimiter();
+builder.Services.Configure<AhamoveService.NhanhVnOption>(builder.Configuration.GetSection(nameof(AhamoveService.NhanhVnOption)));
+builder.Services.Configure<AhamoveService.AhamoveOption>(builder.Configuration.GetSection(nameof(AhamoveService.AhamoveOption)));
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
 builder.Services.AddHttpContextAccessor();
