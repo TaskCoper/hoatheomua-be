@@ -133,7 +133,9 @@ public class Service : IService
         Request.UpdateConfigRequest request)
     {
         
+        
         var keyPrefix = request.Key!.Split('.', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+        
         
         if (request.Value.TryGetProperty("group", out JsonElement groupElement)
             && groupElement.ValueKind == JsonValueKind.String)
