@@ -15,4 +15,5 @@ public interface IService
     Task<string> DeleteConfig(Guid id);
     
     Task<List<Response.ConfigResponse>> GetConfigIsPublic();
+    Task<List<Response.ConfigGroupResponse>> GetConfigGroups(string groupName);
 }

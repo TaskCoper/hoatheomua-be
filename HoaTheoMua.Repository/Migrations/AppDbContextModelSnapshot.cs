@@ -536,6 +536,11 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -548,6 +553,13 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("MapId")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -565,15 +577,18 @@ namespace HoaTheoMua.Repository.Migrations
                         new
                         {
                             Id = new Guid("e1111111-1111-1111-1111-111111111111"),
-                            AddressLine = "123 Main St",
-                            City = "Ho Chi Minh City",
+                            AddressLine = "Số 13 Đào Duy Anh, Phường 9",
+                            City = "Hồ Chí Minh",
                             Country = "Vietnam",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            FullName = "Hoa Theo Mua",
                             IsDeleted = false,
-                            Latitude = 10.7769m,
-                            Longitude = 106.7009m,
-                            MapId = "111-1-1-1-1-1",
-                            Ward = "Ward 1"
+                            Latitude = 10.806088849000048m,
+                            Longitude = 106.67715580100008m,
+                            MapId = "h4gORrahdlpw0Z8t4761TmmZ0TqpdZTffrY5FJFeuZJptWwspnit5C7RQkC8Z-TfMbtCEaZch_dwpGdal162dna1U3ihlJsAc7dBVRZdnc_6XjVIBoQFyl3ClWiqXAOzX",
+                            PhoneNumber = "84908765432",
+                            Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
+                            Ward = "Phường Sài Gòn"
                         });
                 });
 
@@ -586,11 +601,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Group")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsPublic")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Key")
                         .IsRequired()
@@ -607,6 +628,8 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("jsonb");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Group");
 
                     b.ToTable("Configs");
                 });
@@ -961,6 +984,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaxCode")
                         .HasColumnType("text");
 
                     b.Property<decimal>("TotalFee")

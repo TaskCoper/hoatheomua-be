@@ -27,6 +27,10 @@ public class Request
         [Range(typeof(decimal), "-180", "180", ErrorMessage = "Kinh độ phải nằm trong khoảng -180 đến 180")]
         public decimal? Longitude { get; set; }
         
+        [StringLength(100, MinimumLength = 2, ErrorMessage = "Họ và tên phải từ 2 đến 100 ký tự")]
+        public required string FullName { get; set; }
+        public required string Phone { get; set; }
+        public string? Remarks { get; set; } = null!;
         public required string MapId { get; set; }
     }
 
@@ -37,7 +41,7 @@ public class Request
         public required string AddressLine { get; set; }
 
         [StringLength(100, ErrorMessage = "Phường/Xã tối đa 100 ký tự")]
-        public string? Ward { get; set; }
+        public required string Ward { get; set; }
 
         [Required(ErrorMessage = "Tỉnh/Thành phố không được để trống")]
         [StringLength(100, MinimumLength = 2, ErrorMessage = "Tỉnh/Thành phố phải từ 2 đến 100 ký tự")]
@@ -52,7 +56,9 @@ public class Request
 
         [Range(typeof(decimal), "-180", "180", ErrorMessage = "Kinh độ phải nằm trong khoảng -180 đến 180")]
         public decimal? Longitude { get; set; }
-        
+        public required string FullName { get; set; }
+        public required string Phone { get; set; }
+        public string? Remarks { get; set; }
         public required string MapId { get; set; }
     }
 }

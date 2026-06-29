@@ -23,6 +23,11 @@ public class CompanyAddressConfiguration : IEntityTypeConfiguration<CompanyAddre
             .HasMaxLength(100);
         builder.Property(ca => ca.CreatedAt)
             .HasDefaultValueSql("now()");
+        builder.Property(ca => ca.PhoneNumber)
+            .IsRequired();
+        builder.Property(ca => ca.FullName)
+            .IsRequired()
+            .HasMaxLength(100);
         builder.SeedCompanyAddress();
     }
 

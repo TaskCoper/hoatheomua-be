@@ -71,7 +71,12 @@ public class JodDescriptionsController: ControllerBase
         await _jobDescriptionService.DeleteJobAsync(id);
         return NoContent();
     }
-
+    [HttpGet("locations")]
+    public async Task<IActionResult> GetAllLocation()
+    {
+        var result = await _jobDescriptionService.GetAllLocation();
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
     [HttpGet("/api/v1/public/job-descriptions")]
     
     public async Task<IActionResult> GetPublicJobDescriptions( int page = 1,  int pageSize = 10,  string? title = null,  string? location = null,  EmploymentType? employmentType = null,  float? salaryMin = null,  float? salaryMax = null)
@@ -88,4 +93,6 @@ public class JodDescriptionsController: ControllerBase
         result.TraceId = HttpContext.TraceIdentifier;
         return Ok(result);
     }
+    
+
 }

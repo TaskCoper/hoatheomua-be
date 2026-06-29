@@ -8,8 +8,15 @@ public class Response
     {
         public Guid Id { get; set; }
         public required string Key { get; set; }
+        public string? Group { get; set; } = null!;
         public required bool IsPublic { get; set; }
         public required JsonElement Value { get; set; }
         public  Guid UserId { get; set; }
+    }
+
+    public class ConfigGroupResponse
+    {
+        public required string Key { get; set; }
+        public required JsonElement Value { get; set; }
     }
 }
