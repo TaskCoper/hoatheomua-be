@@ -1,7 +1,7 @@
 using System.Text.Json;
 using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.AhaMoveService;
 
 namespace HoaTheoMua.Service.Common;
 
@@ -65,7 +65,10 @@ public class GroupConfig
             "ahamove.shipping.sgn_bike_bulky", 
             "ahamove.shipping.sgn_bike_fragile", 
             "ahamove.shipping.sgn_bike_sms", 
-            "ahamove.shipping.sgn_bike_d2d" 
+            "ahamove.shipping.sgn_bike_d2d",
+            
+            "ahamove.shipping.sgn_bike_reim_bulky",
+            // "ahamove.shipping.sgn_bike_pod"
         };
         
         var result = new List<Request.ItemsRequest>();
@@ -86,6 +89,13 @@ public class GroupConfig
 
                     if (innerDoc.RootElement.TryGetProperty("num", out var numProp))
                         itemReq.Num = numProp.GetInt32();
+                    
+                    //
+                    // if (innerDoc.RootElement.TryGetProperty("name", out var nameProp))
+                    //     itemReq.Name = nameProp.GetString();
+                    //
+                    // if (innerDoc.RootElement.TryGetProperty("price", out var priceProp))
+                    //     itemReq.Price = priceProp.GetDecimal();
 
                     if (!string.IsNullOrEmpty(itemReq.Id))
                     {

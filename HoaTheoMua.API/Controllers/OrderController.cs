@@ -68,7 +68,7 @@ public class OrderController : ControllerBase
 
     [HttpPost("/api/v1/orders/shipping-location")]
     [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
-    public async Task<IActionResult> GetShippingLocation([FromBody] Request.LocationFilters filter)
+    public async Task<IActionResult> GetShippingLocation([FromBody] Request.LocationRequest filter)
     {
         var result = await _orderService.GetShippingLocation(filter);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));

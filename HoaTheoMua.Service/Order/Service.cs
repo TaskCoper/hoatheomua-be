@@ -2,7 +2,7 @@
 using System.Net.Http.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -90,6 +90,7 @@ public class Service : IService
         var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
         var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var depotId = configs.GetValue("nhanhvn.default_depot", 129255);
         var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
@@ -175,7 +176,7 @@ public class Service : IService
                 throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho");
             }
 
-            var targetDepot = depots.FirstOrDefault(d => (int?)d["Id"] == 129255);
+            var targetDepot = depots.FirstOrDefault(d => (int?)d["Id"] == depotId);
 
             if (targetDepot == null)
             {
@@ -191,7 +192,7 @@ public class Service : IService
         }
 
         var itemsRequest = productNhanhResult.Data.Select(
-            x => new AhamoveService.Request.AhamoveItem()
+            x => new AhaMoveService.Request.AhamoveItem()
             {
                 Id = x.Id.ToString(),
                 Name = x.Name,
@@ -201,7 +202,7 @@ public class Service : IService
         ).ToList();
 
         var packageDetailRequest = productNhanhResult.Data.Select(
-            x => new AhamoveService.Request.PackageDetail()
+            x => new AhaMoveService.Request.PackageDetail()
             {
                 Height = x.Shipping.Height,
                 Weight = x.Shipping.Weight,
@@ -217,14 +218,14 @@ public class Service : IService
         
         var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         
-        var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
+        var createRequest = new AhaMoveService.Request.AhaMoveShippingFeeRequest()
         {
             OrderTime = request.OrderTime,
             IdleUntil = request.OrderTime > 0 ? request.OrderTime : 0,
             // OrderTime = 0,
-            Paths = new List<AhamoveService.Request.AhamoveLocationPoint>()
+            Paths = new List<AhaMoveService.Request.AhamoveLocationPoint>()
             {
-                new AhamoveService.Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
+                new AhaMoveService.Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
                 {
                     Latitude = companyAddress?.Latitude ?? 0,
                     Longitude = companyAddress?.Longitude ?? 0,
@@ -234,7 +235,7 @@ public class Service : IService
                     Phone = companyAddress.PhoneNumber,
                     Remarks = companyAddress.Remarks!,
                 },
-                new AhamoveService.Request.AhamoveLocationPoint()
+                new AhaMoveService.Request.AhamoveLocationPoint()
                 {
                     Latitude =  request.Latitude,
                     Longitude =  request.Longitude,
@@ -249,9 +250,9 @@ public class Service : IService
             Remarks = request.Remarks,
             Items = itemsRequest,
             PackageDetail = packageDetailRequest,
-            Services = new List<AhamoveService.Request.ServiceRequest>()
+            Services = new List<AhaMoveService.Request.ServiceRequest>()
             {
-                new AhamoveService.Request.ServiceRequest()
+                new AhaMoveService.Request.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
                     Requests = ahamoveConfigs.GetAhamoveServices()
@@ -485,22 +486,23 @@ public class Service : IService
 
     }
 
-    public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)
+    public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationRequest filter)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
         var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
         var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
         var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/shipping/location?appId=" + appId + "&businessId=" + businessId;
-        var nhanhVnOrderSrcRequest = new Request.LocationRequest()
-        {
-            Filters = new Request.LocationFilters()
-            {
-                LocationVersion = filter.LocationVersion,
-                Type = filter.Type,
-                ParentId = filter.ParentId,
-            }
-        };
+        // var nhanhVnOrderSrcRequest = new Request.LocationRequest()
+        // {
+        //     Filters = new Request.LocationFilters()
+        //     {
+        //         LocationVersion = filter.LocationVersion,
+        //         Type = filter.Type,
+        //         ParentId = filter.ParentId,
+        //     }
+        // };
+        var nhanhVnOrderSrcRequest = filter;
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhVnOrderSrcRequest);

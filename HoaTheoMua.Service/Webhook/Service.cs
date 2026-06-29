@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -158,7 +158,7 @@ public partial class Service : IService
         //  var newOrders = await AhaMoveCreateOrder();
         // Bat dau xu ly phan ahamove va nhanhvn
 
-        var itemsRequest = order.OrderDetails.Select(x => new AhamoveService.Request.AhamoveItem()
+        var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.Request.AhamoveItem()
             {
                 Id = x.Id.ToString(),
                 Name = x.Name,
@@ -167,7 +167,7 @@ public partial class Service : IService
             }
         ).ToList();
 
-        var packageDetailRequest = order.OrderDetails.Select(x => new AhamoveService.Request.PackageDetail()
+        var packageDetailRequest = order.OrderDetails.Select(x => new AhaMoveService.Request.PackageDetail()
             {
                 Height = x.Height,
                 Weight = x.Weight,
@@ -183,13 +183,13 @@ public partial class Service : IService
 
         var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
 
-        var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
+        var createRequest = new AhaMoveService.Request.AhaMoveShippingFeeRequest()
         {
             OrderTime = order.OrderTime,
             IdleUntil = order.OrderTime > 0 ? order.OrderTime : 0,
-            Paths = new List<AhamoveService.Request.AhamoveLocationPoint>()
+            Paths = new List<AhaMoveService.Request.AhamoveLocationPoint>()
             {
-                new AhamoveService.Request.AhamoveLocationPoint() 
+                new AhaMoveService.Request.AhamoveLocationPoint() 
                 {
                     Latitude = companyAddress?.Latitude ?? 0,
                     Longitude = companyAddress?.Longitude ?? 0,
@@ -199,7 +199,7 @@ public partial class Service : IService
                     Phone = companyAddress.PhoneNumber,
                     Remarks = companyAddress.Remarks!,
                 },
-                new AhamoveService.Request.AhamoveLocationPoint()
+                new AhaMoveService.Request.AhamoveLocationPoint()
                 {
                     Latitude = order.Latitude,
                     Longitude = order.Longitude,

@@ -4,7 +4,7 @@ namespace HoaTheoMua.Service.Order;
 
 public class Request
 {
-    public class CreateOrderRequest : AhamoveService.Request.EstimateShippingFeeRequest;
+    public class CreateOrderRequest : AhaMoveService.Request.EstimateShippingFeeRequest;
 
     public class UpdateOrderRequest
     {

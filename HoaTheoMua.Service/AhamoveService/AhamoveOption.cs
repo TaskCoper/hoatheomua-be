@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace HoaTheoMua.Service.AhamoveService;
+namespace HoaTheoMua.Service.AhaMoveService;
 
 public class AhamoveOption
 {

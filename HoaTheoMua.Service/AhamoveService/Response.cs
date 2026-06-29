@@ -1,4 +1,4 @@
-﻿namespace HoaTheoMua.Service.AhamoveService;
+﻿namespace HoaTheoMua.Service.AhaMoveService;
 
 public class Response
 {

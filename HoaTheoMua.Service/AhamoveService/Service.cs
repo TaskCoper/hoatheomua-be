@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using ArgumentException = HoaTheoMua.Service.Exceptions.ArgumentException;
 
-namespace HoaTheoMua.Service.AhamoveService;
+namespace HoaTheoMua.Service.AhaMoveService;
 
 public class Service: IService
 {
@@ -125,13 +125,13 @@ public class Service: IService
             {
                 new Request.AhamoveLocationPoint() 
                 {
-                    Latitude = companyAddress?.Latitude ?? 0,
-                    Longitude = companyAddress?.Longitude ?? 0,
-                    Address = companyAddress?.AddressLine ?? "",
-                    ShortAddress = (companyAddress?.AddressLine + ", " + companyAddress?.Ward + ", " + companyAddress?.City) ?? "",
-                    FullName = "Hoa Theo Mùa",
-                    Phone = "84908765432",
-                    Remarks = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
+                    Latitude = companyAddress.Latitude ?? 0,
+                    Longitude = companyAddress.Longitude ?? 0,
+                    Address = companyAddress.AddressLine ?? "",
+                    ShortAddress = (companyAddress.AddressLine + ", " + companyAddress.Ward + ", " + companyAddress.City) ?? "",
+                    FullName = companyAddress.FullName,
+                    Phone = companyAddress.PhoneNumber,
+                    Remarks = companyAddress.Remarks!,
                 },
                 new Request.AhamoveLocationPoint()
                 {

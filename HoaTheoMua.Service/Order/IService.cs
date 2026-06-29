@@ -16,5 +16,5 @@ public interface IService
     
     
     Task<OrderListRootResponse> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request);
-    Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter);
+    Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationRequest filter);
 }

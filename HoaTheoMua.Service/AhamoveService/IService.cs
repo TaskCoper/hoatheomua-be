@@ -1,6 +1,6 @@
 ﻿using HoaTheoMua.Service.Models;
 
-namespace HoaTheoMua.Service.AhamoveService;
+namespace HoaTheoMua.Service.AhaMoveService;
 
 public interface IService
 {
