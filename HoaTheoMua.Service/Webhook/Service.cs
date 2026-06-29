@@ -7,7 +7,7 @@ using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Webhook;
@@ -16,11 +16,15 @@ public partial class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly HttpClient _httpClient;
+    private readonly NhanhVnOption _nhanhVnOption;
+    private readonly AhamoveOption _ahamoveOption;
 
-    public Service(AppDbContext dbContext, HttpClient httpClient)
+    public Service(AppDbContext dbContext, HttpClient httpClient, IOptions<NhanhVnOption> nhanhVnOption, IOptions<AhamoveOption> ahamoveOption)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
+        _nhanhVnOption = nhanhVnOption.Value;
+        _ahamoveOption = ahamoveOption.Value;
     }
 
     // Match "HTM" (optional separator) + a GUID. The bank/SePay strips dashes, so the GUID can
@@ -212,8 +216,8 @@ public partial class Service : IService
             PackageDetail = packageDetailRequest,
         };
 
-        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/orders";
-        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", "");
+        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahamoveOption.BaseUrl) + "/v3/orders";
+        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahamoveOption.Token);
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -373,10 +377,10 @@ public partial class Service : IService
         };
         
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var appId = configs.GetValue("nhanhvn.app_id", 0);
-        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
-        var token = configs.GetValue("nhanhvn.token", "");
-        var createNhanhOrderApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/add?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var createNhanhOrderApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/order/add?appId=" + appId + "&businessId=" + businessId;
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, createNhanhOrderApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);

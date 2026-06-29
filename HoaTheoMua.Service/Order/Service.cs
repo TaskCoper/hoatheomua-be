@@ -8,7 +8,7 @@ using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Webhook;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -20,16 +20,22 @@ public class Service : IService
     private readonly ICurrentUserService _currentUser;
     private readonly HttpClient _httpClient;
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
+    private readonly NhanhVnOption _nhanhVnOption;
+    private readonly AhamoveOption _ahamoveOption;
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
-        HttpClient httpClient
-        , HoaTheoMua.Service.Product.IService serviceProduct)
+        HttpClient httpClient,
+        HoaTheoMua.Service.Product.IService serviceProduct,
+        IOptions<NhanhVnOption> nhanhVnOption,
+        IOptions<AhamoveOption> ahamoveOption)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
+        _nhanhVnOption = nhanhVnOption.Value;
+        _ahamoveOption = ahamoveOption.Value;
     }
 
 
@@ -80,10 +86,10 @@ public class Service : IService
         }
 
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var appId = configs.GetValue("nhanhvn.app_id", 0);
-        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
-        var token = configs.GetValue("nhanhvn.token", "");
-        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/list?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
             Filters = new NhanhVnRequest.NhanhFilters()
@@ -253,8 +259,8 @@ public class Service : IService
         };
         Console.WriteLine("BUG CHA PA: " + createRequest.OrderTime);
         Console.WriteLine("BUG CHA PA: " + createRequest.IdleUntil);
-        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/orders/estimates";
-        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", "");
+        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahamoveOption.BaseUrl) + "/v3/orders/estimates";
+        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahamoveOption.Token);
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -424,10 +430,10 @@ public class Service : IService
     public async Task<OrderListRootResponse> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var appId = configs.GetValue("nhanhvn.app_id", 0);
-        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
-        var token = configs.GetValue("nhanhvn.token", "");
-        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/order/list?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/order/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnOrderSrcRequest = request;
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
@@ -481,10 +487,10 @@ public class Service : IService
     public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var appId = configs.GetValue("nhanhvn.app_id", 0);
-        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
-        var token = configs.GetValue("nhanhvn.token", "");
-        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/shipping/location?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/shipping/location?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnOrderSrcRequest = new Request.LocationRequest()
         {
             Filters = new Request.LocationFilters()
