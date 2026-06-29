@@ -14,11 +14,17 @@ public class Service: IService
 {
     private readonly HttpClient _httpClient;
     private readonly AppDbContext _appDbContext;
+    private readonly NhanhVnOption _nhanhVnOption;
+    private readonly AhamoveOption _ahamoveOption;
 
-    public Service(HttpClient httpClient, AppDbContext appDbContext)
+    public Service(HttpClient httpClient, AppDbContext appDbContext, IConfiguration configuration)
     {
         _httpClient = httpClient;
         _appDbContext = appDbContext;
+        _nhanhVnOption = new NhanhVnOption();
+        _ahamoveOption = new AhamoveOption();
+        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
+        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
     }
 
 
@@ -37,10 +43,10 @@ public class Service: IService
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn", "ahamove", "contact");
 
         // Call NhanhVn de tim gia tien cua Item
-        var appId = configs.GetValue("nhanhvn.app_id", 0);
-        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
-        var token = configs.GetValue("nhanhvn.token", "");
-        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/product/list?appId=" + appId + "&businessId=" + businessId;
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
             Filters = new NhanhVnRequest.NhanhFilters()
@@ -152,8 +158,8 @@ public class Service: IService
             }
         };
 
-        var ahamoveApi = configs.GetValue("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/orders/estimates";
-        var ahamoveToken = configs.GetValue("ahamove.api_key", "");
+        var ahamoveApi = configs.GetValue("ahamove.base_url", _ahamoveOption.BaseUrl) + "/v3/orders/estimates";
+        var ahamoveToken = configs.GetValue("ahamove.api_key", _ahamoveOption.Token);
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -182,8 +188,8 @@ public class Service: IService
     public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "ahamove");
-        var ahamoveApi = configs.GetValue("ahamove.base_url", "https://partner-apistg.ahamove.com") + "/v3/services/SGN-BIKE";
-        var ahamoveToken = configs.GetValue("ahamove.api_key", "");
+        var ahamoveApi = configs.GetValue("ahamove.base_url", _ahamoveOption.BaseUrl) + "/v3/services/SGN-BIKE";
+        var ahamoveToken = configs.GetValue("ahamove.api_key", _ahamoveOption.Token);
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Get, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         
@@ -236,10 +242,10 @@ public class Service: IService
     public async Task<DepotResponse> GetDepotDetails(NhanhVnRequest.DepotRequest request)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
-        var appId = configs.GetValue("nhanhvn.app_id", 0);
-        var businessId = configs.GetValue("nhanhvn.business_id123123", 0);
-        var token = configs.GetValue("nhanhvn.token", "");
-        var nhanhApi = configs.GetValue("nhanhvn.base_url", "https://pos.open.nhanh.vn/v3.0") + "/business/depot?appId=" + appId + "&businessId=" + businessId;  
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/business/depot?appId=" + appId + "&businessId=" + businessId;  
         
         
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
