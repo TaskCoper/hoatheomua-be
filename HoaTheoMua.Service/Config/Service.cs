@@ -116,6 +116,17 @@ public class Service : IService
         Guid id,
         Request.UpdateConfigRequest request)
     {
+
+        if (!string.IsNullOrEmpty(request.Key))
+        {
+            var existKey = await  _dbContext.Configs
+                .FirstOrDefaultAsync(x => x.Id != id && x.Key.ToLower().Trim().Contains(request.Key!.ToLower().Trim()));
+            if (existKey != null)
+            {
+                throw new BadRequestException("Key is exists");
+            }
+        }
+        
         var query = await _dbContext.Configs
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
@@ -123,7 +134,7 @@ public class Service : IService
         {
             throw new BadRequestException("Id/Key Not Found");
         }
-
+        
         if (request.IsPublic != null)
         {
             query.IsPublic = request.IsPublic.Value;
