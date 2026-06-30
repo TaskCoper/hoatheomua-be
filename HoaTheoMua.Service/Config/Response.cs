@@ -42,4 +42,21 @@ public class Response
         public DateTimeOffset ExpiresAt { get; set; }
     }
     
+    public class ConfigItem
+    {
+        public string? Group { get; set; }
+        public string? Label { get; set; }
+        public List<int>? Value { get; set; }
+        public List<Option>? Options { get; set; }
+        public bool? Required { get; set; } = true;
+        public string? InputType { get; set; } = "multiSelect";
+        public List<int>? Validations  { get; set; } = new();
+     }
+
+    public class Option
+    {
+        public string? Label { get; set; }
+        public int? Value { get; set; }
+    }
+    
 }
