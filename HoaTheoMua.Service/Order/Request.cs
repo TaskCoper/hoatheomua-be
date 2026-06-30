@@ -4,7 +4,10 @@ namespace HoaTheoMua.Service.Order;
 
 public class Request
 {
-    public class CreateOrderRequest : AhaMoveService.AhaMoveRequest.EstimateShippingFeeRequest;
+    public class CreateOrderRequest : AhaMoveService.AhaMoveRequest.EstimateShippingFeeRequest
+    {
+        public string TaxCode { get; set; }
+    }
     
     public class LocationRequest
     {
