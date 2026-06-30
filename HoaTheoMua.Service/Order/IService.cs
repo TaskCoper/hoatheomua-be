@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Service.Models;
+using HoaTheoMua.Service.Models;
 
 namespace HoaTheoMua.Service.Order;
 
@@ -17,5 +17,5 @@ public interface IService
     
     Task<OrderListRootResponse> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request);
     Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationRequest filter);
-    Task<Response.TaxcodeResponse> GetInfoTaxCode(string taxCode);
+    Task<string> GetInfoTaxCode(string taxCode);
 }

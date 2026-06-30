@@ -534,7 +534,7 @@ public class Service : IService
         return shippingLocation;
     }
 
-    public async Task<Response.TaxcodeResponse> GetInfoTaxCode(string taxCode)
+    public async Task<string> GetInfoTaxCode(string taxCode)
     {
         var vietQrApiUrl = $"https://api.vietqr.io/v2/business/{taxCode}";
         
@@ -562,7 +562,7 @@ public class Service : IService
             throw new BadRequestException($"VietQR API Error: {apiResponse.Desc}");
         }
 
-        return apiResponse;
+        return $"{apiResponse.Data.Name} - {apiResponse.Data.Address}";
 
     }
 }
