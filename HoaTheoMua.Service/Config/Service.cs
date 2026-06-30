@@ -37,16 +37,16 @@ public class Service : IService
             query = query.Where(x => x.IsPublic == isPublic);
         }
 
-        var filterGroupName = groupName!.ToLower().Trim();
-        if (groupName != null)
+        if (!string.IsNullOrEmpty(groupName))
         {
-            query =  query.Where(x => x.Group.ToLower().Trim().Contains(filterGroupName));
+            var filterGroupName = groupName.ToLower().Trim();
+            query = query.Where(x => x.Group.ToLower().Trim().Contains(filterGroupName));
         }
         
-        var filterKey = key!.ToLower().Trim();
-        if (key != null)
+        if (!string.IsNullOrEmpty(key))
         {
-            query =  query.Where(x => x.Group.ToLower().Trim().Contains(filterKey));
+            var filterKey = key.ToLower().Trim();
+            query = query.Where(x => x.Key.ToLower().Trim().Contains(filterKey));
         }
         
         var result = await query
@@ -73,6 +73,18 @@ public class Service : IService
                         x.Kind!.ToLower().Trim() == 
                         nameof(KindConfig.Setting).ToLower().Trim());
 
+        if (!string.IsNullOrEmpty(groupName))
+        {
+            var filterGroupName = groupName.ToLower().Trim();
+            query = query.Where(x => x.Group.ToLower().Trim().Contains(filterGroupName));
+        }
+        
+        if (!string.IsNullOrEmpty(key))
+        {
+            var filterKey = key.ToLower().Trim();
+            query = query.Where(x => x.Key.ToLower().Trim().Contains(filterKey));
+        }
+
         var result = await query
             .Select(x => new Response.ConfigResponse
             {
@@ -96,6 +108,17 @@ public class Service : IService
                         x.Kind!.ToLower().Trim() ==
                         nameof(KindConfig.Secret).ToLower().Trim());
         
+        if (!string.IsNullOrEmpty(groupName))
+        {
+            var filterGroupName = groupName.ToLower().Trim();
+            query = query.Where(x => x.Group.ToLower().Trim().Contains(filterGroupName));
+        }
+        
+        if (!string.IsNullOrEmpty(key))
+        {
+            var filterKey = key.ToLower().Trim();
+            query = query.Where(x => x.Key.ToLower().Trim().Contains(filterKey));
+        }
         
         var result = await  query
             .Select(x => new Response.ConfigResponse
