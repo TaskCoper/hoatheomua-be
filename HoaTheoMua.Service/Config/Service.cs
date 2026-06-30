@@ -411,13 +411,9 @@ public class Service : IService
         {
             throw new BadRequestException("NhanhVnOrderTag Not Found");
         }
-
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
         
-        var config = JsonSerializer.Deserialize<Response.ConfigItem>(query.Value, options);
+        
+        var config = JsonSerializer.Deserialize<Response.ConfigItem>(query.Value);
         
         if (config == null || config.Options == null || config.Value == null)
         {
@@ -425,7 +421,7 @@ public class Service : IService
         }
         
         config.Options = config.Options
-            .Where(x => x.Value.HasValue && config.Value.Contains(x.Value.Value))
+            .Where(x =>config.Value.Contains((int)x.Value!))
             .ToList();
         
         return config;
