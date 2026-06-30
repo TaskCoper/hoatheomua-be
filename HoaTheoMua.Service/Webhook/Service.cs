@@ -270,7 +270,6 @@ public partial class Service : IService
         
         var nhanhVnRequest = new OrderRoot
         {
-            Id = order.Id.ToString(),
             Depot = new Depot
             {
                 Id = 129255,
@@ -289,14 +288,14 @@ public partial class Service : IService
                 Description = order.Remarks,
                 PrivateDescription = privateDescription,
                 Status = 54,
-                TagIds = order.TagIds,
+                TagIds = order.TagIds!,
                 TechnicalStaffId = 0,
                 PromotionId = ""
             },
             Channel = new Channel
             {
                 TrafficSourceId = 996,
-                AppOrderId = createAhamoveOrderResult?.OrderId ?? "",
+                AppOrderId = createAhamoveOrderResult?.OrderId ?? order.Id.ToString() ,
                 PageId = "",
                 ConversationId = "",
                 VpageUserId = "",
