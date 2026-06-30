@@ -25,7 +25,7 @@ public class Service : IService
         _currentUser = currentUser;
     }
 
-    public async Task<List<Response.ConfigResponse>> GetConfigContent(bool? isPublic)
+    public async Task<List<Response.ConfigResponse>> GetConfigContent(bool? isPublic, string? groupName, string? key)
     {
         var query = _dbContext.Configs
             .Where(x => !x.IsDeleted && 
@@ -35,6 +35,18 @@ public class Service : IService
         if (isPublic != null)
         {
             query = query.Where(x => x.IsPublic == isPublic);
+        }
+
+        var filterGroupName = groupName!.ToLower().Trim();
+        if (groupName != null)
+        {
+            query =  query.Where(x => x.Group.ToLower().Trim().Contains(filterGroupName));
+        }
+        
+        var filterKey = key!.ToLower().Trim();
+        if (key != null)
+        {
+            query =  query.Where(x => x.Group.ToLower().Trim().Contains(filterKey));
         }
         
         var result = await query
@@ -54,7 +66,7 @@ public class Service : IService
   
     }
 
-    public async Task<List<Response.ConfigResponse>> GetConfigSetting()
+    public async Task<List<Response.ConfigResponse>> GetConfigSetting(string? groupName, string? key)
     {
         var query = _dbContext.Configs
             .Where(x => !x.IsDeleted && 
@@ -77,7 +89,7 @@ public class Service : IService
         return result;
     }
     
-    public async Task<List<Response.ConfigResponse>> GetConfigSecret()
+    public async Task<List<Response.ConfigResponse>> GetConfigSecret(string? groupName, string? key)
     {
         var query =  _dbContext.Configs
             .Where(x => !x.IsDeleted &&
