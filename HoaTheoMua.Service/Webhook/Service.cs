@@ -164,8 +164,10 @@ public partial class Service : IService
 
         if (order.OrderTime > 0)
         {
-            var orderTimeDt = order.OrderTime > 9999999999 ? DateTimeOffset.FromUnixTimeMilliseconds(order.OrderTime) : DateTimeOffset.FromUnixTimeSeconds(order.OrderTime);
-            var vnDt = orderTimeDt.ToOffset(TimeSpan.FromHours(7));
+            var vnDt = DateTimeOffset
+                .FromUnixTimeSeconds(order.OrderTime)
+                .ToOffset(TimeSpan.FromHours(7));
+
             privateDescription += $", khách đặt giao ngày {vnDt:dd/MM/yyyy}";
         }
         else
