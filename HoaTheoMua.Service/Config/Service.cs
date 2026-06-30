@@ -347,11 +347,23 @@ public class Service : IService
         return "Xóa thành công.";
     }
 
-    public async Task<List<Response.ConfigResponse>> GetConfigIsPublic()
+    public async Task<List<Response.ConfigResponse>> GetConfigIsPublic(string? groupName, string? key)
     {
         var query = _dbContext.Configs
-            .Where(x => x.IsPublic == true && x.Kind.ToLower().Trim() == nameof(KindConfig.Content).ToLower().Trim());
-
+            .Where(x => x.IsPublic == true && x.Kind!.ToLower().Trim() == nameof(KindConfig.Content).ToLower().Trim());
+        
+        if (!string.IsNullOrEmpty(groupName))
+        {
+            var filterGroupName = groupName.ToLower().Trim();
+            query = query.Where(x => x.Group.ToLower().Trim().Contains(filterGroupName));
+        }
+        
+        if (!string.IsNullOrEmpty(key))
+        {
+            var filterKey = key.ToLower().Trim();
+            query = query.Where(x => x.Key.ToLower().Trim().Contains(filterKey));
+        }
+        
         var result = await query.Select(x => new Response.ConfigResponse
         {
             Id = x.Id,
