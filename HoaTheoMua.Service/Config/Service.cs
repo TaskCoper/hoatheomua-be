@@ -313,7 +313,8 @@ public class Service : IService
 
     public async Task<List<Response.ConfigResponse>> GetConfigIsPublic()
     {
-        var query = _dbContext.Configs.Where(x => x.IsPublic == true);
+        var query = _dbContext.Configs
+            .Where(x => x.IsPublic == true && x.Kind.ToLower().Trim() == nameof(KindConfig.Content).ToLower().Trim());
 
         var result = await query.Select(x => new Response.ConfigResponse
         {

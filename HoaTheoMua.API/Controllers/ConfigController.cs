@@ -90,6 +90,7 @@ public class ConfigController : ControllerBase
     }
 
     [HttpGet("public")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> GetPublicConfig()
     {
         var result = await _configService.GetConfigIsPublic();
@@ -97,6 +98,7 @@ public class ConfigController : ControllerBase
     }
     
     [HttpGet("group")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetConfigGroups([FromQuery] string groupName)
     {
         var result = await _configService.GetConfigGroups(groupName);
