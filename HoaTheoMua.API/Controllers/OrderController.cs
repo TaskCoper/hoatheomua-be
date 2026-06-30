@@ -74,13 +74,13 @@ public class OrderController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
-    [HttpPost("/api/v1/orders/taxcode")]
-    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
-    public async Task<IActionResult> GetInfoTaxCode([FromQuery] string taxCode)
-    {
-        var result = await _orderService.GetInfoTaxCode( taxCode);
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
-    }
+    // [HttpPost("/api/v1/orders/taxcode")]
+    // [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    // public async Task<IActionResult> GetInfoTaxCode([FromQuery] string taxCode)
+    // {
+    //     var result = await _orderService.GetInfoTaxCode( taxCode);
+    //     return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    // }
 
     // [HttpGet("/api/v1/orders")]
     // public async Task<IActionResult> GetAllOrderTransport(int pageIndex, int pageSize)
