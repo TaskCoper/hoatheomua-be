@@ -79,4 +79,55 @@ public class Response
         public string Name { get; set; }
     }
     
+    public class TaxcodeResponse
+    {
+        [JsonPropertyName("code")]
+        public string Code { get; set; }
+
+        [JsonPropertyName("desc")]
+        public string Desc { get; set; }
+
+        [JsonPropertyName("data")]
+        public CompanyData Data { get; set; }
+
+        [JsonPropertyName("metadata")]
+        public Metadata Metadata { get; set; }
+    }
+
+    public class CompanyData
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        [JsonPropertyName("internationalName")]
+        public string InternationalName { get; set; }
+
+        [JsonPropertyName("shortName")]
+        public string ShortName { get; set; }
+
+        [JsonPropertyName("address")]
+        public string Address { get; set; }
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+    }
+
+    public class Metadata
+    {
+        [JsonPropertyName("disclaimer")]
+        public string Disclaimer { get; set; }
+
+        [JsonPropertyName("source")]
+        public string Source { get; set; }
+
+        [JsonPropertyName("updatedAt")]
+        public DateTime UpdatedAt { get; set; }
+
+        [JsonPropertyName("contact")]
+        public string Contact { get; set; }
+    }
+    
 }
