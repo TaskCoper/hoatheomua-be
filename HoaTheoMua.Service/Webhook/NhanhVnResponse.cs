@@ -2,15 +2,6 @@
 
 namespace HoaTheoMua.Service.Webhook;
 
-public class OrderResponse
-{
-    [JsonPropertyName("code")]
-    public int Code { get; set; }
-
-    [JsonPropertyName("data")]
-    public OrderData Data { get; set; }
-}
-
 public class OrderData
 {
     [JsonPropertyName("id")]

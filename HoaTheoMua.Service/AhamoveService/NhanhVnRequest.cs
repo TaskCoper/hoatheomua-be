@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace HoaTheoMua.Service.AhamoveService;
+namespace HoaTheoMua.Service.AhaMoveService;
 
 public class NhanhVnRequest
 {

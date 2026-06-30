@@ -1,7 +1,7 @@
 using System.Text.Json;
 using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.AhaMoveService;
 
 namespace HoaTheoMua.Service.Common;
 
@@ -59,16 +59,19 @@ public class GroupConfig
 
 
     
-    public List<Request.ItemsRequest> GetAhamoveServices()
+    public List<AhaMoveRequest.ItemsRequest> GetAhamoveServices()
     {
         var keys = new[] { 
             "ahamove.shipping.sgn_bike_bulky", 
             "ahamove.shipping.sgn_bike_fragile", 
             "ahamove.shipping.sgn_bike_sms", 
-            "ahamove.shipping.sgn_bike_d2d" 
+            "ahamove.shipping.sgn_bike_d2d",
+            
+            "ahamove.shipping.sgn_bike_reim_bulky",
+            // "ahamove.shipping.sgn_bike_pod"
         };
         
-        var result = new List<Request.ItemsRequest>();
+        var result = new List<AhaMoveRequest.ItemsRequest>();
         foreach (var key in keys)
         {
             if (_configs.TryGetValue(key, out var val) && val.ValueKind == JsonValueKind.String)
@@ -76,7 +79,7 @@ public class GroupConfig
                 try
                 {
                     var innerDoc = JsonDocument.Parse(val.GetString()!);
-                    var itemReq = new Request.ItemsRequest { Id = "" };
+                    var itemReq = new AhaMoveRequest.ItemsRequest { Id = "" };
 
                     if (innerDoc.RootElement.TryGetProperty("_id", out var idProp))
                         itemReq.Id = idProp.GetString() ?? "";
@@ -86,6 +89,13 @@ public class GroupConfig
 
                     if (innerDoc.RootElement.TryGetProperty("num", out var numProp))
                         itemReq.Num = numProp.GetInt32();
+                    
+                    //
+                    // if (innerDoc.RootElement.TryGetProperty("name", out var nameProp))
+                    //     itemReq.Name = nameProp.GetString();
+                    //
+                    // if (innerDoc.RootElement.TryGetProperty("price", out var priceProp))
+                    //     itemReq.Price = priceProp.GetDecimal();
 
                     if (!string.IsNullOrEmpty(itemReq.Id))
                     {
@@ -99,12 +109,12 @@ public class GroupConfig
             }
         }
         
-        return result.Any() ? result : new List<Request.ItemsRequest>
+        return result.Any() ? result : new List<AhaMoveRequest.ItemsRequest>
         {
-            new Request.ItemsRequest { Id = "SGN-BIKE-SMS" },
-            new Request.ItemsRequest { Id = "SGN-BIKE-D2D" },
-            new Request.ItemsRequest { Id = "SGN-BIKE-FRAGILE" },
-            new Request.ItemsRequest { Id = "SGN-BIKE-BULKY", TierCode = "TIER_2" }
+            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-SMS" },
+            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-D2D" },
+            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-FRAGILE" },
+            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-BULKY", TierCode = "TIER_2" }
         };
     }
 }

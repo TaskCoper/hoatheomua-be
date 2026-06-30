@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.Order;
 
-public class NhanhVnDataConverter : JsonConverter<List<OrderData>>
+public class Converter : JsonConverter<List<OrderData>>
 {
     public override List<OrderData> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
