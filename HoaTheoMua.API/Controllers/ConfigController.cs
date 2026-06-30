@@ -27,24 +27,23 @@ public class ConfigController : ControllerBase
     }
     
     [HttpGet("content")]
-    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
-    public async Task<IActionResult> GetConfigContentList([FromQuery] bool? isPublic)
+    public async Task<IActionResult> GetConfigContentList([FromQuery] bool? isPublic, string? groupName, string? key)
     {
-        var result = await _configService.GetConfigContent(isPublic);
+        var result = await _configService.GetConfigContent(isPublic, groupName, key);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
     [HttpGet("settings")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
-    public async Task<IActionResult> GetConfigSettingList()
+    public async Task<IActionResult> GetConfigSettingList([FromQuery] string? groupName, string? key)
     {
-        var result = await _configService.GetConfigSetting();
+        var result = await _configService.GetConfigSetting(groupName, key);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
     [HttpGet("secrets")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
-    public async Task<IActionResult> GetConfigSecretList()
+    public async Task<IActionResult> GetConfigSecretList([FromQuery] string? groupName, string? key)
     {
-        var result = await _configService.GetConfigSecret();
+        var result = await _configService.GetConfigSecret(groupName, key);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
     [HttpGet("secrets/{id:guid}/reveal")]

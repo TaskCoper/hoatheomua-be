@@ -25,7 +25,7 @@ public class Service : IService
         _currentUser = currentUser;
     }
 
-    public async Task<List<Response.ConfigResponse>> GetConfigContent(bool? isPublic)
+    public async Task<List<Response.ConfigResponse>> GetConfigContent(bool? isPublic, string? groupName, string? key)
     {
         var query = _dbContext.Configs
             .Where(x => !x.IsDeleted && 
@@ -35,6 +35,18 @@ public class Service : IService
         if (isPublic != null)
         {
             query = query.Where(x => x.IsPublic == isPublic);
+        }
+
+        if (!string.IsNullOrEmpty(groupName))
+        {
+            var filterGroupName = groupName.ToLower().Trim();
+            query = query.Where(x => x.Group.ToLower().Trim().Contains(filterGroupName));
+        }
+        
+        if (!string.IsNullOrEmpty(key))
+        {
+            var filterKey = key.ToLower().Trim();
+            query = query.Where(x => x.Key.ToLower().Trim().Contains(filterKey));
         }
         
         var result = await query
@@ -54,12 +66,24 @@ public class Service : IService
   
     }
 
-    public async Task<List<Response.ConfigResponse>> GetConfigSetting()
+    public async Task<List<Response.ConfigResponse>> GetConfigSetting(string? groupName, string? key)
     {
         var query = _dbContext.Configs
             .Where(x => !x.IsDeleted && 
                         x.Kind!.ToLower().Trim() == 
                         nameof(KindConfig.Setting).ToLower().Trim());
+
+        if (!string.IsNullOrEmpty(groupName))
+        {
+            var filterGroupName = groupName.ToLower().Trim();
+            query = query.Where(x => x.Group.ToLower().Trim().Contains(filterGroupName));
+        }
+        
+        if (!string.IsNullOrEmpty(key))
+        {
+            var filterKey = key.ToLower().Trim();
+            query = query.Where(x => x.Key.ToLower().Trim().Contains(filterKey));
+        }
 
         var result = await query
             .Select(x => new Response.ConfigResponse
@@ -77,13 +101,24 @@ public class Service : IService
         return result;
     }
     
-    public async Task<List<Response.ConfigResponse>> GetConfigSecret()
+    public async Task<List<Response.ConfigResponse>> GetConfigSecret(string? groupName, string? key)
     {
         var query =  _dbContext.Configs
             .Where(x => !x.IsDeleted &&
                         x.Kind!.ToLower().Trim() ==
                         nameof(KindConfig.Secret).ToLower().Trim());
         
+        if (!string.IsNullOrEmpty(groupName))
+        {
+            var filterGroupName = groupName.ToLower().Trim();
+            query = query.Where(x => x.Group.ToLower().Trim().Contains(filterGroupName));
+        }
+        
+        if (!string.IsNullOrEmpty(key))
+        {
+            var filterKey = key.ToLower().Trim();
+            query = query.Where(x => x.Key.ToLower().Trim().Contains(filterKey));
+        }
         
         var result = await  query
             .Select(x => new Response.ConfigResponse
@@ -158,6 +193,7 @@ public class Service : IService
                 Id = x.Id,
                 Key = x.Key,
                 Group = x.Group,
+                Kind = x.Kind,
                 IsPublic = x.IsPublic,
                 Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
                     ? MaskJsonOrString(x.Value)
@@ -321,6 +357,7 @@ public class Service : IService
             Id = x.Id,
             Key = x.Key,
             IsPublic = x.IsPublic,
+            Kind = x.Kind,
             Group = x.Group,
             Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
                 ? MaskJsonOrString(x.Value)
