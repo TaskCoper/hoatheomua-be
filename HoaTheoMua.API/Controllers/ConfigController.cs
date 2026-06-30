@@ -25,6 +25,35 @@ public class ConfigController : ControllerBase
         var result = await _configService.GetConfig();
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
+    
+    [HttpGet("content")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> GetConfigContentList([FromQuery] bool? isPublic)
+    {
+        var result = await _configService.GetConfigContent(isPublic);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
+    [HttpGet("settings")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetConfigSettingList()
+    {
+        var result = await _configService.GetConfigSetting();
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
+    [HttpGet("secrets")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetConfigSecretList()
+    {
+        var result = await _configService.GetConfigSecret();
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
+    [HttpGet("secrets/{id:guid}/reveal")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetConfigReveal(Guid id)
+    {
+        var result = await _configService.GetConfigReveal(id);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
 
     [HttpGet("{id:guid}")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
