@@ -136,7 +136,9 @@ public class Service : IService
                 Kind = x.Kind,
                 Group = x.Group,
                 IsPublic = x.IsPublic,
-                Value = StringToJson(x.Value),
+                Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
+                    ? MaskJsonOrString(x.Value)
+                    : StringToJson(x.Value),
                 UserId = x.UserId,
             })
             .ToListAsync();
@@ -157,7 +159,9 @@ public class Service : IService
                 Key = x.Key,
                 Group = x.Group,
                 IsPublic = x.IsPublic,
-                Value = StringToJson(x.Value),
+                Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
+                    ? MaskJsonOrString(x.Value)
+                    : StringToJson(x.Value),
                 UserId = x.UserId,
             })
             .FirstOrDefaultAsync();
@@ -317,7 +321,9 @@ public class Service : IService
             Key = x.Key,
             IsPublic = x.IsPublic,
             Group = x.Group,
-            Value = StringToJson(x.Value),
+            Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
+                ? MaskJsonOrString(x.Value)
+                : StringToJson(x.Value),
             UserId = x.UserId,
         }).ToListAsync();
 
@@ -337,7 +343,9 @@ public class Service : IService
             {
                 Key = x.Key,
                 Kind = x.Kind,
-                Value = StringToJson(x.Value),
+                Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
+                    ? MaskJsonOrString(x.Value)
+                    : StringToJson(x.Value),
             }).ToListAsync();
 
         return configs;
