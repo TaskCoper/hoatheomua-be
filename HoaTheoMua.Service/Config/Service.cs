@@ -1,8 +1,10 @@
 using System.Text.Json;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -23,13 +25,18 @@ public class Service : IService
         _currentUser = currentUser;
     }
 
-
-    public async Task<List<Response.ConfigResponse>> GetConfig()
+    public async Task<List<Response.ConfigResponse>> GetConfigContent(bool? isPublic)
     {
         var query = _dbContext.Configs
-            .Where(x => !x.IsDeleted)
-            .OrderByDescending(x => x.CreatedAt);
+            .Where(x => !x.IsDeleted && 
+                        x.Kind!.ToLower().Trim() == 
+                        nameof(KindConfig.Content).ToLower().Trim());
 
+        if (isPublic != null)
+        {
+            query = query.Where(x => x.IsPublic == isPublic);
+        }
+        
         var result = await query
             .Select(x => new Response.ConfigResponse
             {
@@ -38,6 +45,100 @@ public class Service : IService
                 Group = x.Group,
                 IsPublic = x.IsPublic,
                 Value = StringToJson(x.Value),
+                Kind = x.Kind,
+                UserId = x.UserId,
+            })
+            .ToListAsync();
+
+        return result;
+  
+    }
+
+    public async Task<List<Response.ConfigResponse>> GetConfigSetting()
+    {
+        var query = _dbContext.Configs
+            .Where(x => !x.IsDeleted && 
+                        x.Kind!.ToLower().Trim() == 
+                        nameof(KindConfig.Setting).ToLower().Trim());
+
+        var result = await query
+            .Select(x => new Response.ConfigResponse
+            {
+                Id = x.Id,
+                Key = x.Key,
+                Group = x.Group,
+                IsPublic = x.IsPublic,
+                Kind = x.Kind,
+                Value = StringToJson(x.Value),
+                UserId = x.UserId,
+            })
+            .ToListAsync();
+
+        return result;
+    }
+    
+    public async Task<List<Response.ConfigResponse>> GetConfigSecret()
+    {
+        var query =  _dbContext.Configs
+            .Where(x => !x.IsDeleted &&
+                        x.Kind!.ToLower().Trim() ==
+                        nameof(KindConfig.Secret).ToLower().Trim());
+        
+        
+        var result = await  query
+            .Select(x => new Response.ConfigResponse
+            {
+                Id = x.Id,
+                Key = x.Key,
+                Group = x.Group,
+                IsPublic = x.IsPublic,
+                Kind = x.Kind,
+                Value = MaskJsonOrString(x.Value),
+                UserId = x.UserId,
+            }).ToListAsync();
+        
+        return result;
+    }
+
+    public async Task<Response.RevealResponse> GetConfigReveal(Guid id)
+    {
+        var query = await _dbContext.Configs
+            .Where(x => x.Id == id && !x.IsDeleted)
+            .Select(x => new Response.RevealResponse()
+            {
+                Id  = x.Id,
+                Key = x.Key,
+                Value =  StringToJson(x.Value),
+                RevealedAt = DateTimeOffset.UtcNow,
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5),
+            })
+            .FirstOrDefaultAsync();
+
+        if (query == null)
+        {
+            throw new NotFoundException("Config not found or not a secret");
+        }
+
+        return query;
+    }
+
+
+    public async Task<List<Response.ConfigResponse>> GetConfig()
+    {
+        var query = _dbContext.Configs
+            .Where(x => !x.IsDeleted);
+        
+        var result = await query
+            .Select(x => new Response.ConfigResponse
+            {
+                Id = x.Id,
+                Key = x.Key,
+                Kind = x.Kind,
+                Group = x.Group,
+                IsPublic = x.IsPublic,
+                Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
+                    ? MaskJsonOrString(x.Value)
+                    : StringToJson(x.Value),
                 UserId = x.UserId,
             })
             .ToListAsync();
@@ -58,7 +159,9 @@ public class Service : IService
                 Key = x.Key,
                 Group = x.Group,
                 IsPublic = x.IsPublic,
-                Value = StringToJson(x.Value),
+                Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
+                    ? MaskJsonOrString(x.Value)
+                    : StringToJson(x.Value),
                 UserId = x.UserId,
             })
             .FirstOrDefaultAsync();
@@ -104,6 +207,7 @@ public class Service : IService
 
             Key = key,
             Group =  request.Group,
+            Kind = request.Kind,
             Value = request.Value.GetRawText(),
             IsPublic = false,
             UserId = userId,
@@ -119,6 +223,7 @@ public class Service : IService
         {
             Id = result.Id,
             Key = result.Key,
+            Kind = result.Kind,
             Group = result.Group,
             IsPublic = result.IsPublic,
             Value = StringToJson(result.Value),
@@ -133,9 +238,7 @@ public class Service : IService
         Request.UpdateConfigRequest request)
     {
         
-        
-        var keyPrefix = request.Key!.Split('.', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
-        
+        var keyPrefix = request.Key.Split('.', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
         
         if (request.Value.TryGetProperty("group", out JsonElement groupElement)
             && groupElement.ValueKind == JsonValueKind.String)
@@ -160,13 +263,17 @@ public class Service : IService
         var query = await _dbContext.Configs
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
         
-
         
         if (query == null)
         {
             throw new BadRequestException("Id/Key Not Found");
         }
-        
+
+        if (request.Kind.ToLower().Trim() != query.Kind!.ToLower().Trim())
+        {
+            throw new ConflictException("ConfigKindImmutable");
+        }
+            
         if (request.IsPublic != null)
         {
             query.IsPublic = request.IsPublic.Value;
@@ -206,7 +313,8 @@ public class Service : IService
 
     public async Task<List<Response.ConfigResponse>> GetConfigIsPublic()
     {
-        var query = _dbContext.Configs.Where(x => x.IsPublic == true);
+        var query = _dbContext.Configs
+            .Where(x => x.IsPublic == true && x.Kind.ToLower().Trim() == nameof(KindConfig.Content).ToLower().Trim());
 
         var result = await query.Select(x => new Response.ConfigResponse
         {
@@ -214,7 +322,9 @@ public class Service : IService
             Key = x.Key,
             IsPublic = x.IsPublic,
             Group = x.Group,
-            Value = StringToJson(x.Value),
+            Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
+                ? MaskJsonOrString(x.Value)
+                : StringToJson(x.Value),
             UserId = x.UserId,
         }).ToListAsync();
 
@@ -233,15 +343,50 @@ public class Service : IService
             .Select(x => new Response.ConfigGroupResponse()
             {
                 Key = x.Key,
-                Value = StringToJson(x.Value),
+                Kind = x.Kind,
+                Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
+                    ? MaskJsonOrString(x.Value)
+                    : StringToJson(x.Value),
             }).ToListAsync();
 
         return configs;
     }
 
+
+
     private static JsonElement StringToJson(string value)
     {
         return JsonSerializer.Deserialize<JsonElement>(value);
+    }
+    
+    private static JsonElement MaskJsonOrString(string? rawValue)
+    {
+        if (string.IsNullOrEmpty(rawValue))
+            return JsonDocument.Parse("{}").RootElement; 
+        
+        var jObject = JObject.Parse(rawValue);
+        if (jObject["value"] != null)
+        {
+            string secretToken = jObject["value"]!.ToString();
+            
+            jObject["value"] = MaskSecret(secretToken);
+
+            string maskedJsonString = jObject.ToString(Formatting.None);
+
+            return JsonDocument.Parse(maskedJsonString).RootElement;
+        }
+
+        return JsonDocument.Parse(MaskSecret(rawValue)).RootElement;
+    }
+    
+    private static string MaskSecret(string? value, int visibleSuffix = 10)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        if (value.Length <= visibleSuffix)
+            return "••••••••••";
+        return "••••••••••••••••••••" + value[^visibleSuffix..];
     }
 }
 
