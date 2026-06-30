@@ -27,6 +27,7 @@ public class ConfigController : ControllerBase
     }
     
     [HttpGet("content")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetConfigContentList([FromQuery] bool? isPublic, string? groupName, string? key)
     {
         var result = await _configService.GetConfigContent(isPublic, groupName, key);
@@ -89,10 +90,9 @@ public class ConfigController : ControllerBase
     }
 
     [HttpGet("public")]
-    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
-    public async Task<IActionResult> GetPublicConfig()
+    public async Task<IActionResult> GetPublicConfig([FromQuery] string? groupName, string? key)
     {
-        var result = await _configService.GetConfigIsPublic();
+        var result = await _configService.GetConfigIsPublic(groupName, key);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
     
