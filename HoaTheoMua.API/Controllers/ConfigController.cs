@@ -27,7 +27,6 @@ public class ConfigController : ControllerBase
     }
     
     [HttpGet("content")]
-    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> GetConfigContentList([FromQuery] bool? isPublic, string? groupName, string? key)
     {
         var result = await _configService.GetConfigContent(isPublic, groupName, key);
