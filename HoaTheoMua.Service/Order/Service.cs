@@ -310,6 +310,7 @@ public class Service : IService
             ShippingFee = totalShippingFee,
             ProductFree = totalProductFee,
             TotalFee = totalProductFee + totalShippingFee,
+            TagIds =  request.TagIds,
 
         };
 
