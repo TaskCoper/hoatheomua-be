@@ -270,6 +270,7 @@ public partial class Service : IService
         
         var nhanhVnRequest = new OrderRoot
         {
+            Id = order.Id.ToString(),
             Depot = new Depot
             {
                 Id = 129255,

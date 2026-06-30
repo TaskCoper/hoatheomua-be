@@ -1,4 +1,4 @@
-﻿namespace HoaTheoMua.Service.Webhook;
+namespace HoaTheoMua.Service.Webhook;
 
 using System;
 using System.Collections.Generic;
@@ -6,6 +6,9 @@ using System.Text.Json.Serialization;
 
 public class OrderRoot
 {
+    [JsonPropertyName("id")]
+    public string Id { get; set; }
+
     [JsonPropertyName("depot")]
     public Depot Depot { get; set; }
 
