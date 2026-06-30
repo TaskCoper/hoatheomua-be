@@ -1,4 +1,4 @@
-﻿namespace HoaTheoMua.Service.Webhook;
+namespace HoaTheoMua.Service.Webhook;
 
 using System;
 using System.Collections.Generic;

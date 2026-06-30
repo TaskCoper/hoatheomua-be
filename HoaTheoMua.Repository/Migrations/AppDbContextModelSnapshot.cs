@@ -989,6 +989,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<List<long>>("TagIds")
+                        .HasColumnType("bigint[]");
+
                     b.Property<string>("TaxCode")
                         .HasColumnType("text");
 
