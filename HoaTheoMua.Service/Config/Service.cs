@@ -158,6 +158,7 @@ public class Service : IService
                 Id = x.Id,
                 Key = x.Key,
                 Group = x.Group,
+                Kind = x.Kind,
                 IsPublic = x.IsPublic,
                 Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
                     ? MaskJsonOrString(x.Value)
@@ -321,6 +322,7 @@ public class Service : IService
             Id = x.Id,
             Key = x.Key,
             IsPublic = x.IsPublic,
+            Kind = x.Kind,
             Group = x.Group,
             Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
                 ? MaskJsonOrString(x.Value)
