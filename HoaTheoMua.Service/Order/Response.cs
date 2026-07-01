@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using System.Transactions;
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Service.Order;
 
@@ -17,6 +18,16 @@ public class Response
         public string AhahaMoveTrackingUrl { get; set; } = string.Empty;
         public string? Remark { get; set; }
         public long OrderTime { get; set; }
+        public string? Taxcode { get; set; }
+        public List<long>? TagsId { get; set; }
+        public string IdentityNumber { get; set; } = string.Empty;
+        public InvoiceType? InvoiceType { get; set; }
+        public bool? IsExportInvoice { get; set; }
+        public string ReceiptAddress { get; set; } = string.Empty;
+        public string ReceiptEmail { get; set; } =  string.Empty;
+        public string ReceiptFullName { get; set; } =   string.Empty;
+        public string ReceiptPhoneNumber { get; set; } =   string.Empty;
+        
         public DateTimeOffset CreateAt { get; set; }
         public DateTimeOffset? UpdateAt { get; set; }
     }
@@ -33,6 +44,14 @@ public class Response
         public string? Remark { get; set; }
         public string? TaxCode { get; set; }
         public long OrderTime { get; set; }
+        public List<long>? TagsId { get; set; }
+        public string IdentityNumber { get; set; } = string.Empty;
+        public InvoiceType? InvoiceType { get; set; }
+        public bool? IsExportInvoice { get; set; }
+        public string ReceiptAddress { get; set; } = string.Empty;
+        public string ReceiptEmail { get; set; } =  string.Empty;
+        public string ReceiptFullName { get; set; } =   string.Empty;
+        public string ReceiptPhoneNumber { get; set; } =   string.Empty;
         public string QrCodeUrl { get; set; } = string.Empty;
         
         public OrderTransactionResponse? Transaction { get; set; }
