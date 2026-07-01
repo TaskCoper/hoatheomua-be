@@ -216,7 +216,7 @@ public partial class Service : IService
                 privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
             }
         }
-        else
+        else if(order.OrderTime == 0)
         {
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
                 {
