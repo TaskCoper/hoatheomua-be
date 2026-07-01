@@ -949,7 +949,16 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("IdentityNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InvoiceType")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("IsExportInvoice")
                         .HasColumnType("boolean");
 
                     b.Property<decimal>("Latitude")
@@ -973,6 +982,18 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<decimal>("ProductFree")
                         .HasColumnType("numeric");
+
+                    b.Property<string>("ReceiptAddress")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReceiptEmail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReceiptFullName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReceiptPhoneNumber")
+                        .HasColumnType("text");
 
                     b.Property<string>("Remarks")
                         .IsRequired()

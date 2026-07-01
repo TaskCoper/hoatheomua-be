@@ -428,7 +428,27 @@ public class Service : IService
         return config;
     }
 
-
+    public async Task<int> GetNhanhVnOrderSources()
+    {
+        var query = await _dbContext.Configs
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.Key.Contains("nhanhvn.order_sources"));
+        
+        if (query == null)
+        {
+            throw new BadRequestException("GetNhanhVnOrderSources Not Found");
+        }
+        
+        
+        var config = JsonSerializer.Deserialize<Response.OrderSourceConfig>(query.Value);
+        
+        if (config == null || config.Options == null || config.Value == null)
+        {
+            throw new BadRequestException("Cannot convert value");
+        }
+        
+        return config.Value;
+    }
+    
     private static JsonElement StringToJson(string value)
     {
         return JsonSerializer.Deserialize<JsonElement>(value);

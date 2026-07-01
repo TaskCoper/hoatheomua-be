@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -19,14 +20,17 @@ public partial class Service : IService
     private readonly HoaTheoMua.Service.Order.IService _orderService;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
+    private readonly Config.IService _configService;
 
-    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration, HoaTheoMua.Service.Order.IService orderService)
+    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration, 
+        HoaTheoMua.Service.Order.IService orderService,  Config.IService configService)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
         _orderService = orderService;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
+        _configService = configService;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
     }
@@ -162,20 +166,12 @@ public partial class Service : IService
 
         order.UpdatedAt = DateTimeOffset.UtcNow;
         AhaMoveResponse.CreateAhaMoveOrderResponse? createAhamoveOrderResult = null;
-        string privateDescription = "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
 
-        if (!string.IsNullOrWhiteSpace(order.TaxCode))
-        {
-            try
-            {
-                var taxInfo = await _orderService.GetInfoTaxCode(order.TaxCode);
-                privateDescription += $" - {taxInfo}";
-            }
-            catch (BadRequestException ex)
-            {
-                Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
-            }
-        }
+        var companyAddress = await _dbContext.CompanyAddresses
+            .Where(x => x.IsDeleted == false)
+            .FirstOrDefaultAsync();
+
+        string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
 
         if (order.OrderTime > 0)
         {
@@ -183,7 +179,39 @@ public partial class Service : IService
                 .FromUnixTimeSeconds(order.OrderTime)
                 .ToOffset(TimeSpan.FromHours(7));
 
-            privateDescription += $", khách đặt giao ngày {vnDt:dd/MM/yyyy}";
+            privateDescription += $"\n-------------------------\n Khách đặt giao ngày {vnDt:dd/MM/yyyy}";
+        }
+
+        if (order.IsExportInvoice == true && order.InvoiceType != null)
+        {
+            privateDescription += "\n-------------------------";
+            
+            if (order.InvoiceType == InvoiceType.Business)
+            {
+                if (!string.IsNullOrWhiteSpace(order.TaxCode))
+                {
+                    try
+                    {
+                        var taxInfo = await _orderService.GetInfoTaxCode(order.TaxCode);
+                        privateDescription += $"\n{taxInfo}";
+                    }
+                    catch (BadRequestException ex)
+                    {
+                        Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
+                    }
+                }
+                privateDescription += $"\nMã số thuế: {order.TaxCode}";
+                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
+                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+            }
+            else if (order.InvoiceType == InvoiceType.Personal)
+            {
+                privateDescription += $"\nKhách hàng: {order.ReceiptFullName}";
+                privateDescription += $"\nCMND/CCCD: {order.IdentityNumber}";
+                privateDescription += $"\nĐịa chỉ: {order.ReceiptAddress}";
+                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
+                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+            }
         }
         else
         {
@@ -202,13 +230,9 @@ public partial class Service : IService
                     Weight = x.Weight,
                     Length = x.Length,
                     Width = x.Width,
-                    Description = "Mo ta"
+                    Description = x.Name
                 }
             ).ToList();
-
-            var companyAddress = await _dbContext.CompanyAddresses
-                .Where(x => x.IsDeleted == false)
-                .FirstOrDefaultAsync();
 
             var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
 
@@ -310,7 +334,9 @@ public partial class Service : IService
             Channel = new Channel
             {
                 TrafficSourceId = 996,
-                AppOrderId = createAhamoveOrderResult?.OrderId ?? order.Id.ToString() ,
+                AppOrderId = createAhamoveOrderResult?.OrderId != null
+                    ? createAhamoveOrderResult.OrderId + order.Id.ToString()
+                    : order.Id.ToString(),
                 PageId = "",
                 ConversationId = "",
                 VpageUserId = "",
@@ -319,7 +345,7 @@ public partial class Service : IService
                 FbPsId = "",
                 PostId = "",
                 FbAdsId = 0,
-                SourceFrom = "",
+                SourceFrom = _configService.GetNhanhVnOrderSources().ToString() ?? "", 
                 Id = 0
             },
             Carrier = new Carrier
