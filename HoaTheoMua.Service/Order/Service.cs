@@ -286,7 +286,7 @@ public class Service : IService
             throw new BadRequestException("Ahamove returned null or empty data");
         }
 
-        var totalShippingFee = ahamoveResult[0].Data.TotalPrice;
+        var totalShippingFee = ahamoveResult[0].Data.TotalFee;
         var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
 
         if (!string.IsNullOrEmpty(request.TaxCode))
