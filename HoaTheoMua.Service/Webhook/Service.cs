@@ -270,18 +270,22 @@ public partial class Service : IService
                 ServiceId = "SGN-BIKE",
                 Requests = new List<AhaMoveRequest.ItemsRequest>()
                 {
+                    // new AhaMoveRequest.ItemsRequest()
+                    // {
+                    //     Id = "SGN-BIKE-SMS",
+                    // },
+                    // new AhaMoveRequest.ItemsRequest()
+                    // {
+                    //     Id = "SGN-BIKE-FRAGILE",
+                    // },
+                    // new AhaMoveRequest.ItemsRequest()
+                    // {
+                    //     Id = "SGN-BIKE-BULKY",
+                    //     TierCode = "TIER_2"
+                    // },
                     new AhaMoveRequest.ItemsRequest()
                     {
-                        Id = "SGN-BIKE-SMS",
-                    },
-                    new AhaMoveRequest.ItemsRequest()
-                    {
-                        Id = "SGN-BIKE-FRAGILE",
-                    },
-                    new AhaMoveRequest.ItemsRequest()
-                    {
-                        Id = "SGN-BIKE-BULKY",
-                        TierCode = "TIER_2"
+                        Id = "SGN-BIKE-BAGA"
                     },
                 },
                 PaymentMethod = "CASH",
