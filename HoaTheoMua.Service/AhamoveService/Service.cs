@@ -117,8 +117,6 @@ public class Service: IService
             }
         ).ToList();
         
-        var ahamoveServiceDetails = await GetServiceDetailsAhaMove();
-
         var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
         {
             OrderTime = request.OrderTime,                               
@@ -155,7 +153,26 @@ public class Service: IService
                 new AhaMoveRequest.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
-                    Requests = configs.GetAhamoveServices(ahamoveServiceDetails.Requests)
+                    Requests = new List<AhaMoveRequest.ItemsRequest>()
+                    {
+                        // new AhaMoveRequest.ItemsRequest()
+                        // {
+                        //     Id = "SGN-BIKE-SMS",
+                        // },
+                        // new AhaMoveRequest.ItemsRequest()
+                        // {
+                        //     Id = "SGN-BIKE-FRAGILE",
+                        // },
+                        // new AhaMoveRequest.ItemsRequest()
+                        // {
+                        //     Id = "SGN-BIKE-BULKY",
+                        //     TierCode = "TIER_2"
+                        // },
+                        new AhaMoveRequest.ItemsRequest()
+                        {
+                            Id = "SGN-BIKE-BAGA"
+                        },
+                    }
                 },
             }
         };
