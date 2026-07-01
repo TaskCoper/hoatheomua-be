@@ -311,6 +311,9 @@ public class Service : IService
             ProductFree = totalProductFee,
             TotalFee = totalProductFee + totalShippingFee,
             TagIds =  request.TagIds,
+            Email = request.Email,
+            IdentityNumber = request.IdentityNumber,
+            PhoneNumber = request.PhoneNumber,
 
         };
 

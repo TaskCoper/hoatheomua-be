@@ -27,6 +27,9 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     public required long OrderTime { get; set; } = 0; 
     public string? TaxCode  { get; set; }
     public List<long>? TagIds { get; set; }
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? IdentityNumber {get; set; }
     
     // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }

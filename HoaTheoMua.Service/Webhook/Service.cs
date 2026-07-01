@@ -162,14 +162,19 @@ public partial class Service : IService
 
         order.UpdatedAt = DateTimeOffset.UtcNow;
         AhaMoveResponse.CreateAhaMoveOrderResponse? createAhamoveOrderResult = null;
-        string privateDescription = "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
+
+        var companyAddress = await _dbContext.CompanyAddresses
+            .Where(x => x.IsDeleted == false)
+            .FirstOrDefaultAsync();
+
+        string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
 
         if (!string.IsNullOrWhiteSpace(order.TaxCode))
         {
             try
             {
                 var taxInfo = await _orderService.GetInfoTaxCode(order.TaxCode);
-                privateDescription += $" - {taxInfo}";
+                privateDescription += $"\n{taxInfo}";
             }
             catch (BadRequestException ex)
             {
@@ -183,7 +188,7 @@ public partial class Service : IService
                 .FromUnixTimeSeconds(order.OrderTime)
                 .ToOffset(TimeSpan.FromHours(7));
 
-            privateDescription += $", khách đặt giao ngày {vnDt:dd/MM/yyyy}";
+            privateDescription += $"\nKhách đặt giao ngày {vnDt:dd/MM/yyyy}";
         }
         else
         {
@@ -202,13 +207,9 @@ public partial class Service : IService
                     Weight = x.Weight,
                     Length = x.Length,
                     Width = x.Width,
-                    Description = "Mo ta"
+                    Description = x.Name
                 }
             ).ToList();
-
-            var companyAddress = await _dbContext.CompanyAddresses
-                .Where(x => x.IsDeleted == false)
-                .FirstOrDefaultAsync();
 
             var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
 
