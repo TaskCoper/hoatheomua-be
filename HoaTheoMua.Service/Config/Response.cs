@@ -77,4 +77,37 @@ public class Response
         public int? Value { get; set; }
     }
     
+    public class OrderSourceConfig
+    {
+        [JsonPropertyName("group")]
+        public string Group { get; set; }
+
+        [JsonPropertyName("label")]
+        public string Label { get; set; }
+
+        [JsonPropertyName("value")]
+        public int Value { get; set; }
+
+        [JsonPropertyName("options")]
+        public List<FieldOption> Options { get; set; }
+
+        [JsonPropertyName("required")]
+        public bool Required { get; set; }
+
+        [JsonPropertyName("inputType")]
+        public string InputType { get; set; }
+
+        [JsonPropertyName("validations")]
+        public List<object> Validations { get; set; }
+    }
+
+    public class FieldOption
+    {
+        [JsonPropertyName("label")]
+        public string Label { get; set; }
+
+        [JsonPropertyName("value")]
+        public int Value { get; set; }
+    }
+    
 }
