@@ -323,7 +323,7 @@ public class Service : IService
             
             if (!string.IsNullOrEmpty(request.TaxCode))
             {
-                 vatFee = totalProductFee -  (totalProductFee *= 1.08m) ;
+                vatFee = totalProductFee * 0.08m;
             }
             
             
