@@ -104,7 +104,7 @@ public class ConfigController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
     
-    [HttpGet("nhanhvn.order_tags")]
+    [HttpGet("order-tags")]
     [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
     public async Task<IActionResult> GetNhanhVnOrderTag()
     {
