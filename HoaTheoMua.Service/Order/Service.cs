@@ -22,12 +22,13 @@ public class Service : IService
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
+    private readonly HoaTheoMua.Service.AhaMoveService.IService _ahaMoveService;
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
         HttpClient httpClient,
         HoaTheoMua.Service.Product.IService serviceProduct,
-        IConfiguration configuration)
+        IConfiguration configuration,HoaTheoMua.Service.AhaMoveService.IService ahaMoveService )
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
@@ -35,6 +36,7 @@ public class Service : IService
         _serviceProduct = serviceProduct;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
+        _ahaMoveService = ahaMoveService;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
     }
@@ -216,6 +218,8 @@ public class Service : IService
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
         
+        var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
+        
         var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         
         var createRequest = new AhaMoveService.AhaMoveRequest.AhaMoveShippingFeeRequest()
@@ -255,7 +259,7 @@ public class Service : IService
                 new AhaMoveService.AhaMoveRequest.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
-                    Requests = ahamoveConfigs.GetAhamoveServices()
+                    Requests = ahamoveConfigs.GetAhamoveServices(ahamoveServiceDetails.Requests)
                 },
             }
         };
