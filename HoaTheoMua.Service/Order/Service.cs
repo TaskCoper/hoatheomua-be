@@ -295,10 +295,14 @@ public class Service : IService
         var totalProductFee = productNhanhResult.Data.Sum(x =>
             x.Prices.Retail * request.Items.First(item => item.ItemId.Equals(x.Id)).Number);
 
+        var vatFee = 0m;
+        
         if (!string.IsNullOrEmpty(request.TaxCode))
         {
-            totalProductFee *= 1.08m;
+             vatFee = totalProductFee *= 1.08m ;
         }
+        
+        
 
         var newOrder = new Repository.Entity.Order()
         {
@@ -318,8 +322,9 @@ public class Service : IService
             OrderTime = request.OrderTime,
             CreatedAt = DateTime.UtcNow,
             ShippingFee = totalShippingFee,
-            ProductFree = totalProductFee,
+            ProductFee = totalProductFee,
             TotalFee = totalProductFee + totalShippingFee,
+            Vat = vatFee,
             
             TagIds =  request.TagIds,
             TaxCode = request.TaxCode,
@@ -330,6 +335,7 @@ public class Service : IService
             ReceiptEmail = request.ReceiptEmail,
             IsExportInvoice = request.IsExportInvoice,
             InvoiceType =  request.InvoiceType,
+            
         };
 
 

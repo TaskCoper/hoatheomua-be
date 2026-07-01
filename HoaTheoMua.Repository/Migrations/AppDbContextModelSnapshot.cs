@@ -518,7 +518,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal>("ProductFree")
+                    b.Property<decimal>("ProductFee")
                         .HasColumnType("numeric");
 
                     b.Property<string>("ReceiptAddress")
@@ -566,6 +566,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Vat")
+                        .HasColumnType("numeric");
 
                     b.Property<int>("Ward")
                         .HasColumnType("integer");

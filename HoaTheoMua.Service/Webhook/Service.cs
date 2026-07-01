@@ -301,15 +301,32 @@ public partial class Service : IService
             order.AhahaMoveOrderId = createAhamoveOrderResult.OrderId;
             order.AhahaMoveTrackingUrl = createAhamoveOrderResult.SharedLink;
         }
+
+        var productNhanhVnRequest = new List<Product>();
         
-        var productNhanhVnRequest = order.OrderDetails.Select(
-            x => new Product()
-            {
-                Id = x.ItemId,
-                Price = x.Price,
-                Quantity = x.Number
-            }
-        ).ToList();
+        if (order.TaxCode != null && order.InvoiceType == InvoiceType.Business && order.IsExportInvoice == true)
+        {
+             productNhanhVnRequest = order.OrderDetails.Select(
+                x => new Product()
+                {
+                    Id = x.ItemId,
+                    Price = x.Price,
+                    Quantity = x.Number,
+                    Vat = 8,
+                }
+            ).ToList();
+        }
+        else
+        { 
+            productNhanhVnRequest = order.OrderDetails.Select(
+                x => new Product()
+                {
+                    Id = x.ItemId,
+                    Price = x.Price,
+                    Quantity = x.Number,
+                }
+            ).ToList();
+        }
         
         var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
         
@@ -432,7 +449,7 @@ public partial class Service : IService
                 CancelAutoPromotion = 0,
                 PaymentMoMoCrm = 0,
                 MoneyTransferPaymentLink = 0,
-                TotalProductPrice = order.TotalFee,
+                TotalProductPrice = order.ProductFee,
                 UseManualDiscount = 0
             }
         };

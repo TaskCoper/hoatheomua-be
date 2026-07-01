@@ -23,7 +23,7 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     public  string? AhahaMoveOrderId { get; set; }
     public  string? AhahaMoveTrackingUrl { get; set; }
     public decimal ShippingFee { get; set; }
-    public decimal ProductFree { get; set; }
+    public decimal ProductFee { get; set; }
     public decimal TotalFee { get; set; }
     public required long OrderTime { get; set; } = 0; 
     // public string? Email { get; set; }
@@ -43,6 +43,8 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     public string? ReceiptEmail { get; set; }
     
     public bool? IsExportInvoice { get; set; }
+
+    public decimal? Vat { get; set; } = 1.08m;
     public InvoiceType?  InvoiceType { get; set; }
     
     // External user id (from taskcoper-be's token); no FK — this service has no User table.

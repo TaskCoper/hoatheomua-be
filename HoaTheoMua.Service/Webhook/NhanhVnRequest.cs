@@ -266,6 +266,9 @@ public class Product
 
     [JsonPropertyName("quantity")]
     public int Quantity { get; set; }
+    
+    [JsonPropertyName("vat")]
+    public int? Vat { get; set; }
 }
 
 public class Payment
