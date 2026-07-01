@@ -400,7 +400,32 @@ public class Service : IService
 
         return configs;
     }
-
+    
+    
+    public async Task<Response.ConfigItem> GetNhanhVnOrderTag()
+    {
+        var query = await _dbContext.Configs
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.Key.Contains("nhanhvn.order_tags"));
+        
+        if (query == null)
+        {
+            throw new BadRequestException("NhanhVnOrderTag Not Found");
+        }
+        
+        
+        var config = JsonSerializer.Deserialize<Response.ConfigItem>(query.Value);
+        
+        if (config == null || config.Options == null || config.Value == null)
+        {
+            throw new BadRequestException("Cannot convert value");
+        }
+        
+        config.Options = config.Options
+            .Where(x =>config.Value.Contains((int)x.Value!))
+            .ToList();
+        
+        return config;
+    }
 
 
     private static JsonElement StringToJson(string value)

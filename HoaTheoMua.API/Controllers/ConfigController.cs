@@ -103,4 +103,12 @@ public class ConfigController : ControllerBase
         var result = await _configService.GetConfigGroups(groupName);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
+    
+    [HttpGet("order-tags")]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    public async Task<IActionResult> GetNhanhVnOrderTag()
+    {
+        var result = await _configService.GetNhanhVnOrderTag();
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
 }
