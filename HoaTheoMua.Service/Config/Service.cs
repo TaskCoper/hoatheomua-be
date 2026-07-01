@@ -138,7 +138,8 @@ public class Service : IService
     public async Task<Response.RevealResponse> GetConfigReveal(Guid id)
     {
         var query = await _dbContext.Configs
-            .Where(x => x.Id == id && !x.IsDeleted)
+            .Where(x => x.Id == id && !x.IsDeleted && 
+                        x.Kind!.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim())
             .Select(x => new Response.RevealResponse()
             {
                 Id  = x.Id,
