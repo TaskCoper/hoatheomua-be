@@ -117,6 +117,8 @@ public class Service: IService
             }
         ).ToList();
         
+        var ahamoveServiceDetails = await GetServiceDetailsAhaMove();
+
         var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
         {
             OrderTime = request.OrderTime,                               
@@ -153,7 +155,7 @@ public class Service: IService
                 new AhaMoveRequest.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
-                    Requests = configs.GetAhamoveServices()
+                    Requests = configs.GetAhamoveServices(ahamoveServiceDetails.Requests)
                 },
             }
         };

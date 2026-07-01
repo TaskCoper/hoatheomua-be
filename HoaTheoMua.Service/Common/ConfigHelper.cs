@@ -59,63 +59,48 @@ public class GroupConfig
 
 
     
-    public List<AhaMoveRequest.ItemsRequest> GetAhamoveServices()
+    public List<AhaMoveRequest.ItemsRequest> GetAhamoveServices(List<SpecialRequest> availableRequests)
     {
-        var keys = new[] { 
-            "ahamove.shipping.sgn_bike_bulky", 
-            "ahamove.shipping.sgn_bike_fragile", 
-            "ahamove.shipping.sgn_bike_sms", 
-            "ahamove.shipping.sgn_bike_d2d",
-            
-           // "ahamove.shipping.sgn_bike_reim_bulky",
-            // "ahamove.shipping.sgn_bike_pod"
-        };
-        
         var result = new List<AhaMoveRequest.ItemsRequest>();
-        foreach (var key in keys)
+        
+        foreach (var kvp in _configs)
         {
-            if (_configs.TryGetValue(key, out var val) && val.ValueKind == JsonValueKind.String)
+            if (kvp.Key.StartsWith("ahamove.shipping.") && kvp.Value.ValueKind == JsonValueKind.String)
             {
                 try
                 {
-                    var innerDoc = JsonDocument.Parse(val.GetString()!);
-                    var itemReq = new AhaMoveRequest.ItemsRequest { Id = "" };
-
-                    if (innerDoc.RootElement.TryGetProperty("_id", out var idProp))
-                        itemReq.Id = idProp.GetString() ?? "";
-
-                    if (innerDoc.RootElement.TryGetProperty("tier_code", out var tierProp))
-                        itemReq.TierCode = tierProp.GetString();
-
-                    if (innerDoc.RootElement.TryGetProperty("num", out var numProp))
-                        itemReq.Num = numProp.GetInt32();
+                    var innerDoc = JsonDocument.Parse(kvp.Value.GetString()!);
+                    string id = "";
                     
-                    //
-                    // if (innerDoc.RootElement.TryGetProperty("name", out var nameProp))
-                    //     itemReq.Name = nameProp.GetString();
-                    //
-                    // if (innerDoc.RootElement.TryGetProperty("price", out var priceProp))
-                    //     itemReq.Price = priceProp.GetDecimal();
+                    if (innerDoc.RootElement.TryGetProperty("_id", out var idProp))
+                        id = idProp.GetString() ?? "";
 
-                    if (!string.IsNullOrEmpty(itemReq.Id))
+                    if (string.IsNullOrEmpty(id))
+                        continue;
+
+                    // Kiểm tra xem Id có tồn tại trong danh sách request của AhaMove không
+                    var matchedRequest = availableRequests?.FirstOrDefault(r => r.Id == id);
+                    if (matchedRequest != null)
                     {
+                        var itemReq = new AhaMoveRequest.ItemsRequest { Id = id };
+
+                        if (innerDoc.RootElement.TryGetProperty("tier_code", out var tierProp))
+                            itemReq.TierCode = tierProp.GetString();
+
+                        if (innerDoc.RootElement.TryGetProperty("num", out var numProp))
+                            itemReq.Num = numProp.GetInt32();
+
                         result.Add(itemReq);
-                    }
+                    }   
                 }
                 catch
                 {
-                    throw new ArgumentException("Config value could not be parsed");
+                    // throw new ArgumentException("Config value could not be parsed");
                 }
             }
         }
         
-        return result.Any() ? result : new List<AhaMoveRequest.ItemsRequest>
-        {
-            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-SMS" },
-            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-D2D" },
-            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-FRAGILE" },
-            new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-BULKY", TierCode = "TIER_2" }
-        };
+        return result;
     }
 }
 
