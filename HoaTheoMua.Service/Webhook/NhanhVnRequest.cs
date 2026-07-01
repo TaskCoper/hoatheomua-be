@@ -89,6 +89,9 @@ public class Channel
 
     [JsonPropertyName("appOrderId")]
     public string AppOrderId { get; set; }
+    
+    [JsonPropertyName("sourceName")]
+    public string SourceName { get; set; }
 
     [JsonPropertyName("pageId")]
     public string PageId { get; set; }
