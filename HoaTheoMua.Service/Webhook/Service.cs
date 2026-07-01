@@ -311,6 +311,8 @@ public partial class Service : IService
             }
         ).ToList();
         
+        var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
+        
         var nhanhVnRequest = new OrderRoot
         {
             Depot = new Depot
@@ -349,7 +351,7 @@ public partial class Service : IService
                 FbPsId = "",
                 PostId = "",
                 FbAdsId = 0,
-                SourceFrom = _configService.GetNhanhVnOrderSources().ToString() ?? "", 
+                SourceFrom = nhanhVnOrderSources.ToString(), 
                 Id = 0
             },
             Carrier = new Carrier
