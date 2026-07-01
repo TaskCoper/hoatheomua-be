@@ -174,6 +174,7 @@ public partial class Service : IService
             try
             {
                 var taxInfo = await _orderService.GetInfoTaxCode(order.TaxCode);
+                privateDescription += "\n--------------------------------";
                 privateDescription += $"\n{taxInfo}";
             }
             catch (BadRequestException ex)

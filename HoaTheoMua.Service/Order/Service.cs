@@ -208,7 +208,7 @@ public class Service : IService
                 Weight = x.Shipping.Weight,
                 Length = x.Shipping.Length,
                 Width = x.Shipping.Width,
-                Description = "Noi that"
+                Description = x.Name
             }
         ).ToList();
 
@@ -287,14 +287,18 @@ public class Service : IService
         }
 
         var totalShippingFee = ahamoveResult[0].Data.TotalPrice;
-        var totalProductFee = (productNhanhResult.Data.Select(x => x.Prices.Retail).Sum()) * 1.08m;
+        var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
+
+        if (!string.IsNullOrEmpty(request.TaxCode))
+        {
+            totalProductFee = totalProductFee * 1.08m;
+        }
 
         var newOrder = new Repository.Entity.Order()
         {
             Id = Guid.NewGuid(),
             UserId = userId,
             Status = "Pending",
-            TaxCode = request.TaxCode,
             TrackNumber = "",
             Latitude = request.Latitude,
             Longitude = request.Longitude,
@@ -310,11 +314,16 @@ public class Service : IService
             ShippingFee = totalShippingFee,
             ProductFree = totalProductFee,
             TotalFee = totalProductFee + totalShippingFee,
+            
             TagIds =  request.TagIds,
-            Email = request.Email,
+            TaxCode = request.TaxCode,
             IdentityNumber = request.IdentityNumber,
-            PhoneNumber = request.PhoneNumber,
-
+            ReceiptFullName = request.ReceiptFullName,
+            ReceiptPhoneNumber = request.ReceiptPhoneNumber,
+            ReceiptAddress = request.ReceiptAddress,
+            ReceiptEmail = request.ReceiptEmail,
+            IsExportInvoice = request.IsExportInvoice,
+            InvoiceType =  request.InvoiceType,
         };
 
 
@@ -565,7 +574,7 @@ public class Service : IService
             throw new BadRequestException($"VietQR API Error: {apiResponse.Desc}");
         }
 
-        return $"{apiResponse.Data.Name} - {apiResponse.Data.Address}";
+        return $"{apiResponse.Data.Name}\n{apiResponse.Data.Address}";
 
     }
 }

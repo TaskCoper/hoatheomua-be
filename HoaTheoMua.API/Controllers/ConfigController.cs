@@ -47,9 +47,9 @@ public class ConfigController : ControllerBase
         var result = await _configService.GetConfigSecret(groupName, key);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
-    [HttpGet("secrets/{id:guid}/reveal")]
+    [HttpPost("secrets/reveal/id")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
-    public async Task<IActionResult> GetConfigReveal(Guid id)
+    public async Task<IActionResult> GetConfigReveal([FromBody] Guid id)
     {
         var result = await _configService.GetConfigReveal(id);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
