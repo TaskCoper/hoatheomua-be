@@ -20,14 +20,17 @@ public partial class Service : IService
     private readonly HoaTheoMua.Service.Order.IService _orderService;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
+    private readonly Config.IService _configService;
 
-    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration, HoaTheoMua.Service.Order.IService orderService)
+    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration, 
+        HoaTheoMua.Service.Order.IService orderService,  Config.IService configService)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
         _orderService = orderService;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
+        _configService = configService;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
     }
@@ -342,7 +345,7 @@ public partial class Service : IService
                 FbPsId = "",
                 PostId = "",
                 FbAdsId = 0,
-                SourceFrom = "",
+                SourceFrom = _configService.GetNhanhVnOrderSources().ToString() ?? "", 
                 Id = 0
             },
             Carrier = new Carrier
