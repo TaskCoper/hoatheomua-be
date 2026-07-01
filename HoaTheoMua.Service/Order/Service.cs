@@ -292,39 +292,39 @@ public class Service : IService
 
         var totalShippingFee = ahamoveResult[0].Data.TotalFee;
         //var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
-        var totalProductFee = productNhanhResult.Data.Sum(x =>
-            x.Prices.Retail * request.Items.First(item => item.ItemId.Equals(x.Id)).Number);
+            var totalProductFee = productNhanhResult.Data.Sum(x =>
+                x.Prices.Retail * request.Items.First(item => item.ItemId.Equals(x.Id)).Number);
 
-        var vatFee = 0m;
-        
-        if (!string.IsNullOrEmpty(request.TaxCode))
-        {
-             vatFee = totalProductFee *= 1.08m ;
-        }
-        
-        
+            var vatFee = 0m;
+            
+            if (!string.IsNullOrEmpty(request.TaxCode))
+            {
+                 vatFee = totalProductFee -  (totalProductFee *= 1.08m) ;
+            }
+            
+            
 
-        var newOrder = new Repository.Entity.Order()
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Status = "Pending",
-            TrackNumber = "",
-            Latitude = request.Latitude,
-            Longitude = request.Longitude,
-            Address = request.Address,
-            Ward = request.Ward,
-            City = request.City,
-            ShortAddress = request.ShortAddress,
-            FullName = request.FullName,
-            Phone = request.Phone,
-            Remarks = request.Remarks,
-            OrderTime = request.OrderTime,
-            CreatedAt = DateTime.UtcNow,
-            ShippingFee = totalShippingFee,
-            ProductFee = totalProductFee,
-            TotalFee = totalProductFee + totalShippingFee,
-            Vat = vatFee,
+            var newOrder = new Repository.Entity.Order()
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Status = "Pending",
+                TrackNumber = "",
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+                Address = request.Address,
+                Ward = request.Ward,
+                City = request.City,
+                ShortAddress = request.ShortAddress,
+                FullName = request.FullName,
+                Phone = request.Phone,
+                Remarks = request.Remarks,
+                OrderTime = request.OrderTime,
+                CreatedAt = DateTime.UtcNow,
+                ShippingFee = totalShippingFee,
+                ProductFee = totalProductFee,
+                TotalFee = totalProductFee + totalShippingFee + vatFee,
+                Vat = vatFee,
             
             TagIds =  request.TagIds,
             TaxCode = request.TaxCode,
