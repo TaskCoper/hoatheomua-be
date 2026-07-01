@@ -274,7 +274,6 @@ public class Service : IService
         Guid id,
         Request.UpdateConfigRequest request)
     {
-        
         var keyPrefix = request.Key.Split('.', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
         
         if (request.Value.TryGetProperty("group", out JsonElement groupElement)
@@ -290,7 +289,7 @@ public class Service : IService
         if (!string.IsNullOrEmpty(request.Key))
         {
             var existKey = await  _dbContext.Configs
-                .FirstOrDefaultAsync(x => x.Id != id && x.Key.ToLower().Trim().Contains(request.Key!.ToLower().Trim()));
+                .FirstOrDefaultAsync(x => x.Id != id && x.Key.ToLower().Trim().Contains(request.Key!.ToLower().Trim()) && !x.IsDeleted);
             if (existKey != null)
             {
                 throw new BadRequestException("Key is exists");
@@ -299,7 +298,6 @@ public class Service : IService
         
         var query = await _dbContext.Configs
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
-        
         
         if (query == null)
         {
