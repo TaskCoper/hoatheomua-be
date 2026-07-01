@@ -111,4 +111,12 @@ public class ConfigController : ControllerBase
         var result = await _configService.GetNhanhVnOrderTag();
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
+    
+    // [HttpGet("order-sources")]
+    // [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    // public async Task<IActionResult> GetNhanhVnOrderSoucres()
+    // {
+    //     var result = await _configService.GetNhanhVnOrderSources();
+    //     return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    // }
 }
