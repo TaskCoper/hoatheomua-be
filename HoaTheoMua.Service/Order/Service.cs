@@ -291,7 +291,9 @@ public class Service : IService
         }
 
         var totalShippingFee = ahamoveResult[0].Data.TotalFee;
-        var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
+        //var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
+        var totalProductFee = productNhanhResult.Data.Sum(x =>
+            x.Prices.Retail * request.Items.First(item => item.ItemId.Equals(x.Id)).Number);
 
         if (!string.IsNullOrEmpty(request.TaxCode))
         {
