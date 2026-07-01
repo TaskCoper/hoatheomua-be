@@ -21,9 +21,11 @@ public partial class Service : IService
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
     private readonly Config.IService _configService;
+    private readonly HoaTheoMua.Service.AhaMoveService.IService _ahaMoveService;
 
     public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration, 
-        HoaTheoMua.Service.Order.IService orderService,  Config.IService configService)
+        HoaTheoMua.Service.Order.IService orderService,  Config.IService configService,
+        HoaTheoMua.Service.AhaMoveService.IService ahaMoveService)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
@@ -31,6 +33,7 @@ public partial class Service : IService
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
         _configService = configService;
+        _ahaMoveService = ahaMoveService;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
     }
@@ -235,6 +238,7 @@ public partial class Service : IService
             ).ToList();
 
             var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+            var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
 
             var createRequest = new AhaMoveService.AhaMoveRequest.AhaMoveShippingFeeRequest()
             {
@@ -264,7 +268,7 @@ public partial class Service : IService
                     },
                 },
                 ServiceId = "SGN-BIKE",
-                Requests = ahamoveConfigs.GetAhamoveServices(),
+                Requests = ahamoveConfigs.GetAhamoveServices(ahamoveServiceDetails.Requests),
                 PaymentMethod = "CASH",
                 Remarks = order.Remarks,
                 Items = itemsRequest,

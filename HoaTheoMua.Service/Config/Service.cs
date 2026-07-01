@@ -274,7 +274,6 @@ public class Service : IService
         Guid id,
         Request.UpdateConfigRequest request)
     {
-        
         var keyPrefix = request.Key.Split('.', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
         
         if (request.Value.TryGetProperty("group", out JsonElement groupElement)
@@ -299,7 +298,6 @@ public class Service : IService
         
         var query = await _dbContext.Configs
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
-        
         
         if (query == null)
         {

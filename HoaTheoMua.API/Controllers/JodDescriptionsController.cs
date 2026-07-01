@@ -38,7 +38,7 @@ public class JodDescriptionsController: ControllerBase
     }
 
     [HttpGet("highest-salary")]
-    // [Authorize (Policy = JwtExtensions.AdminPolicy)]
+   // [Authorize (Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetHighestSalary()
     {
         var result = await _jobDescriptionService.GetHighestSalaryAsync();
