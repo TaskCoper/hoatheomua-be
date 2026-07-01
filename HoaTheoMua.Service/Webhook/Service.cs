@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -169,27 +170,45 @@ public partial class Service : IService
 
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
 
-        if (!string.IsNullOrWhiteSpace(order.TaxCode))
-        {
-            try
-            {
-                var taxInfo = await _orderService.GetInfoTaxCode(order.TaxCode);
-                privateDescription += "\n--------------------------------";
-                privateDescription += $"\n{taxInfo}";
-            }
-            catch (BadRequestException ex)
-            {
-                Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
-            }
-        }
-
         if (order.OrderTime > 0)
         {
             var vnDt = DateTimeOffset
                 .FromUnixTimeSeconds(order.OrderTime)
                 .ToOffset(TimeSpan.FromHours(7));
 
-            privateDescription += $"\nKhách đặt giao ngày {vnDt:dd/MM/yyyy}";
+            privateDescription += $"\n-------------------------\n Khách đặt giao ngày {vnDt:dd/MM/yyyy}";
+        }
+
+        if (order.IsExportInvoice == true && order.InvoiceType != null)
+        {
+            privateDescription += "\n-------------------------";
+            
+            if (order.InvoiceType == InvoiceType.Business)
+            {
+                if (!string.IsNullOrWhiteSpace(order.TaxCode))
+                {
+                    try
+                    {
+                        var taxInfo = await _orderService.GetInfoTaxCode(order.TaxCode);
+                        privateDescription += $"\n{taxInfo}";
+                    }
+                    catch (BadRequestException ex)
+                    {
+                        Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
+                    }
+                }
+                privateDescription += $"\nMã số thuế: {order.TaxCode}";
+                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
+                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+            }
+            else if (order.InvoiceType == InvoiceType.Personal)
+            {
+                privateDescription += $"\nKhách hàng: {order.ReceiptFullName}";
+                privateDescription += $"\nCMND/CCCD: {order.IdentityNumber}";
+                privateDescription += $"\nĐịa chỉ: {order.ReceiptAddress}";
+                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
+                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+            }
         }
         else
         {
@@ -312,7 +331,9 @@ public partial class Service : IService
             Channel = new Channel
             {
                 TrafficSourceId = 996,
-                AppOrderId = createAhamoveOrderResult?.OrderId ?? order.Id.ToString() ,
+                AppOrderId = createAhamoveOrderResult?.OrderId != null
+                    ? createAhamoveOrderResult.OrderId + order.Id.ToString()
+                    : order.Id.ToString(),
                 PageId = "",
                 ConversationId = "",
                 VpageUserId = "",
