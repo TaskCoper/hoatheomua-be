@@ -67,7 +67,7 @@ public class GroupConfig
             "ahamove.shipping.sgn_bike_sms", 
             "ahamove.shipping.sgn_bike_d2d",
             
-            "ahamove.shipping.sgn_bike_reim_bulky",
+           // "ahamove.shipping.sgn_bike_reim_bulky",
             // "ahamove.shipping.sgn_bike_pod"
         };
         
