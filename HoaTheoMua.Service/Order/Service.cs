@@ -577,4 +577,23 @@ public class Service : IService
         return $"{apiResponse.Data.Name}\n{apiResponse.Data.Address}";
 
     }
+
+    public async Task<string> CancelOrder(Guid id)
+    {
+        var isExistPendingOrder =  await _dbContext.Orders.
+            FirstOrDefaultAsync(x => 
+                x.Id == id && x.Status == "Pending");
+
+        if (isExistPendingOrder == null)
+        {
+            throw new BadRequestException("Order not found");
+        }
+        
+        isExistPendingOrder.Status = "Cancelled";
+        isExistPendingOrder.UpdatedAt = DateTime.UtcNow;
+        _dbContext.Orders.Update(isExistPendingOrder);
+        await _dbContext.SaveChangesAsync();
+        
+        return "Hủy đơn thành công";
+    }
 }
