@@ -22,13 +22,12 @@ public class Service : IService
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
-    private readonly HoaTheoMua.Service.AhaMoveService.IService _ahaMoveService;
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
         HttpClient httpClient,
         HoaTheoMua.Service.Product.IService serviceProduct,
-        IConfiguration configuration,HoaTheoMua.Service.AhaMoveService.IService ahaMoveService )
+        IConfiguration configuration)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
@@ -36,7 +35,6 @@ public class Service : IService
         _serviceProduct = serviceProduct;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
-        _ahaMoveService = ahaMoveService;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
     }
@@ -70,6 +68,15 @@ public class Service : IService
             AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl!,
             Remark = x.Remarks,
             OrderTime = x.OrderTime,
+            Taxcode = x.TaxCode,
+            TagsId = x.TagIds,
+            IdentityNumber = x.IdentityNumber!,
+            InvoiceType = x.InvoiceType!,
+            IsExportInvoice = x.IsExportInvoice,
+            ReceiptAddress = x.ReceiptAddress!,
+            ReceiptEmail = x.ReceiptEmail!,
+            ReceiptFullName = x.ReceiptFullName!,
+            ReceiptPhoneNumber = x.ReceiptPhoneNumber!,
             CreateAt = x.CreatedAt,
             UpdateAt = x.UpdatedAt,
         }).ToList();
@@ -218,8 +225,6 @@ public class Service : IService
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
         
-        var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
-        
         var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         
         var createRequest = new AhaMoveService.AhaMoveRequest.AhaMoveShippingFeeRequest()
@@ -259,7 +264,26 @@ public class Service : IService
                 new AhaMoveService.AhaMoveRequest.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
-                    Requests = ahamoveConfigs.GetAhamoveServices(ahamoveServiceDetails.Requests)
+                    Requests = new List<AhaMoveRequest.ItemsRequest>()
+                    {
+                        // new AhaMoveRequest.ItemsRequest()
+                        // {
+                        //     Id = "SGN-BIKE-SMS",
+                        // },
+                        // new AhaMoveRequest.ItemsRequest()
+                        // {
+                        //     Id = "SGN-BIKE-FRAGILE",
+                        // },
+                        // new AhaMoveRequest.ItemsRequest()
+                        // {
+                        //     Id = "SGN-BIKE-BULKY",
+                        //     TierCode = "TIER_2"
+                        // },
+                        new AhaMoveRequest.ItemsRequest()
+                        {
+                            Id = "SGN-BIKE-BAGA"
+                        },
+                    }
                 },
             }
         };
@@ -405,6 +429,14 @@ public class Service : IService
             //NhanhTrackingUrl = orders.NhanhTrackingUrl,
             AhahaMoveOrderId = orders.AhahaMoveOrderId,
             AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl,
+            TagsId = orders.TagIds,
+            IdentityNumber =  orders.IdentityNumber!,
+            ReceiptFullName = orders.ReceiptFullName!,
+            ReceiptPhoneNumber = orders.ReceiptPhoneNumber!,
+            ReceiptAddress = orders.ReceiptAddress!,
+            ReceiptEmail = orders.ReceiptEmail!,
+            IsExportInvoice = orders.IsExportInvoice,
+            InvoiceType = orders.InvoiceType,
             
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
