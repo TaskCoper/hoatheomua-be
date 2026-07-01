@@ -5,7 +5,7 @@
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class add_fields_in_table_Orders : Migration
+    public partial class add_fields_of_taxs_Orders : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,10 +16,10 @@ namespace HoaTheoMua.Repository.Migrations
                 type: "text",
                 nullable: true);
 
-            migrationBuilder.AddColumn<int>(
+            migrationBuilder.AddColumn<string>(
                 name: "InvoiceType",
                 table: "Orders",
-                type: "integer",
+                type: "text",
                 nullable: true);
 
             migrationBuilder.AddColumn<bool>(

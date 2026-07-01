@@ -291,7 +291,7 @@ public class Service : IService
 
         if (!string.IsNullOrEmpty(request.TaxCode))
         {
-            totalProductFee = totalProductFee * 1.08m;
+            totalProductFee *= 1.08m;
         }
 
         var newOrder = new Repository.Entity.Order()

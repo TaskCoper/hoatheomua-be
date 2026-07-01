@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260701064328_add_fields_in_table_Orders")]
-    partial class add_fields_in_table_Orders
+    [Migration("20260701081818_add_fields_of_taxs_Orders")]
+    partial class add_fields_of_taxs_Orders
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -955,8 +955,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("IdentityNumber")
                         .HasColumnType("text");
 
-                    b.Property<int?>("InvoiceType")
-                        .HasColumnType("integer");
+                    b.Property<string>("InvoiceType")
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");

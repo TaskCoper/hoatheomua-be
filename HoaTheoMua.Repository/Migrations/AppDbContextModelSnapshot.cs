@@ -952,8 +952,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("IdentityNumber")
                         .HasColumnType("text");
 
-                    b.Property<int?>("InvoiceType")
-                        .HasColumnType("integer");
+                    b.Property<string>("InvoiceType")
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
