@@ -533,4 +533,36 @@ public class Service : IService
 
         return shippingLocation;
     }
+
+    public async Task<string> GetInfoTaxCode(string taxCode)
+    {
+        var vietQrApiUrl = $"https://api.vietqr.io/v2/business/{taxCode}";
+        
+        var httpRequest = new HttpRequestMessage(HttpMethod.Get, vietQrApiUrl);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(httpRequest);
+
+        Response.TaxcodeResponse? apiResponse = null;
+
+        if (response.IsSuccessStatusCode)
+        {
+            apiResponse = await response.Content.ReadFromJsonAsync<Response.TaxcodeResponse>();
+        }
+        else
+        {
+            throw new BadRequestException($"VietQR API HTTP Error ({response.StatusCode})");        }
+
+        if (apiResponse == null || apiResponse.Data == null)
+        {
+            throw new BadRequestException("VietQR API returned null or empty data");
+        }
+        
+        if (apiResponse.Code != "00")
+        {
+            throw new BadRequestException($"VietQR API Error: {apiResponse.Desc}");
+        }
+
+        return $"{apiResponse.Data.Name} - {apiResponse.Data.Address}";
+
+    }
 }

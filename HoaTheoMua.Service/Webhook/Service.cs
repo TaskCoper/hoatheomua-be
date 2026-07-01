@@ -16,13 +16,15 @@ public partial class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly HttpClient _httpClient;
+    private readonly HoaTheoMua.Service.Order.IService _orderService;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
 
-    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration)
+    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration, HoaTheoMua.Service.Order.IService orderService)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
+        _orderService = orderService;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
@@ -161,6 +163,19 @@ public partial class Service : IService
         order.UpdatedAt = DateTimeOffset.UtcNow;
         AhaMoveResponse.CreateAhaMoveOrderResponse? createAhamoveOrderResult = null;
         string privateDescription = "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
+
+        if (!string.IsNullOrWhiteSpace(order.TaxCode))
+        {
+            try
+            {
+                var taxInfo = await _orderService.GetInfoTaxCode(order.TaxCode);
+                privateDescription += $" - {taxInfo}";
+            }
+            catch (BadRequestException ex)
+            {
+                Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
+            }
+        }
 
         if (order.OrderTime > 0)
         {
