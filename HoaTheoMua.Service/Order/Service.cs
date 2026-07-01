@@ -287,7 +287,7 @@ public class Service : IService
         }
 
         var totalShippingFee = ahamoveResult[0].Data.TotalPrice;
-        var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
+        var totalProductFee = (productNhanhResult.Data.Select(x => x.Prices.Retail).Sum()) * 1.08m;
 
         var newOrder = new Repository.Entity.Order()
         {
@@ -310,6 +310,7 @@ public class Service : IService
             ShippingFee = totalShippingFee,
             ProductFree = totalProductFee,
             TotalFee = totalProductFee + totalShippingFee,
+            TagIds =  request.TagIds,
 
         };
 
