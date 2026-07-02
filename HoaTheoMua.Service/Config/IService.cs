@@ -8,7 +8,7 @@ public interface IService
 
     Task<Response.ConfigResponse?> GetConfigById(Guid id);
     
-    Task<List<Response.ConfigResponse>> GetConfigIsPublic(string? groupName, string? key);
+    Task<List<Response.ConfigResponse>?> GetConfigIsPublic(string? groupName, string? key);
     Task<List<Response.ConfigGroupResponse>> GetConfigGroups(string groupName);
     ///
     

@@ -441,7 +441,6 @@ public class Service : IService
             ProductFee = orders.ProductFee,
             TotalFee = orders.TotalFee,
             VatFee = orders.Vat,
-            
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
 

@@ -346,7 +346,7 @@ public class Service : IService
         return "Xóa thành công.";
     }
 
-    public async Task<List<Response.ConfigResponse>> GetConfigIsPublic(string? groupName, string? key)
+    public async Task<List<Response.ConfigResponse>?> GetConfigIsPublic(string? groupName, string? key)
     {
         var query = _dbContext.Configs
             .Where(x => x.IsPublic == true && x.Kind!.ToLower().Trim() == nameof(KindConfig.Content).ToLower().Trim());
@@ -376,11 +376,7 @@ public class Service : IService
             UserId = x.UserId,
         }).ToListAsync();
 
-        if (result.Count == 0)
-        {
-            throw new NotFoundException("DONT_HAVE_ANY_CONFIG");
-        }
-        return result;
+        return result.Count == 0 ? null :  result;
     }
 
     public async Task<List<Response.ConfigGroupResponse>> GetConfigGroups(string groupName)

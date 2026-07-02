@@ -349,6 +349,11 @@ public partial class Service : IService
         
         var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
         
+        const long vatTagId = 253L;
+        var tagIds = !string.IsNullOrWhiteSpace(order.TaxCode)
+            ? order.TagIds!.Append(vatTagId).ToList()
+            : order.TagIds!;
+        
         var nhanhVnRequest = new OrderRoot
         {
             Depot = new Depot
@@ -369,7 +374,7 @@ public partial class Service : IService
                 Description = order.Remarks,
                 PrivateDescription = privateDescription,
                 Status = 54,
-                TagIds = order.TagIds!,
+                TagIds = tagIds,
                 TechnicalStaffId = 0,
                 PromotionId = ""
             },
@@ -394,6 +399,7 @@ public partial class Service : IService
             Carrier = new Carrier
             {
                 Id = 12,
+                AllowTest = 1,
                 ServiceId = 0,
                 ServiceCode = "",
                 CheckGoods = 0,
