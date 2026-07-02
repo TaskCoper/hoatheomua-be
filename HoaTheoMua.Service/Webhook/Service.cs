@@ -347,7 +347,7 @@ public partial class Service : IService
             ).ToList();
         }
         
-        var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
+        //var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
         
         const long vatTagId = 253L;
         var tagIds = !string.IsNullOrWhiteSpace(order.TaxCode)
@@ -393,7 +393,7 @@ public partial class Service : IService
                 FbPsId = "",
                 PostId = "",
                 FbAdsId = 0,
-                SourceFrom = nhanhVnOrderSources.ToString(), 
+                SourceFrom = "", 
                 Id = 0
             },
             Carrier = new Carrier
