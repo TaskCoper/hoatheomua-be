@@ -176,9 +176,10 @@ public partial class Service : IService
 
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
 
+        var vnDt = new DateTimeOffset();
         if (order.OrderTime > 0)
         {
-            var vnDt = DateTimeOffset
+             vnDt = DateTimeOffset
                 .FromUnixTimeSeconds(order.OrderTime)
                 .ToOffset(TimeSpan.FromHours(7));
 
@@ -407,10 +408,10 @@ public partial class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m, // Hậu tố 'm' biểu thị kiểu decimal
-                DeliveryDate = "",
+                DeliveryDate =  (order.OrderTime > 0)  ? vnDt.ToString() : "",
                 DeliveryHour = "",
                 DeliveryMinute = "",
-                DeliveryTime = "",
+                DeliveryTime = (order.OrderTime == 0) ? "" :  order.OrderTime.ToString(),
                 CarrierAccountId = 0,
                 CarrierShopId = "",
                 DeclaredValue = null,
