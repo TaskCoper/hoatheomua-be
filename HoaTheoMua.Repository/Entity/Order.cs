@@ -1,4 +1,5 @@
 using HoaTheoMua.Repository.Abtraction;
+using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Repository.Entity;
 
@@ -22,10 +23,29 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     public  string? AhahaMoveOrderId { get; set; }
     public  string? AhahaMoveTrackingUrl { get; set; }
     public decimal ShippingFee { get; set; }
-    public decimal ProductFree { get; set; }
+    public decimal ProductFee { get; set; }
     public decimal TotalFee { get; set; }
     public required long OrderTime { get; set; } = 0; 
+    // public string? Email { get; set; }
+    // public string? PhoneNumber { get; set; }
+    
+    
+    public List<long>? TagIds { get; set; }
     public string? TaxCode  { get; set; }
+    public string? IdentityNumber {get; set; }
+    
+    public string? ReceiptFullName { get; set; }
+
+    public string? ReceiptPhoneNumber { get; set; }
+
+    public string? ReceiptAddress { get; set; }
+
+    public string? ReceiptEmail { get; set; }
+    
+    public bool? IsExportInvoice { get; set; }
+
+    public decimal? Vat { get; set; } = 1.08m;
+    public InvoiceType?  InvoiceType { get; set; }
     
     // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }

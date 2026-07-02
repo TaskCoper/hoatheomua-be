@@ -2,7 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http;
@@ -30,7 +30,7 @@ public class Service: IService
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
     }
     
-    public async Task<ResponseProductList.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
+    public async Task<NhanhVnProductListResponse.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
         var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
@@ -79,7 +79,7 @@ public class Service: IService
         
         HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
 
-        ResponseProductList.NhanhVnProductResponse? nhanhProductList = null;
+        NhanhVnProductListResponse.NhanhVnProductResponse? nhanhProductList = null;
         
         if (nhanhVnResponse.IsSuccessStatusCode)
         {
@@ -90,7 +90,7 @@ public class Service: IService
             Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
 
 
-            nhanhProductList = await nhanhVnResponse.Content.ReadFromJsonAsync< ResponseProductList.NhanhVnProductResponse>();
+            nhanhProductList = await nhanhVnResponse.Content.ReadFromJsonAsync< NhanhVnProductListResponse.NhanhVnProductResponse>();
         }
         else
         {
@@ -130,7 +130,7 @@ public class Service: IService
         
     }
 
-    public async Task<ResponseProductDetails.NhanhVnProductDetailResponse> GetProductDetails(Request.ProductDetailRequest request)
+    public async Task<NhanhVnProductDetailsResponse.NhanhVnProductDetailResponse> GetProductDetails(Request.ProductDetailRequest request)
     {
         
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
@@ -165,7 +165,7 @@ public class Service: IService
         
         
         
-        ResponseProductDetails.NhanhVnProductDetailResponse? nhanhProductDetails = null;
+        NhanhVnProductDetailsResponse.NhanhVnProductDetailResponse? nhanhProductDetails = null;
         
         if (nhanhVnResponse.IsSuccessStatusCode)
         {
@@ -184,7 +184,7 @@ public class Service: IService
             };
 
             // 3. Tiến hành phân rã chuỗi JSON an toàn thông qua bộ options đã có Converter
-            nhanhProductDetails = JsonSerializer.Deserialize<ResponseProductDetails.NhanhVnProductDetailResponse>(rawJsonString, options);
+            nhanhProductDetails = JsonSerializer.Deserialize<NhanhVnProductDetailsResponse.NhanhVnProductDetailResponse>(rawJsonString, options);
         }
         else
         {

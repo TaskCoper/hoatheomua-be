@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Nodes;
 
-namespace HoaTheoMua.Service.AhamoveService;
+namespace HoaTheoMua.Service.AhaMoveService;
 
 using System;
 using System.Collections.Generic;

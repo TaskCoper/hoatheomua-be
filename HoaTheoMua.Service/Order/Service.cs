@@ -2,7 +2,7 @@
 using System.Net.Http.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -21,7 +21,7 @@ public class Service : IService
     private readonly HttpClient _httpClient;
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly NhanhVnOption _nhanhVnOption;
-    private readonly AhamoveOption _ahamoveOption;
+    private readonly AhaMoveOption _ahaMoveOption;
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
@@ -34,9 +34,9 @@ public class Service : IService
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
         _nhanhVnOption = new NhanhVnOption();
-        _ahamoveOption = new AhamoveOption();
+        _ahaMoveOption = new AhaMoveOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
-        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
+        configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
     }
 
 
@@ -68,6 +68,15 @@ public class Service : IService
             AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl!,
             Remark = x.Remarks,
             OrderTime = x.OrderTime,
+            Taxcode = x.TaxCode,
+            TagsId = x.TagIds,
+            IdentityNumber = x.IdentityNumber!,
+            InvoiceType = x.InvoiceType!,
+            IsExportInvoice = x.IsExportInvoice,
+            ReceiptAddress = x.ReceiptAddress!,
+            ReceiptEmail = x.ReceiptEmail!,
+            ReceiptFullName = x.ReceiptFullName!,
+            ReceiptPhoneNumber = x.ReceiptPhoneNumber!,
             CreateAt = x.CreatedAt,
             UpdateAt = x.UpdatedAt,
         }).ToList();
@@ -90,6 +99,7 @@ public class Service : IService
         var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
         var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var depotId = configs.GetValue("nhanhvn.default_depot", 129255);
         var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/list?appId=" + appId + "&businessId=" + businessId;
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
@@ -175,7 +185,7 @@ public class Service : IService
                 throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho");
             }
 
-            var targetDepot = depots.FirstOrDefault(d => (int?)d["Id"] == 129255);
+            var targetDepot = depots.FirstOrDefault(d => (int?)d["Id"] == depotId);
 
             if (targetDepot == null)
             {
@@ -191,7 +201,7 @@ public class Service : IService
         }
 
         var itemsRequest = productNhanhResult.Data.Select(
-            x => new AhamoveService.Request.AhamoveItem()
+            x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
             {
                 Id = x.Id.ToString(),
                 Name = x.Name,
@@ -201,13 +211,13 @@ public class Service : IService
         ).ToList();
 
         var packageDetailRequest = productNhanhResult.Data.Select(
-            x => new AhamoveService.Request.PackageDetail()
+            x => new AhaMoveService.AhaMoveRequest.PackageDetail()
             {
                 Height = x.Shipping.Height,
                 Weight = x.Shipping.Weight,
                 Length = x.Shipping.Length,
                 Width = x.Shipping.Width,
-                Description = "Noi that"
+                Description = x.Name
             }
         ).ToList();
 
@@ -217,14 +227,14 @@ public class Service : IService
         
         var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         
-        var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
+        var createRequest = new AhaMoveService.AhaMoveRequest.AhaMoveShippingFeeRequest()
         {
             OrderTime = request.OrderTime,
             IdleUntil = request.OrderTime > 0 ? request.OrderTime : 0,
             // OrderTime = 0,
-            Paths = new List<AhamoveService.Request.AhamoveLocationPoint>()
+            Paths = new List<AhaMoveService.AhaMoveRequest.AhamoveLocationPoint>()
             {
-                new AhamoveService.Request.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
+                new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
                 {
                     Latitude = companyAddress?.Latitude ?? 0,
                     Longitude = companyAddress?.Longitude ?? 0,
@@ -234,7 +244,7 @@ public class Service : IService
                     Phone = companyAddress.PhoneNumber,
                     Remarks = companyAddress.Remarks!,
                 },
-                new AhamoveService.Request.AhamoveLocationPoint()
+                new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint()
                 {
                     Latitude =  request.Latitude,
                     Longitude =  request.Longitude,
@@ -249,19 +259,38 @@ public class Service : IService
             Remarks = request.Remarks,
             Items = itemsRequest,
             PackageDetail = packageDetailRequest,
-            Services = new List<AhamoveService.Request.ServiceRequest>()
+            Services = new List<AhaMoveService.AhaMoveRequest.ServiceRequest>()
             {
-                new AhamoveService.Request.ServiceRequest()
+                new AhaMoveService.AhaMoveRequest.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
-                    Requests = ahamoveConfigs.GetAhamoveServices()
+                    Requests = new List<AhaMoveRequest.ItemsRequest>()
+                    {
+                        // new AhaMoveRequest.ItemsRequest()
+                        // {
+                        //     Id = "SGN-BIKE-SMS",
+                        // },
+                        // new AhaMoveRequest.ItemsRequest()
+                        // {
+                        //     Id = "SGN-BIKE-FRAGILE",
+                        // },
+                        // new AhaMoveRequest.ItemsRequest()
+                        // {
+                        //     Id = "SGN-BIKE-BULKY",
+                        //     TierCode = "TIER_2"
+                        // },
+                        new AhaMoveRequest.ItemsRequest()
+                        {
+                            Id = "SGN-BIKE-BAGA"
+                        },
+                    }
                 },
             }
         };
         Console.WriteLine("BUG CHA PA: " + createRequest.OrderTime);
         Console.WriteLine("BUG CHA PA: " + createRequest.IdleUntil);
-        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahamoveOption.BaseUrl) + "/v3/orders/estimates";
-        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahamoveOption.Token);
+        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders/estimates";
+        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
         var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
         ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
@@ -285,31 +314,52 @@ public class Service : IService
             throw new BadRequestException("Ahamove returned null or empty data");
         }
 
-        var totalShippingFee = ahamoveResult[0].Data.TotalPrice;
-        var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
+        var totalShippingFee = ahamoveResult[0].Data.TotalFee;
+        //var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
+            var totalProductFee = productNhanhResult.Data.Sum(x =>
+                x.Prices.Retail * request.Items.First(item => item.ItemId.Equals(x.Id)).Number);
 
-        var newOrder = new Repository.Entity.Order()
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Status = "Pending",
+            var vatFee = 0m;
+            
+            if (!string.IsNullOrEmpty(request.TaxCode))
+            {
+                vatFee = totalProductFee * 0.08m;
+            }
+            
+            
+
+            var newOrder = new Repository.Entity.Order()
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Status = "Pending",
+                TrackNumber = "",
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+                Address = request.Address,
+                Ward = request.Ward,
+                City = request.City,
+                ShortAddress = request.ShortAddress,
+                FullName = request.FullName,
+                Phone = request.Phone,
+                Remarks = request.Remarks,
+                OrderTime = request.OrderTime,
+                CreatedAt = DateTime.UtcNow,
+                ShippingFee = totalShippingFee,
+                ProductFee = totalProductFee,
+                TotalFee = totalProductFee + totalShippingFee + vatFee,
+                Vat = vatFee,
+            
+            TagIds =  request.TagIds,
             TaxCode = request.TaxCode,
-            TrackNumber = "",
-            Latitude = request.Latitude,
-            Longitude = request.Longitude,
-            Address = request.Address,
-            Ward = request.Ward,
-            City = request.City,
-            ShortAddress = request.ShortAddress,
-            FullName = request.FullName,
-            Phone = request.Phone,
-            Remarks = request.Remarks,
-            OrderTime = request.OrderTime,
-            CreatedAt = DateTime.UtcNow,
-            ShippingFee = totalShippingFee,
-            ProductFree = totalProductFee,
-            TotalFee = totalProductFee + totalShippingFee,
-
+            IdentityNumber = request.IdentityNumber,
+            ReceiptFullName = request.ReceiptFullName,
+            ReceiptPhoneNumber = request.ReceiptPhoneNumber,
+            ReceiptAddress = request.ReceiptAddress,
+            ReceiptEmail = request.ReceiptEmail,
+            IsExportInvoice = request.IsExportInvoice,
+            InvoiceType =  request.InvoiceType,
+            
         };
 
 
@@ -379,7 +429,18 @@ public class Service : IService
             //NhanhTrackingUrl = orders.NhanhTrackingUrl,
             AhahaMoveOrderId = orders.AhahaMoveOrderId,
             AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl,
-            
+            TagsId = orders.TagIds,
+            IdentityNumber =  orders.IdentityNumber!,
+            ReceiptFullName = orders.ReceiptFullName!,
+            ReceiptPhoneNumber = orders.ReceiptPhoneNumber!,
+            ReceiptAddress = orders.ReceiptAddress!,
+            ReceiptEmail = orders.ReceiptEmail!,
+            IsExportInvoice = orders.IsExportInvoice,
+            InvoiceType = orders.InvoiceType,
+            ShippingFee = orders.ShippingFee,
+            ProductFee = orders.ProductFee,
+            TotalFee = orders.TotalFee,
+            VatFee = orders.Vat,
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
 
@@ -485,22 +546,23 @@ public class Service : IService
 
     }
 
-    public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationFilters filter)
+    public async Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationRequest filter)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
         var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
         var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
         var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/shipping/location?appId=" + appId + "&businessId=" + businessId;
-        var nhanhVnOrderSrcRequest = new Request.LocationRequest()
-        {
-            Filters = new Request.LocationFilters()
-            {
-                LocationVersion = filter.LocationVersion,
-                Type = filter.Type,
-                ParentId = filter.ParentId,
-            }
-        };
+        // var nhanhVnOrderSrcRequest = new Request.LocationRequest()
+        // {
+        //     Filters = new Request.LocationFilters()
+        //     {
+        //         LocationVersion = filter.LocationVersion,
+        //         Type = filter.Type,
+        //         ParentId = filter.ParentId,
+        //     }
+        // };
+        var nhanhVnOrderSrcRequest = filter;
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhVnOrderSrcRequest);
@@ -529,5 +591,56 @@ public class Service : IService
         }
 
         return shippingLocation;
+    }
+
+    public async Task<string> GetInfoTaxCode(string taxCode)
+    {
+        var vietQrApiUrl = $"https://api.vietqr.io/v2/business/{taxCode}";
+        
+        var httpRequest = new HttpRequestMessage(HttpMethod.Get, vietQrApiUrl);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(httpRequest);
+
+        Response.TaxcodeResponse? apiResponse = null;
+
+        if (response.IsSuccessStatusCode)
+        {
+            apiResponse = await response.Content.ReadFromJsonAsync<Response.TaxcodeResponse>();
+        }
+        else
+        {
+            throw new BadRequestException($"VietQR API HTTP Error ({response.StatusCode})");        }
+
+        if (apiResponse == null || apiResponse.Data == null)
+        {
+            throw new BadRequestException("VietQR API returned null or empty data");
+        }
+        
+        if (apiResponse.Code != "00")
+        {
+            throw new BadRequestException($"VietQR API Error: {apiResponse.Desc}");
+        }
+
+        return $"{apiResponse.Data.Name}\n{apiResponse.Data.Address}";
+
+    }
+
+    public async Task<string> CancelOrder(Guid id)
+    {
+        var isExistPendingOrder =  await _dbContext.Orders.
+            FirstOrDefaultAsync(x => 
+                x.Id == id && x.Status == "Pending");
+
+        if (isExistPendingOrder == null)
+        {
+            throw new BadRequestException("Order not found");
+        }
+        
+        isExistPendingOrder.Status = "Cancelled";
+        isExistPendingOrder.UpdatedAt = DateTime.UtcNow;
+        _dbContext.Orders.Update(isExistPendingOrder);
+        await _dbContext.SaveChangesAsync();
+        
+        return "Hủy đơn thành công";
     }
 }

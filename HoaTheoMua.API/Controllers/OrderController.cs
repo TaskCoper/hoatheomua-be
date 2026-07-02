@@ -22,6 +22,8 @@ public class OrderController : ControllerBase
     }
 
     [HttpGet("/api/v1/orders")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+
     public async Task<IActionResult> GetOrderById(int pageIndex, int pageSize)
     {
         var result = await _orderService.GetOrderPaginationResponse(pageIndex, pageSize);
@@ -29,6 +31,7 @@ public class OrderController : ControllerBase
     }
 
     [HttpPost("/api/v1/orders")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> CreateOrder([FromBody]Request.CreateOrderRequest request)
     {
         var validationResult = await _validatorCreateOrder.ValidateAsync(request);
@@ -38,6 +41,14 @@ public class OrderController : ControllerBase
             throw new ValidationExceptionError(errorMessage);
         }
         var result = await _orderService.CreateOrder(request);
+        return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+    }
+    
+    [HttpPatch("/api/v1/orders/{id}/cancel")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> CancelOrder([FromRoute] Guid id)
+    {
+        var result = await _orderService.CancelOrder(id);
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
 
@@ -68,11 +79,19 @@ public class OrderController : ControllerBase
 
     [HttpPost("/api/v1/orders/shipping-location")]
     [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
-    public async Task<IActionResult> GetShippingLocation([FromBody] Request.LocationFilters filter)
+    public async Task<IActionResult> GetShippingLocation([FromBody] Request.LocationRequest filter)
     {
         var result = await _orderService.GetShippingLocation(filter);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
+    
+    // [HttpPost("/api/v1/orders/taxcode")]
+    // [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    // public async Task<IActionResult> GetInfoTaxCode([FromQuery] string taxCode)
+    // {
+    //     var result = await _orderService.GetInfoTaxCode( taxCode);
+    //     return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    // }
 
     // [HttpGet("/api/v1/orders")]
     // public async Task<IActionResult> GetAllOrderTransport(int pageIndex, int pageSize)

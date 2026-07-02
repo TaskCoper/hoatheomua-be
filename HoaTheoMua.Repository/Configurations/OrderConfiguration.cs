@@ -42,6 +42,9 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         
         builder.Property(o => o.OrderTime)
             .IsRequired();
+
+        builder.Property(o => o.InvoiceType)
+            .HasConversion<string>();
         
         builder.Property(o => o.CreatedAt)
             .HasDefaultValueSql("now()");
