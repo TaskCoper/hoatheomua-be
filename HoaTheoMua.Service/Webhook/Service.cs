@@ -452,7 +452,7 @@ public partial class Service : IService
                 DepositAmount = 0m,
                 DepositAccountId = 0,
                 TransferAmount = order.TotalFee,
-                TransferAccountId = 65086,
+                TransferAccountId = (order.IsExportInvoice == true && order.InvoiceType != null) ? 65087 : 65088,
                 InstallmentAmount = 0m,
                 InstallmentCode = "",
                 InstallmentAccountId = 0,
