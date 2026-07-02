@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.Product;
 
-public class ResponseProductDetails
+public class NhanhVnProductDetailsResponse
 {
     public class NhanhVnProductDetailResponse
     {

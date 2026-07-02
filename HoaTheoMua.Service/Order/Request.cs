@@ -1,29 +1,34 @@
 ﻿using System.Text.Json.Serialization;
+using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Service.Order;
 
 public class Request
 {
-    public class CreateOrderRequest : AhamoveService.Request.EstimateShippingFeeRequest;
-
-    public class UpdateOrderRequest
+    public class CreateOrderRequest : AhaMoveService.AhaMoveRequest.EstimateShippingFeeRequest
     {
-        public Guid OrderId { get; set; }
-        public string TrackNumber { get; set; }
-    }
+        public string? TaxCode { get; set; }
+        public List<long>? TagIds { get; set; }
+        
+        
+        public string? IdentityNumber {get; set; }
     
-    public class UpdateOrderByIdRequest
-    {
-        //public Guid OrderId { get; set; }
-        public string TrackingNumber { get; set; } = string.Empty;
+        public string? ReceiptFullName { get; set; }
+
+        public string? ReceiptPhoneNumber { get; set; }
+
+        public string? ReceiptAddress { get; set; }
+
+        public string? ReceiptEmail { get; set; }
+    
+        public bool? IsExportInvoice { get; set; }
+        public InvoiceType?  InvoiceType { get; set; }
         
-        public string? NhanhOrderId { get; set; } 
-        public string? NhanhTrackingUrl { get; set; } 
-        public string? AhahaMoveOrderId { get; set; }
-        public string? AhahaMoveTrackingUrl { get; set; } 
-        
-        public object Metadata { get; set; } = string.Empty;
-        
+        // public string? Email { get; set; }
+        // public string? PhoneNumber { get; set; }
+        // public string? IdentityNumber { get; set; }
+        // public string FullName { get; set; }
+        // public string Address { get; set; }
     }
     
     public class LocationRequest

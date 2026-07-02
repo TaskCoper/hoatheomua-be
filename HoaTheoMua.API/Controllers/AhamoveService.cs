@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Service.AhamoveService;
+﻿using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,7 +15,7 @@ public class AhamoveService: ControllerBase
     }
     
     [HttpPost("/api/v1/ahamove/estimate")]
-    public async Task<IActionResult> EstimateShippingFee([FromBody] Request.EstimateShippingFeeRequest request)
+    public async Task<IActionResult> EstimateShippingFee([FromBody] AhaMoveRequest.EstimateShippingFeeRequest request)
     {
         var result = await _ahamoveService.EstimateShippingFee(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));

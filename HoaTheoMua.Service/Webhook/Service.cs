@@ -4,7 +4,8 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Repository.Enum;
+using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -16,17 +17,25 @@ public partial class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly HttpClient _httpClient;
+    private readonly HoaTheoMua.Service.Order.IService _orderService;
     private readonly NhanhVnOption _nhanhVnOption;
-    private readonly AhamoveOption _ahamoveOption;
+    private readonly AhaMoveOption _ahaMoveOption;
+    private readonly Config.IService _configService;
+    private readonly HoaTheoMua.Service.AhaMoveService.IService _ahaMoveService;
 
-    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration)
+    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration, 
+        HoaTheoMua.Service.Order.IService orderService,  Config.IService configService,
+        HoaTheoMua.Service.AhaMoveService.IService ahaMoveService)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
+        _orderService = orderService;
         _nhanhVnOption = new NhanhVnOption();
-        _ahamoveOption = new AhamoveOption();
+        _ahaMoveOption = new AhaMoveOption();
+        _configService = configService;
+        _ahaMoveService = ahaMoveService;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
-        configuration.GetSection(nameof(AhamoveOption)).Bind(_ahamoveOption);
+        configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
     }
 
     // Match "HTM" (optional separator) + a GUID. The bank/SePay strips dashes, so the GUID can
@@ -158,104 +167,187 @@ public partial class Service : IService
         //  var newOrders = await AhaMoveCreateOrder();
         // Bat dau xu ly phan ahamove va nhanhvn
 
-        var itemsRequest = order.OrderDetails.Select(x => new AhamoveService.Request.AhamoveItem()
-            {
-                Id = x.Id.ToString(),
-                Name = x.Name,
-                Price = (int)x.Price,
-                Num = x.Number
-            }
-        ).ToList();
-
-        var packageDetailRequest = order.OrderDetails.Select(x => new AhamoveService.Request.PackageDetail()
-            {
-                Height = x.Height,
-                Weight = x.Weight,
-                Length = x.Length,
-                Width = x.Width,
-                Description = "Mo ta"
-            }
-        ).ToList();
+        order.UpdatedAt = DateTimeOffset.UtcNow;
+        AhaMoveResponse.CreateAhaMoveOrderResponse? createAhamoveOrderResult = null;
 
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
 
-        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
 
-        var createRequest = new AhamoveService.Request.AhaMoveShippingFeeRequest()
+        if (order.OrderTime > 0)
         {
-            OrderTime = order.OrderTime,
-            IdleUntil = order.OrderTime > 0 ? order.OrderTime : 0,
-            Paths = new List<AhamoveService.Request.AhamoveLocationPoint>()
+            var vnDt = DateTimeOffset
+                .FromUnixTimeSeconds(order.OrderTime)
+                .ToOffset(TimeSpan.FromHours(7));
+
+            privateDescription += $"\n-------------------------\n Khách đặt giao ngày {vnDt:dd/MM/yyyy}";
+        }
+
+        if (order.IsExportInvoice == true && order.InvoiceType != null)
+        {
+            privateDescription += "\n-------------------------";
+            
+            if (order.InvoiceType == InvoiceType.Business)
             {
-                new AhamoveService.Request.AhamoveLocationPoint() 
+                if (!string.IsNullOrWhiteSpace(order.TaxCode))
                 {
-                    Latitude = companyAddress?.Latitude ?? 0,
-                    Longitude = companyAddress?.Longitude ?? 0,
-                    Address = companyAddress?.AddressLine ?? "",
-                    ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
-                    FullName = companyAddress!.FullName,
-                    Phone = companyAddress.PhoneNumber,
-                    Remarks = companyAddress.Remarks!,
-                },
-                new AhamoveService.Request.AhamoveLocationPoint()
-                {
-                    Latitude = order.Latitude,
-                    Longitude = order.Longitude,
-                    Address = order.Address,
-                    ShortAddress = order.ShortAddress,
-                    FullName = order.FullName,
-                    Phone = order.Phone,
-                    Remarks = order.Remarks,
-                },
-            },
-            ServiceId = "SGN-BIKE",
-            Requests = ahamoveConfigs.GetAhamoveServices(),
-            PaymentMethod = "CASH",
-            Remarks = order.Remarks,
-            Items = itemsRequest,
-            PackageDetail = packageDetailRequest,
-        };
-
-        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahamoveOption.BaseUrl) + "/v3/orders";
-        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahamoveOption.Token);
-        var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
-        ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
-        ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
-
-        HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
-
-        AhaMoveResponse.CreateAhaMoveOrderResponse? createAhamoveOrderResult = null;
-
-        if (ahamoveResponse.IsSuccessStatusCode)
+                    try
+                    {
+                        var taxInfo = await _orderService.GetInfoTaxCode(order.TaxCode);
+                        privateDescription += $"\n{taxInfo}";
+                    }
+                    catch (BadRequestException ex)
+                    {
+                        Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
+                    }
+                }
+                privateDescription += $"\nMã số thuế: {order.TaxCode}";
+                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
+                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+            }
+            else if (order.InvoiceType == InvoiceType.Personal)
+            {
+                privateDescription += $"\nKhách hàng: {order.ReceiptFullName}";
+                privateDescription += $"\nCMND/CCCD: {order.IdentityNumber}";
+                privateDescription += $"\nĐịa chỉ: {order.ReceiptAddress}";
+                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
+                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+            }
+        }
+        else if(order.OrderTime == 0)
         {
-            createAhamoveOrderResult =
-                await ahamoveResponse.Content.ReadFromJsonAsync<AhaMoveResponse.CreateAhaMoveOrderResponse>();
+            var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
+                {
+                    Id = x.Id.ToString(),
+                    Name = x.Name,
+                    Price = (int)x.Price,
+                    Num = x.Number
+                }
+            ).ToList();
+
+            var packageDetailRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.PackageDetail()
+                {
+                    Height = x.Height,
+                    Weight = x.Weight,
+                    Length = x.Length,
+                    Width = x.Width,
+                    Description = x.Name
+                }
+            ).ToList();
+
+            var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+            var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
+
+            var createRequest = new AhaMoveService.AhaMoveRequest.AhaMoveShippingFeeRequest()
+            {
+                OrderTime = order.OrderTime,
+                IdleUntil = order.OrderTime > 0 ? order.OrderTime : 0,
+                Paths = new List<AhaMoveService.AhaMoveRequest.AhamoveLocationPoint>()
+                {
+                    new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint() 
+                    {
+                        Latitude = companyAddress?.Latitude ?? 0,
+                        Longitude = companyAddress?.Longitude ?? 0,
+                        Address = companyAddress?.AddressLine ?? "",
+                        ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
+                        FullName = companyAddress!.FullName,
+                        Phone = companyAddress.PhoneNumber,
+                        Remarks = companyAddress.Remarks!,
+                    },
+                    new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint()
+                    {
+                        Latitude = order.Latitude,
+                        Longitude = order.Longitude,
+                        Address = order.Address,
+                        ShortAddress = order.ShortAddress,
+                        FullName = order.FullName,
+                        Phone = order.Phone,
+                        Remarks = order.Remarks,
+                    },
+                },
+                ServiceId = "SGN-BIKE",
+                Requests = new List<AhaMoveRequest.ItemsRequest>()
+                {
+                    // new AhaMoveRequest.ItemsRequest()
+                    // {
+                    //     Id = "SGN-BIKE-SMS",
+                    // },
+                    // new AhaMoveRequest.ItemsRequest()
+                    // {
+                    //     Id = "SGN-BIKE-FRAGILE",
+                    // },
+                    // new AhaMoveRequest.ItemsRequest()
+                    // {
+                    //     Id = "SGN-BIKE-BULKY",
+                    //     TierCode = "TIER_2"
+                    // },
+                    new AhaMoveRequest.ItemsRequest()
+                    {
+                        Id = "SGN-BIKE-BAGA"
+                    },
+                },
+                PaymentMethod = "CASH",
+                Remarks = order.Remarks,
+                Items = itemsRequest,
+                PackageDetail = packageDetailRequest,
+            };
+
+            var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders";
+            var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
+            var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
+            ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
+            ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
+
+            HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
+
+            if (ahamoveResponse.IsSuccessStatusCode)
+            {
+                createAhamoveOrderResult =
+                    await ahamoveResponse.Content.ReadFromJsonAsync<AhaMoveResponse.CreateAhaMoveOrderResponse>();
+            }
+            else
+            {
+                throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+            }
+
+            if (createAhamoveOrderResult == null)
+            {
+                throw new Exception("Ahamove returned null or empty data");
+            }
+
+            order.AhahaMoveOrderId = createAhamoveOrderResult.OrderId;
+            order.AhahaMoveTrackingUrl = createAhamoveOrderResult.SharedLink;
+        }
+
+        var productNhanhVnRequest = new List<Product>();
+        
+        if (order.TaxCode != null && order.InvoiceType == InvoiceType.Business && order.IsExportInvoice == true)
+        {
+             productNhanhVnRequest = order.OrderDetails.Select(
+                x => new Product()
+                {
+                    Id = x.ItemId,
+                    Price = x.Price,
+                    Quantity = x.Number,
+                    Vat = 8,
+                }
+            ).ToList();
         }
         else
-        {
-            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+        { 
+            productNhanhVnRequest = order.OrderDetails.Select(
+                x => new Product()
+                {
+                    Id = x.ItemId,
+                    Price = x.Price,
+                    Quantity = x.Number,
+                }
+            ).ToList();
         }
-
-        if (createAhamoveOrderResult == null)
-        {
-            throw new Exception("Ahamove returned null or empty data");
-        }
-
-        order.UpdatedAt = DateTimeOffset.UtcNow;
-        order.AhahaMoveOrderId = createAhamoveOrderResult.OrderId;
-        order.AhahaMoveTrackingUrl = createAhamoveOrderResult.SharedLink;
         
-        var productNhanhVnRequest = order.OrderDetails.Select(
-            x => new Product()
-            {
-                Id = x.ItemId,
-                Price = x.Price,
-                Quantity = x.Number
-            }
-        ).ToList();
+        var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
         
         var nhanhVnRequest = new OrderRoot
         {
@@ -275,16 +367,19 @@ public partial class Service : IService
                 SaleId = 0,
                 SaleName = "",
                 Description = order.Remarks,
-                PrivateDescription = "Đến nơi lấy hàng đọc mã đơn để nhận hàng",
+                PrivateDescription = privateDescription,
                 Status = 54,
-                TagIds = new List<long>(),
+                TagIds = order.TagIds!,
                 TechnicalStaffId = 0,
                 PromotionId = ""
             },
             Channel = new Channel
             {
                 TrafficSourceId = 996,
-                AppOrderId = createAhamoveOrderResult.OrderId,
+                AppOrderId = createAhamoveOrderResult?.OrderId != null
+                    ? createAhamoveOrderResult.OrderId + order.Id.ToString()
+                    : order.Id.ToString(),
+                SourceName = "WEBSITE",
                 PageId = "",
                 ConversationId = "",
                 VpageUserId = "",
@@ -293,7 +388,7 @@ public partial class Service : IService
                 FbPsId = "",
                 PostId = "",
                 FbAdsId = 0,
-                SourceFrom = "",
+                SourceFrom = nhanhVnOrderSources.ToString(), 
                 Id = 0
             },
             Carrier = new Carrier
@@ -373,7 +468,7 @@ public partial class Service : IService
                 CancelAutoPromotion = 0,
                 PaymentMoMoCrm = 0,
                 MoneyTransferPaymentLink = 0,
-                TotalProductPrice = order.TotalFee,
+                TotalProductPrice = order.ProductFee,
                 UseManualDiscount = 0
             }
         };

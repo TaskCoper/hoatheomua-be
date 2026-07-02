@@ -1,16 +1,12 @@
 ﻿using System.Text.Json.Serialization;
 using System.Transactions;
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Service.Order;
 
 public class Response
 {
-    public class CreateOrderResponse
-    {
-        public string QrCodeUrl { get; set; } = string.Empty; 
-    }
-
     public class GetOrderResponse
     {
         public Guid OrderId { get; set; }
@@ -22,6 +18,16 @@ public class Response
         public string AhahaMoveTrackingUrl { get; set; } = string.Empty;
         public string? Remark { get; set; }
         public long OrderTime { get; set; }
+        public string? Taxcode { get; set; }
+        public List<long>? TagsId { get; set; }
+        public string IdentityNumber { get; set; } = string.Empty;
+        public InvoiceType? InvoiceType { get; set; }
+        public bool? IsExportInvoice { get; set; }
+        public string ReceiptAddress { get; set; } = string.Empty;
+        public string ReceiptEmail { get; set; } =  string.Empty;
+        public string ReceiptFullName { get; set; } =   string.Empty;
+        public string ReceiptPhoneNumber { get; set; } =   string.Empty;
+        
         public DateTimeOffset CreateAt { get; set; }
         public DateTimeOffset? UpdateAt { get; set; }
     }
@@ -38,6 +44,14 @@ public class Response
         public string? Remark { get; set; }
         public string? TaxCode { get; set; }
         public long OrderTime { get; set; }
+        public List<long>? TagsId { get; set; }
+        public string IdentityNumber { get; set; } = string.Empty;
+        public InvoiceType? InvoiceType { get; set; }
+        public bool? IsExportInvoice { get; set; }
+        public string ReceiptAddress { get; set; } = string.Empty;
+        public string ReceiptEmail { get; set; } =  string.Empty;
+        public string ReceiptFullName { get; set; } =   string.Empty;
+        public string ReceiptPhoneNumber { get; set; } =   string.Empty;
         public string QrCodeUrl { get; set; } = string.Empty;
         
         public OrderTransactionResponse? Transaction { get; set; }
@@ -82,6 +96,57 @@ public class Response
 
         [JsonPropertyName("name")]
         public string Name { get; set; }
+    }
+    
+    public class TaxcodeResponse
+    {
+        [JsonPropertyName("code")]
+        public string Code { get; set; }
+
+        [JsonPropertyName("desc")]
+        public string Desc { get; set; }
+
+        [JsonPropertyName("data")]
+        public CompanyData Data { get; set; }
+
+        [JsonPropertyName("metadata")]
+        public Metadata Metadata { get; set; }
+    }
+
+    public class CompanyData
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        [JsonPropertyName("internationalName")]
+        public string InternationalName { get; set; }
+
+        [JsonPropertyName("shortName")]
+        public string ShortName { get; set; }
+
+        [JsonPropertyName("address")]
+        public string Address { get; set; }
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+    }
+
+    public class Metadata
+    {
+        [JsonPropertyName("disclaimer")]
+        public string Disclaimer { get; set; }
+
+        [JsonPropertyName("source")]
+        public string Source { get; set; }
+
+        [JsonPropertyName("updatedAt")]
+        public DateTime UpdatedAt { get; set; }
+
+        [JsonPropertyName("contact")]
+        public string Contact { get; set; }
     }
     
 }

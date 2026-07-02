@@ -1,4 +1,4 @@
-﻿namespace HoaTheoMua.Service.Webhook;
+namespace HoaTheoMua.Service.Webhook;
 
 using System;
 using System.Collections.Generic;
@@ -89,6 +89,9 @@ public class Channel
 
     [JsonPropertyName("appOrderId")]
     public string AppOrderId { get; set; }
+    
+    [JsonPropertyName("sourceName")]
+    public string SourceName { get; set; }
 
     [JsonPropertyName("pageId")]
     public string PageId { get; set; }
@@ -263,6 +266,9 @@ public class Product
 
     [JsonPropertyName("quantity")]
     public int Quantity { get; set; }
+    
+    [JsonPropertyName("vat")]
+    public int? Vat { get; set; }
 }
 
 public class Payment

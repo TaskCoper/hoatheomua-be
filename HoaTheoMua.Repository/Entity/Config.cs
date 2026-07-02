@@ -12,6 +12,8 @@ public class Config: BaseEntity<Guid>, IAuditableEntity
     public bool IsPublic { get; set; } = false;
 
     public string Group { get; set; } = null!;
+
+    public string? Kind { get; set; } = null!;
     // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }
 

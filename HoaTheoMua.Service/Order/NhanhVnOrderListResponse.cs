@@ -12,7 +12,7 @@ namespace HoaTheoMua.Service.Order;
         public Paginator Paginator { get; set; }
         
         [JsonPropertyName("data")]
-        [System.Text.Json.Serialization.JsonConverter(typeof(NhanhVnDataConverter))]
+        [System.Text.Json.Serialization.JsonConverter(typeof(Converter))]
         public List<OrderData> Data { get; set; } = new();
         // public List<OrderEntry> Data { get; set; } = new();
     }

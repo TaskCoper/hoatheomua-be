@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using HoaTheoMua.Repository;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.Extensions.Configuration;
 
