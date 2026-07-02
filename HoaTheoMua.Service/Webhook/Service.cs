@@ -182,7 +182,7 @@ public partial class Service : IService
                 .FromUnixTimeSeconds(order.OrderTime)
                 .ToOffset(TimeSpan.FromHours(7));
 
-            privateDescription += $"\n-------------------------\n Khách đặt giao ngày {vnDt:dd/MM/yyyy}";
+            privateDescription += $"\n-------------------------\nGiao ngày: {vnDt:dd/MM/yyyy}";
         }
 
         if (order.IsExportInvoice == true && order.InvoiceType != null)
@@ -203,17 +203,17 @@ public partial class Service : IService
                         Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
                     }
                 }
-                privateDescription += $"\nMã số thuế: {order.TaxCode}";
-                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
-                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+                privateDescription += $"\nMST: {order.TaxCode}";
+                privateDescription += $"\nEmail: {order.ReceiptEmail}";
+                privateDescription += $"\nSĐT: {order.ReceiptPhoneNumber}";
             }
             else if (order.InvoiceType == InvoiceType.Personal)
             {
-                privateDescription += $"\nKhách hàng: {order.ReceiptFullName}";
+                privateDescription += $"\nTên: {order.ReceiptFullName}";
                 privateDescription += $"\nCMND/CCCD: {order.IdentityNumber}";
-                privateDescription += $"\nĐịa chỉ: {order.ReceiptAddress}";
-                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
-                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+                privateDescription += $"\nĐC: {order.ReceiptAddress}";
+                privateDescription += $"\nEmail: {order.ReceiptEmail}";
+                privateDescription += $"\nSĐT: {order.ReceiptPhoneNumber}";
             }
         }
         else if(order.OrderTime == 0)
@@ -349,6 +349,11 @@ public partial class Service : IService
         
         var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
         
+        const long vatTagId = 253L;
+        var tagIds = !string.IsNullOrWhiteSpace(order.TaxCode)
+            ? order.TagIds!.Append(vatTagId).ToList()
+            : order.TagIds!;
+        
         var nhanhVnRequest = new OrderRoot
         {
             Depot = new Depot
@@ -369,7 +374,7 @@ public partial class Service : IService
                 Description = order.Remarks,
                 PrivateDescription = privateDescription,
                 Status = 54,
-                TagIds = order.TagIds!,
+                TagIds = tagIds,
                 TechnicalStaffId = 0,
                 PromotionId = ""
             },
@@ -394,6 +399,7 @@ public partial class Service : IService
             Carrier = new Carrier
             {
                 Id = 12,
+                AllowTest = 1,
                 ServiceId = 0,
                 ServiceCode = "",
                 CheckGoods = 0,
