@@ -437,6 +437,10 @@ public class Service : IService
             ReceiptEmail = orders.ReceiptEmail!,
             IsExportInvoice = orders.IsExportInvoice,
             InvoiceType = orders.InvoiceType,
+            ShippingFee = orders.ShippingFee,
+            ProductFee = orders.ProductFee,
+            TotalFee = orders.TotalFee,
+            VatFee = orders.Vat,
             
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
