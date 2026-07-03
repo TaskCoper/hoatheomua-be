@@ -350,6 +350,8 @@ public partial class Service : IService
         }
         
         //var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
+        var prefixOrderId = order.Id.ToString().Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+
         
         const long vatTagId = 253L;
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
@@ -384,7 +386,7 @@ public partial class Service : IService
             {
                 TrafficSourceId = 996,
                 AppOrderId = createAhamoveOrderResult?.OrderId != null
-                    ? createAhamoveOrderResult.OrderId + " - " + order.Id.ToString()
+                    ? createAhamoveOrderResult.OrderId + " - " + prefixOrderId
                     : order.Id.ToString(),
                 SourceName = "WEBSITE",
                 PageId = "",
