@@ -103,8 +103,8 @@ public class Service : IService
             var filterMin = salaryMin ?? 0;
             var filterMax = salaryMax ?? float.MaxValue;
 
-            query = query.Where(job => job.salaryNegotiable == true && 
-                ((job.salaryMin ?? 0) <= filterMax && (job.salaryMax ?? float.MaxValue) >= filterMin));
+            query = query.Where(job => 
+                (job.salaryMin ?? 0) <= filterMax && (job.salaryMax ?? float.MaxValue) >= filterMin);
         }
 
         var totalCount = await query.CountAsync();

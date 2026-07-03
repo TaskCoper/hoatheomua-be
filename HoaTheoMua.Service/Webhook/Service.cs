@@ -217,7 +217,8 @@ public partial class Service : IService
                 privateDescription += $"\nSĐT: {order.ReceiptPhoneNumber}";
             }
         }
-        else if(order.OrderTime == 0)
+        
+        if (order.OrderTime == 0)
         {
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
                 {
@@ -383,7 +384,7 @@ public partial class Service : IService
             {
                 TrafficSourceId = 996,
                 AppOrderId = createAhamoveOrderResult?.OrderId != null
-                    ? createAhamoveOrderResult.OrderId + order.Id.ToString()
+                    ? createAhamoveOrderResult.OrderId + " - " + order.Id.ToString()
                     : order.Id.ToString(),
                 SourceName = "WEBSITE",
                 PageId = "",
