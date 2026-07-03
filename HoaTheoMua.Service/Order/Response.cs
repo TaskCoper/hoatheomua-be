@@ -56,7 +56,7 @@ public class Response
         public decimal ProductFee { get; set; }
         public decimal TotalFee { get; set; }
         public decimal? VatFee { get; set; }
-        
+        public DateTimeOffset CreateAt { get; set; }
         public string QrCodeUrl { get; set; } = string.Empty;
         
         public OrderTransactionResponse? Transaction { get; set; }

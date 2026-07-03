@@ -443,6 +443,7 @@ public class Service : IService
             VatFee = orders.Vat,
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
+            CreateAt = orders.CreatedAt,
 
             Details = orders.OrderDetails.Select(x => new Response.OrderDetailsResponse()
             {

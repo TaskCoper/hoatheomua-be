@@ -176,9 +176,10 @@ public partial class Service : IService
 
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
 
+        var vnDt = new DateTimeOffset();
         if (order.OrderTime > 0)
         {
-            var vnDt = DateTimeOffset
+             vnDt = DateTimeOffset
                 .FromUnixTimeSeconds(order.OrderTime)
                 .ToOffset(TimeSpan.FromHours(7));
 
@@ -216,7 +217,8 @@ public partial class Service : IService
                 privateDescription += $"\nSĐT: {order.ReceiptPhoneNumber}";
             }
         }
-        else if(order.OrderTime == 0)
+        
+        if (order.OrderTime == 0)
         {
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
                 {
@@ -347,10 +349,12 @@ public partial class Service : IService
             ).ToList();
         }
         
-        var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
+        //var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
+        var prefixOrderId = order.Id.ToString().Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+
         
         const long vatTagId = 253L;
-        var tagIds = !string.IsNullOrWhiteSpace(order.TaxCode)
+        var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
             ? order.TagIds!.Append(vatTagId).ToList()
             : order.TagIds!;
         
@@ -382,7 +386,7 @@ public partial class Service : IService
             {
                 TrafficSourceId = 996,
                 AppOrderId = createAhamoveOrderResult?.OrderId != null
-                    ? createAhamoveOrderResult.OrderId + order.Id.ToString()
+                    ? createAhamoveOrderResult.OrderId + " - " + prefixOrderId
                     : order.Id.ToString(),
                 SourceName = "WEBSITE",
                 PageId = "",
@@ -393,7 +397,7 @@ public partial class Service : IService
                 FbPsId = "",
                 PostId = "",
                 FbAdsId = 0,
-                SourceFrom = nhanhVnOrderSources.ToString(), 
+                SourceFrom = "", 
                 Id = 0
             },
             Carrier = new Carrier
@@ -407,9 +411,11 @@ public partial class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m, // Hậu tố 'm' biểu thị kiểu decimal
-                DeliveryDate = "",
+                DeliveryDate =  (order.OrderTime > 0)  ? vnDt.ToString("yyyy-MM-dd") : "",
+                // DeliveryDate =  "2026-07-05",
                 DeliveryHour = "",
                 DeliveryMinute = "",
+                // DeliveryTime = (order.OrderTime == 0) ? "" :  "19h",
                 DeliveryTime = "",
                 CarrierAccountId = 0,
                 CarrierShopId = "",
@@ -452,7 +458,7 @@ public partial class Service : IService
                 DepositAmount = 0m,
                 DepositAccountId = 0,
                 TransferAmount = order.TotalFee,
-                TransferAccountId = 65086,
+                TransferAccountId = (order.IsExportInvoice == true && order.InvoiceType != null) ? 65087 : 65088,
                 InstallmentAmount = 0m,
                 InstallmentCode = "",
                 InstallmentAccountId = 0,
@@ -489,6 +495,9 @@ public partial class Service : IService
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhVnRequest);
         
+        // var debugJson = await nhanhHttpRequest.Content.ReadAsStringAsync();
+        // Console.WriteLine("NhanhVN request body: " + debugJson);
+        //
         HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
 
         // NhanhVn replies with HTTP 200 even when it rejects the order (code != 1), and in that case
