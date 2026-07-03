@@ -176,9 +176,10 @@ public partial class Service : IService
 
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
 
+        var vnDt = new DateTimeOffset();
         if (order.OrderTime > 0)
         {
-            var vnDt = DateTimeOffset
+             vnDt = DateTimeOffset
                 .FromUnixTimeSeconds(order.OrderTime)
                 .ToOffset(TimeSpan.FromHours(7));
 
@@ -407,9 +408,11 @@ public partial class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m, // Hậu tố 'm' biểu thị kiểu decimal
-                DeliveryDate = "",
+                DeliveryDate =  (order.OrderTime > 0)  ? vnDt.ToString("yyyy-MM-dd") : "",
+                // DeliveryDate =  "2026-07-05",
                 DeliveryHour = "",
                 DeliveryMinute = "",
+                // DeliveryTime = (order.OrderTime == 0) ? "" :  "19h",
                 DeliveryTime = "",
                 CarrierAccountId = 0,
                 CarrierShopId = "",
@@ -489,6 +492,9 @@ public partial class Service : IService
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhVnRequest);
         
+        // var debugJson = await nhanhHttpRequest.Content.ReadAsStringAsync();
+        // Console.WriteLine("NhanhVN request body: " + debugJson);
+        //
         HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
 
         // NhanhVn replies with HTTP 200 even when it rejects the order (code != 1), and in that case
