@@ -1,6 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+using Moq;
+using MockQueryable.Moq;
 using Xunit;
 
 using HoaTheoMua.Repository;
@@ -14,14 +18,56 @@ namespace HoaTheoMua.Service.Test.CompanyAddressTest;
 
 public class CreateCompanyAddressTest
 {
-    private AppDbContext CreateDbContext()
+    private AppDbContext CreateMockDbContext(List<CompanyAddressEntity> companyAddresses)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
-            .Options;
+        var mockDbSet = companyAddresses.BuildMockDbSet();
 
-        return new AppDbContext(options);
+        mockDbSet
+            .Setup(x => x.AddAsync(
+                It.IsAny<CompanyAddressEntity>(),
+                It.IsAny<CancellationToken>()))
+            .Callback((CompanyAddressEntity entity, CancellationToken _) =>
+            {
+                companyAddresses.Add(entity);
+            })
+            .Returns((CompanyAddressEntity _, CancellationToken _) =>
+                new ValueTask<EntityEntry<CompanyAddressEntity>>(
+                    (EntityEntry<CompanyAddressEntity>)null!
+                )
+            );
+
+        var options = new DbContextOptionsBuilder<AppDbContext>().Options;
+        var mockDbContext = new Mock<AppDbContext>(options);
+
+        mockDbContext
+            .Setup(x => x.CompanyAddresses)
+            .Returns(mockDbSet.Object);
+
+        mockDbContext
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var mockTransaction = new Mock<IDbContextTransaction>();
+
+        mockTransaction
+            .Setup(x => x.CommitAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        mockTransaction
+            .Setup(x => x.RollbackAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var mockDatabase = new Mock<DatabaseFacade>(mockDbContext.Object);
+
+        mockDatabase
+            .Setup(x => x.BeginTransactionAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockTransaction.Object);
+
+        mockDbContext
+            .Setup(x => x.Database)
+            .Returns(mockDatabase.Object);
+
+        return mockDbContext.Object;
     }
 
     private Request.CreateCompanyAddressRequest CreateValidRequest()
@@ -35,14 +81,13 @@ public class CreateCompanyAddressTest
             FullName = "Hoa Theo Mua",
             Phone = "0909123456",
             Remarks = "Company address",
-            Latitude = 10.776889m, //m:so kieu decimal
+            Latitude = 10.776889m,
             Longitude = 106.700806m,
             MapId = "map-new"
         };
     }
 
     private List<ValidationResult> ValidateModel(object model)
-    // kiem tra annotation( [Required], [StringLength], [Range]
     {
         var results = new List<ValidationResult>();
         var context = new ValidationContext(model);
@@ -57,7 +102,8 @@ public class CreateCompanyAddressTest
     public async Task Create_Success()
     {
         // Arrange
-        await using var dbContext = CreateDbContext();
+        var companyAddresses = new List<CompanyAddressEntity>();
+        var dbContext = CreateMockDbContext(companyAddresses);
 
         var service = new CompanyAddressService(dbContext);
         var request = CreateValidRequest();
@@ -80,7 +126,9 @@ public class CreateCompanyAddressTest
         Assert.Equal("map-new", result.MapId);
         Assert.Null(result.UpdatedAt);
 
-        var addressInDb = await dbContext.CompanyAddresses.SingleAsync();
+        Assert.Single(companyAddresses);
+
+        var addressInDb = companyAddresses.First();
 
         Assert.Equal(result.Id, addressInDb.Id);
         Assert.False(addressInDb.IsDeleted);
@@ -92,27 +140,28 @@ public class CreateCompanyAddressTest
     public async Task Create_ActiveAddressExists_ThrowConflict()
     {
         // Arrange
-        await using var dbContext = CreateDbContext();
-
-        dbContext.CompanyAddresses.Add(new CompanyAddressEntity
+        var companyAddresses = new List<CompanyAddressEntity>
         {
-            Id = Guid.NewGuid(),
-            AddressLine = "Old Address",
-            Ward = "Ward 1",
-            City = "Ho Chi Minh",
-            PhoneNumber = "0111111111",
-            FullName = "Old Company",
-            Remarks = "Old address remark",
-            Country = "Vietnam",
-            Latitude = 10.776889m,
-            Longitude = 106.700806m,
-            MapId = "map-old",
-            IsDeleted = false,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = null
-        });
+            new CompanyAddressEntity
+            {
+                Id = Guid.NewGuid(),
+                AddressLine = "Old Address",
+                Ward = "Ward 1",
+                City = "Ho Chi Minh",
+                PhoneNumber = "0111111111",
+                FullName = "Old Company",
+                Remarks = "Old address remark",
+                Country = "Vietnam",
+                Latitude = 10.776889m,
+                Longitude = 106.700806m,
+                MapId = "map-old",
+                IsDeleted = false,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = null
+            }
+        };
 
-        await dbContext.SaveChangesAsync();
+        var dbContext = CreateMockDbContext(companyAddresses);
 
         var service = new CompanyAddressService(dbContext);
         var request = CreateValidRequest();
@@ -128,7 +177,7 @@ public class CreateCompanyAddressTest
             exception.Message
         );
 
-        Assert.Equal(1, await dbContext.CompanyAddresses.CountAsync());
+        Assert.Single(companyAddresses);
     }
 
     // TC03: Request thiếu required fields
@@ -177,7 +226,6 @@ public class CreateCompanyAddressTest
     [Theory]
     [InlineData(91)]
     [InlineData(-91)]
-    // latitude hop le tu -90 -> 90
     public void Create_InvalidLatitude_Invalid(decimal latitude)
     {
         // Arrange
@@ -195,7 +243,6 @@ public class CreateCompanyAddressTest
     [Theory]
     [InlineData(181)]
     [InlineData(-181)]
-    // longitude hop le tu -180 -> 180
     public void Create_InvalidLongitude_Invalid(decimal longitude)
     {
         // Arrange
@@ -230,27 +277,28 @@ public class CreateCompanyAddressTest
     public async Task Create_SoftDeletedAddressExists_Success()
     {
         // Arrange
-        await using var dbContext = CreateDbContext();
-
-        dbContext.CompanyAddresses.Add(new CompanyAddressEntity
+        var companyAddresses = new List<CompanyAddressEntity>
         {
-            Id = Guid.NewGuid(),
-            AddressLine = "123 Nguyen Hue",
-            Ward = "Ben Nghe",
-            City = "Ho Chi Minh",
-            PhoneNumber = "0909123456",
-            FullName = "Hoa Theo Mua",
-            Remarks = "Company address",
-            Country = "Vietnam",
-            Latitude = 10.776889m,
-            Longitude = 106.700806m,
-            MapId = "map-new",
-            IsDeleted = true,
-            CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
-            UpdatedAt = DateTimeOffset.UtcNow
-        });
+            new CompanyAddressEntity
+            {
+                Id = Guid.NewGuid(),
+                AddressLine = "123 Nguyen Hue",
+                Ward = "Ben Nghe",
+                City = "Ho Chi Minh",
+                PhoneNumber = "0909123456",
+                FullName = "Hoa Theo Mua",
+                Remarks = "Company address",
+                Country = "Vietnam",
+                Latitude = 10.776889m,
+                Longitude = 106.700806m,
+                MapId = "map-new",
+                IsDeleted = true,
+                CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
+                UpdatedAt = DateTimeOffset.UtcNow
+            }
+        };
 
-        await dbContext.SaveChangesAsync();
+        var dbContext = CreateMockDbContext(companyAddresses);
 
         var service = new CompanyAddressService(dbContext);
         var request = CreateValidRequest();
@@ -264,8 +312,8 @@ public class CreateCompanyAddressTest
         Assert.Equal("Ho Chi Minh", result.City);
         Assert.Equal("Vietnam", result.Country);
 
-        Assert.Equal(2, await dbContext.CompanyAddresses.CountAsync());
-        Assert.Equal(1, await dbContext.CompanyAddresses.CountAsync(x => !x.IsDeleted));
-        Assert.Equal(1, await dbContext.CompanyAddresses.CountAsync(x => x.IsDeleted));
+        Assert.Equal(2, companyAddresses.Count);
+        Assert.Equal(1, companyAddresses.Count(x => !x.IsDeleted));
+        Assert.Equal(1, companyAddresses.Count(x => x.IsDeleted));
     }
 }
