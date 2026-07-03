@@ -98,14 +98,13 @@ public class Service : IService
             query = query.Where(job => job.status == status.Value);
         }
 
-        if (salaryMin.HasValue)
+        if (salaryMin.HasValue || salaryMax.HasValue)
         {
-            query = query.Where(job => job.salaryNegotiable || job.salaryMin >= salaryMin.Value);
-        }
+            var filterMin = salaryMin ?? 0;
+            var filterMax = salaryMax ?? float.MaxValue;
 
-        if (salaryMax.HasValue)
-        {
-            query = query.Where(job => job.salaryNegotiable || job.salaryMax <= salaryMax.Value);
+            query = query.Where(job => job.salaryNegotiable == true && 
+                ((job.salaryMin ?? 0) <= filterMax && (job.salaryMax ?? float.MaxValue) >= filterMin));
         }
 
         var totalCount = await query.CountAsync();

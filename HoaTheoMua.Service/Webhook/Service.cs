@@ -351,7 +351,7 @@ public partial class Service : IService
         //var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
         
         const long vatTagId = 253L;
-        var tagIds = !string.IsNullOrWhiteSpace(order.TaxCode)
+        var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
             ? order.TagIds!.Append(vatTagId).ToList()
             : order.TagIds!;
         
