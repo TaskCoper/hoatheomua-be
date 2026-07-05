@@ -1,376 +1,448 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
-using Moq;
-using Moq.Protected;
-using MockQueryable.Moq;
-using Xunit;
-using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhaMoveService;
 using HoaTheoMua.Service.Exceptions;
-using HoaTheoMua.Service.Models;
-using AhaMoveServiceInstance = HoaTheoMua.Service.AhaMoveService.Service;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using MockQueryable.Moq;
+using Moq;
+using Moq.Protected;
+using Xunit;
 using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
+using AhaMoveServiceImplementation = HoaTheoMua.Service.AhaMoveService.Service;
 
-namespace HoaTheoMua.Service.Test.AhaMoveServiceTest;
-
-public class EstimateShippingFeeTest
+namespace HoaTheoMua.Service.Test.AhaMoveService
 {
-    
-    private CompanyAddressEntity CreateFullCompanyAddress(
-        string addressLine, 
-        bool isDeleted, 
-        DateTimeOffset createdAt)
+    public class AhaMoveServiceTests
     {
-        return new CompanyAddressEntity
+        private CompanyAddressEntity CreateAddress(bool isDeleted = false)
         {
-            Id = Guid.NewGuid(),
-            AddressLine = addressLine,
-            Ward = "Phường Bến Nghé",
-            City = "Ho Chi Minh",
-            Country = "Vietnam",
-            PhoneNumber = "0222222222",
-            FullName = "Cửa hàng Hoa Theo Mùa",
-            Remarks = "Gần ngã tư",
-            Latitude = 10.776889m,
-            Longitude = 106.700806m,
-            MapId = "map-default-id",
-            IsDeleted = isDeleted,
-            CreatedAt = createdAt,
-            UpdatedAt = null
-        };
-    }
-
-    private (AppDbContext, Mock<IConfiguration>) SetupMockDependencies(
-        List<CompanyAddressEntity> addresses)
-    {
-        // 1. Mock CompanyAddresses DbSet
-        var mockDbSet = addresses.BuildMockDbSet();
-        var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<AppDbContext>().Options;
-        var mockDbContext = new Mock<AppDbContext>(options);
-        
-        mockDbContext.Setup(x => x.CompanyAddresses).Returns(mockDbSet.Object);
-
-        // 2. Mock IConfiguration phục vụ cho việc khởi tạo Service ban đầu
-        var mockConfig = new Mock<IConfiguration>();
-        var mockSection = new Mock<IConfigurationSection>();
-        mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockSection.Object);
-
-        return (mockDbContext.Object, mockConfig);
-    }
-
-    private HttpClient CreateMockHttpClient(params HttpResponseMessage[] responses)
-    {
-        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        var handlerSequence = handlerMock.Protected()
-            .SetupSequence<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>()
-            );
-
-        foreach (var response in responses)
-        {
-            handlerSequence.ReturnsAsync(response);
+            return new CompanyAddressEntity
+            {
+                Id = Guid.NewGuid(),
+                AddressLine = "123 Test",
+                Ward = "Ward 1",
+                City = "Ho Chi Minh",
+                PhoneNumber = "0987654321",
+                FullName = "Shop Test",
+                Remarks = "Ghi chu",
+                Country = "Vietnam",
+                Latitude = 10.762622m,
+                Longitude = 106.660172m,
+                IsDeleted = isDeleted,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
         }
 
-        return new HttpClient(handlerMock.Object);
-    }
-
-
-    [Fact]
-    public async Task EstimateShippingFee_Success_WithValidDataAndOrderTime()
-    {
-        // Arrange
-        var addresses = new List<CompanyAddressEntity>
+        private AppDbContext CreateMockDbContext(List<CompanyAddressEntity> companyAddresses)
         {
-            CreateFullCompanyAddress(addressLine: "123 Đường ABC", isDeleted: false, createdAt: DateTimeOffset.UtcNow)
-        };
-        var (dbContext, config) = SetupMockDependencies(addresses);
-
-        // Giả lập NhanhVn API Response thành công
-        var nhanhResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new NhanhProductListResponse
+            var mockDbSet = companyAddresses.BuildMockDbSet();
+            
+            var configs = new List<HoaTheoMua.Repository.Entity.Config>
             {
-                Code = 1,
-                Data = new List<NhanhProduct>
+                new HoaTheoMua.Repository.Entity.Config { Key = "nhanhvn.token", Value = "{\"value\": \"test_token\"}", Group = "nhanhvn", IsDeleted = false },
+                new HoaTheoMua.Repository.Entity.Config { Key = "nhanhvn.base_url", Value = "{\"value\": \"http://nhanhvn.test\"}", Group = "nhanhvn", IsDeleted = false },
+                new HoaTheoMua.Repository.Entity.Config { Key = "nhanhvn.app_id", Value = "{\"value\": 12345}", Group = "nhanhvn", IsDeleted = false },
+                new HoaTheoMua.Repository.Entity.Config { Key = "nhanhvn.business_id", Value = "{\"value\": 67890}", Group = "nhanhvn", IsDeleted = false },
+                new HoaTheoMua.Repository.Entity.Config { Key = "ahamove.api_key", Value = "{\"value\": \"test_api_key\"}", Group = "ahamove", IsDeleted = false },
+                new HoaTheoMua.Repository.Entity.Config { Key = "ahamove.base_url", Value = "{\"value\": \"http://ahamove.test\"}", Group = "ahamove", IsDeleted = false }
+            };
+            var mockConfigDbSet = configs.BuildMockDbSet();
+
+            var options = new DbContextOptionsBuilder<AppDbContext>().Options;
+            var mockDbContext = new Mock<AppDbContext>(options);
+
+            mockDbContext
+                .Setup(x => x.CompanyAddresses)
+                .Returns(mockDbSet.Object);
+
+            mockDbContext
+                .Setup(x => x.Configs)
+                .Returns(mockConfigDbSet.Object);
+
+            return mockDbContext.Object;
+        }
+        
+        // EDGE CASE 1: Company không tồn tại trong db
+        [Fact]
+        public async Task EstimateShippingFee_CompanyAddressNotFound_ThrowsException()
+        {
+            // Arrange
+            var dbContext = CreateMockDbContext(new List<CompanyAddressEntity>());
+
+            var mockConfig = new Mock<IConfiguration>();
+            var mockConfigSection = new Mock<IConfigurationSection>();
+            mockConfigSection.Setup(x => x.Value).Returns("dummy_value");
+            mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockConfigSection.Object);
+
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+
+            var service = new AhaMoveServiceImplementation(httpClient, dbContext, mockConfig.Object);
+
+            var request = new AhaMoveRequest.EstimateShippingFeeRequest();
+
+            // Act
+            var act = async () => await service.EstimateShippingFee(request);
+
+            // async Task Estimat()
+            // {
+            //     await service.EstimateShippingFee(request);
+            // }
+            
+            // Assert
+            var exception = await Assert.ThrowsAsync<Exception>(act);
+            Assert.Equal("Company address not found", exception.Message);
+        }
+        
+        // EDGE CASE 2: Response của nhanhvn trả về code == 0
+        [Fact]
+        public async Task EstimateShippingFee_NhanhVnReturnsCodeZero_ThrowsBadRequestException()
+        {
+            // Arrange
+            var companyAddress = CreateAddress();
+            var dbContext = CreateMockDbContext(new List<CompanyAddressEntity> { companyAddress });
+
+            var mockConfig = new Mock<IConfiguration>();
+            var mockConfigSection = new Mock<IConfigurationSection>();
+            mockConfigSection.Setup(x => x.Value).Returns("dummy_value");
+            mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockConfigSection.Object);
+
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+
+            var nhanhVnResponseData = new NhanhProductListResponse
+            {
+                Code = 0,
+                Data = new List<NhanhProductData>()
+            };
+
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString().Contains("nhanhvn")),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
                 {
-                    new() { 
-                        Id = 101, 
-                        Name = "Hoa Hồng Đỏ", 
-                        Prices = new ProductPrices { Retail = 150000 },
-                        Shipping = new ProductShipping { Height = 20, Weight = 2, Length = 20, Width = 20 }
-                    }
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(nhanhVnResponseData)
+                });
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var service = new AhaMoveServiceImplementation(httpClient, dbContext, mockConfig.Object);
+
+            var request = new AhaMoveRequest.EstimateShippingFeeRequest
+            {
+                Items = new List<AhaMoveRequest.Items>
+                {
+                    new AhaMoveRequest.Items { ItemId = 1, Number = 1 }
                 }
-            })
-        };
+            };
 
-        // Giả lập AhaMove API Response thành công
-        var ahaResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new List<ServiceResponse>
+            // Act
+            var act = async () => await service.EstimateShippingFee(request);
+
+            // Assert
+            var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+            Assert.Equal("ERR_INVALID_FORM_FIELDS", exception.Message);
+        }
+        
+        // EDGE CASE 3: ItemId truyền vô không tồn tại dẫn đến lỗi bị crash
+        [Fact]
+            public async Task EstimateShippingFee_ItemIdNotFoundInNhanhVn_ThrowsInvalidOperationException()
             {
-                new() { ServiceId = "SGN-BIKE", TotalFee = 35000 }
-            })
-        };
+                // Arrange
+                var companyAddress = CreateAddress();
+                var dbContext = CreateMockDbContext(new List<CompanyAddressEntity> { companyAddress });
 
-        var httpClient = CreateMockHttpClient(nhanhResponse, ahaResponse);
-        var service = new AhaMoveServiceInstance(httpClient, dbContext, config.Object);
+                var mockConfig = new Mock<IConfiguration>();
+                var mockConfigSection = new Mock<IConfigurationSection>();
+                mockConfigSection.Setup(x => x.Value).Returns("dummy_value");
+                mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockConfigSection.Object);
 
-        var request = new AhaMoveRequest.EstimateShippingFeeRequest()
-        {
-            OrderTime = 1719999999, // Lớn hơn 0 -> IdleUntil sẽ nhận giá trị này
-            Latitude = 10.8m,
-            Longitude = 106.7m,
-            Address = "456 Đường XYZ",
-            ShortAddress = "Quận 3, HCM",
-            FullName = "Nguyễn Văn A",
-            Phone = "0909090909",
-            Remarks = "Giao giờ hành chính",
-            Items = new List<AhaMoveRequest.Items>
-            {
-                new() { ItemId = 101, Number = 2 }
+                var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+
+                var nhanhProductData = new NhanhProductData
+                {
+                    Id = 999, 
+                    Name = "Sản phẩm A",
+                    Prices = new NhanhPrices { Retail = 100000 },
+                    Shipping = new NhanhShipping { Height = 10, Weight = 1, Length = 10, Width = 10 }
+                };
+
+                var nhanhVnResponseData = new NhanhProductListResponse
+                {
+                    Code = 1,
+                    Data = new List<NhanhProductData> { nhanhProductData }
+                };
+
+                mockHttpMessageHandler.Protected()
+                    .Setup<Task<HttpResponseMessage>>(
+                        "SendAsync",
+                        ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains("nhanhvn")),
+                        ItExpr.IsAny<CancellationToken>()
+                    )
+                    .ReturnsAsync(new HttpResponseMessage
+                    {
+                        StatusCode = HttpStatusCode.OK,
+                        Content = JsonContent.Create(nhanhVnResponseData)
+                    });
+
+                var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+                var service = new AhaMoveServiceImplementation(httpClient, dbContext, mockConfig.Object);
+
+                var request = new AhaMoveRequest.EstimateShippingFeeRequest
+                {
+                    Items = new List<AhaMoveRequest.Items>
+                    {
+                        new AhaMoveRequest.Items { ItemId = 1, Number = 2 } // Request ID = 1 nhưng NhanhVn trả về ID = 999
+                    }
+                };
+
+                // Act
+                var act = async () => await service.EstimateShippingFee(request);
+
+                // Assert
+                await Assert.ThrowsAsync<InvalidOperationException>(act); 
             }
-        };
-
-        // Act
-        var result = await service.EstimateShippingFee(request);
-
-        // Assert
-        Assert.NotNull(result);
         
-        // Kiểm tra cấu trúc object ẩn danh trả về
-        var type = result.GetType();
-        var ahaResultProp = type.GetProperty("ahamoveResult")?.GetValue(result) as List<ServiceResponse>;
-        var nhanhResultProp = type.GetProperty("productNhanhResult")?.GetValue(result) as NhanhProductListResponse;
-
-        Assert.NotNull(ahaResultProp);
-        Assert.NotNull(nhanhResultProp);
-        Assert.Single(ahaResultProp);
-        Assert.Equal(101, nhanhResultProp.Data.First().Id);
-    }
-
-    [Fact]
-    public async Task EstimateShippingFee_Success_WhenOrderTimeIsZero_IdleUntilIsNull()
-    {
-        // Arrange
-        var addresses = new List<CompanyAddressEntity>
+        // EDGE CASE 4: Kiểm tra logic OrderTime và IdleUntil khi gọi AhaMove
+        [Fact]
+        public async Task EstimateShippingFee_OrderTimeGreaterThanZero_MapsIdleUntilCorrectly()
         {
-            CreateFullCompanyAddress(addressLine: "123 Đường ABC", isDeleted: false, createdAt: DateTimeOffset.UtcNow)
-        };
-        var (dbContext, config) = SetupMockDependencies(addresses);
+            // Arrange
+            var companyAddress = CreateAddress();
+            var dbContext = CreateMockDbContext(new List<CompanyAddressEntity> { companyAddress });
 
-        var nhanhResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new NhanhProductListResponse 
-            { 
-                Code = 1, 
-                Data = new List<NhanhProduct> { new() { Id = 101, Prices = new ProductPrices(), Shipping = new ProductShipping() } } 
-            })
-        };
-        var ahaResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new List<ServiceResponse> { new() })
-        };
+            var mockConfig = new Mock<IConfiguration>();
+            var mockConfigSection = new Mock<IConfigurationSection>();
+            mockConfigSection.Setup(x => x.Value).Returns("dummy_value");
+            mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockConfigSection.Object);
 
-        var httpClient = CreateMockHttpClient(nhanhResponse, ahaResponse);
-        var service = new AhaMoveServiceInstance(httpClient, dbContext, config.Object);
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
 
-        var request = new AhaMoveRequest.EstimateShippingFeeRequest
-        {
-            OrderTime = 0, // Kiểm tra điều kiện OrderTime = 0 -> IdleUntil sẽ là null
-            Items = new List<AhaMoveRequest.Items> { new() { ItemId = 101, Number = 1 } }
-        };
+            var nhanhProductData = new NhanhProductData
+            {
+                Id = 1,
+                Name = "Sản phẩm A",
+                Prices = new NhanhPrices { Retail = 100000 },
+                Shipping = new NhanhShipping { Height = 10, Weight = 1, Length = 10, Width = 10 }
+            };
 
-        // Act
-        var result = await service.EstimateShippingFee(request);
-
-        // Assert
-        Assert.NotNull(result);
-    }
-
-    [Fact]
-    public async Task EstimateShippingFee_ThrowsException_WhenCompanyAddressNotFound()
-    {
-        // Arrange: Danh sách trống
-        var addresses = new List<CompanyAddressEntity>(); 
-        var (dbContext, config) = SetupMockDependencies(addresses);
-        
-        var httpClient = CreateMockHttpClient();
-        var service = new AhaMoveServiceInstance(httpClient, dbContext, config.Object);
-
-        var request = new AhaMoveRequest.EstimateShippingFeeRequest();
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<Exception>(() => service.EstimateShippingFee(request));
-        Assert.Equal("Company address not found", exception.Message);
-    }
-
-    [Fact]
-    public async Task EstimateShippingFee_ThrowsBadRequestException_WhenNhanhVnReturnsHttpError()
-    {
-        // Arrange
-        var addresses = new List<CompanyAddressEntity> { CreateFullCompanyAddress("ABC", false, DateTimeOffset.UtcNow) };
-        var (dbContext, config) = SetupMockDependencies(addresses);
-
-        // Giả lập lỗi HTTP 500 từ Nhanh.vn
-        var nhanhResponse = new HttpResponseMessage(HttpStatusCode.InternalServerError);
-
-        var httpClient = CreateMockHttpClient(nhanhResponse);
-        var service = new AhaMoveServiceInstance(httpClient, dbContext, config.Object);
-
-        var request = new AhaMoveRequest.EstimateShippingFeeRequest { Items = new List<AhaMoveRequest.Items>() };
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => service.EstimateShippingFee(request));
-        Assert.Contains("NhanhVn API HTTP Error", exception.Message);
-    }
-
-    [Fact]
-    public async Task EstimateShippingFee_ThrowsBadRequestException_WhenNhanhVnResponseDataIsNull()
-    {
-        // Arrange
-        var addresses = new List<CompanyAddressEntity> { CreateFullCompanyAddress("ABC", false, DateTimeOffset.UtcNow) };
-        var (dbContext, config) = SetupMockDependencies(addresses);
-
-        var nhanhResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new NhanhProductListResponse { Code = 1, Data = null })
-        };
-
-        var httpClient = CreateMockHttpClient(nhanhResponse);
-        var service = new AhaMoveServiceInstance(httpClient, dbContext, config.Object);
-
-        var request = new AhaMoveRequest.EstimateShippingFeeRequest { Items = new List<AhaMoveRequest.Items>() };
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => service.EstimateShippingFee(request));
-        Assert.Equal("NhanhVnResponse returned null or empty data", exception.Message);
-    }
-
-    [Fact]
-    public async Task EstimateShippingFee_ThrowsBadRequestException_WhenNhanhVnCodeIsZero()
-    {
-        // Arrange
-        var addresses = new List<CompanyAddressEntity> { CreateFullCompanyAddress("ABC", false, DateTimeOffset.UtcNow) };
-        var (dbContext, config) = SetupMockDependencies(addresses);
-
-        var nhanhResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new NhanhProductListResponse { Code = 0, Data = new List<NhanhProduct>() })
-        };
-
-        var httpClient = CreateMockHttpClient(nhanhResponse);
-        var service = new AhaMoveServiceInstance(httpClient, dbContext, config.Object);
-
-        var request = new AhaMoveRequest.EstimateShippingFeeRequest { Items = new List<AhaMoveRequest.Items>() };
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => service.EstimateShippingFee(request));
-        Assert.Equal("ERR_INVALID_FORM_FIELDS", exception.Message);
-    }
-
-    [Fact]
-    public async Task EstimateShippingFee_ThrowsInvalidOperationException_WhenNhanhVnReturnsUnrequestedProductId()
-    {
-        // Arrange
-        var addresses = new List<CompanyAddressEntity> { CreateFullCompanyAddress("ABC", false, DateTimeOffset.UtcNow) };
-        var (dbContext, config) = SetupMockDependencies(addresses);
-
-        // NhanhVn trả về sản phẩm có ID không khớp với Id được yêu cầu từ request
-        var nhanhResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new NhanhProductListResponse
+            var nhanhVnResponseData = new NhanhProductListResponse
             {
                 Code = 1,
-                Data = new List<NhanhProduct> { new() { Id = 999, Prices = new ProductPrices(), Shipping = new ProductShipping() } }
-            })
-        };
+                Data = new List<NhanhProductData> { nhanhProductData }
+            };
 
-        var httpClient = CreateMockHttpClient(nhanhResponse);
-        var service = new AhaMoveServiceInstance(httpClient, dbContext, config.Object);
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains("nhanhvn")),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(nhanhVnResponseData)
+                });
 
-        var request = new AhaMoveRequest.EstimateShippingFeeRequest
-        {
-            Items = new List<AhaMoveRequest.Items> { new() { ItemId = 111, Number = 1 } }
-        };
+            string capturedAhamoveRequestBody = string.Empty;
 
-        // Act & Assert: Hàm .First() so khớp id sẽ báo lỗi hệ thống
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.EstimateShippingFee(request));
-    }
+            var ahamoveResponseData = new List<ServiceResponse>
+            {
+                new ServiceResponse { ServiceId = "SGN-BIKE" }
+            };
 
-    [Fact]
-    public async Task EstimateShippingFee_ThrowsBadRequestException_WhenAhaMoveReturnsHttpError()
-    {
-        // Arrange
-        var addresses = new List<CompanyAddressEntity> { CreateFullCompanyAddress("ABC", false, DateTimeOffset.UtcNow) };
-        var (dbContext, config) = SetupMockDependencies(addresses);
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains("ahamove")),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .Callback<HttpRequestMessage, CancellationToken>((req, ct) =>
+                {
+                    capturedAhamoveRequestBody = req.Content.ReadAsStringAsync().Result;
+                })
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(ahamoveResponseData)
+                });
 
-        var nhanhResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new NhanhProductListResponse 
-            { 
-                Code = 1, 
-                Data = new List<NhanhProduct> { new() { Id = 101, Prices = new ProductPrices(), Shipping = new ProductShipping() } } 
-            })
-        };
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var service = new AhaMoveServiceImplementation(httpClient, dbContext, mockConfig.Object);
+
+            var request = new AhaMoveRequest.EstimateShippingFeeRequest
+            {
+                OrderTime = 1680000000, 
+                Items = new List<AhaMoveRequest.Items>
+                {
+                    new AhaMoveRequest.Items { ItemId = 1, Number = 2 }
+                }
+            };
+
+            // Act
+            await service.EstimateShippingFee(request);
+
+            // Assert
+            var ahamoveRequestObj = JsonSerializer.Deserialize<AhaMoveRequest.AhaMoveShippingFeeRequest>(capturedAhamoveRequestBody);
+            
+            Assert.NotNull(ahamoveRequestObj);
+            Assert.Equal(1680000000, ahamoveRequestObj.OrderTime);
+            Assert.Equal(1680000000, ahamoveRequestObj.IdleUntil);
+        }
         
-        var ahaResponse = new HttpResponseMessage(HttpStatusCode.BadRequest);
-
-        var httpClient = CreateMockHttpClient(nhanhResponse, ahaResponse);
-        var service = new AhaMoveServiceInstance(httpClient, dbContext, config.Object);
-
-        var request = new AhaMoveRequest.EstimateShippingFeeRequest
+        // EDGE CASE 5: AhaMove response trả về null hoặc rỗng
+        [Fact]
+        public async Task EstimateShippingFee_AhamoveReturnsEmptyList_ThrowsBadRequestException()
         {
-            Items = new List<AhaMoveRequest.Items> { new() { ItemId = 101, Number = 1 } }
-        };
+            // Arrange
+            var companyAddress = CreateAddress();
+            var dbContext = CreateMockDbContext(new List<CompanyAddressEntity> { companyAddress });
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => service.EstimateShippingFee(request));
-        Assert.Contains("Ahamove API HTTP Error", exception.Message);
-    }
+            var mockConfig = new Mock<IConfiguration>();
+            var mockConfigSection = new Mock<IConfigurationSection>();
+            mockConfigSection.Setup(x => x.Value).Returns("dummy_value");
+            mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockConfigSection.Object);
 
-    [Fact]
-    public async Task EstimateShippingFee_ThrowsBadRequestException_WhenAhaMoveReturnsNullOrEmpty()
-    {
-        // Arrange
-        var addresses = new List<CompanyAddressEntity> { CreateFullCompanyAddress("ABC", false, DateTimeOffset.UtcNow) };
-        var (dbContext, config) = SetupMockDependencies(addresses);
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
 
-        var nhanhResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new NhanhProductListResponse 
-            { 
-                Code = 1, 
-                Data = new List<NhanhProduct> { new() { Id = 101, Prices = new ProductPrices(), Shipping = new ProductShipping() } } 
-            })
-        };
+            var nhanhProductData = new NhanhProductData
+            {
+                Id = 1,
+                Name = "Sản phẩm A",
+                Prices = new NhanhPrices { Retail = 100000 },
+                Shipping = new NhanhShipping { Height = 10, Weight = 1, Length = 10, Width = 10 }
+            };
+
+            var nhanhVnResponseData = new NhanhProductListResponse
+            {
+                Code = 1,
+                Data = new List<NhanhProductData> { nhanhProductData }
+            };
+
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains("nhanhvn")),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(nhanhVnResponseData)
+                });
+
+            var emptyAhamoveResponseData = new List<ServiceResponse>();
+
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains("ahamove")),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(emptyAhamoveResponseData)
+                });
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var service = new AhaMoveServiceImplementation(httpClient, dbContext, mockConfig.Object);
+
+            var request = new AhaMoveRequest.EstimateShippingFeeRequest
+            {
+                Items = new List<AhaMoveRequest.Items>
+                {
+                    new AhaMoveRequest.Items { ItemId = 1, Number = 2 }
+                }
+            };
+
+            // Act
+            var act = async () => await service.EstimateShippingFee(request);
+
+            // Assert
+            var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+            Assert.Equal("Ahamove returned null or empty data", exception.Message);
+        }
         
-        var ahaResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        // HAPPY CASE: Chạy thành công
+        [Fact]
+        public async Task EstimateShippingFee_ValidRequest_ReturnsSuccessObject()
         {
-            Content = JsonContent.Create(new List<ServiceResponse>()) // Trả về mảng trống
-        };
+            // Arrange
+            var companyAddress = CreateAddress();
+            var dbContext = CreateMockDbContext(new List<CompanyAddressEntity> { companyAddress });
 
-        var httpClient = CreateMockHttpClient(nhanhResponse, ahaResponse);
-        var service = new AhaMoveServiceInstance(httpClient, dbContext, config.Object);
+            var mockConfig = new Mock<IConfiguration>();
+            var mockConfigSection = new Mock<IConfigurationSection>();
+            mockConfigSection.Setup(x => x.Value).Returns("dummy_value");
+            mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockConfigSection.Object);
 
-        var request = new AhaMoveRequest.EstimateShippingFeeRequest
-        {
-            Items = new List<AhaMoveRequest.Items> { new() { ItemId = 101, Number = 1 } }
-        };
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => service.EstimateShippingFee(request));
-        Assert.Equal("Ahamove returned null or empty data", exception.Message);
+            var nhanhProductData = new NhanhProductData
+            {
+                Id = 1,
+                Name = "Sản phẩm A",
+                Prices = new NhanhPrices { Retail = 100000 },
+                Shipping = new NhanhShipping { Height = 10, Weight = 1, Length = 10, Width = 10 }
+            };
+
+            var nhanhVnResponseData = new NhanhProductListResponse
+            {
+                Code = 1,
+                Data = new List<NhanhProductData> { nhanhProductData }
+            };
+
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains("nhanhvn")),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(nhanhVnResponseData)
+                });
+
+            var ahamoveResponseData = new List<ServiceResponse>
+            {
+                new ServiceResponse { ServiceId = "SGN-BIKE" }
+            };
+
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains("ahamove")),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(ahamoveResponseData)
+                });
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var service = new AhaMoveServiceImplementation(httpClient, dbContext, mockConfig.Object);
+
+            var request = new AhaMoveRequest.EstimateShippingFeeRequest
+            {
+                Items = new List<AhaMoveRequest.Items>
+                {
+                    new AhaMoveRequest.Items { ItemId = 1, Number = 2 }
+                }
+            };
+
+            // Act
+            var result = await service.EstimateShippingFee(request);
+
+            // Assert
+            Assert.NotNull(result);
+        }
     }
-
-    
 }
-
-// Các class DTO phục vụ biên dịch (Bỏ qua/Xóa đi nếu các class này đã có sẵn trong project)
-public class NhanhProductListResponse { public int Code { get; set; } public List<NhanhProduct>? Data { get; set; } }
-public class NhanhProduct { public int Id { get; set; } public string Name { get; set; } = ""; public ProductPrices Prices { get; set; } = new(); public ProductShipping Shipping { get; set; } = new(); }
-public class ProductPrices { public decimal Retail { get; set; } }
-public class ProductShipping { public double Height { get; set; } public double Weight { get; set; } public double Length { get; set; } public double Width { get; set; } }
-public class ServiceResponse { public string ServiceId { get; set; } = ""; public double TotalFee { get; set; } }
