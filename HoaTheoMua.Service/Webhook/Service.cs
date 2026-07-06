@@ -223,7 +223,7 @@ public partial class Service : IService
             ? order.TagIds!.Append(vatTagId).ToList()
             : order.TagIds!;
         
-        if (order.OrderTime == 0 && tagIds.Count == 0)
+        if (order.OrderTime == 0 && order.TagIds!.Count == 0)
         {
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
                 {
