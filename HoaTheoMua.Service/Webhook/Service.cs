@@ -218,7 +218,12 @@ public partial class Service : IService
             }
         }
         
-        if (order.OrderTime == 0)
+        const long vatTagId = 253L;
+        var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
+            ? order.TagIds!.Append(vatTagId).ToList()
+            : order.TagIds!;
+        
+        if (order.OrderTime == 0 && tagIds.Count == 0)
         {
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
                 {
@@ -353,10 +358,7 @@ public partial class Service : IService
         var prefixOrderId = order.Id.ToString().Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
 
         
-        const long vatTagId = 253L;
-        var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
-            ? order.TagIds!.Append(vatTagId).ToList()
-            : order.TagIds!;
+        
         
         var nhanhVnRequest = new OrderRoot
         {
