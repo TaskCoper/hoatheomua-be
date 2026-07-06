@@ -229,7 +229,7 @@ public partial class Service : IService
                 }
             ).ToList();
 
-            var packageDetailRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.PackageDetail()
+            var packageDetailRequest = order. OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.PackageDetail()
                 {
                     Height = x.Height,
                     Weight = x.Weight,
