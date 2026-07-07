@@ -40,5 +40,7 @@ public class UpdateAddressRequestValidator : AbstractValidator<Request.UpdateAdd
         RuleFor(x => x.Longitude)
             .NotNull().WithMessage("LONGITUDE_REQUIRED")
             .InclusiveBetween(-180m, 180m).WithMessage("LONGITUDE_OUT_OF_RANGE");
+        RuleFor(x => x.IsDefault)
+            .NotNull().WithMessage("ISDEFAULT_REQUIRED");
     }
 }
