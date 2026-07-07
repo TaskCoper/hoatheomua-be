@@ -25,6 +25,12 @@ public class Request
         [JsonPropertyName("name")]
         public string? Name { get; set; } = null;
 
+        [JsonPropertyName("gpid")]
+        public int? Gpid { get; set; }
+        
+        [JsonPropertyName("parentId")]
+        public int? ParentId { get; set; }
+        
         // Thêm trường categoryIds (Mảng ID danh mục sản phẩm)
         [JsonPropertyName("categoryIds")]
         public List<int>? CategoryIds { get; set; } = null;

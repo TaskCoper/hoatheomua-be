@@ -176,13 +176,14 @@ public partial class Service : IService
 
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
 
+        var vnDt = new DateTimeOffset();
         if (order.OrderTime > 0)
         {
-            var vnDt = DateTimeOffset
+             vnDt = DateTimeOffset
                 .FromUnixTimeSeconds(order.OrderTime)
                 .ToOffset(TimeSpan.FromHours(7));
 
-            privateDescription += $"\n-------------------------\n Khách đặt giao ngày {vnDt:dd/MM/yyyy}";
+            privateDescription += $"\n-------------------------\nGiao: {vnDt:dd/MM/yyyy}";
         }
 
         if (order.IsExportInvoice == true && order.InvoiceType != null)
@@ -203,20 +204,26 @@ public partial class Service : IService
                         Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
                     }
                 }
-                privateDescription += $"\nMã số thuế: {order.TaxCode}";
-                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
-                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+                privateDescription += $"\nMST:{order.TaxCode}";
+                privateDescription += $"\nEmail:{order.ReceiptEmail}";
+                privateDescription += $"\nSĐT:{order.ReceiptPhoneNumber}";
             }
             else if (order.InvoiceType == InvoiceType.Personal)
             {
-                privateDescription += $"\nKhách hàng: {order.ReceiptFullName}";
-                privateDescription += $"\nCMND/CCCD: {order.IdentityNumber}";
-                privateDescription += $"\nĐịa chỉ: {order.ReceiptAddress}";
-                privateDescription += $"\nEmail nhận HĐ: {order.ReceiptEmail}";
-                privateDescription += $"\nSĐT nhận HĐ: {order.ReceiptPhoneNumber}";
+                privateDescription += $"\nTên:{order.ReceiptFullName}";
+                privateDescription += $"\nCCCD:{order.IdentityNumber}";
+                privateDescription += $"\nĐC:{order.ReceiptAddress}";
+                privateDescription += $"\nEmail:{order.ReceiptEmail}";
+                privateDescription += $"\nSĐT:{order.ReceiptPhoneNumber}";
             }
         }
-        else if(order.OrderTime == 0)
+        
+        const long vatTagId = 253L;
+        var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
+            ? order.TagIds!.Append(vatTagId).ToList()
+            : order.TagIds!;
+        
+        if (order.OrderTime == 0 && order.TagIds!.Count == 0)
         {
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
                 {
@@ -347,7 +354,11 @@ public partial class Service : IService
             ).ToList();
         }
         
-        var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
+        //var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
+        var prefixOrderId = order.Id.ToString().Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+
+        
+        
         
         var nhanhVnRequest = new OrderRoot
         {
@@ -369,7 +380,7 @@ public partial class Service : IService
                 Description = order.Remarks,
                 PrivateDescription = privateDescription,
                 Status = 54,
-                TagIds = order.TagIds!,
+                TagIds = tagIds,
                 TechnicalStaffId = 0,
                 PromotionId = ""
             },
@@ -377,7 +388,7 @@ public partial class Service : IService
             {
                 TrafficSourceId = 996,
                 AppOrderId = createAhamoveOrderResult?.OrderId != null
-                    ? createAhamoveOrderResult.OrderId + order.Id.ToString()
+                    ? createAhamoveOrderResult.OrderId + " - " + prefixOrderId
                     : order.Id.ToString(),
                 SourceName = "WEBSITE",
                 PageId = "",
@@ -388,12 +399,13 @@ public partial class Service : IService
                 FbPsId = "",
                 PostId = "",
                 FbAdsId = 0,
-                SourceFrom = nhanhVnOrderSources.ToString(), 
+                SourceFrom = "", 
                 Id = 0
             },
             Carrier = new Carrier
             {
                 Id = 12,
+                AllowTest = 1,
                 ServiceId = 0,
                 ServiceCode = "",
                 CheckGoods = 0,
@@ -401,9 +413,11 @@ public partial class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m, // Hậu tố 'm' biểu thị kiểu decimal
-                DeliveryDate = "",
+                DeliveryDate =  (order.OrderTime > 0)  ? vnDt.ToString("yyyy-MM-dd") : "",
+                // DeliveryDate =  "2026-07-05",
                 DeliveryHour = "",
                 DeliveryMinute = "",
+                // DeliveryTime = (order.OrderTime == 0) ? "" :  "19h",
                 DeliveryTime = "",
                 CarrierAccountId = 0,
                 CarrierShopId = "",
@@ -446,7 +460,7 @@ public partial class Service : IService
                 DepositAmount = 0m,
                 DepositAccountId = 0,
                 TransferAmount = order.TotalFee,
-                TransferAccountId = 65086,
+                TransferAccountId = (order.IsExportInvoice == true && order.InvoiceType != null) ? 65087 : 65088,
                 InstallmentAmount = 0m,
                 InstallmentCode = "",
                 InstallmentAccountId = 0,
@@ -483,6 +497,9 @@ public partial class Service : IService
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhVnRequest);
         
+        // var debugJson = await nhanhHttpRequest.Content.ReadAsStringAsync();
+        // Console.WriteLine("NhanhVN request body: " + debugJson);
+        //
         HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
 
         // NhanhVn replies with HTTP 200 even when it rejects the order (code != 1), and in that case

@@ -146,6 +146,9 @@ public class Carrier
 {
     [JsonPropertyName("id")]
     public int Id { get; set; }
+    
+    [JsonPropertyName("allowTest")]
+    public int AllowTest { get; set; } 
 
     [JsonPropertyName("serviceId")]
     public int ServiceId { get; set; }
