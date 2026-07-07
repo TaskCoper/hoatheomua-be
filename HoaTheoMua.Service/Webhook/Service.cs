@@ -183,7 +183,7 @@ public partial class Service : IService
                 .FromUnixTimeSeconds(order.OrderTime)
                 .ToOffset(TimeSpan.FromHours(7));
 
-            privateDescription += $"\n-------------------------\nGiao ngày: {vnDt:dd/MM/yyyy}";
+            privateDescription += $"\n-------------------------\nGiao: {vnDt:dd/MM/yyyy}";
         }
 
         if (order.IsExportInvoice == true && order.InvoiceType != null)
@@ -204,21 +204,26 @@ public partial class Service : IService
                         Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
                     }
                 }
-                privateDescription += $"\nMST: {order.TaxCode}";
-                privateDescription += $"\nEmail: {order.ReceiptEmail}";
-                privateDescription += $"\nSĐT: {order.ReceiptPhoneNumber}";
+                privateDescription += $"\nMST:{order.TaxCode}";
+                privateDescription += $"\nEmail:{order.ReceiptEmail}";
+                privateDescription += $"\nSĐT:{order.ReceiptPhoneNumber}";
             }
             else if (order.InvoiceType == InvoiceType.Personal)
             {
-                privateDescription += $"\nTên: {order.ReceiptFullName}";
-                privateDescription += $"\nCMND/CCCD: {order.IdentityNumber}";
-                privateDescription += $"\nĐC: {order.ReceiptAddress}";
-                privateDescription += $"\nEmail: {order.ReceiptEmail}";
-                privateDescription += $"\nSĐT: {order.ReceiptPhoneNumber}";
+                privateDescription += $"\nTên:{order.ReceiptFullName}";
+                privateDescription += $"\nCCCD:{order.IdentityNumber}";
+                privateDescription += $"\nĐC:{order.ReceiptAddress}";
+                privateDescription += $"\nEmail:{order.ReceiptEmail}";
+                privateDescription += $"\nSĐT:{order.ReceiptPhoneNumber}";
             }
         }
         
-        if (order.OrderTime == 0)
+        const long vatTagId = 253L;
+        var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
+            ? order.TagIds!.Append(vatTagId).ToList()
+            : order.TagIds!;
+        
+        if (order.OrderTime == 0 && order.TagIds!.Count == 0)
         {
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
                 {
@@ -353,10 +358,7 @@ public partial class Service : IService
         var prefixOrderId = order.Id.ToString().Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
 
         
-        const long vatTagId = 253L;
-        var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
-            ? order.TagIds!.Append(vatTagId).ToList()
-            : order.TagIds!;
+        
         
         var nhanhVnRequest = new OrderRoot
         {
