@@ -25,6 +25,35 @@ public class ConfigController : ControllerBase
         var result = await _configService.GetConfig();
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
+    
+    [HttpGet("content")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetConfigContentList([FromQuery] bool? isPublic, string? groupName, string? key)
+    {
+        var result = await _configService.GetConfigContent(isPublic, groupName, key);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
+    [HttpGet("settings")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetConfigSettingList([FromQuery] string? groupName, string? key)
+    {
+        var result = await _configService.GetConfigSetting(groupName, key);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
+    [HttpGet("secrets")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetConfigSecretList([FromQuery] string? groupName, string? key)
+    {
+        var result = await _configService.GetConfigSecret(groupName, key);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
+    [HttpPost("secrets/reveal/id")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetConfigReveal([FromBody] Guid id)
+    {
+        var result = await _configService.GetConfigReveal(id);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
 
     [HttpGet("{id:guid}")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
@@ -61,9 +90,32 @@ public class ConfigController : ControllerBase
     }
 
     [HttpGet("public")]
-    public async Task<IActionResult> GetPublicConfig()
+    public async Task<IActionResult> GetPublicConfig([FromQuery] string? groupName, string? key)
     {
-        var result = await _configService.GetConfigIsPublic();
+        var result = await _configService.GetConfigIsPublic(groupName, key);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
+    
+    [HttpGet("group")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetConfigGroups([FromQuery] string groupName)
+    {
+        var result = await _configService.GetConfigGroups(groupName);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpGet("order-tags")]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    public async Task<IActionResult> GetNhanhVnOrderTag()
+    {
+        var result = await _configService.GetNhanhVnOrderTag();
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
+    //
+    // [HttpGet("order-sources")]
+    // public async Task<IActionResult> GetNhanhVnOrderSoucres()
+    // {
+    //     var result = await _configService.GetNhanhVnOrderSources();
+    //     return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    // }
 }

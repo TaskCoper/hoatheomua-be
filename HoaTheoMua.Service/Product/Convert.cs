@@ -3,20 +3,20 @@ using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.Product;
 
-public class NhanhVnProductDataConverter : JsonConverter<List<ResponseProductDetails.ProductDetailData>>
+public class NhanhVnProductDataConverter : JsonConverter<List<NhanhVnProductDetailsResponse.ProductDetailData>>
 {
-    public override List<ResponseProductDetails.ProductDetailData> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override List<NhanhVnProductDetailsResponse.ProductDetailData> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.StartArray)
         {
-            var list = new List<ResponseProductDetails.ProductDetailData>();
+            var list = new List<NhanhVnProductDetailsResponse.ProductDetailData>();
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndArray)
                     return list;
 
                 // Deserialize từng phần tử OrderData
-                var item = JsonSerializer.Deserialize<ResponseProductDetails.ProductDetailData>(ref reader, options);
+                var item = JsonSerializer.Deserialize<NhanhVnProductDetailsResponse.ProductDetailData>(ref reader, options);
                 if (item != null)
                 {
                     list.Add(item);
@@ -34,14 +34,14 @@ public class NhanhVnProductDataConverter : JsonConverter<List<ResponseProductDet
                 // Log cảnh báo ở đây nếu cần thiết
             }
             // Trả về danh sách rỗng thay vì để sập hệ thống
-            return new List<ResponseProductDetails.ProductDetailData>();
+            return new List<NhanhVnProductDetailsResponse.ProductDetailData>();
         }
 
         // Các trường hợp Token khác (gặp Null, String trống,...)
-        return new List<ResponseProductDetails.ProductDetailData>();
+        return new List<NhanhVnProductDetailsResponse.ProductDetailData>();
     }
 
-    public override void Write(Utf8JsonWriter writer, List<ResponseProductDetails.ProductDetailData> value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, List<NhanhVnProductDetailsResponse.ProductDetailData> value, JsonSerializerOptions options)
     {
         // Ghi đè phương thức serialize khi cần trả data ngược lại
         JsonSerializer.Serialize(writer, value, options);
@@ -50,21 +50,21 @@ public class NhanhVnProductDataConverter : JsonConverter<List<ResponseProductDet
 }
 
 
-public class NhanhVnDataListConverter : JsonConverter<List<ResponseProductList.ProductDetailData>>
+public class NhanhVnDataListConverter : JsonConverter<List<NhanhVnProductListResponse.ProductDetailData>>
 {
-    public override List<ResponseProductList.ProductDetailData> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override List<NhanhVnProductListResponse.ProductDetailData> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         // Trường hợp 1: Dữ liệu là một Array chuẩn [ { ... }, { ... } ]
         if (reader.TokenType == JsonTokenType.StartArray)
         {
-            var list = new List<ResponseProductList.ProductDetailData>();
+            var list = new List<NhanhVnProductListResponse.ProductDetailData>();
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndArray)
                     return list;
 
                 // Deserialize từng phần tử OrderData
-                var item = JsonSerializer.Deserialize<ResponseProductList.ProductDetailData>(ref reader, options);
+                var item = JsonSerializer.Deserialize<NhanhVnProductListResponse.ProductDetailData>(ref reader, options);
                 if (item != null)
                 {
                     list.Add(item);
@@ -82,39 +82,39 @@ public class NhanhVnDataListConverter : JsonConverter<List<ResponseProductList.P
                 // Log cảnh báo ở đây nếu cần thiết
             }
             // Trả về danh sách rỗng thay vì để sập hệ thống
-            return new List<ResponseProductList.ProductDetailData>();
+            return new List<NhanhVnProductListResponse.ProductDetailData>();
         }
 
         // Các trường hợp Token khác (gặp Null, String trống,...)
-        return new List<ResponseProductList.ProductDetailData>();
+        return new List<NhanhVnProductListResponse.ProductDetailData>();
     }
 
-    public override void Write(Utf8JsonWriter writer, List<ResponseProductList.ProductDetailData> value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, List<NhanhVnProductListResponse.ProductDetailData> value, JsonSerializerOptions options)
     {
         // Ghi đè phương thức serialize khi cần trả data ngược lại
         JsonSerializer.Serialize(writer, value, options);
     }
-    public class NhanhVnUnitsListConverter : JsonConverter<Dictionary<string, List<ResponseProductDetails.UnitDetail>>>
+    public class NhanhVnUnitsListConverter : JsonConverter<Dictionary<string, List<NhanhVnProductDetailsResponse.UnitDetail>>>
     {
-        public override Dictionary<string, List<ResponseProductDetails.UnitDetail>>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override Dictionary<string, List<NhanhVnProductDetailsResponse.UnitDetail>>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             // Nếu API trả về mảng rỗng []
             if (reader.TokenType == JsonTokenType.StartArray)
             {
                 reader.Skip(); 
-                return new Dictionary<string, List<ResponseProductDetails.UnitDetail>>(); 
+                return new Dictionary<string, List<NhanhVnProductDetailsResponse.UnitDetail>>(); 
             }
 
             // Nếu API trả về dạng Object chuẩn { "id": [...] }
             if (reader.TokenType == JsonTokenType.StartObject)
             {
-                return JsonSerializer.Deserialize<Dictionary<string, List<ResponseProductDetails.UnitDetail>>>(ref reader, options);
+                return JsonSerializer.Deserialize<Dictionary<string, List<NhanhVnProductDetailsResponse.UnitDetail>>>(ref reader, options);
             }
 
             return null;
         }
 
-        public override void Write(Utf8JsonWriter writer, Dictionary<string, List<ResponseProductDetails.UnitDetail>> value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, Dictionary<string, List<NhanhVnProductDetailsResponse.UnitDetail>> value, JsonSerializerOptions options)
         {
             JsonSerializer.Serialize(writer, value, options);
         }

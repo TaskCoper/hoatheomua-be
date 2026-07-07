@@ -98,14 +98,13 @@ public class Service : IService
             query = query.Where(job => job.status == status.Value);
         }
 
-        if (salaryMin.HasValue)
+        if (salaryMin.HasValue || salaryMax.HasValue)
         {
-            query = query.Where(job => job.salaryNegotiable || job.salaryMin >= salaryMin.Value);
-        }
+            var filterMin = salaryMin ?? 0;
+            var filterMax = salaryMax ?? float.MaxValue;
 
-        if (salaryMax.HasValue)
-        {
-            query = query.Where(job => job.salaryNegotiable || job.salaryMax <= salaryMax.Value);
+            query = query.Where(job => 
+                (job.salaryMin ?? 0) <= filterMax && (job.salaryMax ?? float.MaxValue) >= filterMin);
         }
 
         var totalCount = await query.CountAsync();
@@ -273,6 +272,16 @@ public class Service : IService
         job.UpdatedAt = DateTimeOffset.UtcNow;
         _context.JobDescriptions.Update(job);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<string>> GetAllLocation()
+    {
+        var locations = await _context.JobDescriptions
+            .Where(x => !x.IsDeleted && !string.IsNullOrWhiteSpace(x.location))
+            .Select(x => x.location)
+            .Distinct()
+            .ToListAsync();
+        return  locations;
     }
 
     private IQueryable<Repository.Entity.JobDescriptions> GetJobByIdOrSlugQuery(string idOrSlug)

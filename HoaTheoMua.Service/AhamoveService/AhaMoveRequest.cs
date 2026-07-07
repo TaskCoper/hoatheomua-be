@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace HoaTheoMua.Service.AhamoveService;
+namespace HoaTheoMua.Service.AhaMoveService;
 
-public class Request
+public class AhaMoveRequest
 {
    public class EstimateShippingFeeRequest
    {
@@ -116,6 +116,11 @@ public class Request
       public int? Num { get; set; }
       [JsonPropertyName("tier_code")]
       public string? TierCode { get; set; }
+      //
+      // [JsonPropertyName("name")]
+      // public string? Name { get; set; }
+      // [JsonPropertyName("price")]
+      // public decimal? Price { get; set; }
    }
    
 }

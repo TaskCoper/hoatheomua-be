@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.Product;
 
-public class ResponseProductList
+public class NhanhVnProductListResponse
 {
     public class NhanhVnProductResponse
     {

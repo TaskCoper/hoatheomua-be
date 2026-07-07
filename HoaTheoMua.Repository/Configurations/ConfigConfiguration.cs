@@ -13,7 +13,11 @@ public class ConfigConfiguration: IEntityTypeConfiguration<Config>
             .IsRequired();
         builder.Property(x => x.Key)
             .IsRequired();
-        
-        
+        builder.Property(x => x.IsPublic)
+            .HasDefaultValue(false);
+        builder.HasIndex(x => x.Group);
+        builder.Property(x => x.Group)
+            .IsRequired();
+
     }
 }
