@@ -1,3 +1,4 @@
+using FluentValidation;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
@@ -10,11 +11,16 @@ public class Service : IService
 {
     private readonly AppDbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IValidator<Request.CreateRecruitmentRequest> _createValidator;
 
-    public Service(AppDbContext context, ICurrentUserService currentUser)
+    public Service(
+        AppDbContext context,
+        ICurrentUserService currentUser,
+        IValidator<Request.CreateRecruitmentRequest> createValidator)
     {
         _context = context;
         _currentUser = currentUser;
+        _createValidator = createValidator;
     }
 
     public async Task<BasePaginationResponse> GetPagedRecruitmentRequestsAsync(int pageIndex, int pageSize,
@@ -172,6 +178,12 @@ public class Service : IService
     public async Task<Response.CreateRecruitmentResponse> CreateRecruitmentRequestAsync(
         Request.CreateRecruitmentRequest request)
     {
+        var validationResult = await _createValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            throw new ValidationExceptionError(validationResult.Errors.First().ErrorMessage);
+        }
+
         var userId = _currentUser.GetRequiredUserId();
 
         var jobExistsAndOpen = await _context.JobDescriptions.AnyAsync(j =>
