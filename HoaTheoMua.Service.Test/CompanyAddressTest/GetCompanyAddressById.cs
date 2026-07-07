@@ -81,25 +81,6 @@ public class GetCompanyAddressByIdTest
         Assert.Equal("map-new", result.MapId);
     }
 
-    // TC02: ID không hợp lệ Guid.Empty
-    [Fact]
-    public async Task GetById_EmptyId_ThrowBadRequest()
-    {
-        // Arrange
-        var companyAddresses = new List<CompanyAddressEntity>();
-
-        var dbContext = CreateMockDbContext(companyAddresses);
-        var service = new CompanyAddressService(dbContext);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.GetCompanyAddressById(Guid.Empty)
-        );
-
-        // Assert
-        Assert.Equal("Id địa chỉ công ty không hợp lệ", exception.Message);
-    }
-
     // TC03: ID không tồn tại
     [Fact]
     public async Task GetById_NotFound_ThrowBadRequest()

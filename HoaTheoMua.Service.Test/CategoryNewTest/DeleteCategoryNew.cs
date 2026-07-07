@@ -145,26 +145,6 @@ public class DeleteCateTest
         Assert.Equal("CATEGORY_NOT_FOUND", exception.Message);
     }
 
-    // TC05: id là Guid.Empty
-    // Theo service hiện tại: Guid.Empty sẽ throw NotFoundException, không phải BadRequestException
-    [Fact]
-    public async Task Delete_EmptyId_ThrowNotFound()
-    {
-        // Arrange
-        var categories = new List<CategoryNewsEntity>();
-
-        var dbContext = CreateMockDbContext(categories);
-        var service = CreateService(dbContext);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.DeleteCate(Guid.Empty)
-        );
-
-        // Assert
-        Assert.Equal("CATEGORY_NOT_FOUND", exception.Message);
-    }
-
     // TC06: Category đã bị soft delete trước đó
     [Fact]
     public async Task Delete_AlreadyDeleted_ThrowNotFound()

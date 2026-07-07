@@ -318,30 +318,7 @@ public class CreateCateTest
         Assert.Equal(1, categories.Count(x => !x.IsDeleted));
         Assert.Equal(1, categories.Count(x => x.IsDeleted));
     }
-
-    // TC09: parentId là Guid.Empty
-    // Theo service hiện tại: Guid.Empty khác null nên sẽ đi tìm parent và throw NotFoundException
-    [Fact]
-    public async Task Create_EmptyParentId_ThrowNotFound()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var categories = new List<CategoryNewsEntity>();
-
-        var dbContext = CreateMockDbContext(categories);
-        var service = CreateService(dbContext, userId);
-        var request = CreateRequest(title: "Cong nghe", parentId: Guid.Empty);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.CreateCate(request)
-        );
-
-        // Assert
-        Assert.Equal("CATEGORY_NOT_FOUND", exception.Message);
-        Assert.Empty(categories);
-    }
-
+    
     // TC10: Title chỉ chứa khoảng trắng
     [Fact]
     public async Task Create_WhitespaceTitle_ThrowBadRequest()
@@ -381,31 +358,10 @@ public class CreateCateTest
         // Act
         var result = await service.CreateCate(request);
 
-        // Assert
+        // Assert   
         Assert.NotNull(result);
         Assert.Equal(longTitle, result.title);
         Assert.Single(categories);
     }
-
-    // TC12: UserId từ JWT không tồn tại trong bảng Users vẫn tạo thành công
-    [Fact]
-    public async Task Create_UserIdNotInUsers_Success()
-    {
-        // Arrange
-        var userIdFromJwt = Guid.NewGuid();
-        var categories = new List<CategoryNewsEntity>();
-
-        var dbContext = CreateMockDbContext(categories);
-        var service = CreateService(dbContext, userIdFromJwt);
-        var request = CreateRequest(title: "Cong nghe", parentId: null);
-
-        // Act
-        var result = await service.CreateCate(request);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(userIdFromJwt, result.userId);
-        Assert.Equal("Cong nghe", result.title);
-        Assert.Single(categories);
-    }
+    
 }

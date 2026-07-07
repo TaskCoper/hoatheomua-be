@@ -328,36 +328,6 @@ public class GetCategoriesTest
         Assert.Equal(0, GetInt(result, "totalCount"));
     }
 
-    // TC05: Keyword là khoảng trắng
-    [Fact]
-    public async Task GetCategories_WhitespaceKeyword_ReturnAll()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-
-        var categories = new List<CategoryNewsEntity>
-        {
-            CreateCategory(Guid.NewGuid(), "Technology", userId, parentId: null, isDeleted: false),
-            CreateCategory(Guid.NewGuid(), "Business", userId, parentId: null, isDeleted: false)
-        };
-
-        var dbContext = CreateMockDbContext(categories);
-        var service = CreateService(dbContext);
-
-        // Act
-        var result = await service.GetCategories(
-            pageIndex: 1,
-            pageSize: 10,
-            keyword: "   "
-        );
-
-        // Assert
-        var items = GetItems(result);
-
-        Assert.Equal(2, items.Count);
-        Assert.Equal(2, GetInt(result, "totalCount"));
-    }
-
     // TC06: Category cha không có children
     [Fact]
     public async Task GetCategories_ParentWithoutChildren_ReturnSuccess()

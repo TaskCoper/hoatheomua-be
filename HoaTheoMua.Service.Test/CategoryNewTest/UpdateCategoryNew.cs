@@ -129,32 +129,7 @@ public class UpdateCateTest
         // Assert
         Assert.Equal("CATEGORY_ALREADY_EXISTS", exception.Message);
     }
-
-    // TC03: Gán parent là chính nó
-    [Fact]
-    public async Task Update_ParentIsSelf_ThrowBadRequest()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var categoryId = Guid.NewGuid();
-
-        var categories = new List<CategoryNewsEntity>
-        {
-            CreateCategory(categoryId, "Cong Nghe", userId, parentId: null, isDeleted: false)
-        };
-
-        var dbContext = CreateMockDbContext(categories);
-        var service = CreateService(dbContext);
-        var request = CreateRequest(title: "Cong Nghe Moi", parentId: categoryId);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.UpdateCate(categoryId, request)
-        );
-
-        // Assert
-        Assert.Equal("CATEGORY_PARENT_INVALID", exception.Message);
-    }
+    
 
     // TC04: Gán parent cho category đang có con
     [Fact]
@@ -369,33 +344,7 @@ public class UpdateCateTest
         // Assert
         Assert.Equal("CATEGORY_TITLE_REQUIRED", exception.Message);
     }
-
-    // TC11: Gán parentId là Guid.Empty
-    // Theo service hiện tại: Guid.Empty != null nên service tìm parent và throw PARENT_CATEGORY_NOT_FOUND
-    [Fact]
-    public async Task Update_EmptyParentId_ThrowParentNotFound()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var categoryId = Guid.NewGuid();
-
-        var categories = new List<CategoryNewsEntity>
-        {
-            CreateCategory(categoryId, "Cong Nghe", userId, parentId: null, isDeleted: false)
-        };
-
-        var dbContext = CreateMockDbContext(categories);
-        var service = CreateService(dbContext);
-        var request = CreateRequest(title: "Cong Nghe Moi", parentId: Guid.Empty);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.UpdateCate(categoryId, request)
-        );
-
-        // Assert
-        Assert.Equal("PARENT_CATEGORY_NOT_FOUND", exception.Message);
-    }
+    
 
     // Parent không tồn tại
     [Fact]

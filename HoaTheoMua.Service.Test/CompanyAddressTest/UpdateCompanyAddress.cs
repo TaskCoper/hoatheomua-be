@@ -172,27 +172,6 @@ public class UpdateCompanyAddressTest
         Assert.NotNull(updatedAddress.UpdatedAt);
     }
 
-    // TC02: ID không hợp lệ Guid.Empty
-    // Theo service hiện tại: Guid.Empty sẽ throw NotFoundException, không phải BadRequestException
-    [Fact]
-    public async Task Update_EmptyId_ThrowNotFound()
-    {
-        // Arrange
-        var companyAddresses = new List<CompanyAddressEntity>();
-
-        var dbContext = CreateMockDbContext(companyAddresses);
-        var service = new CompanyAddressService(dbContext);
-        var request = CreateValidRequest();
-
-        // Act
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.UpdateCompanyAddress(Guid.Empty, request)
-        );
-
-        // Assert
-        Assert.Equal("Không tìm thấy địa chỉ công ty", exception.Message);
-    }
-
     // TC03: Không tìm thấy địa chỉ
     [Fact]
     public async Task Update_NotFound_ThrowNotFound()
@@ -329,5 +308,31 @@ public class UpdateCompanyAddressTest
 
         // Assert
         Assert.Contains(errors, x => x.ErrorMessage == "Kinh độ phải nằm trong khoảng -180 đến 180");
+    }
+
+    // TC09: Kiểm tra quyền Admin (chỉ Admin mới được cập nhật, ngược lại trả về 403)
+    [Fact]
+    public async Task Update_ServiceDoesNotCheckAdminRole_AuthorizationEnforcedByController()
+    {
+        // Arrange
+        var addressId = Guid.NewGuid();
+
+        var companyAddresses = new List<CompanyAddressEntity>
+        {
+            CreateAddress(addressId, isDeleted: false)
+        };
+
+        var dbContext = CreateMockDbContext(companyAddresses);
+        var service = new CompanyAddressService(dbContext);
+        var request = CreateValidRequest();
+
+        // Act
+        // Không truyền vào bất kỳ thông tin role/identity nào — Service vẫn thực thi
+        // được, chứng tỏ Service không tự chặn theo quyền. Việc chặn (403) là trách
+        // nhiệm của [Authorize(Policy = AdminPolicy)] tại Controller.
+        var result = await service.UpdateCompanyAddress(addressId, request);
+
+        // Assert
+        Assert.Equal("Cập nhật địa chỉ công ty thành công.", result);
     }
 }

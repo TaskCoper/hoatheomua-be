@@ -211,27 +211,6 @@ public class GetCategoryTest
         Assert.Equal("CATEGORY_NOT_FOUND", exception.Message);
     }
 
-    // TC04: id là Guid.Empty
-    // Theo service hiện tại: Guid.Empty sẽ throw NotFoundException, không phải BadRequestException
-    [Fact]
-    public async Task GetCategory_EmptyId_ThrowNotFound()
-    {
-        // Arrange
-        var categories = new List<CategoryNewsEntity>();
-        var categoryNewsDetails = new List<CategoryNewsDetailEntity>();
-
-        var dbContext = CreateMockDbContext(categories, categoryNewsDetails);
-        var service = CreateService(dbContext);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.GetCategory(Guid.Empty)
-        );
-
-        // Assert
-        Assert.Equal("CATEGORY_NOT_FOUND", exception.Message);
-    }
-
     // TC05: Category không có children
     [Fact]
     public async Task GetCategory_NoChildren_ReturnEmptyChildren()

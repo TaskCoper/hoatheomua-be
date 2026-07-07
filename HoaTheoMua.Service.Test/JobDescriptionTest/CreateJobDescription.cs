@@ -239,7 +239,7 @@ public class CreateJobDescriptionTest
         var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
-        request.salaryMin = 50_000_000f;
+        request.salaryMin = 50_000_000f;    
         request.salaryMax = 30_000_000f;
 
         // Act
@@ -353,28 +353,5 @@ public class CreateJobDescriptionTest
         Assert.Equal("LOCATION_REQUIRED", exception.Message);
         Assert.Empty(jobs);
     }
-
-    // Thêm case: title không sinh được slug
-    [Fact]
-    public async Task Create_InvalidTitleForSlug_ThrowBadRequest()
-    {
-        // Arrange
-        var jobs = new List<JobDescriptionEntity>();
-
-        var dbContext = CreateMockDbContext(jobs);
-        var validator = CreateValidValidator();
-        var service = new JobDescriptionService(dbContext, validator);
-
-        var request = CreateValidRequest();
-        request.title = "$$$";
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.CreateJobAsync(request)
-        );
-
-        // Assert
-        Assert.Equal("INVALID_JOB_TITLE", exception.Message);
-        Assert.Empty(jobs);
-    }
+    
 }

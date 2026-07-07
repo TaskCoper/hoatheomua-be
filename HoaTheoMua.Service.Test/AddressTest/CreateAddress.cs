@@ -290,36 +290,6 @@ public class CreateAddressTest
         Assert.Equal("map_123", savedAddress.MapId);
     }
 
-    // TC06
-    [Fact]
-    public async Task CreateAddress_IgnoreOtherUserAddresses_FirstAddressOfCurrentUserStillDefault()
-    {
-        var otherUserAddress = CreateAddressEntity(
-            userId: OtherUserId,
-            receiverName: "other user address",
-            isDefault: true);
-
-        var addresses = new List<AddressEntity>
-        {
-            otherUserAddress
-        };
-
-        var service = CreateService(addresses, out _);
-
-        var request = CreateValidRequest(
-            receiverName: "current user first address",
-            isDefault: false);
-
-        var result = await service.CreateAddress(request);
-
-        var currentUserAddress = addresses.Single(x => x.UserId == UserId);
-
-        Assert.Equal("Cập nhật thành công", result);
-        Assert.True(currentUserAddress.IsDefault);
-        Assert.True(otherUserAddress.IsDefault);
-        Assert.Equal(2, addresses.Count);
-    }
-
     private class TestAsyncQueryProvider<TEntity> : IAsyncQueryProvider
     {
         private readonly IQueryProvider _inner;

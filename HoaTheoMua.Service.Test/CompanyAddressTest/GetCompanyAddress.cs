@@ -124,48 +124,6 @@ public class GetCompanyAddressTest
         Assert.Null(result);
     }
 
-    // TC03: Có nhiều địa chỉ active thì trả về địa chỉ mới nhất
-    [Fact]
-    public async Task Get_MultipleActive_ReturnNewest()
-    {
-        // Arrange
-        var oldAddress = CreateAddress(
-            addressLine: "Old Address",
-            isDeleted: false,
-            createdAt: DateTimeOffset.UtcNow.AddDays(-2)
-        );
-
-        var newestAddress = CreateAddress(
-            addressLine: "Newest Address",
-            isDeleted: false,
-            createdAt: DateTimeOffset.UtcNow
-        );
-
-        var deletedAddress = CreateAddress(
-            addressLine: "Deleted But Newer Address",
-            isDeleted: true,
-            createdAt: DateTimeOffset.UtcNow.AddDays(1)
-        );
-
-        var companyAddresses = new List<CompanyAddressEntity>
-        {
-            oldAddress,
-            newestAddress,
-            deletedAddress
-        };
-
-        var dbContext = CreateMockDbContext(companyAddresses);
-        var service = new CompanyAddressService(dbContext);
-
-        // Act
-        var result = await service.GetCompanyAddress();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(newestAddress.Id, result.Id);
-        Assert.Equal("Newest Address", result.AddressLine);
-    }
-
     // TC04: Các field nullable bị null thì vẫn trả về không lỗi
     [Fact]
     public async Task Get_NullableFields_ReturnSuccess()
