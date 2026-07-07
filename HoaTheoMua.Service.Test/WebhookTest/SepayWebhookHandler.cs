@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using HoaTheoMua.Service.AhaMoveService;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -19,7 +19,7 @@ using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
 using TransactionEntity = HoaTheoMua.Repository.Entity.Transaction;
 using ConfigEntity = HoaTheoMua.Repository.Entity.Config;
 
-namespace HoaTheoMua.Service.Test.Webhook
+namespace HoaTheoMua.Service.Test.WebhookTest
 {
 
     public class SepayWebhookHandlerTests
@@ -175,7 +175,7 @@ namespace HoaTheoMua.Service.Test.Webhook
             var mockOrderService = new Mock<HoaTheoMua.Service.Order.IService>();
             var mockConfigService = new Mock<HoaTheoMua.Service.Config.IService>();
 
-            var mockAhaMoveService = new Mock<HoaTheoMua.Service.AhaMoveService.IService>();
+            var mockAhaMoveService = new Mock<IService>();
             mockAhaMoveService
                 .Setup(x => x.GetServiceDetailsAhaMove())
                 .ReturnsAsync(new ServiceDetailsResponse());

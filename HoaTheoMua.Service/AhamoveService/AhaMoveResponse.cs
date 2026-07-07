@@ -1,13 +1,9 @@
 ﻿using System.Text.Json.Nodes;
-
-namespace HoaTheoMua.Service.AhaMoveService;
-
-using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
+namespace HoaTheoMua.Service.AhamoveService;
 
- public class ServiceDetailsResponse
+public class ServiceDetailsResponse
     {
         [JsonPropertyName("_id")]
         public string Id { get; set; }

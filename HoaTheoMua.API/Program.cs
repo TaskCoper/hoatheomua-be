@@ -1,5 +1,4 @@
 using FluentValidation;
-using HoaTheoMua.Extension;
 using HoaTheoMua.Extentions;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
@@ -10,13 +9,14 @@ using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
 using NewService = HoaTheoMua.Service.New;
 using JobDescriptionService = HoaTheoMua.Service.JobDescriptions;
 using RecruitmentRequestService = HoaTheoMua.Service.RecruitmentRequests;
-using AhamoveService = HoaTheoMua.Service.AhaMoveService;
 using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
 using ProductService = HoaTheoMua.Service.Product;
 using ConfigService = HoaTheoMua.Service.Config;
 using AddressService = HoaTheoMua.Service.Address;
+using IService = HoaTheoMua.Service.AhamoveService.IService;
 using NhanhVnService = HoaTheoMua.Service.NhanhVnService;
+using Service = HoaTheoMua.Service.AhamoveService.Service;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,7 +53,7 @@ builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
-builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>();
+builder.Services.AddHttpClient<IService, Service>();
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
 builder.Services.AddScoped<AddressService.IService, AddressService.Service>();

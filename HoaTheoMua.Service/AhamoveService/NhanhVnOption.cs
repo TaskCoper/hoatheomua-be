@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace HoaTheoMua.Service.AhaMoveService;
+namespace HoaTheoMua.Service.AhamoveService;
 
 public class NhanhVnOption
 {

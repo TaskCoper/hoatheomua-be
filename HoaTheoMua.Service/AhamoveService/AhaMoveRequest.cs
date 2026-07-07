@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace HoaTheoMua.Service.AhaMoveService;
+namespace HoaTheoMua.Service.AhamoveService;
 
 public class AhaMoveRequest
 {

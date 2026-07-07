@@ -8,11 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Moq;
 using Xunit;
-
 using NewsEntity = HoaTheoMua.Repository.Entity.News;
 using NewsService = HoaTheoMua.Service.New.Service;
 
-namespace HoaTheoMua.Service.Test.NewTest;
+namespace HoaTheoMua.Service.Test.NewsTest;
 
 public class DeleteNewTest
 {

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
@@ -14,7 +13,7 @@ using ProductServiceImpl = HoaTheoMua.Service.Product.Service;
 using ProductRequest = HoaTheoMua.Service.Product.Request;
 using ConfigEntity = HoaTheoMua.Repository.Entity.Config;
 
-namespace HoaTheoMua.Service.Test.Product
+namespace HoaTheoMua.Service.Test.ProductTest
 {
     // Unit test cho HoaTheoMua.Service.Product.Service.GetProductDetails.
     // Viết theo đúng format của AhaMoveService/EstimateShippingFee.cs (Arrange - Act - Assert,

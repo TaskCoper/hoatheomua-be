@@ -10,14 +10,13 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Query;
 using Moq;
 using Xunit;
-
 using NewsEntity = HoaTheoMua.Repository.Entity.News;
 using CategoryNewsEntity = HoaTheoMua.Repository.Entity.CategoryNews;
 using CategoryNewsDetailEntity = HoaTheoMua.Repository.Entity.CategoryNewsDetail;
 using NewsService = HoaTheoMua.Service.New.Service;
 using NewsRequest = HoaTheoMua.Service.New.CreateNewRequest;
 
-namespace HoaTheoMua.Service.Test.NewTest;
+namespace HoaTheoMua.Service.Test.NewsTest;
 
 public class CreateNewTest
 {

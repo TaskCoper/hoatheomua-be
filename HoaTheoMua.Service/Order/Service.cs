@@ -2,7 +2,7 @@
 using System.Net.Http.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
-using HoaTheoMua.Service.AhaMoveService;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -201,7 +201,7 @@ public class Service : IService
         }
 
         var itemsRequest = productNhanhResult.Data.Select(
-            x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
+            x => new AhaMoveRequest.AhamoveItem()
             {
                 Id = x.Id.ToString(),
                 Name = x.Name,
@@ -211,7 +211,7 @@ public class Service : IService
         ).ToList();
 
         var packageDetailRequest = productNhanhResult.Data.Select(
-            x => new AhaMoveService.AhaMoveRequest.PackageDetail()
+            x => new AhaMoveRequest.PackageDetail()
             {
                 Height = x.Shipping.Height,
                 Weight = x.Shipping.Weight,
@@ -227,14 +227,14 @@ public class Service : IService
         
         var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         
-        var createRequest = new AhaMoveService.AhaMoveRequest.AhaMoveShippingFeeRequest()
+        var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
         {
             OrderTime = request.OrderTime,
             IdleUntil = request.OrderTime > 0 ? request.OrderTime : 0,
             // OrderTime = 0,
-            Paths = new List<AhaMoveService.AhaMoveRequest.AhamoveLocationPoint>()
+            Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
             {
-                new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
+                new AhaMoveRequest.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
                 {
                     Latitude = companyAddress?.Latitude ?? 0,
                     Longitude = companyAddress?.Longitude ?? 0,
@@ -244,7 +244,7 @@ public class Service : IService
                     Phone = companyAddress.PhoneNumber,
                     Remarks = companyAddress.Remarks!,
                 },
-                new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint()
+                new AhaMoveRequest.AhamoveLocationPoint()
                 {
                     Latitude =  request.Latitude,
                     Longitude =  request.Longitude,
@@ -259,9 +259,9 @@ public class Service : IService
             Remarks = request.Remarks,
             Items = itemsRequest,
             PackageDetail = packageDetailRequest,
-            Services = new List<AhaMoveService.AhaMoveRequest.ServiceRequest>()
+            Services = new List<AhaMoveRequest.ServiceRequest>()
             {
-                new AhaMoveService.AhaMoveRequest.ServiceRequest()
+                new AhaMoveRequest.ServiceRequest()
                 {
                     Id = "SGN-BIKE",
                     Requests = new List<AhaMoveRequest.ItemsRequest>()

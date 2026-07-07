@@ -1,6 +1,6 @@
-﻿namespace HoaTheoMua.Service.AhaMoveService;
+﻿using System.Text.Json.Serialization;
 
-using System.Text.Json.Serialization;
+namespace HoaTheoMua.Service.AhamoveService;
 
 public class NhanhProductListResponse
 {

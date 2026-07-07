@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using HoaTheoMua.Repository;
-using HoaTheoMua.Service.AhaMoveService;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -11,9 +11,9 @@ using Moq;
 using Moq.Protected;
 using Xunit;
 using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
-using AhaMoveServiceImplementation = HoaTheoMua.Service.AhaMoveService.Service;
+using AhaMoveServiceImplementation = HoaTheoMua.Service.AhamoveService.Service;
 
-namespace HoaTheoMua.Service.Test.AhaMoveService
+namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
 {
     public class GetServiceDetailsAhaMove
     {
