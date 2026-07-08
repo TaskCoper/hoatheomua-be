@@ -178,10 +178,11 @@ public class Service : IService
     public async Task<Response.CreateRecruitmentResponse> CreateRecruitmentRequestAsync(
         Request.CreateRecruitmentRequest request)
     {
-        var validationResult = await _createValidator.ValidateAsync(request);
-        if (!validationResult.IsValid)
+        var result = await _createValidator.ValidateAsync(request);
+        if (!result.IsValid)
         {
-            throw new ValidationExceptionError(validationResult.Errors.First().ErrorMessage);
+            var errorMessage = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
+            throw new ValidationExceptionError(errorMessage);
         }
 
         var userId = _currentUser.GetRequiredUserId();

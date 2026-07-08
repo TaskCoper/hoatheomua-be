@@ -9,6 +9,7 @@ public class CreateRecruitmentRequestValidator : AbstractValidator<Request.Creat
     public CreateRecruitmentRequestValidator()
     {
         RuleFor(x => x.jobDescriptionId)
+            .NotEmpty().WithMessage("JOB_DESCRIPTION_ID_REQUIRED")
             .NotEqual(Guid.Empty).WithMessage("JOB_DESCRIPTION_ID_REQUIRED");
 
         RuleFor(x => x.title)
