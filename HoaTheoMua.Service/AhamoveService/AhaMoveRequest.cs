@@ -10,11 +10,11 @@ public class AhaMoveRequest
       public decimal Longitude { get; set; }
       public int Ward { get; set; }
       public int City { get; set; }
-      public string Address { get; set; }
-      public string ShortAddress { get; set; }
-      public string FullName { get; set; }
-      public string Phone { get; set; }
-      public string Remarks { get; set; }
+      public string Address { get; set; } = null!;
+      public string ShortAddress { get; set; } = null!;
+      public string FullName { get; set; } = null!;
+      public string Phone { get; set; } = null!;
+      public string Remarks { get; set; } = null!;
       public long OrderTime { get; set; } = 0;  
       public List<Items> Items { get; set; } = new List<Items>();
    }
