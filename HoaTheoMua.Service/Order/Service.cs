@@ -1,5 +1,6 @@
 
 using System.Net.Http.Json;
+using FluentValidation;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.AhaMoveService;
@@ -22,17 +23,20 @@ public class Service : IService
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
+    private readonly IValidator<Request.CreateOrderRequest> _createOrderValidator;
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
         HttpClient httpClient,
         HoaTheoMua.Service.Product.IService serviceProduct,
+        IValidator<Request.CreateOrderRequest> createOrderValidator,
         IConfiguration configuration)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
+        _createOrderValidator = createOrderValidator;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
@@ -87,6 +91,14 @@ public class Service : IService
     //------------
     public async Task<string> CreateOrder(Request.CreateOrderRequest request)
     {
+        
+        var result = await _createOrderValidator.ValidateAsync(request);
+        if (!result.IsValid)
+        {
+            var errorMessage = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
+            throw new ValidationExceptionError(errorMessage);
+        }
+
         var userId = _currentUser.GetRequiredUserId();
 
         // Email-verification is now asserted by the token, not a Users-table lookup.
@@ -641,7 +653,7 @@ public class Service : IService
         isExistPendingOrder.UpdatedAt = DateTime.UtcNow;
         _dbContext.Orders.Update(isExistPendingOrder);
         await _dbContext.SaveChangesAsync();
-        
+
         return "Hủy đơn thành công";
     }
 }
