@@ -105,7 +105,7 @@ public class ConfigController : ControllerBase
     }
     
     [HttpGet("order-tags")]
-    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    //[Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
     public async Task<IActionResult> GetNhanhVnOrderTag()
     {
         var result = await _configService.GetNhanhVnOrderTag();
