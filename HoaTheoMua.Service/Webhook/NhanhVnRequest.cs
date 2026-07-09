@@ -7,25 +7,25 @@ using System.Text.Json.Serialization;
 public class OrderRoot
 {
     [JsonPropertyName("depot")]
-    public Depot Depot { get; set; }
+    public Depot Depot { get; set; } = null!;
 
     [JsonPropertyName("info")]
-    public Info Info { get; set; }
+    public Info Info { get; set; } = null!;
 
     [JsonPropertyName("channel")]
-    public Channel Channel { get; set; }
+    public Channel Channel { get; set; } = null!;
 
     [JsonPropertyName("carrier")]
-    public Carrier Carrier { get; set; }
+    public Carrier Carrier { get; set; } = null!;
 
     [JsonPropertyName("shippingAddress")]
-    public ShippingAddress ShippingAddress { get; set; }
+    public ShippingAddress ShippingAddress { get; set; } = null!;
 
     [JsonPropertyName("products")]
-    public List<Product> Products { get; set; }
+    public List<Product> Products { get; set; } = null!;
 
     [JsonPropertyName("payment")]
-    public Payment Payment { get; set; }
+    public Payment Payment { get; set; } = null!;
 }
 
 public class Depot
@@ -61,13 +61,13 @@ public class Info
     public long SaleId { get; set; }
 
     [JsonPropertyName("saleName")]
-    public string SaleName { get; set; }
+    public string SaleName { get; set; } = null!;
 
     [JsonPropertyName("description")]
-    public string Description { get; set; }
+    public string Description { get; set; } = null!;
 
     [JsonPropertyName("privateDescription")]
-    public string PrivateDescription { get; set; }
+    public string PrivateDescription { get; set; } = null!;
 
     [JsonPropertyName("status")]
     public int Status { get; set; }
@@ -79,7 +79,7 @@ public class Info
     public long TechnicalStaffId { get; set; }
 
     [JsonPropertyName("promotionId")]
-    public string PromotionId { get; set; }
+    public string PromotionId { get; set; } = null!;
 }
 
 public class Channel
@@ -88,37 +88,37 @@ public class Channel
     public int TrafficSourceId { get; set; }
 
     [JsonPropertyName("appOrderId")]
-    public string AppOrderId { get; set; }
+    public string AppOrderId { get; set; } = null!;
     
     [JsonPropertyName("sourceName")]
-    public string SourceName { get; set; }
+    public string SourceName { get; set; } = null!;
 
     [JsonPropertyName("pageId")]
-    public string PageId { get; set; }
+    public string PageId { get; set; } = null!;
 
     [JsonPropertyName("conversationId")]
-    public string ConversationId { get; set; }
+    public string ConversationId { get; set; } = null!;
 
     [JsonPropertyName("vpageUserId")]
-    public string VpageUserId { get; set; }
+    public string VpageUserId { get; set; } = null!;
 
     [JsonPropertyName("vpageGroupId")]
-    public string VpageGroupId { get; set; }
+    public string VpageGroupId { get; set; } = null!;
 
     [JsonPropertyName("postPurchaseMessage")]
-    public string PostPurchaseMessage { get; set; }
+    public string PostPurchaseMessage { get; set; } = null!;
 
     [JsonPropertyName("fbPsId")]
-    public string FbPsId { get; set; }
+    public string FbPsId { get; set; } = null!;
 
     [JsonPropertyName("postId")]
-    public string PostId { get; set; }
+    public string PostId { get; set; } = null!;
 
     [JsonPropertyName("fbAdsId")]
     public long FbAdsId { get; set; }
 
     [JsonPropertyName("sourceFrom")]
-    public string SourceFrom { get; set; }
+    public string SourceFrom { get; set; } = null!;
 
     [JsonPropertyName("id")]
     public long Id { get; set; }
@@ -154,7 +154,7 @@ public class Carrier
     public int ServiceId { get; set; }
 
     [JsonPropertyName("serviceCode")]
-    public string ServiceCode { get; set; }
+    public string ServiceCode { get; set; } = null!;
 
     [JsonPropertyName("checkGoods")]
     public int CheckGoods { get; set; }
@@ -172,22 +172,22 @@ public class Carrier
     public decimal FeeCustomerReject { get; set; }
 
     [JsonPropertyName("deliveryDate")]
-    public string DeliveryDate { get; set; }
+    public string DeliveryDate { get; set; } = null!;
 
     [JsonPropertyName("deliveryHour")]
-    public string DeliveryHour { get; set; }
+    public string DeliveryHour { get; set; } = null!;
 
     [JsonPropertyName("deliveryMinute")]
-    public string DeliveryMinute { get; set; }
+    public string DeliveryMinute { get; set; } = null!;
 
     [JsonPropertyName("deliveryTime")]
-    public string DeliveryTime { get; set; }
+    public string DeliveryTime { get; set; } = null!;
 
     [JsonPropertyName("carrierAccountId")]
     public long CarrierAccountId { get; set; }
 
     [JsonPropertyName("carrierShopId")]
-    public string CarrierShopId { get; set; }
+    public string CarrierShopId { get; set; } = null!;
 
     [JsonPropertyName("declaredValue")]
     public decimal? DeclaredValue { get; set; }
@@ -205,7 +205,7 @@ public class Carrier
     public int IsSelfConnect { get; set; }
 
     [JsonPropertyName("carrierPromotionCode")]
-    public string CarrierPromotionCode { get; set; }
+    public string CarrierPromotionCode { get; set; } = null!;
 
     [JsonPropertyName("carrierPromotionCodes")]
     public List<string> CarrierPromotionCodes { get; set; } = new List<string>();
@@ -220,7 +220,7 @@ public class Carrier
     public decimal FollowTotalFee { get; set; }
 
     [JsonPropertyName("orderPackageSize")]
-    public OrderPackageSize OrderPackageSize { get; set; }
+    public OrderPackageSize OrderPackageSize { get; set; } = null!;
 
     [JsonPropertyName("isBrokenGoods")]
     public int IsBrokenGoods { get; set; }
@@ -241,13 +241,13 @@ public class Carrier
 public class ShippingAddress
 {
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!; 
 
     [JsonPropertyName("mobile")]
-    public string Mobile { get; set; }
+    public string Mobile { get; set; } = null!;
 
     [JsonPropertyName("address")]
-    public string Address { get; set; }
+    public string Address { get; set; } = null!;
 
     [JsonPropertyName("cityId")]
     public int CityId { get; set; }
@@ -256,7 +256,7 @@ public class ShippingAddress
     public int WardId { get; set; }
 
     [JsonPropertyName("locationVersion")]
-    public string LocationVersion { get; set; }
+    public string LocationVersion { get; set; } = null!;
 }
 
 public class Product
@@ -292,7 +292,7 @@ public class Payment
     public decimal InstallmentAmount { get; set; }
 
     [JsonPropertyName("installmentCode")]
-    public string InstallmentCode { get; set; }
+    public string InstallmentCode { get; set; } = null!;
 
     [JsonPropertyName("installmentAccountId")]
     public long InstallmentAccountId { get; set; }
@@ -301,7 +301,7 @@ public class Payment
     public decimal CreditAmount { get; set; }
 
     [JsonPropertyName("creditCode")]
-    public string CreditCode { get; set; }
+    public string CreditCode { get; set; } = null!;
 
     [JsonPropertyName("creditAccountId")]
     public long CreditAccountId { get; set; }
@@ -310,10 +310,10 @@ public class Payment
     public decimal Discount { get; set; }
 
     [JsonPropertyName("discountType")]
-    public string DiscountType { get; set; }
+    public string DiscountType { get; set; } = null!;
 
     [JsonPropertyName("couponCode")]
-    public string CouponCode { get; set; }
+    public string CouponCode { get; set; } = null!;
 
     [JsonPropertyName("couponMoney")]
     public decimal CouponMoney { get; set; }
@@ -328,16 +328,16 @@ public class Payment
     public double? VatValue { get; set; }
 
     [JsonPropertyName("vatType")]
-    public string VatType { get; set; }
+    public string VatType { get; set; } = null!;
 
     [JsonPropertyName("taxCode")]
-    public string TaxCode { get; set; }
+    public string TaxCode { get; set; } = null!;
 
     [JsonPropertyName("taxDate")]
-    public string TaxDate { get; set; }
+    public string TaxDate { get; set; } = null!;
 
     [JsonPropertyName("debtDueDate")]
-    public string DebtDueDate { get; set; }
+    public string DebtDueDate { get; set; } = null!;
 
     [JsonPropertyName("cancelAutoPoint")]
     public int CancelAutoPoint { get; set; }

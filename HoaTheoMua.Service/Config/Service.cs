@@ -387,7 +387,7 @@ public class Service : IService
             .Select(x => new Response.ConfigGroupResponse()
             {
                 Key = x.Key,
-                Kind = x.Kind,
+                Kind = x.Kind!,
                 Value = x.Kind != null && x.Kind.ToLower().Trim() == nameof(KindConfig.Secret).ToLower().Trim()
                     ? MaskJsonOrString(x.Value)
                     : StringToJson(x.Value),
@@ -422,7 +422,7 @@ public class Service : IService
         return config;
     }
 
-    public async Task<int> GetNhanhVnOrderSources()
+    public async Task<int?> GetNhanhVnOrderSources()
     {
         var query = await _dbContext.Configs
             .FirstOrDefaultAsync(x => !x.IsDeleted && x.Key.Contains("nhanhvn.order_sources"));

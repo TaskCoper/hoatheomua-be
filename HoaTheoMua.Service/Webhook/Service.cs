@@ -154,10 +154,7 @@ public partial class Service : IService
             throw new NotFoundException("Order not on Pending");
             ;
         }
-
-        decimal itemAmount = 0;
-        decimal shippingFee = 0;
-
+        
         if (order.TotalFee != request.TransferAmount)
         {
             throw new ConflictException("Transfer amount must be equal to transfer amount");
