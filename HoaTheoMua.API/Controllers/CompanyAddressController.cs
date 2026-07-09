@@ -44,7 +44,7 @@ public class CompanyAddressController : ControllerBase
     }
     
     [HttpPost]
-    //[Authorize(Policy = JwtExtensions.AdminPolicy)]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> CreateCompanyAddress(
         [FromBody] Request.CreateCompanyAddressRequest request)
     {

@@ -1,3 +1,4 @@
+using FluentValidation;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
@@ -10,11 +11,19 @@ public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
+    private readonly IValidator<Request.CreateAddressRequest> _createValidator;
+    private readonly IValidator<Request.UpdateAddressRequest> _updateValidator;
 
-    public Service(AppDbContext dbContext, ICurrentUserService currentUser)
+    public Service(
+        AppDbContext dbContext,
+        ICurrentUserService currentUser,
+        IValidator<Request.CreateAddressRequest> createValidator,
+        IValidator<Request.UpdateAddressRequest> updateValidator)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
     public async Task<List<Response.AddressResponse>> GetMyAddresses()
@@ -47,6 +56,8 @@ public class Service : IService
 
     public async Task<string> CreateAddress(Request.CreateAddressRequest request)
     {
+        await ValidateAsync(_createValidator, request);
+
         var userId = _currentUser.GetRequiredUserId();
 
         // Địa chỉ đầu tiên của user luôn được đặt làm mặc định.
@@ -85,6 +96,8 @@ public class Service : IService
 
     public async Task<string> UpdateAddress(Guid id, Request.UpdateAddressRequest request)
     {
+        await ValidateAsync(_updateValidator, request);
+
         var userId = _currentUser.GetRequiredUserId();
 
         var entity = await _dbContext.Addresses
@@ -188,6 +201,15 @@ public class Service : IService
         foreach (var address in currentDefaults)
         {
             address.IsDefault = false;
+        }
+    }
+
+    private static async Task ValidateAsync<T>(IValidator<T> validator, T request)
+    {
+        var result = await validator.ValidateAsync(request);
+        if (!result.IsValid)
+        {
+            throw new ValidationExceptionError(result.Errors.First().ErrorMessage);
         }
     }
 

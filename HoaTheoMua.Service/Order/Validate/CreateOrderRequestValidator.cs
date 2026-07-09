@@ -1,36 +1,46 @@
-﻿using FluentValidation;
+using FluentValidation;
 using HoaTheoMua.Repository.Enum;
+using HoaTheoMua.Service.AhaMoveService.Validate;
+using HoaTheoMua.Service.Common;
 
 namespace HoaTheoMua.Service.Order.Validate;
 
-public class CreateOrderRequestValidator: AbstractValidator<Request.CreateOrderRequest>  
+public class CreateOrderRequestValidator: AbstractValidator<Request.CreateOrderRequest>
 {
     public CreateOrderRequestValidator()
     {
-        RuleFor(x => x.OrderTime)
-            .Must(BeValidOrderTime)
-            .WithMessage("OrderTime must be 0 or within the next 7 days.");
-
+        Include(new EstimateShippingFeeRequestValidator());
+        
+        RuleFor(x => x.TaxCode).MaximumLength(20).WithMessage("TAX_CODE_LENGTH_INVALID");
+        RuleFor(x => x.IdentityNumber).MaximumLength(20).WithMessage("IDENTITY_NUMBER_LENGTH_INVALID");
+        RuleFor(x => x.ReceiptFullName).MaximumLength(100).WithMessage("RECEIPT_FULL_NAME_LENGTH_INVALID");
+        RuleFor(x => x.ReceiptAddress).MaximumLength(255).WithMessage("RECEIPT_ADDRESS_LENGTH_INVALID");
+        RuleFor(x => x.ReceiptPhoneNumber).OptionalPhoneNumberVn();
+        RuleFor(x => x.ReceiptEmail).OptionalEmail();
+        
+        RuleFor(x => x.IsExportInvoice).NotEmpty().WithMessage("IS_EXPORT_FORCE");
+        
+        // Cross-field: chỉ áp dụng khi xuất hóa đơn.
         When(x => x.IsExportInvoice == true, () =>
         {
             RuleFor(x => x.InvoiceType)
                 .NotNull()
-                .WithMessage("InvoiceType is required when exporting invoice.");
+                .WithMessage("INVOICE_TYPE_REQUIRED");
 
             // Doanh nghiệp: TaxCode, ReceiptEmail, ReceiptPhoneNumber
             When(x => x.InvoiceType == InvoiceType.Business, () =>
             {
                 RuleFor(x => x.TaxCode)
                     .NotEmpty()
-                    .WithMessage("TaxCode is required for business invoice.");
+                    .WithMessage("TAX_CODE_REQUIRED");
 
                 RuleFor(x => x.ReceiptEmail)
                     .NotEmpty()
-                    .WithMessage("ReceiptEmail is required for business invoice.");
+                    .WithMessage("RECEIPT_EMAIL_REQUIRED");
 
                 RuleFor(x => x.ReceiptPhoneNumber)
                     .NotEmpty()
-                    .WithMessage("ReceiptPhoneNumber is required for business invoice.");
+                    .WithMessage("RECEIPT_PHONE_NUMBER_REQUIRED");
             });
 
             // Cá nhân: IdentityNumber, ReceiptFullName, ReceiptAddress, ReceiptEmail, ReceiptPhoneNumber
@@ -38,39 +48,25 @@ public class CreateOrderRequestValidator: AbstractValidator<Request.CreateOrderR
             {
                 RuleFor(x => x.IdentityNumber)
                     .NotEmpty()
-                    .WithMessage("IdentityNumber is required for personal invoice.");
+                    .WithMessage("IDENTITY_NUMBER_REQUIRED");
 
                 RuleFor(x => x.ReceiptFullName)
                     .NotEmpty()
-                    .WithMessage("ReceiptFullName is required for personal invoice.");
+                    .WithMessage("RECEIPT_FULL_NAME_REQUIRED");
 
                 RuleFor(x => x.ReceiptAddress)
                     .NotEmpty()
-                    .WithMessage("ReceiptAddress is required for personal invoice.");
+                    .WithMessage("RECEIPT_ADDRESS_REQUIRED");
 
                 RuleFor(x => x.ReceiptEmail)
                     .NotEmpty()
-                    .WithMessage("ReceiptEmail is required for personal invoice.");
+                    .WithMessage("RECEIPT_EMAIL_REQUIRED");
 
                 RuleFor(x => x.ReceiptPhoneNumber)
                     .NotEmpty()
-                    .WithMessage("ReceiptPhoneNumber is required for personal invoice.");
+                    .WithMessage("RECEIPT_PHONE_NUMBER_REQUIRED");
             });
         });
     }
-
-    private bool BeValidOrderTime(long orderTime)
-    {
-        if (orderTime == 0)
-            return true;
-
-        var orderDate = DateTimeOffset
-            .FromUnixTimeSeconds(orderTime)
-            .UtcDateTime;
-
-        var now = DateTime.UtcNow;
-
-        return orderDate >= now &&
-               orderDate <= now.AddDays(7);
-    }
+    
 }
