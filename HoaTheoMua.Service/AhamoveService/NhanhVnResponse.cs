@@ -62,7 +62,7 @@ public class NhanhProductData
     public int? InternalCategoryId { get; set; }
 
     [JsonPropertyName("prices")]
-    public NhanhPrices Prices { get; set; }  = null!;
+    public NhanhPrices Prices { get; set; }  = new();
 
     [JsonPropertyName("images")]
     public NhanhImages Images { get; set; }  = null!;
@@ -78,7 +78,7 @@ public class NhanhProductData
     public int Type { get; set; }
 
     [JsonPropertyName("shipping")]
-    public NhanhShipping Shipping { get; set; } = null!;
+    public NhanhShipping Shipping { get; set; } = new();
 
     [JsonPropertyName("countryName")]
     public string CountryName { get; set; }  = null!;
