@@ -216,11 +216,12 @@ public partial class Service : IService
         }
         
         const long vatTagId = 253L;
+        var tags = order.TagIds ?? new List<long>();
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
-            ? order.TagIds!.Append(vatTagId).ToList()
-            : order.TagIds!;
-        
-        if (order.OrderTime == 0 && order.TagIds!.Count == 0)
+            ? tags.Append(vatTagId).ToList()
+            : tags;
+
+        if (order.OrderTime == 0 && tags.Count == 0)
         {
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
                 {

@@ -304,7 +304,7 @@ public class Service : IService
             throw new BadRequestException("Id/Key Not Found");
         }
 
-        if (request.Kind.ToLower().Trim() != query.Kind!.ToLower().Trim())
+        if (request.Kind.ToLower().Trim() != query.Kind?.ToLower().Trim())
         {
             throw new ConflictException("ConfigKindImmutable");
         }
@@ -416,7 +416,7 @@ public class Service : IService
         }
         
         config.Options = config.Options
-            .Where(x =>config.Value.Contains((int)x.Value!))
+            .Where(x => x.Value.HasValue && config.Value.Contains(x.Value.Value))
             .ToList();
         
         return config;
