@@ -418,7 +418,7 @@ public partial class Service : IService
                 DeliveryHour = "",
                 DeliveryMinute = "",
                 // DeliveryTime = (order.OrderTime == 0) ? "" :  "19h",
-                DeliveryTime = "",
+                DeliveryTime = await ConvertTimeDelivery(order),
                 CarrierAccountId = 0,
                 CarrierShopId = "",
                 DeclaredValue = null,
@@ -566,6 +566,37 @@ public partial class Service : IService
         await _dbContext.SaveChangesAsync();
 
     }
+
+    private async Task<string> ConvertTimeDelivery(Repository.Entity.Order order)
+    {
+        if (order.TagIds == null || order.TagIds.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var orderTagConfig = await _configService.GetNhanhVnOrderTag();
+
+        var deliveryTime = orderTagConfig.Options?
+            .FirstOrDefault(x => 
+                x.Value.HasValue && order.TagIds.Contains(x.Value.Value));
+
+        if (deliveryTime == null)
+        {
+            throw new BadRequestException("Không tồn tại thời gian giao hàng");
+        }
+
+        var convertDeliveryTime = Regex
+            .Match(deliveryTime.Value.ToString() ?? string.Empty, @"\d{1,2}");
+
+        if (!convertDeliveryTime.Success || !int.TryParse(convertDeliveryTime.Value, out var time)
+                                         || time is < 0 or > 23)
+        {
+            return string.Empty;
+        }
+
+        return $"{time:D2}:00:00";
+    }
+    
 }
 
 //     
