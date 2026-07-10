@@ -33,8 +33,8 @@ public class EstimateShippingFeeRequestValidator : AbstractValidator<AhaMoveRequ
             .NotEmpty().WithMessage("LONGITUDE_REQUIRED");
         
         
-        RuleFor(x => x.City).GreaterThan(0).WithMessage("CITY_CODE_REQUIRED");
-        RuleFor(x => x.Ward).GreaterThan(0).WithMessage("WARD_CODE_REQUIRED");
+        // RuleFor(x => x.City).GreaterThan(0).WithMessage("CITY_CODE_REQUIRED");
+        // RuleFor(x => x.Ward).GreaterThan(0).WithMessage("WARD_CODE_REQUIRED");
         
         RuleFor(x => x.OrderTime)
             .Must(BeValidOrderTime)
