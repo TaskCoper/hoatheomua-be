@@ -11,8 +11,8 @@ public class CreateOrderRequestValidator: AbstractValidator<Request.CreateOrderR
     {
         Include(new EstimateShippingFeeRequestValidator());
         
-        RuleFor(x => x.TagIds)
-            .NotEmpty().WithMessage("TAG_IDS_REQUIRED");
+        // RuleFor(x => x.TagIds)
+        //     .NotEmpty().WithMessage("TAG_IDS_REQUIRED");
 
         RuleFor(x => x.TaxCode).MaximumLength(20).WithMessage("TAX_CODE_LENGTH_INVALID");
         RuleFor(x => x.IdentityNumber).MaximumLength(20).WithMessage("IDENTITY_NUMBER_LENGTH_INVALID");
