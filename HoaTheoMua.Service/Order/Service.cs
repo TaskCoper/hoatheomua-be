@@ -362,17 +362,17 @@ public class Service : IService
                 TotalFee = totalProductFee + totalShippingFee + vatFee,
                 Vat = vatFee,
             
-            TagIds =  request.TagIds,
-            TaxCode = request.TaxCode,
-            IdentityNumber = request.IdentityNumber,
-            ReceiptFullName = request.ReceiptFullName,
-            ReceiptPhoneNumber = request.ReceiptPhoneNumber,
-            ReceiptAddress = request.ReceiptAddress,
-            ReceiptEmail = request.ReceiptEmail,
-            IsExportInvoice = request.IsExportInvoice,
-            InvoiceType =  request.InvoiceType,
+                TagIds =  request.TagIds,
+                TaxCode = request.TaxCode,
+                IdentityNumber = request.IdentityNumber,
+                ReceiptFullName = request.ReceiptFullName,
+                ReceiptPhoneNumber = request.ReceiptPhoneNumber,
+                ReceiptAddress = request.ReceiptAddress,
+                ReceiptEmail = request.ReceiptEmail,
+                IsExportInvoice = request.IsExportInvoice,
+                InvoiceType =  request.InvoiceType,
             
-        };
+            };
 
 
         var newOrderDetails = productNhanhResult.Data.Select(x => new OrderDetails
