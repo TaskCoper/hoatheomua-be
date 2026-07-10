@@ -170,7 +170,7 @@ public class Service : IService
             companyAddress.City = request.City.Trim();
             companyAddress.Country = request.Country.Trim();
             companyAddress.FullName = request.FullName.Trim();
-            companyAddress.Remarks = request.Remarks!.Trim();
+            companyAddress.Remarks = request.Remarks?.Trim() ?? string.Empty;
             companyAddress.PhoneNumber = request.Phone;
             companyAddress.Latitude = request.Latitude;
             companyAddress.Longitude = request.Longitude;
