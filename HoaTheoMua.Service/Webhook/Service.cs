@@ -586,7 +586,7 @@ public partial class Service : IService
         }
 
         var convertDeliveryTime = Regex
-            .Match(deliveryTime.Value.ToString() ?? string.Empty, @"\d{1,2}");
+            .Match(deliveryTime.Label ?? string.Empty, @"\d{1,2}");
 
         if (!convertDeliveryTime.Success || !int.TryParse(convertDeliveryTime.Value, out var time)
                                          || time is < 0 or > 23)
