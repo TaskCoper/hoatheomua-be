@@ -1,3 +1,4 @@
+using FluentValidation;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -7,10 +8,17 @@ namespace HoaTheoMua.Service.CompanyAddress;
 public class Service : IService
 {
     private readonly AppDbContext _dbContext;
+    private readonly IValidator<Request.CreateCompanyAddressRequest> _createValidator;
+    private readonly IValidator<Request.UpdateCompanyAddressRequest> _updateValidator;
 
-    public Service(AppDbContext dbContext)
+    public Service(
+        AppDbContext dbContext,
+        IValidator<Request.CreateCompanyAddressRequest> createValidator,
+        IValidator<Request.UpdateCompanyAddressRequest> updateValidator)
     {
         _dbContext = dbContext;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
     public async Task<Response.CompanyAddressResponse?> GetCompanyAddress()
@@ -77,6 +85,8 @@ public class Service : IService
     public async Task<Response.CompanyAddressResponse> CreateCompanyAddress(
         Request.CreateCompanyAddressRequest request)
     {
+        await ValidateAsync(_createValidator, request);
+
         var hasActiveCompanyAddress = await _dbContext.CompanyAddresses
             .AnyAsync(x => !x.IsDeleted);
 
@@ -140,6 +150,7 @@ public class Service : IService
         Guid id,
         Request.UpdateCompanyAddressRequest request)
     {
+        await ValidateAsync(_updateValidator, request);
 
         var companyAddress = await _dbContext.CompanyAddresses
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
@@ -159,7 +170,7 @@ public class Service : IService
             companyAddress.City = request.City.Trim();
             companyAddress.Country = request.Country.Trim();
             companyAddress.FullName = request.FullName.Trim();
-            companyAddress.Remarks = request.Remarks!.Trim();
+            companyAddress.Remarks = request.Remarks?.Trim() ?? string.Empty;
             companyAddress.PhoneNumber = request.Phone;
             companyAddress.Latitude = request.Latitude;
             companyAddress.Longitude = request.Longitude;
@@ -201,5 +212,14 @@ public class Service : IService
         await _dbContext.SaveChangesAsync();
 
         return "Xóa địa chỉ công ty thành công.";
+    }
+
+    private static async Task ValidateAsync<T>(IValidator<T> validator, T request)
+    {
+        var result = await validator.ValidateAsync(request);
+        if (!result.IsValid)
+        {
+            throw new ValidationExceptionError(result.Errors.First().ErrorMessage);
+        }
     }
 }

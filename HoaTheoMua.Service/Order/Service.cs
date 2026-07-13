@@ -1,5 +1,6 @@
 
 using System.Net.Http.Json;
+using FluentValidation;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.AhaMoveService;
@@ -22,17 +23,20 @@ public class Service : IService
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
+    private readonly IValidator<Request.CreateOrderRequest> _createOrderValidator;
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
         HttpClient httpClient,
         HoaTheoMua.Service.Product.IService serviceProduct,
+        IValidator<Request.CreateOrderRequest> createOrderValidator,
         IConfiguration configuration)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
+        _createOrderValidator = createOrderValidator;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
@@ -87,6 +91,14 @@ public class Service : IService
     //------------
     public async Task<string> CreateOrder(Request.CreateOrderRequest request)
     {
+        
+        var result = await _createOrderValidator.ValidateAsync(request);
+        if (!result.IsValid)
+        {
+            var errorMessage = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
+            throw new ValidationExceptionError(errorMessage);
+        }
+
         var userId = _currentUser.GetRequiredUserId();
 
         // Email-verification is now asserted by the token, not a Users-table lookup.
@@ -192,7 +204,7 @@ public class Service : IService
                 throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot 129255");
             }
 
-            double available = (double)targetDepot["Available"]!;
+            double available = (double?)targetDepot["Available"] ?? 0;
 
             if (item.Number > available)
             {
@@ -200,13 +212,26 @@ public class Service : IService
             }
         }
 
+        var getItemsInProduct = productNhanhResult.Data
+            .Select(x => x.Id)
+            .ToHashSet();
+
+        var existItems = request.Items.FirstOrDefault(items => !getItemsInProduct.Contains(items.ItemId));
+        
+        if (existItems != null)
+        {
+            throw new BadRequestException("Đơn hàng không tồn tại trong hệ thống");
+        }
+        
+        var dictionaryIds = request.Items.ToDictionary(x => x.ItemId, x => x.Number);
+        
         var itemsRequest = productNhanhResult.Data.Select(
             x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
             {
                 Id = x.Id.ToString(),
                 Name = x.Name,
                 Price = (int)x.Prices.Retail,
-                Num = request.Items.First(item => item.ItemId.Equals(x.Id)).Number
+                Num = dictionaryIds[x.Id]
             }
         ).ToList();
 
@@ -350,17 +375,17 @@ public class Service : IService
                 TotalFee = totalProductFee + totalShippingFee + vatFee,
                 Vat = vatFee,
             
-            TagIds =  request.TagIds,
-            TaxCode = request.TaxCode,
-            IdentityNumber = request.IdentityNumber,
-            ReceiptFullName = request.ReceiptFullName,
-            ReceiptPhoneNumber = request.ReceiptPhoneNumber,
-            ReceiptAddress = request.ReceiptAddress,
-            ReceiptEmail = request.ReceiptEmail,
-            IsExportInvoice = request.IsExportInvoice,
-            InvoiceType =  request.InvoiceType,
+                TagIds =  request.TagIds,
+                TaxCode = request.TaxCode,
+                IdentityNumber = request.IdentityNumber,
+                ReceiptFullName = request.ReceiptFullName,
+                ReceiptPhoneNumber = request.ReceiptPhoneNumber,
+                ReceiptAddress = request.ReceiptAddress,
+                ReceiptEmail = request.ReceiptEmail,
+                IsExportInvoice = request.IsExportInvoice,
+                InvoiceType =  request.InvoiceType,
             
-        };
+            };
 
 
         var newOrderDetails = productNhanhResult.Data.Select(x => new OrderDetails
@@ -641,7 +666,7 @@ public class Service : IService
         isExistPendingOrder.UpdatedAt = DateTime.UtcNow;
         _dbContext.Orders.Update(isExistPendingOrder);
         await _dbContext.SaveChangesAsync();
-        
+
         return "Hủy đơn thành công";
     }
 }

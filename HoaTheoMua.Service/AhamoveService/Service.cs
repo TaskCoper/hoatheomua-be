@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using FluentValidation;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -16,13 +17,16 @@ public class Service: IService
     private readonly AppDbContext _appDbContext;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
+    private readonly IValidator<AhaMoveRequest.EstimateShippingFeeRequest> _createOrderValidator;
 
-    public Service(HttpClient httpClient, AppDbContext appDbContext, IConfiguration configuration)
+    public Service(HttpClient httpClient, AppDbContext appDbContext, IConfiguration configuration, 
+         IValidator<AhaMoveRequest.EstimateShippingFeeRequest> createOrderValidator)
     {
         _httpClient = httpClient;
         _appDbContext = appDbContext;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
+        _createOrderValidator = createOrderValidator;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
     }
@@ -30,6 +34,13 @@ public class Service: IService
 
     public async Task<object> EstimateShippingFee(AhaMoveRequest.EstimateShippingFeeRequest request)
     {
+        var result =  await _createOrderValidator.ValidateAsync(request);
+        if (!result.IsValid)
+        {
+            var errorMessage = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
+            throw new ValidationExceptionError(errorMessage);        
+        }
+        
         // Call DB Tim Address cua Shop
         var companyAddress = await _appDbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)

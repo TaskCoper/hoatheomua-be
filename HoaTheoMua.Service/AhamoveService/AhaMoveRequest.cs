@@ -10,11 +10,11 @@ public class AhaMoveRequest
       public decimal Longitude { get; set; }
       public int Ward { get; set; }
       public int City { get; set; }
-      public string Address { get; set; }
-      public string ShortAddress { get; set; }
-      public string FullName { get; set; }
-      public string Phone { get; set; }
-      public string Remarks { get; set; }
+      public string Address { get; set; } = null!;
+      public string ShortAddress { get; set; } = null!;
+      public string FullName { get; set; } = null!;
+      public string Phone { get; set; } = null!;
+      public string Remarks { get; set; } = null!;
       public long OrderTime { get; set; } = 0;  
       public List<Items> Items { get; set; } = new List<Items>();
    }
@@ -63,27 +63,27 @@ public class AhaMoveRequest
       [JsonPropertyName("lng")] 
       public decimal Longitude { get; set; }
       [JsonPropertyName("address")]
-      public string Address { get; set; }
+      public string Address { get; set; } = null!;
       [JsonPropertyName("short_address")]
-      public string ShortAddress { get; set; }
+      public string ShortAddress { get; set; } = null!;
       [JsonPropertyName("name")]
-      public string FullName { get; set; }
+      public string FullName { get; set; } = null!;
       [JsonPropertyName("mobile")]
-      public string Phone { get; set; }
+      public string Phone { get; set; } = null!;
       [JsonPropertyName("remarks")]
-      public string Remarks { get; set; }
+      public string Remarks { get; set; } = null!;
    }
    
    public class AhamoveItem
    {
       [JsonPropertyName("_id")] 
-      public string Id { get; set; }
+      public string Id { get; set; } = null!;
       [JsonPropertyName("price")]
       public int Price { get; set; }
       [JsonPropertyName("num")]
       public int Num {get; set;}
       [JsonPropertyName("name")]
-      public string Name {get; set;}
+      public string Name {get; set;} = null!;
    }
    
    public class PackageDetail
@@ -97,7 +97,7 @@ public class AhaMoveRequest
       [JsonPropertyName("height")]
       public double Height { get; set; }
       [JsonPropertyName("description")]
-      public string Description { get; set; }
+      public string Description { get; set; } = null!;
    }
       
    public class ServiceRequest
