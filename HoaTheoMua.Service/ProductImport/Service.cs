@@ -23,178 +23,222 @@ public class Service : IService
 
         try
         {
-            // --- Buffer to MemoryStream (allows seeking for validation + import) ---
-            using var ms = new MemoryStream();
-            await fileStream.CopyToAsync(ms);
+            using var ms = await BufferStreamAsync(fileStream);
+            await ValidateFileStructureAsync(ms);
 
-            // --- VALIDATE FILE STRUCTURE ---
-            ms.Position = 0;
-            var rawRows = await MiniExcel.QueryAsync(ms, useHeaderRow: false);
-            var headerRow = rawRows.FirstOrDefault() as IDictionary<string, object?>;
-
-            if (headerRow is not { Count: > 0 })
-                throw new BadRequestException("File Excel rỗng");
-
-            headerRow.TryGetValue("A", out var valA);
-            var colA = valA?.ToString() ?? "";
-
-            if (string.IsNullOrWhiteSpace(colA) ||
-                !colA.Contains("ID", StringComparison.OrdinalIgnoreCase) ||
-                headerRow.Count < 40)
-            {
-                throw new BadRequestException(
-                    "File Excel không đúng định dạng xuất từ Nhanh.vn. " +
-                    "Vui lòng upload file xuất từ Nhanh.vn, không dùng file tự chế.");
-            }
-
-            // --- ACTUAL IMPORT ---
-            ms.Position = 0;
-            var rows = (await MiniExcel.QueryAsync<Request.ExcelRow>(ms)).ToList();
-            if (!rows.Any())
-            {
-                throw new BadRequestException("File Excel không có dữ liệu hoặc định dạng không đúng");
-            }
-
-            for (var i = 0; i < rows.Count; i++)
-            {
-                rows[i].SourceRowNumber = i + 2;
-            }
-
+            var rows = await ReadRowsAsync(ms);
             result.TotalRecords = rows.Count;
 
-            var productIdsInFile = rows
-                .Select(r => NullIfEmpty(r.NhanhProductId))
-                .Where(id => id != null)
-                .Distinct()
-                .ToList();
+            var isb = await BuildUpsertBatchAsync(rows);
+            await PersistBatchAsync(isb);
 
-            var existingProductsMap = await _dbContext.Products
-                .Where(p => p.NhanhProductId != null && productIdsInFile.Contains(p.NhanhProductId) && !p.IsDeleted)
-                .ToDictionaryAsync(p => p.NhanhProductId!);
-
-            var listToUpdate = new List<ProductEntity>();
-            var listToInsert = new List<ProductEntity>();
-
-            foreach (var row in rows)
-            {
-                var cleanId = NullIfEmpty(row.NhanhProductId);
-                ProductEntity? existingProduct = null;
-                var isUpdate = cleanId != null && existingProductsMap.TryGetValue(cleanId, out existingProduct);
-
-                var product = isUpdate && existingProduct != null ? existingProduct : new ProductEntity
-                {
-                    Id = Guid.NewGuid(),
-                    CreatedAt = DateTimeOffset.UtcNow
-                };
-
-                product.SourceRowNumber = row.SourceRowNumber;
-                product.NhanhProductId = cleanId;
-                product.ParentProductId = NullIfEmpty(row.ParentProductId);
-                product.Barcode = NullIfEmpty(row.Barcode);
-                product.ProductType = NullIfEmpty(row.ProductType);
-                product.ProductCode = NullIfEmpty(row.ProductCode);
-                product.ProductName = NullIfEmpty(row.ProductName);
-                product.Unit = NullIfEmpty(row.Unit);
-                product.CoverImage = NullIfEmpty(row.CoverImage);
-
-                product.WarrantyMonths = ParseInt(row.WarrantyMonthsRaw);
-                product.Weight = ParseDecimal(row.WeightRaw);
-
-                product.ImportPrice = ParseDecimal(row.ImportPriceRaw);
-                product.ImportVat = ParseDecimal(row.ImportVatRaw);
-                product.ImportPriceWithVat = ParseDecimal(row.ImportPriceWithVatRaw);
-                product.ImportVatMode = NullIfEmpty(row.ImportVatMode);
-
-                product.Price = ParseDecimal(row.PriceRaw);
-                product.PriceWithVat = ParseDecimal(row.PriceWithVatRaw);
-                product.BranchPrice = ParseDecimal(row.BranchPriceRaw);
-                product.BranchPriceWithVat = ParseDecimal(row.BranchPriceWithVatRaw);
-                product.SaleVatMode = NullIfEmpty(row.SaleVatMode);
-                product.OldPrice = ParseDecimal(row.OldPriceRaw);
-                product.Vat = ParseDecimal(row.VatRaw);
-
-                product.ProfitPercentage = ParseDecimal(row.ProfitPercentageRaw);
-                product.CostPrice = ParseDecimal(row.CostPriceRaw);
-                product.WholesalePrice = ParseDecimal(row.WholesalePriceRaw);
-                product.WholesalePriceWithVat = ParseDecimal(row.WholesalePriceWithVatRaw);
-                product.WholesaleBranchPrice = ParseDecimal(row.WholesaleBranchPriceRaw);
-                product.WholesaleBranchPriceWithVat = ParseDecimal(row.WholesaleBranchPriceWithVatRaw);
-
-                product.TotalStock = ParseDecimal(row.TotalStockRaw);
-                product.StockTransferring = ParseDecimal(row.StockTransferringRaw);
-                product.Stock = ParseDecimal(row.StockRaw);
-                product.DeliveringStock = ParseDecimal(row.DeliveringStockRaw);
-                product.WarehouseStock = ParseDecimal(row.WarehouseStockRaw);
-                product.StockError = ParseDecimal(row.StockErrorRaw);
-                product.Held = ParseDecimal(row.HeldRaw);
-                product.AvailableForSale = ParseDecimal(row.AvailableForSaleRaw);
-                product.PendingImportStock = ParseDecimal(row.PendingImportStockRaw);
-                product.PreOrder = ParseDecimal(row.PreOrderRaw);
-
-                product.Status = NullIfEmpty(row.Status);
-                product.CategoryCode = NullIfEmpty(row.CategoryCode);
-                product.CategoryName = NullIfEmpty(row.CategoryName);
-                product.Brand = NullIfEmpty(row.Brand);
-                product.Supplier = NullIfEmpty(row.Supplier);
-                product.Slug = NullIfEmpty(row.Slug);
-                product.WebOrder = ParseInt(row.WebOrderRaw);
-                product.NhanhCreatedAt = ParseDateTimeOffset(row.NhanhCreatedAtRaw);
-
-                product.BranchPriceDuplicate = ParseDecimal(row.BranchPriceDuplicateRaw);
-                product.WholesaleBranchPriceDuplicate = ParseDecimal(row.WholesaleBranchPriceDuplicateRaw);
-                product.PriceLabel = NullIfEmpty(row.PriceLabel);
-                product.Size = NullIfEmpty(row.Size);
-                product.Color = NullIfEmpty(row.Color);
-
-                product.UpdatedAt = DateTimeOffset.UtcNow;
-
-                if (isUpdate)
-                {
-                    listToUpdate.Add(product);
-                    result.UpdatedCount++;
-                }
-                else
-                {
-                    listToInsert.Add(product);
-                    result.InsertedCount++;
-                }
-            }
-
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
-            try
-            {
-                if (listToInsert.Any())
-                {
-                    await _dbContext.Products.AddRangeAsync(listToInsert);
-                }
-
-                if (listToUpdate.Any())
-                {
-                    _dbContext.Products.UpdateRange(listToUpdate);
-                }
-
-                await _dbContext.SaveChangesAsync();
-                await transaction.CommitAsync();
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+            result.InsertedCount = isb.ToInsert.Count;
+            result.UpdatedCount = isb.ToUpdate.Count;
         }
-        catch (AppException)
-        {
-            throw;
-        }
+        catch (AppException) { throw; }
         catch (Exception ex)
         {
-            Console.WriteLine($"Import error details: {ex.Message}");
-            result.ErrorCount = result.TotalRecords > 0 ? result.TotalRecords : 1;
-            throw new BadRequestException($"Lỗi xử lý file Excel: {ex.Message}");
+            Console.WriteLine($"Import error: {ex.Message}");
+            throw new BadRequestException($"Excel processing error: {ex.Message}");
         }
 
         return result;
     }
+
+    // ── Orchestration helpers ──────────────────────────────────────────
+
+    private static async Task<MemoryStream> BufferStreamAsync(Stream source)
+    {
+        var ms = new MemoryStream();
+        await source.CopyToAsync(ms);
+        return ms;
+    }
+
+    private static async Task ValidateFileStructureAsync(MemoryStream ms)
+    {
+        ms.Position = 0;
+        var rawRows = await MiniExcel.QueryAsync(ms, useHeaderRow: false);
+        var headerRow = rawRows.FirstOrDefault() as IDictionary<string, object?>;
+
+        if (headerRow is not { Count: > 0 })
+            throw new BadRequestException("Excel file is empty");
+
+        headerRow.TryGetValue("A", out var valA);
+        var colA = valA?.ToString() ?? "";
+
+        if (string.IsNullOrWhiteSpace(colA) ||
+            !colA.Contains("ID", StringComparison.OrdinalIgnoreCase) ||
+            headerRow.Count < 40)
+        {
+            throw new BadRequestException(
+                "Invalid file format. Please upload an Excel file exported from Nhanh.vn.");
+        }
+    }
+
+    private async Task<List<Request.ExcelRow>> ReadRowsAsync(MemoryStream ms)
+    {
+        ms.Position = 0;
+        var rows = (await MiniExcel.QueryAsync<Request.ExcelRow>(ms)).ToList();
+
+        if (rows.Count == 0)
+            throw new BadRequestException("Excel file contains no data");
+
+        for (var i = 0; i < rows.Count; i++)
+            rows[i].SourceRowNumber = i + 2;
+
+        return rows;
+    }
+
+    // ── Upsert batch ───────────────────────────────────────────────────
+
+    private struct ImportBatch
+    {
+        public List<ProductEntity> ToInsert;
+        public List<ProductEntity> ToUpdate;
+    }
+
+    private async Task<ImportBatch> BuildUpsertBatchAsync(List<Request.ExcelRow> rows)
+    {
+        var idsInFile = rows
+            .Select(r => NullIfEmpty(r.NhanhProductId))
+            .Where(id => id != null)
+            .Distinct()
+            .ToList();
+
+        var existingMap = idsInFile.Count > 0
+            ? await _dbContext.Products
+                .Where(p => p.NhanhProductId != null && idsInFile.Contains(p.NhanhProductId) && !p.IsDeleted)
+                .ToDictionaryAsync(p => p.NhanhProductId!)
+            : new Dictionary<string, ProductEntity>();
+
+        var batch = new ImportBatch
+        {
+            ToInsert = new List<ProductEntity>(),
+            ToUpdate = new List<ProductEntity>()
+        };
+
+        foreach (var row in rows)
+        {
+            var product = ResolveProduct(row, existingMap, out var isUpdate);
+            ApplyRowToProduct(row, product);
+            product.UpdatedAt = DateTimeOffset.UtcNow;
+
+            if (isUpdate)
+                batch.ToUpdate.Add(product);
+            else
+                batch.ToInsert.Add(product);
+        }
+
+        return batch;
+    }
+
+    private static ProductEntity ResolveProduct(
+        Request.ExcelRow row,
+        Dictionary<string, ProductEntity> existingMap,
+        out bool isUpdate)
+    {
+        var cleanId = NullIfEmpty(row.NhanhProductId);
+
+        if (cleanId != null && existingMap.TryGetValue(cleanId, out var existing))
+        {
+            isUpdate = true;
+            return existing;
+        }
+
+        isUpdate = false;
+        return new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    private static void ApplyRowToProduct(
+        Request.ExcelRow row,
+        ProductEntity product)
+    {
+        product.SourceRowNumber = row.SourceRowNumber;
+        product.NhanhProductId = NullIfEmpty(row.NhanhProductId);
+        product.ParentProductId = NullIfEmpty(row.ParentProductId);
+        product.Barcode = NullIfEmpty(row.Barcode);
+        product.ProductType = NullIfEmpty(row.ProductType);
+        product.ProductCode = NullIfEmpty(row.ProductCode);
+        product.ProductName = NullIfEmpty(row.ProductName);
+        product.Unit = NullIfEmpty(row.Unit);
+        product.CoverImage = NullIfEmpty(row.CoverImage);
+
+        product.WarrantyMonths = ParseInt(row.WarrantyMonthsRaw);
+        product.Weight = ParseDecimal(row.WeightRaw);
+
+        product.ImportPrice = ParseDecimal(row.ImportPriceRaw);
+        product.ImportVat = ParseDecimal(row.ImportVatRaw);
+        product.ImportPriceWithVat = ParseDecimal(row.ImportPriceWithVatRaw);
+        product.ImportVatMode = NullIfEmpty(row.ImportVatMode);
+
+        product.Price = ParseDecimal(row.PriceRaw);
+        product.PriceWithVat = ParseDecimal(row.PriceWithVatRaw);
+        product.BranchPrice = ParseDecimal(row.BranchPriceRaw);
+        product.BranchPriceWithVat = ParseDecimal(row.BranchPriceWithVatRaw);
+        product.SaleVatMode = NullIfEmpty(row.SaleVatMode);
+        product.OldPrice = ParseDecimal(row.OldPriceRaw);
+        product.Vat = ParseDecimal(row.VatRaw);
+
+        product.ProfitPercentage = ParseDecimal(row.ProfitPercentageRaw);
+        product.CostPrice = ParseDecimal(row.CostPriceRaw);
+        product.WholesalePrice = ParseDecimal(row.WholesalePriceRaw);
+        product.WholesalePriceWithVat = ParseDecimal(row.WholesalePriceWithVatRaw);
+        product.WholesaleBranchPrice = ParseDecimal(row.WholesaleBranchPriceRaw);
+        product.WholesaleBranchPriceWithVat = ParseDecimal(row.WholesaleBranchPriceWithVatRaw);
+
+        product.TotalStock = ParseDecimal(row.TotalStockRaw);
+        product.StockTransferring = ParseDecimal(row.StockTransferringRaw);
+        product.Stock = ParseDecimal(row.StockRaw);
+        product.DeliveringStock = ParseDecimal(row.DeliveringStockRaw);
+        product.WarehouseStock = ParseDecimal(row.WarehouseStockRaw);
+        product.StockError = ParseDecimal(row.StockErrorRaw);
+        product.Held = ParseDecimal(row.HeldRaw);
+        product.AvailableForSale = ParseDecimal(row.AvailableForSaleRaw);
+        product.PendingImportStock = ParseDecimal(row.PendingImportStockRaw);
+        product.PreOrder = ParseDecimal(row.PreOrderRaw);
+
+        product.Status = NullIfEmpty(row.Status);
+        product.CategoryCode = NullIfEmpty(row.CategoryCode);
+        product.CategoryName = NullIfEmpty(row.CategoryName);
+        product.Brand = NullIfEmpty(row.Brand);
+        product.Supplier = NullIfEmpty(row.Supplier);
+        product.Slug = NullIfEmpty(row.Slug);
+        product.WebOrder = ParseInt(row.WebOrderRaw);
+        product.NhanhCreatedAt = ParseDateTimeOffset(row.NhanhCreatedAtRaw);
+
+        product.BranchPriceDuplicate = ParseDecimal(row.BranchPriceDuplicateRaw);
+        product.WholesaleBranchPriceDuplicate = ParseDecimal(row.WholesaleBranchPriceDuplicateRaw);
+        product.PriceLabel = NullIfEmpty(row.PriceLabel);
+        product.Size = NullIfEmpty(row.Size);
+        product.Color = NullIfEmpty(row.Color);
+    }
+
+    private async Task PersistBatchAsync(ImportBatch batch)
+    {
+        await using var tx = await _dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            if (batch.ToInsert.Count > 0)
+                await _dbContext.Products.AddRangeAsync(batch.ToInsert);
+
+            if (batch.ToUpdate.Count > 0)
+                _dbContext.Products.UpdateRange(batch.ToUpdate);
+
+            await _dbContext.SaveChangesAsync();
+            await tx.CommitAsync();
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
+    }
+
+    // ── Parse helpers ──────────────────────────────────────────────────
 
     private static string? NullIfEmpty(string? val)
     {
@@ -207,15 +251,12 @@ public class Service : IService
     {
         if (string.IsNullOrWhiteSpace(val)) return null;
         val = val.Trim();
+
         if (decimal.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var dec))
-        {
             return dec;
-        }
 
         if (decimal.TryParse(val.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out dec))
-        {
             return dec;
-        }
 
         return null;
     }
@@ -224,10 +265,9 @@ public class Service : IService
     {
         if (string.IsNullOrWhiteSpace(val)) return null;
         val = val.Trim();
+
         if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var dbl))
-        {
             return (int)Math.Round(dbl);
-        }
 
         return null;
     }
@@ -238,14 +278,10 @@ public class Service : IService
         val = val.Trim();
 
         if (DateTimeOffset.TryParseExact(val, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dto))
-        {
             return dto.ToUniversalTime();
-        }
 
         if (DateTimeOffset.TryParse(val, CultureInfo.InvariantCulture, DateTimeStyles.None, out dto))
-        {
             return dto.ToUniversalTime();
-        }
 
         return null;
     }
