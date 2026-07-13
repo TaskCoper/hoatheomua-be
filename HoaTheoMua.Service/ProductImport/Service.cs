@@ -47,6 +47,7 @@ public class Service : IService
 
     // ── Orchestration helpers ──────────────────────────────────────────
 
+    /** Sao chép file stream vào MemoryStream để có thể seek (đọc nhiều lần). */
     private static async Task<MemoryStream> BufferStreamAsync(Stream source)
     {
         var ms = new MemoryStream();
@@ -54,6 +55,7 @@ public class Service : IService
         return ms;
     }
 
+    /** Kiểm tra dòng header: cột A phải chứa "ID" và file phải có 40+ cột. */
     private static async Task ValidateFileStructureAsync(MemoryStream ms)
     {
         ms.Position = 0;
@@ -75,6 +77,7 @@ public class Service : IService
         }
     }
 
+    /** Parse dòng Excel qua MiniExcel và gán SourceRowNumber để truy vết. */
     private async Task<List<Request.ExcelRow>> ReadRowsAsync(MemoryStream ms)
     {
         ms.Position = 0;
@@ -97,6 +100,7 @@ public class Service : IService
         public List<ProductEntity> ToUpdate;
     }
 
+    /** Nạp sản phẩm từ DB theo NhanhProductId, phân loại từng dòng là insert hay update. */
     private async Task<ImportBatch> BuildUpsertBatchAsync(List<Request.ExcelRow> rows)
     {
         var idsInFile = rows
@@ -132,6 +136,7 @@ public class Service : IService
         return batch;
     }
 
+    /** Tìm product theo NhanhProductId, nếu có thì update, không có thì tạo mới. */
     private static ProductEntity ResolveProduct(
         Request.ExcelRow row,
         Dictionary<string, ProductEntity> existingMap,
@@ -153,6 +158,7 @@ public class Service : IService
         };
     }
 
+    /** Áp dụng toàn bộ giá trị từ ExcelRow vào Product entity (map 50 cột). */
     private static void ApplyRowToProduct(
         Request.ExcelRow row,
         ProductEntity product)
@@ -217,6 +223,7 @@ public class Service : IService
         product.Color = NullIfEmpty(row.Color);
     }
 
+    /** Lưu batch vào DB trong 1 transaction (rollback nếu lỗi). */
     private async Task PersistBatchAsync(ImportBatch batch)
     {
         await using var tx = await _dbContext.Database.BeginTransactionAsync();
@@ -240,6 +247,7 @@ public class Service : IService
 
     // ── Parse helpers ──────────────────────────────────────────────────
 
+    /** Trả về null nếu chuỗi rỗng / chỉ chứa khoảng trắng / là chữ "null". */
     private static string? NullIfEmpty(string? val)
     {
         if (string.IsNullOrWhiteSpace(val)) return null;
@@ -247,6 +255,7 @@ public class Service : IService
         return trimmed.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : trimmed;
     }
 
+    /** Parse số thập phân từ Excel (hỗ trợ cả dấu phẩy và chấm). */
     private static decimal? ParseDecimal(string? val)
     {
         if (string.IsNullOrWhiteSpace(val)) return null;
@@ -261,6 +270,7 @@ public class Service : IService
         return null;
     }
 
+    /** Parse số nguyên từ Excel, làm tròn nếu là số thập phân. */
     private static int? ParseInt(string? val)
     {
         if (string.IsNullOrWhiteSpace(val)) return null;
@@ -272,6 +282,7 @@ public class Service : IService
         return null;
     }
 
+    /** Parse ngày giờ dạng "yyyy-MM-dd HH:mm:ss" từ Excel. */
     private static DateTimeOffset? ParseDateTimeOffset(string? val)
     {
         if (string.IsNullOrWhiteSpace(val)) return null;
