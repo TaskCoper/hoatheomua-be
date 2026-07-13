@@ -56,9 +56,7 @@ public class DeleteJobDescriptionTest
 
     private JobDescriptionService CreateService(AppDbContext dbContext)
     {
-        var validatorMock = new Mock<IValidator<Request.CreateRequest>>();
-
-        return new JobDescriptionService(dbContext, validatorMock.Object);
+        return new JobDescriptionService(dbContext);
     }
 
     private JobDescriptionEntity CreateJob(

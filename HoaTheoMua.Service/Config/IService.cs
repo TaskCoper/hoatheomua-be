@@ -20,5 +20,5 @@ public interface IService
     Task<Response.ConfigResponse> CreateConfig(Request.CreateConfigRequest request);
     Task<string> DeleteConfig(Guid id);
     Task<Response.ConfigItem> GetNhanhVnOrderTag();
-    Task<int> GetNhanhVnOrderSources();
+    Task<int?> GetNhanhVnOrderSources();
 }

@@ -48,9 +48,7 @@ public class GetJobByIdOrSlugTest
 
     private JobDescriptionService CreateService(AppDbContext dbContext)
     {
-        IValidator<Request.CreateRequest> validator = new JobDescriptionRequestValidator();
-
-        return new JobDescriptionService(dbContext, validator);
+        return new JobDescriptionService(dbContext);
     }
 
     private JobDescriptionEntity CreateJob(

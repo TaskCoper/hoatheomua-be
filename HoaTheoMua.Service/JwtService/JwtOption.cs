@@ -6,7 +6,7 @@ namespace HoaTheoMua.Service.JwtService;
 // Validation needs Issuer, Audience and the shared access-token signing key only.
 public class JwtOption
 {
-    [Required]public string Issuer { get; set; }
-    [Required]public string Audience { get; set; }
-    [Required]public string AccessTokenKey { get; set; }
+    [Required]public string Issuer { get; set; } = null!;
+    [Required]public string Audience { get; set; } = null!;
+    [Required]public string AccessTokenKey { get; set; } = null!;
 }

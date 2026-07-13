@@ -1,5 +1,6 @@
 using FluentValidation;
 using HoaTheoMua.Extentions;
+using HoaTheoMua.Filters;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();
 
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationActionFilter>();
+}).AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });

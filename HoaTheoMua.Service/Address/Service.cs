@@ -11,7 +11,9 @@ public class Service : IService
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
 
-    public Service(AppDbContext dbContext, ICurrentUserService currentUser)
+    public Service(
+        AppDbContext dbContext,
+        ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;

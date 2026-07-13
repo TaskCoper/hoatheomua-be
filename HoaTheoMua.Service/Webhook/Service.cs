@@ -154,10 +154,7 @@ public partial class Service : IService
             throw new NotFoundException("Order not on Pending");
             ;
         }
-
-        decimal itemAmount = 0;
-        decimal shippingFee = 0;
-
+        
         if (order.TotalFee != request.TransferAmount)
         {
             throw new ConflictException("Transfer amount must be equal to transfer amount");
@@ -219,11 +216,12 @@ public partial class Service : IService
         }
         
         const long vatTagId = 253L;
+        var tags = order.TagIds ?? new List<long>();
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
-            ? order.TagIds!.Append(vatTagId).ToList()
-            : order.TagIds!;
-        
-        if (order.OrderTime == 0 && order.TagIds!.Count == 0)
+            ? tags.Append(vatTagId).ToList()
+            : tags;
+
+        if (order.OrderTime == 0 && tags.Count == 0)
         {
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
                 {
@@ -418,7 +416,7 @@ public partial class Service : IService
                 DeliveryHour = "",
                 DeliveryMinute = "",
                 // DeliveryTime = (order.OrderTime == 0) ? "" :  "19h",
-                DeliveryTime = "",
+                DeliveryTime = await ConvertTimeDelivery(order),
                 CarrierAccountId = 0,
                 CarrierShopId = "",
                 DeclaredValue = null,
@@ -566,6 +564,37 @@ public partial class Service : IService
         await _dbContext.SaveChangesAsync();
 
     }
+
+    private async Task<string> ConvertTimeDelivery(Repository.Entity.Order order)
+    {
+        if (order.TagIds == null || order.TagIds.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var orderTagConfig = await _configService.GetNhanhVnOrderTag();
+
+        var deliveryTime = orderTagConfig.Options?
+            .FirstOrDefault(x => 
+                x.Value.HasValue && order.TagIds.Contains(x.Value.Value));
+
+        if (deliveryTime == null)
+        {
+            throw new BadRequestException("Không tồn tại thời gian giao hàng");
+        }
+
+        var convertDeliveryTime = Regex
+            .Match(deliveryTime.Label ?? string.Empty, @"\d{1,2}");
+
+        if (!convertDeliveryTime.Success || !int.TryParse(convertDeliveryTime.Value, out var time)
+                                         || time is < 0 or > 23)
+        {
+            return string.Empty;
+        }
+
+        return $"{time:D2}:00:00";
+    }
+    
 }
 
 //     

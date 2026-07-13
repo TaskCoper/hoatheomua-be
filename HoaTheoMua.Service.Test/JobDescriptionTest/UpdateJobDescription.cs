@@ -33,10 +33,15 @@ public class UpdateJobDescriptionTest
 
     private static JobDescriptionService CreateService(AppDbContext dbContext)
     {
-        IValidator<HoaTheoMua.Service.JobDescriptions.Request.CreateRequest> validator =
-            new JobDescriptionRequestValidator();
+        return new JobDescriptionService(dbContext);
+    }
 
-        return new JobDescriptionService(dbContext, validator);
+    // Validation now lives in the global ValidationActionFilter; rule test cases
+    // exercise this validator directly. UpdateRequest inherits CreateRequest, so
+    // the CreateRequest validator applies to it too.
+    private static IValidator<JobRequest.CreateRequest> CreateValidator()
+    {
+        return new JobDescriptionRequestValidator();
     }
 
     private static TEnum ParseEnum<TEnum>(string value) where TEnum : struct, Enum
@@ -158,12 +163,7 @@ public class UpdateJobDescriptionTest
     [Fact]
     public async Task UpdateJob_ValidationFailed_ThrowValidation()
     {
-        await using var dbContext = CreateDbContext();
-
-        dbContext.JobDescriptions.Add(CreateJob());
-        await dbContext.SaveChangesAsync();
-
-        var service = CreateService(dbContext);
+        var validator = CreateValidator();
 
         var request = CreateValidRequest(
             title: "",
@@ -174,10 +174,10 @@ public class UpdateJobDescriptionTest
         request.coverImageUrl = "";
         request.description = "";
 
-        var ex = await Assert.ThrowsAnyAsync<Exception>(
-            () => service.UpdateJobAsync(JobId, request));
+        var result = await validator.ValidateAsync(request);
 
-        Assert.Contains("TITLE_REQUIRED", ex.Message);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "TITLE_REQUIRED");
     }
 
     [Fact]
@@ -200,21 +200,16 @@ public class UpdateJobDescriptionTest
     [Fact]
     public async Task UpdateJob_SalaryMinGreaterThanSalaryMax_ThrowValidation()
     {
-        await using var dbContext = CreateDbContext();
-
-        dbContext.JobDescriptions.Add(CreateJob());
-        await dbContext.SaveChangesAsync();
-
-        var service = CreateService(dbContext);
+        var validator = CreateValidator();
 
         var request = CreateValidRequest(
             salaryMin: 50000000f,
             salaryMax: 30000000f);
 
-        var ex = await Assert.ThrowsAnyAsync<Exception>(
-            () => service.UpdateJobAsync(JobId, request));
+        var result = await validator.ValidateAsync(request);
 
-        Assert.Contains("MIN_SALARY_GREATER_THAN_MAX_SALARY", ex.Message);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "MIN_SALARY_GREATER_THAN_MAX_SALARY");
     }
 
     [Fact]
@@ -297,20 +292,15 @@ public class UpdateJobDescriptionTest
     [Fact]
     public async Task UpdateJob_OpeningsZero_ThrowValidation()
     {
-        await using var dbContext = CreateDbContext();
-
-        dbContext.JobDescriptions.Add(CreateJob());
-        await dbContext.SaveChangesAsync();
-
-        var service = CreateService(dbContext);
+        var validator = CreateValidator();
 
         var request = CreateValidRequest(
             openings: 0);
 
-        var ex = await Assert.ThrowsAnyAsync<Exception>(
-            () => service.UpdateJobAsync(JobId, request));
+        var result = await validator.ValidateAsync(request);
 
-        Assert.Contains("OPENINGS_MUST_BE_GREATER_THAN_ZERO", ex.Message);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "OPENINGS_MUST_BE_GREATER_THAN_ZERO");
     }
 
     [Fact]
@@ -335,59 +325,44 @@ public class UpdateJobDescriptionTest
     [Fact]
     public async Task UpdateJob_EmptyTitle_ThrowValidation()
     {
-        await using var dbContext = CreateDbContext();
-
-        dbContext.JobDescriptions.Add(CreateJob());
-        await dbContext.SaveChangesAsync();
-
-        var service = CreateService(dbContext);
+        var validator = CreateValidator();
 
         var request = CreateValidRequest(
             title: "");
 
-        var ex = await Assert.ThrowsAnyAsync<Exception>(
-            () => service.UpdateJobAsync(JobId, request));
+        var result = await validator.ValidateAsync(request);
 
-        Assert.Contains("TITLE_REQUIRED", ex.Message);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "TITLE_REQUIRED");
     }
 
     [Fact]
     public async Task UpdateJob_WhitespaceTitle_ThrowValidation()
     {
-        await using var dbContext = CreateDbContext();
-
-        dbContext.JobDescriptions.Add(CreateJob());
-        await dbContext.SaveChangesAsync();
-
-        var service = CreateService(dbContext);
+        var validator = CreateValidator();
 
         var request = CreateValidRequest(
             title: "   ");
 
-        var ex = await Assert.ThrowsAnyAsync<Exception>(
-            () => service.UpdateJobAsync(JobId, request));
+        var result = await validator.ValidateAsync(request);
 
-        Assert.Contains("TITLE_REQUIRED", ex.Message);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "TITLE_REQUIRED");
     }
 
     [Fact]
     public async Task UpdateJob_NegativeSalary_ThrowValidation()
     {
-        await using var dbContext = CreateDbContext();
-
-        dbContext.JobDescriptions.Add(CreateJob());
-        await dbContext.SaveChangesAsync();
-
-        var service = CreateService(dbContext);
+        var validator = CreateValidator();
 
         var request = CreateValidRequest(
             salaryMin: -1000000f,
             salaryMax: 30000000f);
 
-        var ex = await Assert.ThrowsAnyAsync<Exception>(
-            () => service.UpdateJobAsync(JobId, request));
+        var result = await validator.ValidateAsync(request);
 
-        Assert.Contains("SALARY_CANNOT_BE_NEGATIVE", ex.Message);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "SALARY_CANNOT_BE_NEGATIVE");
     }
 
     // ParseEnumIfExists moved to TestSupport/ReflectionHelper.cs (using static)

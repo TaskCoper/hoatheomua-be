@@ -5,14 +5,14 @@ namespace HoaTheoMua.Service.AhamoveService;
 
 public class NhanhWarrantyConverter : JsonConverter<NhanhWarranty>
 {
-    public override NhanhWarranty Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override NhanhWarranty? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         // If the token is anything other than the start of an object (e.g., StartArray '[' or String)
         if (reader.TokenType != JsonTokenType.StartObject)
         {
             // Skip the entire token/structure (like an empty array []) so the reader stays on track
             reader.Skip();
-            return null;
+            return null!;
         }
 
         // Otherwise, deserialize normally using a temporary options instance without this converter

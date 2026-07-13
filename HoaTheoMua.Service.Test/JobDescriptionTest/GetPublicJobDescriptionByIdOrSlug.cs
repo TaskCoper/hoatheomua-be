@@ -32,10 +32,7 @@ public class GetPublicJobDescriptionByIdOrSlugTest
 
     private static JobDescriptionService CreateService(AppDbContext dbContext)
     {
-        IValidator<HoaTheoMua.Service.JobDescriptions.Request.CreateRequest> validator =
-            new JobDescriptionRequestValidator();
-
-        return new JobDescriptionService(dbContext, validator);
+        return new JobDescriptionService(dbContext);
     }
 
     private static TEnum ParseEnum<TEnum>(string value) where TEnum : struct, Enum

@@ -192,7 +192,7 @@ public class Service : IService
                 throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot 129255");
             }
 
-            double available = (double)targetDepot["Available"]!;
+            double available = (double?)targetDepot["Available"] ?? 0;
 
             if (item.Number > available)
             {
@@ -200,13 +200,26 @@ public class Service : IService
             }
         }
 
+        var getItemsInProduct = productNhanhResult.Data
+            .Select(x => x.Id)
+            .ToHashSet();
+
+        var existItems = request.Items.FirstOrDefault(items => !getItemsInProduct.Contains(items.ItemId));
+
+        if (existItems != null)
+        {
+            throw new BadRequestException("Đơn hàng không tồn tại trong hệ thống");
+        }
+
+        var dictionaryIds = request.Items.ToDictionary(x => x.ItemId, x => x.Number);
+
         var itemsRequest = productNhanhResult.Data.Select(
             x => new AhaMoveRequest.AhamoveItem()
             {
                 Id = x.Id.ToString(),
                 Name = x.Name,
                 Price = (int)x.Prices.Retail,
-                Num = request.Items.First(item => item.ItemId.Equals(x.Id)).Number
+                Num = dictionaryIds[x.Id]
             }
         ).ToList();
 
@@ -325,8 +338,6 @@ public class Service : IService
         {
             vatFee = totalProductFee * 0.08m;
         }
-
-
 
         var newOrder = new Repository.Entity.Order()
         {

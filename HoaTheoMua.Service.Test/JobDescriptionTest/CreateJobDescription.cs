@@ -56,21 +56,8 @@ public class CreateJobDescriptionTest
         return mockDbContext.Object;
     }
 
-    private IValidator<Request.CreateRequest> CreateValidValidator()
-    {
-        var validatorMock = new Mock<IValidator<Request.CreateRequest>>();
-
-        validatorMock
-            .Setup(x => x.ValidateAsync(
-                It.IsAny<Request.CreateRequest>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ValidationResult());
-
-        return validatorMock.Object;
-    }
-
-    // Use the real FluentValidation rules so the tests actually exercise them,
-    // rather than a mock that returns a canned failure for any input.
+    // Validation now runs in the global ValidationActionFilter, not the service.
+    // Validation-rule test cases exercise this validator directly.
     private IValidator<Request.CreateRequest> CreateRealValidator()
     {
         return new JobDescriptionRequestValidator();
@@ -132,8 +119,7 @@ public class CreateJobDescriptionTest
         var jobs = new List<JobDescriptionEntity>();
 
         var dbContext = CreateMockDbContext(jobs);
-        var validator = CreateValidValidator();
-        var service = new JobDescriptionService(dbContext, validator);
+        var service = new JobDescriptionService(dbContext);
 
         var request = CreateValidRequest();
 
@@ -165,25 +151,19 @@ public class CreateJobDescriptionTest
     public async Task Create_ValidationFailed_ThrowValidationException()
     {
         // Arrange
-        var jobs = new List<JobDescriptionEntity>();
-
-        var dbContext = CreateMockDbContext(jobs);
         var validator = CreateRealValidator();
-        var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
         request.title = null!;
         request.location = null!;
 
         // Act
-        var exception = await Assert.ThrowsAsync<ValidationExceptionError>(
-            () => service.CreateJobAsync(request)
-        );
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        // The service surfaces the first failing rule; title is validated before location.
-        Assert.Equal("TITLE_REQUIRED", exception.Message);
-        Assert.Empty(jobs);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "TITLE_REQUIRED");
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "LOCATION_REQUIRED");
     }
 
     // TC04: Slug bị trùng thì tự sinh slug mới
@@ -200,8 +180,7 @@ public class CreateJobDescriptionTest
         };
 
         var dbContext = CreateMockDbContext(jobs);
-        var validator = CreateValidValidator();
-        var service = new JobDescriptionService(dbContext, validator);
+        var service = new JobDescriptionService(dbContext);
 
         var request = CreateValidRequest();
 
@@ -225,24 +204,18 @@ public class CreateJobDescriptionTest
     public async Task Create_SalaryMinGreaterThanMax_ThrowValidationException()
     {
         // Arrange
-        var jobs = new List<JobDescriptionEntity>();
-
-        var dbContext = CreateMockDbContext(jobs);
         var validator = CreateRealValidator();
-        var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
-        request.salaryMin = 50_000_000f;    
+        request.salaryMin = 50_000_000f;
         request.salaryMax = 30_000_000f;
 
         // Act
-        var exception = await Assert.ThrowsAsync<ValidationExceptionError>(
-            () => service.CreateJobAsync(request)
-        );
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Equal("MIN_SALARY_GREATER_THAN_MAX_SALARY", exception.Message);
-        Assert.Empty(jobs);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "MIN_SALARY_GREATER_THAN_MAX_SALARY");
     }
 
     // TC06: Salary âm
@@ -250,23 +223,17 @@ public class CreateJobDescriptionTest
     public async Task Create_NegativeSalary_ThrowValidationException()
     {
         // Arrange
-        var jobs = new List<JobDescriptionEntity>();
-
-        var dbContext = CreateMockDbContext(jobs);
         var validator = CreateRealValidator();
-        var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
         request.salaryMin = -1_000_000f;
 
         // Act
-        var exception = await Assert.ThrowsAsync<ValidationExceptionError>(
-            () => service.CreateJobAsync(request)
-        );
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Equal("SALARY_CANNOT_BE_NEGATIVE", exception.Message);
-        Assert.Empty(jobs);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "SALARY_CANNOT_BE_NEGATIVE");
     }
 
     // TC09: Openings <= 0
@@ -276,23 +243,17 @@ public class CreateJobDescriptionTest
     public async Task Create_InvalidOpenings_ThrowValidationException(int openings)
     {
         // Arrange
-        var jobs = new List<JobDescriptionEntity>();
-
-        var dbContext = CreateMockDbContext(jobs);
         var validator = CreateRealValidator();
-        var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
         request.openings = openings;
 
         // Act
-        var exception = await Assert.ThrowsAsync<ValidationExceptionError>(
-            () => service.CreateJobAsync(request)
-        );
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Equal("OPENINGS_MUST_BE_GREATER_THAN_ZERO", exception.Message);
-        Assert.Empty(jobs);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "OPENINGS_MUST_BE_GREATER_THAN_ZERO");
     }
 
     // TC10: Title rỗng
@@ -302,23 +263,17 @@ public class CreateJobDescriptionTest
     public async Task Create_EmptyTitle_ThrowValidationException(string title)
     {
         // Arrange
-        var jobs = new List<JobDescriptionEntity>();
-
-        var dbContext = CreateMockDbContext(jobs);
         var validator = CreateRealValidator();
-        var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
         request.title = title;
 
         // Act
-        var exception = await Assert.ThrowsAsync<ValidationExceptionError>(
-            () => service.CreateJobAsync(request)
-        );
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Equal("TITLE_REQUIRED", exception.Message);
-        Assert.Empty(jobs);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "TITLE_REQUIRED");
     }
 
     // TC11: Location rỗng
@@ -328,23 +283,17 @@ public class CreateJobDescriptionTest
     public async Task Create_EmptyLocation_ThrowValidationException(string location)
     {
         // Arrange
-        var jobs = new List<JobDescriptionEntity>();
-
-        var dbContext = CreateMockDbContext(jobs);
         var validator = CreateRealValidator();
-        var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
         request.location = location;
 
         // Act
-        var exception = await Assert.ThrowsAsync<ValidationExceptionError>(
-            () => service.CreateJobAsync(request)
-        );
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Equal("LOCATION_REQUIRED", exception.Message);
-        Assert.Empty(jobs);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "LOCATION_REQUIRED");
     }
     
 }

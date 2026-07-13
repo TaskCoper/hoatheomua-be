@@ -35,7 +35,7 @@ public class Request
     public class LocationRequest
     {
         [JsonPropertyName("filters")]
-        public LocationFilters Filters { get; set; }
+        public LocationFilters Filters { get; set; } = null!;
     }
 
     public class LocationFilters

@@ -8,16 +8,16 @@ public class OrderLabelResponse
     public int Code { get; set; }
 
     [JsonPropertyName("paginator")]
-    public ResponsePaginator Paginator { get; set; }
+    public ResponsePaginator Paginator { get; set; } = null!;
 
     [JsonPropertyName("data")]
-    public List<LabelData> Data { get; set; }
+    public List<LabelData> Data { get; set; } = null!;
 }
 
 public class ResponsePaginator
 {
     [JsonPropertyName("next")]
-    public NextPage Next { get; set; }
+    public NextPage Next { get; set; } = null!;
 }
 
 public class NextPage
@@ -36,7 +36,7 @@ public class LabelData
     public int BusinessId { get; set; }
 
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 
     [JsonPropertyName("status")]
     public int Status { get; set; }
@@ -63,10 +63,10 @@ public class OrderSourceResponse
     public int Code { get; set; }
 
     [JsonPropertyName("paginator")]
-    public SourcePaginator Paginator { get; set; }
-
+    public SourcePaginator Paginator { get; set; } = null!;
+ 
     [JsonPropertyName("data")]
-    public List<OrderSourceData> Data { get; set; }
+    public List<OrderSourceData> Data { get; set; } = null!;
 }
 
 public class SourcePaginator
@@ -88,7 +88,7 @@ public class OrderSourceData
     public int Id { get; set; }
 
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 
     // Trạng thái: 1 = Active, 2 = Inactive
     [JsonPropertyName("status")]

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using FluentValidation;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
@@ -13,19 +12,15 @@ namespace HoaTheoMua.Service.JobDescriptions;
 public class Service : IService
 {
     private readonly AppDbContext _context;
-    private readonly IValidator<Request.CreateRequest> _validator;
 
-    public Service(AppDbContext context, IValidator<Request.CreateRequest> validator)
+    public Service(AppDbContext context)
     {
         _context = context;
-        _validator = validator;
     }
 
 
     public async Task<Response.CreateResponse> CreateJobAsync(Request.CreateRequest request)
     {
-        await ValidateJobRequestAsync(request);
-
         string finalSlug = await GenerateUniqueSlugAsync(request.title);
 
         var newJob = new Repository.Entity.JobDescriptions()
@@ -103,7 +98,7 @@ public class Service : IService
             var filterMin = salaryMin ?? 0;
             var filterMax = salaryMax ?? float.MaxValue;
 
-            query = query.Where(job => 
+            query = query.Where(job =>
                 (job.salaryMin ?? 0) <= filterMax && (job.salaryMax ?? float.MaxValue) >= filterMin);
         }
 
@@ -171,7 +166,7 @@ public class Service : IService
     {
         var highestSalary = await _context.JobDescriptions
             .AsNoTracking()
-            .Where(job =>job.salaryMax.HasValue)
+            .Where(job => job.salaryMax.HasValue)
             .MaxAsync(job => (float?)job.salaryMax);
 
         return ApiResponseFactory.Base(new Response.HighestSalaryResponse
@@ -186,8 +181,6 @@ public class Service : IService
         {
             throw new BadRequestException("INVALID_JOB_ID");
         }
-
-        await ValidateJobRequestAsync(request);
 
         var job = await _context.JobDescriptions
             .Where(j => !j.IsDeleted)
@@ -281,7 +274,7 @@ public class Service : IService
             .Select(x => x.location)
             .Distinct()
             .ToListAsync();
-        return  locations;
+        return locations;
     }
 
     private IQueryable<Repository.Entity.JobDescriptions> GetJobByIdOrSlugQuery(string idOrSlug)
@@ -346,15 +339,6 @@ public class Service : IService
         return finalSlug;
     }
 
-    private async Task ValidateJobRequestAsync(Request.CreateRequest request)
-    {
-        var validationResult = await _validator.ValidateAsync(request);
-        if (!validationResult.IsValid)
-        {
-            throw new ValidationExceptionError(validationResult.Errors.First().ErrorMessage);
-        }
-    }
-
     private static void ValidateSalaryRange(float? salaryMin, float? salaryMax)
     {
         if (salaryMin.HasValue && salaryMin.Value < 0 ||
@@ -369,7 +353,7 @@ public class Service : IService
         }
     }
 
-    
+
     private static readonly System.Linq.Expressions.Expression<Func<Repository.Entity.JobDescriptions, Response.JobDetailResponse>> ProjectToDetail = job => new Response.JobDetailResponse
     {
         Id = job.Id,
