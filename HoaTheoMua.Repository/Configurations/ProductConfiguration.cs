@@ -11,11 +11,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasKey(p => p.Id);
 
         builder.Property(p => p.NhanhProductId)
-            .IsRequired()
             .HasMaxLength(100);
 
         builder.HasIndex(p => p.NhanhProductId)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("\"NhanhProductId\" IS NOT NULL");
 
         builder.Property(p => p.ParentProductId)
             .HasMaxLength(100);
@@ -30,7 +30,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasMaxLength(200);
 
         builder.Property(p => p.ProductName)
-            .IsRequired()
             .HasMaxLength(500);
 
         builder.Property(p => p.Unit)

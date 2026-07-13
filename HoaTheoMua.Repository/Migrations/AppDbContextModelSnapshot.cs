@@ -641,6 +641,15 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<decimal?>("BranchPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("BranchPriceDuplicate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("BranchPriceWithVat")
+                        .HasColumnType("numeric");
+
                     b.Property<string>("Brand")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -681,6 +690,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("ImportPriceWithVat")
                         .HasColumnType("numeric");
 
+                    b.Property<decimal?>("ImportVat")
+                        .HasColumnType("numeric");
+
                     b.Property<string>("ImportVatMode")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -692,16 +704,18 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("NhanhProductId")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("OldPrice")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("ParentProductId")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("PendingImportStock")
-                        .HasColumnType("integer");
+                    b.Property<decimal?>("PendingImportStock")
+                        .HasColumnType("numeric");
 
                     b.Property<decimal?>("PreOrder")
                         .HasColumnType("numeric");
@@ -721,7 +735,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("ProductName")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
@@ -744,11 +757,20 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("SourceRowNumber")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Status")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.Property<decimal?>("Stock")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("StockError")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("StockTransferring")
                         .HasColumnType("numeric");
 
                     b.Property<string>("Supplier")
@@ -765,13 +787,28 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<decimal?>("Vat")
+                        .HasColumnType("numeric");
+
                     b.Property<decimal?>("WarehouseStock")
                         .HasColumnType("numeric");
 
                     b.Property<int?>("WarrantyMonths")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("WebOrder")
+                        .HasColumnType("integer");
+
                     b.Property<decimal?>("Weight")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesaleBranchPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesaleBranchPriceDuplicate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesaleBranchPriceWithVat")
                         .HasColumnType("numeric");
 
                     b.Property<decimal?>("WholesalePrice")
@@ -783,7 +820,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("NhanhProductId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"NhanhProductId\" IS NOT NULL");
 
                     b.ToTable("Products");
                 });

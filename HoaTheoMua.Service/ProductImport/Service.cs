@@ -1,18 +1,11 @@
-using System;
-using System.IO;
-using System.Linq;
 using System.Globalization;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using HoaTheoMua.Repository;
+using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using MiniExcelLibs;
-using HoaTheoMua.Repository;
-using HoaTheoMua.Repository.Entity;
-using HoaTheoMua.Service.Exceptions;
 
 namespace HoaTheoMua.Service.ProductImport;
 
-// Disambiguate Entity Product from Product namespace
 using ProductEntity = HoaTheoMua.Repository.Entity.Product;
 
 public class Service : IService
@@ -30,55 +23,77 @@ public class Service : IService
 
         try
         {
-            // MiniExcel: Query with head row check
-            // MiniExcel index-based query ("A", "B", etc.) starts parsing from the first row containing data.
-            // If the excel sheet has a header row, we skip it by ignoring the first item if it contains the header text.
-            var rawRows = (await fileStream.QueryAsync<Request.ExcelRow>()).ToList();
-            if (!rawRows.Any())
+            // --- Buffer to MemoryStream (allows seeking for validation + import) ---
+            using var ms = new MemoryStream();
+            await fileStream.CopyToAsync(ms);
+
+            // --- VALIDATE FILE STRUCTURE ---
+            ms.Position = 0;
+            var rawRows = await MiniExcel.QueryAsync(ms, useHeaderRow: false);
+            var headerRow = rawRows.FirstOrDefault() as IDictionary<string, object?>;
+
+            if (headerRow is not { Count: > 0 })
+                throw new BadRequestException("File Excel rỗng");
+
+            headerRow.TryGetValue("A", out var valA);
+            var colA = valA?.ToString() ?? "";
+
+            if (string.IsNullOrWhiteSpace(colA) ||
+                !colA.Contains("ID", StringComparison.OrdinalIgnoreCase) ||
+                headerRow.Count < 40)
+            {
+                throw new BadRequestException(
+                    "File Excel không đúng định dạng xuất từ Nhanh.vn. " +
+                    "Vui lòng upload file xuất từ Nhanh.vn, không dùng file tự chế.");
+            }
+
+            // --- ACTUAL IMPORT ---
+            ms.Position = 0;
+            var rows = (await MiniExcel.QueryAsync<Request.ExcelRow>(ms)).ToList();
+            if (!rows.Any())
             {
                 throw new BadRequestException("File Excel không có dữ liệu hoặc định dạng không đúng");
             }
 
-            // Skip header row if it contains Vietnamese headers
-            var rows = rawRows.Where(r =>
-                r.NhanhProductId != "ID sản phẩm" &&
-                !string.IsNullOrWhiteSpace(r.NhanhProductId) &&
-                !string.IsNullOrWhiteSpace(r.ProductName)
-            ).ToList();
+            for (var i = 0; i < rows.Count; i++)
+            {
+                rows[i].SourceRowNumber = i + 2;
+            }
 
             result.TotalRecords = rows.Count;
 
-            // Fetch existing NhanhProductIds to do batch checking
-            var productIdsInFile = rows.Select(r => r.NhanhProductId!.Trim()).Distinct().ToList();
+            var productIdsInFile = rows
+                .Select(r => NullIfEmpty(r.NhanhProductId))
+                .Where(id => id != null)
+                .Distinct()
+                .ToList();
+
             var existingProductsMap = await _dbContext.Products
-                .Where(p => productIdsInFile.Contains(p.NhanhProductId) && !p.IsDeleted)
-                .ToDictionaryAsync(p => p.NhanhProductId);
+                .Where(p => p.NhanhProductId != null && productIdsInFile.Contains(p.NhanhProductId) && !p.IsDeleted)
+                .ToDictionaryAsync(p => p.NhanhProductId!);
 
             var listToUpdate = new List<ProductEntity>();
             var listToInsert = new List<ProductEntity>();
 
             foreach (var row in rows)
             {
-                var cleanId = row.NhanhProductId!.Trim();
-                var isUpdate = existingProductsMap.TryGetValue(cleanId, out var existingProduct);
+                var cleanId = NullIfEmpty(row.NhanhProductId);
+                ProductEntity? existingProduct = null;
+                var isUpdate = cleanId != null && existingProductsMap.TryGetValue(cleanId, out existingProduct);
 
-                var product = isUpdate ? existingProduct! : new ProductEntity
+                var product = isUpdate && existingProduct != null ? existingProduct : new ProductEntity
                 {
                     Id = Guid.NewGuid(),
-                    NhanhProductId = cleanId,
-                    ProductName = row.ProductName ?? string.Empty,
                     CreatedAt = DateTimeOffset.UtcNow
                 };
 
-                // Map fields with type parse protection
+                product.SourceRowNumber = row.SourceRowNumber;
+                product.NhanhProductId = cleanId;
                 product.ParentProductId = NullIfEmpty(row.ParentProductId);
                 product.Barcode = NullIfEmpty(row.Barcode);
                 product.ProductType = NullIfEmpty(row.ProductType);
                 product.ProductCode = NullIfEmpty(row.ProductCode);
-                if (isUpdate)
-                {
-                    product.ProductName = row.ProductName ?? string.Empty;
-                }
+                product.ProductName = NullIfEmpty(row.ProductName);
                 product.Unit = NullIfEmpty(row.Unit);
                 product.CoverImage = NullIfEmpty(row.CoverImage);
 
@@ -86,26 +101,35 @@ public class Service : IService
                 product.Weight = ParseDecimal(row.WeightRaw);
 
                 product.ImportPrice = ParseDecimal(row.ImportPriceRaw);
+                product.ImportVat = ParseDecimal(row.ImportVatRaw);
                 product.ImportPriceWithVat = ParseDecimal(row.ImportPriceWithVatRaw);
                 product.ImportVatMode = NullIfEmpty(row.ImportVatMode);
 
                 product.Price = ParseDecimal(row.PriceRaw);
                 product.PriceWithVat = ParseDecimal(row.PriceWithVatRaw);
+                product.BranchPrice = ParseDecimal(row.BranchPriceRaw);
+                product.BranchPriceWithVat = ParseDecimal(row.BranchPriceWithVatRaw);
                 product.SaleVatMode = NullIfEmpty(row.SaleVatMode);
+                product.OldPrice = ParseDecimal(row.OldPriceRaw);
+                product.Vat = ParseDecimal(row.VatRaw);
 
                 product.ProfitPercentage = ParseDecimal(row.ProfitPercentageRaw);
                 product.CostPrice = ParseDecimal(row.CostPriceRaw);
                 product.WholesalePrice = ParseDecimal(row.WholesalePriceRaw);
                 product.WholesalePriceWithVat = ParseDecimal(row.WholesalePriceWithVatRaw);
+                product.WholesaleBranchPrice = ParseDecimal(row.WholesaleBranchPriceRaw);
+                product.WholesaleBranchPriceWithVat = ParseDecimal(row.WholesaleBranchPriceWithVatRaw);
 
                 product.TotalStock = ParseDecimal(row.TotalStockRaw);
+                product.StockTransferring = ParseDecimal(row.StockTransferringRaw);
                 product.Stock = ParseDecimal(row.StockRaw);
                 product.DeliveringStock = ParseDecimal(row.DeliveringStockRaw);
                 product.WarehouseStock = ParseDecimal(row.WarehouseStockRaw);
+                product.StockError = ParseDecimal(row.StockErrorRaw);
                 product.Held = ParseDecimal(row.HeldRaw);
                 product.AvailableForSale = ParseDecimal(row.AvailableForSaleRaw);
+                product.PendingImportStock = ParseDecimal(row.PendingImportStockRaw);
                 product.PreOrder = ParseDecimal(row.PreOrderRaw);
-                product.PendingImportStock = ParseInt(row.PendingImportStockRaw);
 
                 product.Status = NullIfEmpty(row.Status);
                 product.CategoryCode = NullIfEmpty(row.CategoryCode);
@@ -113,13 +137,14 @@ public class Service : IService
                 product.Brand = NullIfEmpty(row.Brand);
                 product.Supplier = NullIfEmpty(row.Supplier);
                 product.Slug = NullIfEmpty(row.Slug);
+                product.WebOrder = ParseInt(row.WebOrderRaw);
+                product.NhanhCreatedAt = ParseDateTimeOffset(row.NhanhCreatedAtRaw);
 
+                product.BranchPriceDuplicate = ParseDecimal(row.BranchPriceDuplicateRaw);
+                product.WholesaleBranchPriceDuplicate = ParseDecimal(row.WholesaleBranchPriceDuplicateRaw);
                 product.PriceLabel = NullIfEmpty(row.PriceLabel);
                 product.Size = NullIfEmpty(row.Size);
                 product.Color = NullIfEmpty(row.Color);
-
-                // Date parse (Format YYYY-MM-DD HH:MM:SS)
-                product.NhanhCreatedAt = ParseDateTimeOffset(row.NhanhCreatedAtRaw);
 
                 product.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -135,30 +160,31 @@ public class Service : IService
                 }
             }
 
-            // Save in transaction
-            using (var transaction = await _dbContext.Database.BeginTransactionAsync())
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            try
             {
-                try
+                if (listToInsert.Any())
                 {
-                    if (listToInsert.Any())
-                    {
-                        await _dbContext.Products.AddRangeAsync(listToInsert);
-                    }
-
-                    if (listToUpdate.Any())
-                    {
-                        _dbContext.Products.UpdateRange(listToUpdate);
-                    }
-
-                    await _dbContext.SaveChangesAsync();
-                    await transaction.CommitAsync();
+                    await _dbContext.Products.AddRangeAsync(listToInsert);
                 }
-                catch
+
+                if (listToUpdate.Any())
                 {
-                    await transaction.RollbackAsync();
-                    throw;
+                    _dbContext.Products.UpdateRange(listToUpdate);
                 }
+
+                await _dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+        catch (AppException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -185,11 +211,12 @@ public class Service : IService
         {
             return dec;
         }
-        // Try parsing using comma as decimal separator for specific formats
+
         if (decimal.TryParse(val.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out dec))
         {
             return dec;
         }
+
         return null;
     }
 
@@ -201,6 +228,7 @@ public class Service : IService
         {
             return (int)Math.Round(dbl);
         }
+
         return null;
     }
 
@@ -209,13 +237,11 @@ public class Service : IService
         if (string.IsNullOrWhiteSpace(val)) return null;
         val = val.Trim();
 
-        // 1. Try parse direct YYYY-MM-DD HH:MM:SS
         if (DateTimeOffset.TryParseExact(val, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dto))
         {
             return dto.ToUniversalTime();
         }
 
-        // 2. Fallback general parse
         if (DateTimeOffset.TryParse(val, CultureInfo.InvariantCulture, DateTimeStyles.None, out dto))
         {
             return dto.ToUniversalTime();

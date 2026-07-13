@@ -1,4 +1,3 @@
-using System;
 using MiniExcelLibs.Attributes;
 
 namespace HoaTheoMua.Service.ProductImport;
@@ -7,6 +6,8 @@ public class Request
 {
     public class ExcelRow
     {
+        public int SourceRowNumber { get; set; }
+
         [ExcelColumnIndex(0)]
         public string? NhanhProductId { get; set; }
 
@@ -40,7 +41,8 @@ public class Request
         [ExcelColumnIndex(10)]
         public string? ImportPriceRaw { get; set; }
 
-        // Col L (index 11) is VAT nhập (intentionally skipped/ignored)
+        [ExcelColumnIndex(11)]
+        public string? ImportVatRaw { get; set; }
 
         [ExcelColumnIndex(12)]
         public string? ImportPriceWithVatRaw { get; set; }
@@ -54,12 +56,20 @@ public class Request
         [ExcelColumnIndex(15)]
         public string? PriceWithVatRaw { get; set; }
 
-        // Col Q, R (indexes 16, 17) skipped (Giá bán chi nhánh, Giá bán chi nhánh có VAT)
+        [ExcelColumnIndex(16)]
+        public string? BranchPriceRaw { get; set; }
+
+        [ExcelColumnIndex(17)]
+        public string? BranchPriceWithVatRaw { get; set; }
 
         [ExcelColumnIndex(18)]
         public string? SaleVatMode { get; set; }
 
-        // Col T, U (indexes 19, 20) skipped (Giá cũ, VAT)
+        [ExcelColumnIndex(19)]
+        public string? OldPriceRaw { get; set; }
+
+        [ExcelColumnIndex(20)]
+        public string? VatRaw { get; set; }
 
         [ExcelColumnIndex(21)]
         public string? ProfitPercentageRaw { get; set; }
@@ -73,12 +83,17 @@ public class Request
         [ExcelColumnIndex(24)]
         public string? WholesalePriceWithVatRaw { get; set; }
 
-        // Col Z, AA (indexes 25, 26) skipped (Giá sỉ chi nhánh, Giá sỉ chi nhánh có VAT)
+        [ExcelColumnIndex(25)]
+        public string? WholesaleBranchPriceRaw { get; set; }
+
+        [ExcelColumnIndex(26)]
+        public string? WholesaleBranchPriceWithVatRaw { get; set; }
 
         [ExcelColumnIndex(27)]
         public string? TotalStockRaw { get; set; }
 
-        // Col AC (index 28) skipped (Đang chuyển kho)
+        [ExcelColumnIndex(28)]
+        public string? StockTransferringRaw { get; set; }
 
         [ExcelColumnIndex(29)]
         public string? StockRaw { get; set; }
@@ -89,7 +104,8 @@ public class Request
         [ExcelColumnIndex(31)]
         public string? WarehouseStockRaw { get; set; }
 
-        // Col AG (index 32) skipped (Lỗi)
+        [ExcelColumnIndex(32)]
+        public string? StockErrorRaw { get; set; }
 
         [ExcelColumnIndex(33)]
         public string? HeldRaw { get; set; }
@@ -121,12 +137,17 @@ public class Request
         [ExcelColumnIndex(42)]
         public string? Slug { get; set; }
 
-        // Col AR (index 43) skipped (Thứ tự trên Website)
+        [ExcelColumnIndex(43)]
+        public string? WebOrderRaw { get; set; }
 
         [ExcelColumnIndex(44)]
         public string? NhanhCreatedAtRaw { get; set; }
 
-        // Col AT, AU (indexes 45, 46) skipped (Duplicate branch pricing headers)
+        [ExcelColumnIndex(45)]
+        public string? BranchPriceDuplicateRaw { get; set; }
+
+        [ExcelColumnIndex(46)]
+        public string? WholesaleBranchPriceDuplicateRaw { get; set; }
 
         [ExcelColumnIndex(47)]
         public string? PriceLabel { get; set; }
