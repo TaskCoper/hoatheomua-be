@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -9,6 +9,7 @@ using Xunit;
 
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.CompanyAddress;
+using HoaTheoMua.Service.CompanyAddress.Validations;
 using HoaTheoMua.Service.Exceptions;
 
 using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
@@ -87,14 +88,9 @@ public class CreateCompanyAddressTest
         };
     }
 
-    private List<ValidationResult> ValidateModel(object model)
+    private IValidator<Request.CreateCompanyAddressRequest> CreateRealValidator()
     {
-        var results = new List<ValidationResult>();
-        var context = new ValidationContext(model);
-
-        Validator.TryValidateObject(model, context, results, true);
-
-        return results;
+        return new CreateCompanyAddressRequestValidator();
     }
 
     // TC01: Tạo địa chỉ công ty thành công
@@ -182,9 +178,11 @@ public class CreateCompanyAddressTest
 
     // TC03: Request thiếu required fields
     [Fact]
-    public void Create_MissingRequiredFields_Invalid()
+    public async Task Create_MissingRequiredFields_Invalid()
     {
         // Arrange
+        var validator = CreateRealValidator();
+
         var request = CreateValidRequest();
 
         request.AddressLine = null!;
@@ -192,19 +190,22 @@ public class CreateCompanyAddressTest
         request.Country = null!;
 
         // Act
-        var errors = ValidateModel(request);
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Contains(errors, x => x.ErrorMessage == "Địa chỉ không được để trống");
-        Assert.Contains(errors, x => x.ErrorMessage == "Tỉnh/Thành phố không được để trống");
-        Assert.Contains(errors, x => x.ErrorMessage == "Quốc gia không được để trống");
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "ADDRESS_REQUIRED");
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "CITY_REQUIRED");
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "COUNTRY_REQUIRED");
     }
 
     // TC04: Các field required bị để trống
     [Fact]
-    public void Create_EmptyRequiredFields_Invalid()
+    public async Task Create_EmptyRequiredFields_Invalid()
     {
         // Arrange
+        var validator = CreateRealValidator();
+
         var request = CreateValidRequest();
 
         request.AddressLine = "";
@@ -213,63 +214,73 @@ public class CreateCompanyAddressTest
         request.FullName = "";
 
         // Act
-        var errors = ValidateModel(request);
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Contains(errors, x => x.ErrorMessage == "Địa chỉ không được để trống");
-        Assert.Contains(errors, x => x.ErrorMessage == "Tỉnh/Thành phố không được để trống");
-        Assert.Contains(errors, x => x.ErrorMessage == "Quốc gia không được để trống");
-        Assert.Contains(errors, x => x.ErrorMessage == "Họ và tên phải từ 2 đến 100 ký tự");
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "ADDRESS_REQUIRED");
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "CITY_REQUIRED");
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "COUNTRY_REQUIRED");
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "FULL_NAME_REQUIRED");
     }
 
     // TC05: Latitude không hợp lệ
     [Theory]
     [InlineData(91)]
     [InlineData(-91)]
-    public void Create_InvalidLatitude_Invalid(decimal latitude)
+    public async Task Create_InvalidLatitude_Invalid(decimal latitude)
     {
         // Arrange
+        var validator = CreateRealValidator();
+
         var request = CreateValidRequest();
         request.Latitude = latitude;
 
         // Act
-        var errors = ValidateModel(request);
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Contains(errors, x => x.ErrorMessage == "Vĩ độ phải nằm trong khoảng -90 đến 90");
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "LATITUDE_OUT_OF_RANGE");
     }
 
     // TC05: Longitude không hợp lệ
     [Theory]
     [InlineData(181)]
     [InlineData(-181)]
-    public void Create_InvalidLongitude_Invalid(decimal longitude)
+    public async Task Create_InvalidLongitude_Invalid(decimal longitude)
     {
         // Arrange
+        var validator = CreateRealValidator();
+
         var request = CreateValidRequest();
         request.Longitude = longitude;
 
         // Act
-        var errors = ValidateModel(request);
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Contains(errors, x => x.ErrorMessage == "Kinh độ phải nằm trong khoảng -180 đến 180");
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "LONGITUDE_OUT_OF_RANGE");
     }
 
     // TC06: AddressLine quá dài
     [Fact]
-    public void Create_AddressLineTooLong_Invalid()
+    public async Task Create_AddressLineTooLong_Invalid()
     {
         // Arrange
+        var validator = CreateRealValidator();
+
         var request = CreateValidRequest();
 
         request.AddressLine = new string('A', 256);
 
         // Act
-        var errors = ValidateModel(request);
+        var result = await validator.ValidateAsync(request);
 
         // Assert
-        Assert.Contains(errors, x => x.ErrorMessage == "Địa chỉ phải từ 5 đến 255 ký tự");
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage == "ADDRESS_LENGTH_INVALID");
     }
 
     // TC07: Địa chỉ cũ đã soft delete thì tạo lại được

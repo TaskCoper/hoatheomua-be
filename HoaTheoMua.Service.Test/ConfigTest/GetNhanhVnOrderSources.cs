@@ -122,11 +122,10 @@ namespace HoaTheoMua.Service.Test.ConfigTest
 
         // EDGE CASE 4
         [Fact]
-        public async Task GetNhanhVnOrderSources_NullValue_ThrowsJsonException()
+        public async Task GetNhanhVnOrderSources_NullValue_ThrowsBadRequest()
         {
-            // Arrange: JSON null for the non-nullable "value" is rejected by the
-            // deserializer itself (the service's `config.Value == null` guard is dead
-            // code for a non-nullable int), so the failure surfaces as JsonException.
+            // Arrange: "value" is a nullable int, so a JSON null deserializes cleanly
+            // and the failure surfaces from the service's own `config.Value == null` guard.
             var json = "{\"value\": null, \"options\": []}";
             var configs = new List<ConfigEntity>
             {
@@ -136,7 +135,8 @@ namespace HoaTheoMua.Service.Test.ConfigTest
             var service = CreateService(dbContext);
 
             // Act & Assert
-            await Assert.ThrowsAsync<JsonException>(() => service.GetNhanhVnOrderSources());
+            var exception = await Assert.ThrowsAsync<BadRequestException>(() => service.GetNhanhVnOrderSources());
+            Assert.Equal("Cannot convert value", exception.Message);
         }
     }
 }
