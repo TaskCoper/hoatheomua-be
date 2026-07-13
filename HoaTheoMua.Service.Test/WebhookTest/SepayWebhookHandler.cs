@@ -469,7 +469,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             var act = async () => await service.SepayWebhookHandler(request);
 
             // Assert
-            var exception = await Assert.ThrowsAsync<Exception>(act);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(act);
             Assert.Contains("Ahamove API HTTP Error", exception.Message);
         }
         
@@ -500,7 +500,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             var act = async () => await service.SepayWebhookHandler(request);
 
             // Assert
-            var exception = await Assert.ThrowsAsync<Exception>(act);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(act);
             Assert.Equal("Ahamove returned null or empty data", exception.Message);
         }
         
@@ -557,7 +557,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             var act = async () => await service.SepayWebhookHandler(request);
 
             // Assert
-            var exception = await Assert.ThrowsAsync<Exception>(act);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(act);
             Assert.Contains("NhanhVn API HTTP Error", exception.Message);
         }
         
@@ -588,7 +588,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             var act = async () => await service.SepayWebhookHandler(request);
 
             // Assert
-            var exception = await Assert.ThrowsAsync<Exception>(act);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(act);
             Assert.Contains("NhanhVn order creation failed", exception.Message);
         }
         
@@ -618,7 +618,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             var act = async () => await service.SepayWebhookHandler(request);
 
             // Assert
-            var exception = await Assert.ThrowsAsync<Exception>(act);
+            var exception = await Assert.ThrowsAsync<BadRequestException>(act);
             Assert.Contains("NhanhVn order creation failed", exception.Message);
         }
         

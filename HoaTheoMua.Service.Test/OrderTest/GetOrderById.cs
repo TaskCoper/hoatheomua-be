@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Claims;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using MockQueryable.Moq;
@@ -148,18 +150,37 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal("User not found", exception.Message);
         }
 
-        // Test case 03: UserId sai định dạng Guid
-        [Fact]
-        public async Task GetOrderById_UserIdInvalidGuid_ThrowsFormatException()
+        // Builds the real CurrentUserService over a mocked HttpContext so the actual
+        // claim-parsing logic runs (Guid.TryParse), instead of stubbing the interface.
+        private static ICurrentUserService CreateRealCurrentUserService(string? userIdClaim)
         {
-            // Arrange
+            var claims = userIdClaim is null
+                ? new List<Claim>()
+                : new List<Claim> { new Claim("UserId", userIdClaim) };
+            var httpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims))
+            };
+            var accessor = new Mock<IHttpContextAccessor>();
+            accessor.Setup(x => x.HttpContext).Returns(httpContext);
+            return new CurrentUserService(accessor.Object);
+        }
+
+        // Test case 03: UserId sai định dạng Guid -> UnauthorizedException
+        [Fact]
+        public async Task GetOrderById_UserIdInvalidGuid_ThrowsUnauthorizedException()
+        {
+            // Arrange: a real CurrentUserService whose "UserId" claim is not a valid Guid.
+            // Guid.TryParse fails, so GetRequiredUserId() throws UnauthorizedException
+            // (the service never sees a FormatException).
             var dbContext = CreateMockDbContext(new List<OrderEntity>()).Object;
-            var currentUserMock = new Mock<ICurrentUserService>();
-            currentUserMock.Setup(x => x.GetRequiredUserId()).Throws<FormatException>();
-            var service = CreateService(dbContext, currentUserMock.Object);
+            var currentUser = CreateRealCurrentUserService("not-a-valid-guid");
+            var service = CreateService(dbContext, currentUser);
 
             // Act & Assert
-            await Assert.ThrowsAsync<FormatException>(() => service.GetOrderById(Guid.NewGuid()));
+            var exception = await Assert.ThrowsAsync<UnauthorizedException>(
+                () => service.GetOrderById(Guid.NewGuid()));
+            Assert.Equal("User not found", exception.Message);
         }
 
         // Test case 04: Order không tồn tại

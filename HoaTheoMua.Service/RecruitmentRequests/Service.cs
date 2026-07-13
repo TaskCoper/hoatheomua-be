@@ -25,6 +25,7 @@ public class Service : IService
 
         var query = _context.RecruitmentRequests
             .Include(r => r.JobDescription)
+            .Where(r => !r.IsDeleted)
             .AsNoTracking();
 
         if (isRead.HasValue)

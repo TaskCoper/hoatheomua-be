@@ -6,6 +6,7 @@ using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.JobDescriptions.Validations;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using static HoaTheoMua.Service.Test.TestSupport.ReflectionHelper;
 
 using JobDescriptionEntity = HoaTheoMua.Repository.Entity.JobDescriptions;
 using JobDescriptionService = HoaTheoMua.Service.JobDescriptions.Service;
@@ -245,60 +246,7 @@ public class GetPublicJobDescriptionByIdOrSlugTest
         Assert.Contains("JOB_DESCRIPTION_NOT_FOUND", ex.Message);
     }
 
-    private static void SetPropertyIfExists(object obj, string propertyName, object? value)
-    {
-        var property = obj.GetType().GetProperty(
-            propertyName,
-            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-
-        if (property == null || !property.CanWrite)
-        {
-            return;
-        }
-
-        if (value == null)
-        {
-            property.SetValue(obj, null);
-            return;
-        }
-
-        var targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
-
-        if (targetType.IsEnum)
-        {
-            var enumValue = Enum.Parse(targetType, value.ToString()!, ignoreCase: true);
-            property.SetValue(obj, enumValue);
-            return;
-        }
-
-        if (targetType == typeof(Guid))
-        {
-            property.SetValue(obj, Guid.Parse(value.ToString()!));
-            return;
-        }
-
-        if (targetType == typeof(DateTimeOffset))
-        {
-            if (value is DateTimeOffset dto)
-            {
-                property.SetValue(obj, dto);
-            }
-            else
-            {
-                property.SetValue(obj, DateTimeOffset.Parse(value.ToString()!));
-            }
-
-            return;
-        }
-
-        if (targetType.IsAssignableFrom(value.GetType()))
-        {
-            property.SetValue(obj, value);
-            return;
-        }
-
-        property.SetValue(obj, Convert.ChangeType(value, targetType));
-    }
+    // SetPropertyIfExists moved to TestSupport/ReflectionHelper.cs (using static)
 
     private static object? GetValue(object result)
     {

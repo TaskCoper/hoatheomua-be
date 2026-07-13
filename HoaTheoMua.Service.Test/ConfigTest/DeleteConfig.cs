@@ -69,6 +69,7 @@ namespace HoaTheoMua.Service.Test.ConfigTest
 
             // Assert
             Assert.Equal("Xóa thành công.", result);
+            Assert.True(configs[0].IsDeleted); // soft-delete flag must actually be set
             dbContextMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
         }
 

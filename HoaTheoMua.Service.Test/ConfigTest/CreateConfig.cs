@@ -40,9 +40,10 @@ namespace HoaTheoMua.Service.Test.ConfigTest
             };
         }
 
-        private static Mock<AppDbContext> CreateMockDbContext(List<ConfigEntity> configs)
+        private static Mock<AppDbContext> CreateMockDbContext(
+            List<ConfigEntity> configs, out Mock<DbSet<ConfigEntity>> mockConfigs)
         {
-            var mockConfigs = configs.BuildMockDbSet();
+            mockConfigs = configs.BuildMockDbSet();
             var options = new DbContextOptionsBuilder<AppDbContext>().Options;
             var mockDbContext = new Mock<AppDbContext>(options);
             mockDbContext.Setup(x => x.Configs).Returns(mockConfigs.Object);
@@ -67,7 +68,7 @@ namespace HoaTheoMua.Service.Test.ConfigTest
         public async Task CreateConfig_ValidRequest_CreatesConfigSuccessfully()
         {
             // Arrange
-            var dbContextMock = CreateMockDbContext(new List<ConfigEntity>());
+            var dbContextMock = CreateMockDbContext(new List<ConfigEntity>(), out var mockConfigs);
             var currentUser = CreateMockCurrentUserService(TestUserId);
             var service = CreateService(dbContextMock.Object, currentUser);
 
@@ -88,6 +89,17 @@ namespace HoaTheoMua.Service.Test.ConfigTest
             Assert.Equal("web.title", result.Key);
             Assert.Equal("web", result.Group);
             Assert.Equal(TestUserId, result.UserId);
+            Assert.False(result.IsPublic); // impl forces IsPublic = false on create
+            // The entity must actually be inserted, with the correct owner/key/forced flag.
+            mockConfigs.Verify(
+                x => x.AddAsync(
+                    It.Is<ConfigEntity>(c =>
+                        c.Key == "web.title" &&
+                        c.UserId == TestUserId &&
+                        !c.IsPublic &&
+                        !c.IsDeleted),
+                    It.IsAny<System.Threading.CancellationToken>()),
+                Times.Once);
             dbContextMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
         }
 
@@ -97,7 +109,7 @@ namespace HoaTheoMua.Service.Test.ConfigTest
         {
             // Arrange
             var existingConfig = CreateConfigEntity("web.title", "web", nameof(KindConfig.Content));
-            var dbContext = CreateMockDbContext(new List<ConfigEntity> { existingConfig }).Object;
+            var dbContext = CreateMockDbContext(new List<ConfigEntity> { existingConfig }, out _).Object;
             var currentUser = CreateMockCurrentUserService(TestUserId);
             var service = CreateService(dbContext, currentUser);
 
@@ -120,7 +132,7 @@ namespace HoaTheoMua.Service.Test.ConfigTest
         public async Task CreateConfig_GroupMismatchWithValueGroup_ThrowsConflictException()
         {
             // Arrange
-            var dbContext = CreateMockDbContext(new List<ConfigEntity>()).Object;
+            var dbContext = CreateMockDbContext(new List<ConfigEntity>(), out _).Object;
             var currentUser = CreateMockCurrentUserService(TestUserId);
             var service = CreateService(dbContext, currentUser);
 
@@ -144,7 +156,7 @@ namespace HoaTheoMua.Service.Test.ConfigTest
         public async Task CreateConfig_UnauthenticatedUser_ThrowsUnauthorizedException()
         {
             // Arrange
-            var dbContext = CreateMockDbContext(new List<ConfigEntity>()).Object;
+            var dbContext = CreateMockDbContext(new List<ConfigEntity>(), out _).Object;
             var currentUserMock = new Mock<ICurrentUserService>();
             currentUserMock.Setup(x => x.GetRequiredUserId()).Throws(new UnauthorizedException("User not found"));
             var service = CreateService(dbContext, currentUserMock.Object);

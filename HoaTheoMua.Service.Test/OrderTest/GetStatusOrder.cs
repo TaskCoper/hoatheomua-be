@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using HoaTheoMua.Repository;
@@ -93,6 +94,22 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return mock.Object;
         }
 
+        // Builds the real CurrentUserService over a mocked HttpContext so the actual
+        // claim-parsing logic runs (Guid.TryParse), instead of stubbing the interface.
+        private static ICurrentUserService CreateRealCurrentUserService(string? userIdClaim)
+        {
+            var claims = userIdClaim is null
+                ? new List<Claim>()
+                : new List<Claim> { new Claim("UserId", userIdClaim) };
+            var httpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims))
+            };
+            var accessor = new Mock<IHttpContextAccessor>();
+            accessor.Setup(x => x.HttpContext).Returns(httpContext);
+            return new CurrentUserService(accessor.Object);
+        }
+
         // ---------------------------------------------------------------------
         // TEST CASE 01: Lấy trạng thái order thành công
         // ---------------------------------------------------------------------
@@ -135,19 +152,22 @@ namespace HoaTheoMua.Service.Test.OrderTest
         }
 
         // ---------------------------------------------------------------------
-        // TEST CASE 03: UserId trong token sai định dạng Guid -> FormatException
+        // TEST CASE 03: UserId trong token sai định dạng Guid -> UnauthorizedException
         // ---------------------------------------------------------------------
         [Fact]
-        public async Task GetStatusOrder_UserIdInvalidGuid_ThrowsFormatException()
+        public async Task GetStatusOrder_UserIdInvalidGuid_ThrowsUnauthorizedException()
         {
-            // Arrange
+            // Arrange: a real CurrentUserService whose "UserId" claim is not a valid Guid.
+            // Guid.TryParse fails, so GetRequiredUserId() throws UnauthorizedException
+            // (the service never sees a FormatException).
             var dbContext = CreateMockDbContext(new List<OrderEntity>()).Object;
-            var currentUserMock = new Mock<ICurrentUserService>();
-            currentUserMock.Setup(x => x.GetRequiredUserId()).Throws<FormatException>();
-            var service = CreateService(dbContext, currentUserMock.Object);
+            var currentUser = CreateRealCurrentUserService("not-a-valid-guid");
+            var service = CreateService(dbContext, currentUser);
 
             // Act & Assert
-            await Assert.ThrowsAsync<FormatException>(() => service.GetStatusOrder(Guid.NewGuid()));
+            var exception = await Assert.ThrowsAsync<UnauthorizedException>(
+                () => service.GetStatusOrder(Guid.NewGuid()));
+            Assert.Equal("User not found", exception.Message);
         }
 
         // ---------------------------------------------------------------------

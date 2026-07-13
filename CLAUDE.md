@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Ahamove** — delivery quoting & dispatch (`AhamoveOption`)
 - **Sepay** — payment webhooks (`SepayController`)
 
-**This service does not issue JWTs and has no User/auth table.** Tokens are issued by a separate service, `taskcoper-be`; this service only *validates* them. The validated token claims are the source of truth for identity (see `ICurrentUserService`). The `JwtOption` Issuer/Audience/AccessTokenKey here **must stay byte-identical to taskcoper-be's** or cross-service tokens won't validate. The `HoaTheoMua.Service/Auth/Service.cs` and `JwtService/` are vestigial (largely commented out) — do not re-enable token issuance without understanding this split.
+**This service does not issue JWTs and has no User/auth table.** Tokens are issued by a separate service, `taskcoper-be`; this service only _validates_ them. The validated token claims are the source of truth for identity (see `ICurrentUserService`). The `JwtOption` Issuer/Audience/AccessTokenKey here **must stay byte-identical to taskcoper-be's** or cross-service tokens won't validate. The `HoaTheoMua.Service/Auth/Service.cs` and `JwtService/` are vestigial (largely commented out) — do not re-enable token issuance without understanding this split.
 
 ## Common commands
 
@@ -24,6 +24,12 @@ dotnet run --project HoaTheoMua.API
 # Restore
 dotnet restore HoaTheoMua.sln
 
+# Run all tests
+dotnet test HoaTheoMua.sln
+
+# Run a single test class (file AddressTest/CreateAddress.cs → class CreateAddressTest)
+dotnet test HoaTheoMua.Service.Test --filter "FullyQualifiedName~CreateAddressTest"
+
 # EF Core migrations (run from repo root)
 dotnet ef migrations add <Name> --project HoaTheoMua.Repository --startup-project HoaTheoMua.API
 dotnet ef database update --project HoaTheoMua.Repository --startup-project HoaTheoMua.API
@@ -31,15 +37,28 @@ dotnet ef database update --project HoaTheoMua.Repository --startup-project HoaT
 
 Migrations are **applied automatically at startup** (`Program.cs` calls `dbContext.Database.MigrateAsync()`), so a fresh DB self-bootstraps on first run — you rarely need `database update` manually.
 
-There is **no test project** and no test runner configured. The `HoaTheoMua.Service/test/` folder contains only ad-hoc scripts, not unit tests.
+`global.json` pins the SDK to 8.0.x (`rollForward: latestMinor`).
+
+## Testing
+
+`HoaTheoMua.Service.Test` is the xUnit project (Moq, MockQueryable.Moq, EF InMemory) covering the Service layer. Conventions:
+
+- One folder per feature (`AddressTest/`, `OrderTest/`, …), one file per service method; the file `AddressTest/CreateAddress.cs` holds the class `CreateAddressTest`.
+- Test files are **self-contained**: each builds its own mocked `AppDbContext` via a private `CreateService(...)` helper — there are no shared fixtures or base classes. Most files mock `DbSet`s with MockQueryable.Moq; some hand-roll `TestAsyncEnumerator`/`TestAsyncQueryProvider` per file; a few use EF InMemory. Follow the pattern already used by the feature you're testing.
+- External-API features (Ahamove, NhanhVn, Product) are tested by mocking `HttpMessageHandler` behind the injected `HttpClient`.
+- Identity comes from a mocked `ICurrentUserService` (`GetRequiredUserId()`).
+- **Neither the git hooks nor CI run tests** — both only build. Run `dotnet test` yourself before pushing.
+
+The `HoaTheoMua.Service/test/` folder (lowercase, inside the Service project) contains only ad-hoc scripts — real tests live in `HoaTheoMua.Service.Test`.
 
 ## Architecture
 
-Three-project layered solution, dependencies flow API → Service → Repository:
+Layered solution, dependencies flow API → Service → Repository:
 
 - **`HoaTheoMua.API`** — web host. Controllers, middleware, DI wiring (`Program.cs`), and `Extentions/` (note the spelling). Root namespace is `HoaTheoMua`, **not** `HoaTheoMua.API`.
 - **`HoaTheoMua.Service`** — business logic, organized by feature folder.
 - **`HoaTheoMua.Repository`** — EF Core: `AppDbContext`, `Entity/`, `Configurations/`, `Migrations/`, `Enum/`, `Abtraction/` (note the spelling).
+- **`HoaTheoMua.Service.Test`** — xUnit tests for the Service layer (see Testing above).
 
 ### Feature-folder convention (Service layer)
 
@@ -100,7 +119,8 @@ In Docker, every setting is supplied as an env var using the `__` (double-unders
   - `commit-msg` → Conventional Commits enforced (`feat|fix|docs|style|refactor|perf|test|chore|build|ci`, optional `(scope)`).
   - `pre-push` → branch name must match `feature/`, `bugfix/`, `hotfix/`, `release/`, or be `develop`/`main`/`master`; then restore + build.
 - **Docker:** images build from `HoaTheoMua.API/Dockerfile` (multi-stage, exposes 8080, `ASPNETCORE_URLS=http://+:8080`). Compose lives in `.docker/` and is profile-driven (`dev`, `prod`); `.docker/sync-env-secrets.sh` pushes a `.docker/.env.<env>` file into GitHub environment secrets.
-- **CI/CD (`.github/workflows/`):** push to `develop` deploys the `dev` profile, push to `main` deploys `prod`. Build → deploy (self-hosted runner behind a Cloudflare tunnel) → Discord notification.
+- **CI/CD (`.github/workflows/`):** push to `develop` deploys the `dev` profile, push to `main` deploys `prod`. Build → deploy (self-hosted runner behind a Cloudflare tunnel) → Discord notification. The build workflow does **not** run tests (its "no test projects yet" comment predates `HoaTheoMua.Service.Test`).
+- **API documentation:** `hoatheomua-documentation/` holds Obsidian-flavored markdown, one folder per feature (`Service - Address/`), one file per service method with a sample request/response, a flow-diagram image embedded from `Store-Image/` (`![[...]]` syntax), and test-case descriptions in Vietnamese. Endpoint changes are typically accompanied by an update here.
 
 ## Conventions to respect
 

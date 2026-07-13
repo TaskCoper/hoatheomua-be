@@ -73,7 +73,7 @@ namespace HoaTheoMua.Service.Test.ConfigTest
                 Group = "web",
                 Kind = nameof(KindConfig.Content),
                 Value = valueDoc.RootElement,
-                IsPublic = true
+                IsPublic = false // seed is true, so a successful update must flip this
             };
 
             // Act
@@ -81,6 +81,9 @@ namespace HoaTheoMua.Service.Test.ConfigTest
 
             // Assert
             Assert.Equal("Cập nhật thành công", result);
+            // The request fields must actually be written onto the persisted entity.
+            Assert.False(configs[0].IsPublic);
+            Assert.Contains("New Store Title", configs[0].Value);
             dbContextMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
         }
 

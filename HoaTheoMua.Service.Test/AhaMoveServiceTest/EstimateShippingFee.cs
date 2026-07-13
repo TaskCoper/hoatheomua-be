@@ -415,12 +415,17 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
                 new ServiceResponse { ServiceId = "SGN-BIKE" }
             };
 
+            // Capture the outgoing Ahamove request body (read inside the callback, before
+            // HttpClient disposes the request) so the field mapping can be asserted.
+            string? ahamoveRequestBody = null;
             mockHttpMessageHandler.Protected()
                 .Setup<Task<HttpResponseMessage>>(
                     "SendAsync",
                     ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains("ahamove")),
                     ItExpr.IsAny<CancellationToken>()
                 )
+                .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
+                    ahamoveRequestBody = req.Content!.ReadAsStringAsync().GetAwaiter().GetResult())
                 .ReturnsAsync(new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
@@ -441,8 +446,27 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             // Act
             var result = await service.EstimateShippingFee(request);
 
-            // Assert
+            // Assert: the method returns both upstream results...
             Assert.NotNull(result);
+            var ahamoveResult = result.GetType().GetProperty("ahamoveResult")!.GetValue(result) as List<ServiceResponse>;
+            var productNhanhResult = result.GetType().GetProperty("productNhanhResult")!.GetValue(result) as NhanhProductListResponse;
+            Assert.NotNull(ahamoveResult);
+            Assert.Single(ahamoveResult!);
+            Assert.Equal("SGN-BIKE", ahamoveResult![0].ServiceId);
+            Assert.NotNull(productNhanhResult);
+            Assert.Equal(1, productNhanhResult!.Code);
+
+            // ...and the outgoing Ahamove request maps the NhanhVn product data correctly:
+            // price from Prices.Retail, num from the requested quantity, and PaymentMethod "CASH".
+            Assert.NotNull(ahamoveRequestBody);
+            using var doc = JsonDocument.Parse(ahamoveRequestBody!);
+            var root = doc.RootElement;
+            Assert.Equal("CASH", root.GetProperty("payment_method").GetString());
+            var items = root.GetProperty("items");
+            Assert.Equal(1, items.GetArrayLength());
+            Assert.Equal("1", items[0].GetProperty("_id").GetString());
+            Assert.Equal(100000, items[0].GetProperty("price").GetInt32());
+            Assert.Equal(2, items[0].GetProperty("num").GetInt32());
         }
     }
 }

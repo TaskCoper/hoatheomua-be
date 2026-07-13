@@ -316,12 +316,12 @@ public partial class Service : IService
             }
             else
             {
-                throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+                throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
             }
 
             if (createAhamoveOrderResult == null)
             {
-                throw new Exception("Ahamove returned null or empty data");
+                throw new BadRequestException("Ahamove returned null or empty data");
             }
 
             order.AhahaMoveOrderId = createAhamoveOrderResult.OrderId;
@@ -511,7 +511,7 @@ public partial class Service : IService
 
         if (!nhanhVnResponse.IsSuccessStatusCode)
         {
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode}): {nhanhRawContent}");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode}): {nhanhRawContent}");
         }
 
         using var nhanhDoc = JsonDocument.Parse(nhanhRawContent);
@@ -527,13 +527,13 @@ public partial class Service : IService
             || !nhanhRoot.TryGetProperty("data", out var nhanhDataElement)
             || nhanhDataElement.ValueKind != JsonValueKind.Object)
         {
-            throw new Exception($"NhanhVn order creation failed: {nhanhRawContent}");
+            throw new BadRequestException($"NhanhVn order creation failed: {nhanhRawContent}");
         }
 
         var createOrderNhanhResult = nhanhDataElement.Deserialize<OrderData>();
         if (createOrderNhanhResult == null)
         {
-            throw new Exception($"NhanhVn order creation failed: {nhanhRawContent}");
+            throw new BadRequestException($"NhanhVn order creation failed: {nhanhRawContent}");
         }
 
         order.NhanhOrderId = createOrderNhanhResult.Id;

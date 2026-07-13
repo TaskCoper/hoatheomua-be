@@ -10,6 +10,7 @@ using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.JobDescriptions;
+using HoaTheoMua.Service.JobDescriptions.Validations;
 
 using JobDescriptionEntity = HoaTheoMua.Repository.Entity.JobDescriptions;
 using JobDescriptionService = HoaTheoMua.Service.JobDescriptions.Service;
@@ -68,20 +69,11 @@ public class CreateJobDescriptionTest
         return validatorMock.Object;
     }
 
-    private IValidator<Request.CreateRequest> CreateInvalidValidator(string errorMessage)
+    // Use the real FluentValidation rules so the tests actually exercise them,
+    // rather than a mock that returns a canned failure for any input.
+    private IValidator<Request.CreateRequest> CreateRealValidator()
     {
-        var validatorMock = new Mock<IValidator<Request.CreateRequest>>();
-
-        validatorMock
-            .Setup(x => x.ValidateAsync(
-                It.IsAny<Request.CreateRequest>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ValidationResult(new List<ValidationFailure>
-            {
-                new ValidationFailure("field", errorMessage)
-            }));
-
-        return validatorMock.Object;
+        return new JobDescriptionRequestValidator();
     }
 
     private Request.CreateRequest CreateValidRequest()
@@ -176,7 +168,7 @@ public class CreateJobDescriptionTest
         var jobs = new List<JobDescriptionEntity>();
 
         var dbContext = CreateMockDbContext(jobs);
-        var validator = CreateInvalidValidator("JOB_DESCRIPTION_VALIDATION_FAILED");
+        var validator = CreateRealValidator();
         var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
@@ -189,7 +181,8 @@ public class CreateJobDescriptionTest
         );
 
         // Assert
-        Assert.Equal("JOB_DESCRIPTION_VALIDATION_FAILED", exception.Message);
+        // The service surfaces the first failing rule; title is validated before location.
+        Assert.Equal("TITLE_REQUIRED", exception.Message);
         Assert.Empty(jobs);
     }
 
@@ -235,7 +228,7 @@ public class CreateJobDescriptionTest
         var jobs = new List<JobDescriptionEntity>();
 
         var dbContext = CreateMockDbContext(jobs);
-        var validator = CreateInvalidValidator("MIN_SALARY_GREATER_THAN_MAX_SALARY");
+        var validator = CreateRealValidator();
         var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
@@ -260,7 +253,7 @@ public class CreateJobDescriptionTest
         var jobs = new List<JobDescriptionEntity>();
 
         var dbContext = CreateMockDbContext(jobs);
-        var validator = CreateInvalidValidator("SALARY_CANNOT_BE_NEGATIVE");
+        var validator = CreateRealValidator();
         var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
@@ -286,7 +279,7 @@ public class CreateJobDescriptionTest
         var jobs = new List<JobDescriptionEntity>();
 
         var dbContext = CreateMockDbContext(jobs);
-        var validator = CreateInvalidValidator("OPENINGS_MUST_BE_GREATER_THAN_ZERO");
+        var validator = CreateRealValidator();
         var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
@@ -312,7 +305,7 @@ public class CreateJobDescriptionTest
         var jobs = new List<JobDescriptionEntity>();
 
         var dbContext = CreateMockDbContext(jobs);
-        var validator = CreateInvalidValidator("TITLE_REQUIRED");
+        var validator = CreateRealValidator();
         var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();
@@ -338,7 +331,7 @@ public class CreateJobDescriptionTest
         var jobs = new List<JobDescriptionEntity>();
 
         var dbContext = CreateMockDbContext(jobs);
-        var validator = CreateInvalidValidator("LOCATION_REQUIRED");
+        var validator = CreateRealValidator();
         var service = new JobDescriptionService(dbContext, validator);
 
         var request = CreateValidRequest();

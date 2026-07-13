@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Moq;
 using Xunit;
+using HoaTheoMua.Service.Test.TestSupport;
+using static HoaTheoMua.Service.Test.TestSupport.ReflectionHelper;
 
 using JobDescriptionEntity = HoaTheoMua.Repository.Entity.JobDescriptions;
 using RecruitmentRequestEntity = HoaTheoMua.Repository.Entity.RecruitmentRequest;
@@ -325,30 +327,7 @@ public class GetRecruitmentRequestByIdTest
         Assert.Empty(attachments);
     }
 
-    private static object? ParseEnumIfExists(string enumName, string value)
-    {
-        var enumType = AppDomain.CurrentDomain
-            .GetAssemblies()
-            .SelectMany(x =>
-            {
-                try
-                {
-                    return x.GetTypes();
-                }
-                catch
-                {
-                    return Array.Empty<Type>();
-                }
-            })
-            .FirstOrDefault(x => x.IsEnum && x.Name == enumName);
-
-        if (enumType == null)
-        {
-            return value;
-        }
-
-        return Enum.Parse(enumType, value, ignoreCase: true);
-    }
+    // ParseEnumIfExists moved to TestSupport/ReflectionHelper.cs (using static)
 
     private static object? GetValue(object result)
     {
@@ -425,177 +404,7 @@ public class GetRecruitmentRequestByIdTest
         return new List<string>();
     }
 
-    private static void SetPropertyIfExists(object obj, string propertyName, object? value)
-    {
-        var property = obj.GetType().GetProperty(
-            propertyName,
-            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+    // SetPropertyIfExists moved to TestSupport/ReflectionHelper.cs (using static)
 
-        if (property == null || !property.CanWrite)
-        {
-            return;
-        }
-
-        if (value == null)
-        {
-            property.SetValue(obj, null);
-            return;
-        }
-
-        var targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
-
-        if (targetType.IsEnum)
-        {
-            var enumValue = Enum.Parse(targetType, value.ToString()!, ignoreCase: true);
-            property.SetValue(obj, enumValue);
-            return;
-        }
-
-        if (targetType == typeof(Guid))
-        {
-            property.SetValue(obj, Guid.Parse(value.ToString()!));
-            return;
-        }
-
-        if (targetType == typeof(DateTimeOffset))
-        {
-            if (value is DateTimeOffset dateTimeOffset)
-            {
-                property.SetValue(obj, dateTimeOffset);
-            }
-            else
-            {
-                property.SetValue(obj, DateTimeOffset.Parse(value.ToString()!));
-            }
-
-            return;
-        }
-
-        if (targetType.IsAssignableFrom(value.GetType()))
-        {
-            property.SetValue(obj, value);
-            return;
-        }
-
-        property.SetValue(obj, Convert.ChangeType(value, targetType));
-    }
-
-    private class EfExpressionCleaner : ExpressionVisitor
-    {
-        protected override Expression VisitMethodCall(MethodCallExpression node)
-        {
-            if (node.Method.DeclaringType == typeof(EntityFrameworkQueryableExtensions) &&
-                (node.Method.Name == nameof(EntityFrameworkQueryableExtensions.AsNoTracking) ||
-                 node.Method.Name == nameof(EntityFrameworkQueryableExtensions.Include) ||
-                 node.Method.Name == nameof(EntityFrameworkQueryableExtensions.ThenInclude)))
-            {
-                return Visit(node.Arguments[0])!;
-            }
-
-            return base.VisitMethodCall(node);
-        }
-    }
-
-    private class TestAsyncQueryProvider<TEntity> : IAsyncQueryProvider
-    {
-        private readonly IQueryProvider _inner;
-
-        public TestAsyncQueryProvider(IQueryProvider inner)
-        {
-            _inner = inner;
-        }
-
-        private static Expression CleanExpression(Expression expression)
-        {
-            return new EfExpressionCleaner().Visit(expression)!;
-        }
-
-        public IQueryable CreateQuery(Expression expression)
-        {
-            return new TestAsyncEnumerable<TEntity>(CleanExpression(expression));
-        }
-
-        public IQueryable<TElement> CreateQuery<TElement>(Expression expression)
-        {
-            return new TestAsyncEnumerable<TElement>(CleanExpression(expression));
-        }
-
-        public object? Execute(Expression expression)
-        {
-            return _inner.Execute(CleanExpression(expression));
-        }
-
-        public TResult Execute<TResult>(Expression expression)
-        {
-            return _inner.Execute<TResult>(CleanExpression(expression));
-        }
-
-        public TResult ExecuteAsync<TResult>(
-            Expression expression,
-            CancellationToken cancellationToken = default)
-        {
-            var cleanedExpression = CleanExpression(expression);
-            var expectedResultType = typeof(TResult).GetGenericArguments()[0];
-
-            var executionResult = typeof(IQueryProvider)
-                .GetMethods()
-                .First(method =>
-                    method.Name == nameof(IQueryProvider.Execute) &&
-                    method.IsGenericMethod &&
-                    method.GetParameters().Length == 1)
-                .MakeGenericMethod(expectedResultType)
-                .Invoke(_inner, new object[] { cleanedExpression });
-
-            return (TResult)typeof(Task)
-                .GetMethod(nameof(Task.FromResult))!
-                .MakeGenericMethod(expectedResultType)
-                .Invoke(null, new[] { executionResult })!;
-        }
-    }
-
-    private class TestAsyncEnumerable<T> :
-        EnumerableQuery<T>,
-        IAsyncEnumerable<T>,
-        IQueryable<T>
-    {
-        public TestAsyncEnumerable(IEnumerable<T> enumerable) : base(enumerable)
-        {
-        }
-
-        public TestAsyncEnumerable(Expression expression) : base(expression)
-        {
-        }
-
-        public IAsyncEnumerator<T> GetAsyncEnumerator(
-            CancellationToken cancellationToken = default)
-        {
-            return new TestAsyncEnumerator<T>(this.AsEnumerable().GetEnumerator());
-        }
-
-        IQueryProvider IQueryable.Provider =>
-            new TestAsyncQueryProvider<T>(this);
-    }
-
-    private class TestAsyncEnumerator<T> : IAsyncEnumerator<T>
-    {
-        private readonly IEnumerator<T> _inner;
-
-        public TestAsyncEnumerator(IEnumerator<T> inner)
-        {
-            _inner = inner;
-        }
-
-        public T Current => _inner.Current;
-
-        public ValueTask<bool> MoveNextAsync()
-        {
-            return new ValueTask<bool>(_inner.MoveNext());
-        }
-
-        public ValueTask DisposeAsync()
-        {
-            _inner.Dispose();
-            return ValueTask.CompletedTask;
-        }
-    }
+    // Async-queryable shims (with EF operator cleaning) moved to TestSupport/MockAsyncQueryable.cs
 }

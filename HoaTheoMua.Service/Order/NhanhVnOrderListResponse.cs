@@ -3,33 +3,33 @@ using Newtonsoft.Json;
 
 namespace HoaTheoMua.Service.Order;
 
- public class OrderListRootResponse
-    {
-        [JsonPropertyName("code")]
-        public int Code { get; set; }
+public class OrderListRootResponse
+{
+    [JsonPropertyName("code")]
+    public int Code { get; set; }
 
-        [JsonPropertyName("paginator")]
-        public Paginator Paginator { get; set; }
-        
-        [JsonPropertyName("data")]
-        [System.Text.Json.Serialization.JsonConverter(typeof(Converter))]
-        public List<OrderData> Data { get; set; } = new();
-        // public List<OrderEntry> Data { get; set; } = new();
-    }
+    [JsonPropertyName("paginator")]
+    public Paginator Paginator { get; set; }
 
-     public class Paginator
-     {
-         [JsonPropertyName("next")]
-         public PaginatorNext Next { get; set; }
-     }
+    [JsonPropertyName("data")]
+    [System.Text.Json.Serialization.JsonConverter(typeof(Converter))]
+    public List<OrderData> Data { get; set; } = new();
+    // public List<OrderEntry> Data { get; set; } = new();
+}
 
-     public class PaginatorNext
-     {
-         [JsonPropertyName("id")]
-         public int Id { get; set; }
-     }
+public class Paginator
+{
+    [JsonPropertyName("next")]
+    public PaginatorNext Next { get; set; }
+}
 
-    public class OrderData
+public class PaginatorNext
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+}
+
+public class OrderData
 {
     [JsonProperty("info")]
     public OrderInfo Info { get; set; }
@@ -496,4 +496,3 @@ public class Credit
     [JsonProperty("accountId")]
     public int AccountId { get; set; }
 }
-  

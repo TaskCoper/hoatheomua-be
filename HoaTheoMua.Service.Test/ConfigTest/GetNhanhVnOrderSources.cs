@@ -102,10 +102,12 @@ namespace HoaTheoMua.Service.Test.ConfigTest
 
         // EDGE CASE 3
         [Fact]
-        public async Task GetNhanhVnOrderSources_NullPropertiesInConfig_ThrowsBadRequestException()
+        public async Task GetNhanhVnOrderSources_MissingOptions_ThrowsBadRequestException()
         {
-            // Arrange
-            var json = "{\"Value\": null, \"Options\": null}";
+            // Arrange: valid "value" but no "options" array. After deserialization
+            // Options is null, which the service rejects with BadRequestException.
+            // (Property names are case-sensitive via [JsonPropertyName]; they must be lowercase.)
+            var json = "{\"value\": 10}";
             var configs = new List<ConfigEntity>
             {
                 CreateConfigEntity("nhanhvn.order_sources", json)
@@ -116,6 +118,25 @@ namespace HoaTheoMua.Service.Test.ConfigTest
             // Act & Assert
             var exception = await Assert.ThrowsAsync<BadRequestException>(() => service.GetNhanhVnOrderSources());
             Assert.Equal("Cannot convert value", exception.Message);
+        }
+
+        // EDGE CASE 4
+        [Fact]
+        public async Task GetNhanhVnOrderSources_NullValue_ThrowsJsonException()
+        {
+            // Arrange: JSON null for the non-nullable "value" is rejected by the
+            // deserializer itself (the service's `config.Value == null` guard is dead
+            // code for a non-nullable int), so the failure surfaces as JsonException.
+            var json = "{\"value\": null, \"options\": []}";
+            var configs = new List<ConfigEntity>
+            {
+                CreateConfigEntity("nhanhvn.order_sources", json)
+            };
+            var dbContext = CreateMockDbContext(configs).Object;
+            var service = CreateService(dbContext);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<JsonException>(() => service.GetNhanhVnOrderSources());
         }
     }
 }

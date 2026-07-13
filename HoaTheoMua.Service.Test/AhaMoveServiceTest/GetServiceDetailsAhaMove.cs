@@ -144,5 +144,42 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             var exception = await Assert.ThrowsAsync<BadRequestException>(act);
             Assert.Equal("Ahamove returned null or empty data", exception.Message);
         }
+
+        // ================= EDGE CASE 3: Outgoing request is built correctly =================
+        // Verifies the endpoint, HTTP method (GET), and the Ahamove Authorization token —
+        // the request-building the service exists to do.
+        [Fact]
+        public async Task GetServiceDetailsAhaMove_BuildsAuthorizedGetRequestToConfiguredEndpoint()
+        {
+            // Arrange
+            HttpRequestMessage? captured = null;
+            var mockHandler = new Mock<HttpMessageHandler>();
+            mockHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .Callback<HttpRequestMessage, CancellationToken>((req, _) => captured = req)
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(new ServiceDetailsResponse { Id = "SGN-BIKE" })
+                });
+
+            var service = new AhaMoveServiceImplementation(
+                new HttpClient(mockHandler.Object),
+                CreateMockDbContext(),
+                CreateMockConfiguration());
+
+            // Act
+            await service.GetServiceDetailsAhaMove();
+
+            // Assert
+            Assert.NotNull(captured);
+            Assert.Equal(HttpMethod.Get, captured!.Method);
+            Assert.Equal("http://ahamove.test/v3/services/SGN-BIKE", captured.RequestUri!.ToString());
+            Assert.True(captured.Headers.Contains("Authorization"));
+            Assert.Equal("test_api_key", captured.Headers.GetValues("Authorization").First());
+        }
     }
 }

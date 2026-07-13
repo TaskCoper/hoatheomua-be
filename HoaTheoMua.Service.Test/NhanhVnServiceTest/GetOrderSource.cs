@@ -183,5 +183,48 @@ namespace HoaTheoMua.Service.Test.NhanhVnServiceTest
             var exception = await Assert.ThrowsAsync<BadRequestException>(act);
             Assert.Equal("ERR_INVALID_FORM_FIELDS", exception.Message);
         }
+
+        // ================= TEST CASE 05: Outgoing request is built correctly =================
+        // Verifies the endpoint, HTTP method, appId/businessId query string, and the
+        // Authorization header token — the request-building the service exists to do.
+        [Fact]
+        public async Task GetOrderSource_BuildsAuthorizedPostRequestToConfiguredEndpoint()
+        {
+            // Arrange
+            HttpRequestMessage? captured = null;
+            var mockHandler = new Mock<HttpMessageHandler>();
+            mockHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .Callback<HttpRequestMessage, CancellationToken>((req, _) => captured = req)
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(new OrderSourceResponse
+                    {
+                        Code = 1,
+                        Data = new List<OrderSourceData>()
+                    })
+                });
+
+            var service = new NhanhVnServiceImplementation(
+                new HttpClient(mockHandler.Object),
+                CreateMockDbContext(),
+                CreateMockConfiguration());
+
+            // Act
+            await service.GetOrderSource(CreateRequest());
+
+            // Assert
+            Assert.NotNull(captured);
+            Assert.Equal(HttpMethod.Post, captured!.Method);
+            Assert.Equal(
+                "http://nhanhvn.test/order/source?appId=12345&businessId=67890",
+                captured.RequestUri!.ToString());
+            Assert.True(captured.Headers.Contains("Authorization"));
+            Assert.Equal("test_token", captured.Headers.GetValues("Authorization").First());
+        }
     }
 }

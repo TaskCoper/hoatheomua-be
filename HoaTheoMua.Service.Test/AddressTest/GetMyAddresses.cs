@@ -1,10 +1,12 @@
 using System.Linq.Expressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Common;
+using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Moq;
 using Xunit;
+using HoaTheoMua.Service.Test.TestSupport;
 
 using AddressEntity = HoaTheoMua.Repository.Entity.Address;
 using AddressService = HoaTheoMua.Service.Address.Service;
@@ -50,7 +52,7 @@ public class GetMyAddressesTest
         {
             currentUserMock
                 .Setup(x => x.GetRequiredUserId())
-                .Throws(new UnauthorizedAccessException("Unauthorized"));
+                .Throws(new UnauthorizedException("User not found"));
         }
         else
         {
@@ -288,106 +290,11 @@ public class GetMyAddressesTest
             out _,
             throwUnauthorized: true);
 
-        var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        var ex = await Assert.ThrowsAsync<UnauthorizedException>(
             () => service.GetMyAddresses());
 
-        Assert.Equal("Unauthorized", ex.Message);
+        Assert.Equal("User not found", ex.Message);
     }
 
-    private class TestAsyncQueryProvider<TEntity> : IAsyncQueryProvider
-    {
-        private readonly IQueryProvider _inner;
-
-        public TestAsyncQueryProvider(IQueryProvider inner)
-        {
-            _inner = inner;
-        }
-
-        public IQueryable CreateQuery(Expression expression)
-        {
-            return new TestAsyncEnumerable<TEntity>(expression);
-        }
-
-        public IQueryable<TElement> CreateQuery<TElement>(Expression expression)
-        {
-            return new TestAsyncEnumerable<TElement>(expression);
-        }
-
-        public object? Execute(Expression expression)
-        {
-            return _inner.Execute(expression);
-        }
-
-        public TResult Execute<TResult>(Expression expression)
-        {
-            return _inner.Execute<TResult>(expression);
-        }
-
-        public TResult ExecuteAsync<TResult>(
-            Expression expression,
-            CancellationToken cancellationToken = default)
-        {
-            var expectedResultType = typeof(TResult).GetGenericArguments()[0];
-
-            var executionResult = typeof(IQueryProvider)
-                .GetMethods()
-                .First(method =>
-                    method.Name == nameof(IQueryProvider.Execute) &&
-                    method.IsGenericMethod &&
-                    method.GetParameters().Length == 1)
-                .MakeGenericMethod(expectedResultType)
-                .Invoke(_inner, new object[] { expression });
-
-            return (TResult)typeof(Task)
-                .GetMethod(nameof(Task.FromResult))!
-                .MakeGenericMethod(expectedResultType)
-                .Invoke(null, new[] { executionResult })!;
-        }
-    }
-
-    private class TestAsyncEnumerable<T> :
-        EnumerableQuery<T>,
-        IAsyncEnumerable<T>,
-        IQueryable<T>
-    {
-        public TestAsyncEnumerable(IEnumerable<T> enumerable) : base(enumerable)
-        {
-        }
-
-        public TestAsyncEnumerable(Expression expression) : base(expression)
-        {
-        }
-
-        public IAsyncEnumerator<T> GetAsyncEnumerator(
-            CancellationToken cancellationToken = default)
-        {
-            return new TestAsyncEnumerator<T>(this.AsEnumerable().GetEnumerator());
-        }
-
-        IQueryProvider IQueryable.Provider =>
-            new TestAsyncQueryProvider<T>(this);
-    }
-
-    private class TestAsyncEnumerator<T> : IAsyncEnumerator<T>
-    {
-        private readonly IEnumerator<T> _inner;
-
-        public TestAsyncEnumerator(IEnumerator<T> inner)
-        {
-            _inner = inner;
-        }
-
-        public T Current => _inner.Current;
-
-        public ValueTask<bool> MoveNextAsync()
-        {
-            return new ValueTask<bool>(_inner.MoveNext());
-        }
-
-        public ValueTask DisposeAsync()
-        {
-            _inner.Dispose();
-            return ValueTask.CompletedTask;
-        }
-    }
+    // Async-queryable shims moved to TestSupport/MockAsyncQueryable.cs
 }

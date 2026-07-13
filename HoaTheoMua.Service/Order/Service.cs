@@ -224,9 +224,9 @@ public class Service : IService
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
-        
+
         var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
-        
+
         var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
         {
             OrderTime = request.OrderTime,
@@ -316,41 +316,41 @@ public class Service : IService
 
         var totalShippingFee = ahamoveResult[0].Data.TotalFee;
         //var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
-            var totalProductFee = productNhanhResult.Data.Sum(x =>
-                x.Prices.Retail * request.Items.First(item => item.ItemId.Equals(x.Id)).Number);
+        var totalProductFee = productNhanhResult.Data.Sum(x =>
+            x.Prices.Retail * request.Items.First(item => item.ItemId.Equals(x.Id)).Number);
 
-            var vatFee = 0m;
-            
-            if (!string.IsNullOrEmpty(request.TaxCode))
-            {
-                vatFee = totalProductFee * 0.08m;
-            }
-            
-            
+        var vatFee = 0m;
 
-            var newOrder = new Repository.Entity.Order()
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                Status = "Pending",
-                TrackNumber = "",
-                Latitude = request.Latitude,
-                Longitude = request.Longitude,
-                Address = request.Address,
-                Ward = request.Ward,
-                City = request.City,
-                ShortAddress = request.ShortAddress,
-                FullName = request.FullName,
-                Phone = request.Phone,
-                Remarks = request.Remarks,
-                OrderTime = request.OrderTime,
-                CreatedAt = DateTime.UtcNow,
-                ShippingFee = totalShippingFee,
-                ProductFee = totalProductFee,
-                TotalFee = totalProductFee + totalShippingFee + vatFee,
-                Vat = vatFee,
-            
-            TagIds =  request.TagIds,
+        if (!string.IsNullOrEmpty(request.TaxCode))
+        {
+            vatFee = totalProductFee * 0.08m;
+        }
+
+
+
+        var newOrder = new Repository.Entity.Order()
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Status = "Pending",
+            TrackNumber = "",
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            Address = request.Address,
+            Ward = request.Ward,
+            City = request.City,
+            ShortAddress = request.ShortAddress,
+            FullName = request.FullName,
+            Phone = request.Phone,
+            Remarks = request.Remarks,
+            OrderTime = request.OrderTime,
+            CreatedAt = DateTime.UtcNow,
+            ShippingFee = totalShippingFee,
+            ProductFee = totalProductFee,
+            TotalFee = totalProductFee + totalShippingFee + vatFee,
+            Vat = vatFee,
+
+            TagIds = request.TagIds,
             TaxCode = request.TaxCode,
             IdentityNumber = request.IdentityNumber,
             ReceiptFullName = request.ReceiptFullName,
@@ -358,8 +358,8 @@ public class Service : IService
             ReceiptAddress = request.ReceiptAddress,
             ReceiptEmail = request.ReceiptEmail,
             IsExportInvoice = request.IsExportInvoice,
-            InvoiceType =  request.InvoiceType,
-            
+            InvoiceType = request.InvoiceType,
+
         };
 
 
@@ -430,7 +430,7 @@ public class Service : IService
             AhahaMoveOrderId = orders.AhahaMoveOrderId,
             AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl,
             TagsId = orders.TagIds,
-            IdentityNumber =  orders.IdentityNumber!,
+            IdentityNumber = orders.IdentityNumber!,
             ReceiptFullName = orders.ReceiptFullName!,
             ReceiptPhoneNumber = orders.ReceiptPhoneNumber!,
             ReceiptAddress = orders.ReceiptAddress!,
@@ -457,7 +457,7 @@ public class Service : IService
                 Width = x.Width,
                 Height = x.Height,
             }).ToList(),
-            
+
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
                 TransferAmount = lastTransaction.TransferAmount,
@@ -597,7 +597,7 @@ public class Service : IService
     public async Task<string> GetInfoTaxCode(string taxCode)
     {
         var vietQrApiUrl = $"https://api.vietqr.io/v2/business/{taxCode}";
-        
+
         var httpRequest = new HttpRequestMessage(HttpMethod.Get, vietQrApiUrl);
 
         HttpResponseMessage response = await _httpClient.SendAsync(httpRequest);
@@ -610,13 +610,14 @@ public class Service : IService
         }
         else
         {
-            throw new BadRequestException($"VietQR API HTTP Error ({response.StatusCode})");        }
+            throw new BadRequestException($"VietQR API HTTP Error ({response.StatusCode})");
+        }
 
         if (apiResponse == null || apiResponse.Data == null)
         {
             throw new BadRequestException("VietQR API returned null or empty data");
         }
-        
+
         if (apiResponse.Code != "00")
         {
             throw new BadRequestException($"VietQR API Error: {apiResponse.Desc}");
@@ -628,20 +629,20 @@ public class Service : IService
 
     public async Task<string> CancelOrder(Guid id)
     {
-        var isExistPendingOrder =  await _dbContext.Orders.
-            FirstOrDefaultAsync(x => 
+        var isExistPendingOrder = await _dbContext.Orders.
+            FirstOrDefaultAsync(x =>
                 x.Id == id && x.Status == "Pending");
 
         if (isExistPendingOrder == null)
         {
             throw new BadRequestException("Order not found");
         }
-        
+
         isExistPendingOrder.Status = "Cancelled";
         isExistPendingOrder.UpdatedAt = DateTime.UtcNow;
         _dbContext.Orders.Update(isExistPendingOrder);
         await _dbContext.SaveChangesAsync();
-        
+
         return "Hủy đơn thành công";
     }
 }
