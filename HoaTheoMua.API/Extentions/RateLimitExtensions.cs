@@ -1,6 +1,6 @@
 ﻿using System.Threading.RateLimiting;
 
-namespace HoaTheoMua.Extension;
+namespace HoaTheoMua.Extentions;
 
 public static class RateLimitExtensions
 {

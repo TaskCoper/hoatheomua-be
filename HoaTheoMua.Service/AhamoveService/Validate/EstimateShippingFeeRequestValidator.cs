@@ -1,13 +1,11 @@
 ﻿using FluentValidation;
-using FluentValidation.Validators;
 using HoaTheoMua.Service.Common;
-using Microsoft.Extensions.Options;
 
-namespace HoaTheoMua.Service.AhaMoveService.Validate;
+namespace HoaTheoMua.Service.AhamoveService.Validate;
 
 public class EstimateShippingFeeRequestValidator : AbstractValidator<AhaMoveRequest.EstimateShippingFeeRequest>
 {
-   public EstimateShippingFeeRequestValidator()
+    public EstimateShippingFeeRequestValidator()
     {
         RuleFor(x => x.FullName)
             .NotEmpty().WithMessage("FULL_NAME_REQUIRED")
@@ -21,7 +19,7 @@ public class EstimateShippingFeeRequestValidator : AbstractValidator<AhaMoveRequ
         RuleFor(x => x.Address)
             .NotEmpty().WithMessage("ADDRESS_REQUIRED")
             .Length(1, 255).WithMessage("ADDRESS_LENGTH_INVALID");
-        
+
         RuleFor(x => x.ShortAddress)
             .Length(1, 255).WithMessage("ADDRESS_LENGTH_INVALID");
 
@@ -31,15 +29,15 @@ public class EstimateShippingFeeRequestValidator : AbstractValidator<AhaMoveRequ
 
         RuleFor(x => x.Longitude)
             .NotEmpty().WithMessage("LONGITUDE_REQUIRED");
-        
-        
+
+
         // RuleFor(x => x.City).GreaterThan(0).WithMessage("CITY_CODE_REQUIRED");
         // RuleFor(x => x.Ward).GreaterThan(0).WithMessage("WARD_CODE_REQUIRED");
-        
+
         RuleFor(x => x.OrderTime)
             .Must(BeValidOrderTime)
             .WithMessage("ORDER_TIME_INVALID");
-        
+
     }
 
     private bool BeValidOrderTime(long orderTime)

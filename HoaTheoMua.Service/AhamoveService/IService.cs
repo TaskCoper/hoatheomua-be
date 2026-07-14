@@ -1,6 +1,4 @@
-﻿using HoaTheoMua.Service.Models;
-
-namespace HoaTheoMua.Service.AhaMoveService;
+﻿namespace HoaTheoMua.Service.AhamoveService;
 
 public interface IService
 {
