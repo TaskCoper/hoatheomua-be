@@ -11,7 +11,9 @@ public class Service : IService
     private readonly AppDbContext _context;
     private readonly ICurrentUserService _currentUser;
 
-    public Service(AppDbContext context, ICurrentUserService currentUser)
+    public Service(
+        AppDbContext context,
+        ICurrentUserService currentUser)
     {
         _context = context;
         _currentUser = currentUser;
@@ -25,6 +27,7 @@ public class Service : IService
 
         var query = _context.RecruitmentRequests
             .Include(r => r.JobDescription)
+            .Where(r => !r.IsDeleted)
             .AsNoTracking();
 
         if (isRead.HasValue)

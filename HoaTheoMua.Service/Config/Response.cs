@@ -80,31 +80,31 @@ public class Response
     public class OrderSourceConfig
     {
         [JsonPropertyName("group")]
-        public string Group { get; set; }
+        public string Group { get; set; }= null!;
 
         [JsonPropertyName("label")]
-        public string Label { get; set; }
+        public string Label { get; set; } = null!;
 
         [JsonPropertyName("value")]
-        public int Value { get; set; }
+        public int? Value { get; set; }
 
         [JsonPropertyName("options")]
-        public List<FieldOption> Options { get; set; }
+        public List<FieldOption> Options { get; set; } = null!;
 
         [JsonPropertyName("required")]
         public bool Required { get; set; }
 
         [JsonPropertyName("inputType")]
-        public string InputType { get; set; }
+        public string InputType { get; set; } = null!;
 
         [JsonPropertyName("validations")]
-        public List<object> Validations { get; set; }
+        public List<object> Validations { get; set; } = null!;
     }
 
     public class FieldOption
     {
         [JsonPropertyName("label")]
-        public string Label { get; set; }
+        public string Label { get; set; } = null!;
 
         [JsonPropertyName("value")]
         public int Value { get; set; }

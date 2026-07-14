@@ -75,12 +75,12 @@ public class Request
     public class ProductDetailRequest
     {
         [JsonPropertyName("filters")]
-        public ProductDetailFilters Filters { get; set; } = null;
+        public ProductDetailFilters Filters { get; set; } = null!;
     }
 
     public class ProductDetailFilters
     {
         [JsonPropertyName("id")]
-        public string Id { get; set; } = null;
+        public string Id { get; set; } = null!;
     }
 }

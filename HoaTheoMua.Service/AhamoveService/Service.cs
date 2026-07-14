@@ -2,13 +2,10 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
-using HoaTheoMua.Service.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using ArgumentException = HoaTheoMua.Service.Exceptions.ArgumentException;
 
-namespace HoaTheoMua.Service.AhaMoveService;
+namespace HoaTheoMua.Service.AhamoveService;
 
 public class Service: IService
 {

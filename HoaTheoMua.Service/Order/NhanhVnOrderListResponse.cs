@@ -3,51 +3,51 @@ using Newtonsoft.Json;
 
 namespace HoaTheoMua.Service.Order;
 
- public class OrderListRootResponse
-    {
-        [JsonPropertyName("code")]
-        public int Code { get; set; }
+public class OrderListRootResponse
+{
+    [JsonPropertyName("code")]
+    public int Code { get; set; }
 
-        [JsonPropertyName("paginator")]
-        public Paginator Paginator { get; set; }
-        
-        [JsonPropertyName("data")]
-        [System.Text.Json.Serialization.JsonConverter(typeof(Converter))]
-        public List<OrderData> Data { get; set; } = new();
-        // public List<OrderEntry> Data { get; set; } = new();
-    }
+    [JsonPropertyName("paginator")]
+    public Paginator Paginator { get; set; }
 
-     public class Paginator
-     {
-         [JsonPropertyName("next")]
-         public PaginatorNext Next { get; set; }
-     }
+    [JsonPropertyName("data")]
+    [System.Text.Json.Serialization.JsonConverter(typeof(Converter))]
+    public List<OrderData> Data { get; set; } = new();
+    // public List<OrderEntry> Data { get; set; } = new();
+}
 
-     public class PaginatorNext
-     {
-         [JsonPropertyName("id")]
-         public int Id { get; set; }
-     }
+public class Paginator
+{
+    [JsonPropertyName("next")]
+    public PaginatorNext Next { get; set; }
+}
 
-    public class OrderData
+public class PaginatorNext
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+}
+
+public class OrderData
 {
     [JsonProperty("info")]
-    public OrderInfo Info { get; set; }
+    public OrderInfo Info { get; set; } = null!;
 
     [JsonProperty("channel")]
-    public Channel Channel { get; set; }
+    public Channel Channel { get; set; } = null!;
 
     [JsonProperty("shippingAddress")]
-    public ShippingAddress ShippingAddress { get; set; }
+    public ShippingAddress ShippingAddress { get; set; } = null!;
 
     [JsonProperty("products")]
-    public List<Product> Products { get; set; }
+    public List<Product> Products { get; set; } = null!;
 
     [JsonProperty("carrier")]
-    public Carrier Carrier { get; set; }
+    public Carrier Carrier { get; set; } = null!;
 
     [JsonProperty("payment")]
-    public Payment Payment { get; set; }
+    public Payment Payment { get; set; } = null!;
 }
 
 public class OrderInfo
@@ -83,13 +83,13 @@ public class OrderInfo
     public int CreatedById { get; set; }
 
     [JsonProperty("createdByName")]
-    public string CreatedByName { get; set; }
+    public string CreatedByName { get; set; } = null!;
 
     [JsonProperty("saleId")]
     public int SaleId { get; set; }
 
     [JsonProperty("saleName")]
-    public string SaleName { get; set; }
+    public string SaleName { get; set; } = null!;
 
     [JsonProperty("technicalStaffId")]
     public int TechnicalStaffId { get; set; }
@@ -101,7 +101,7 @@ public class OrderInfo
     public int CustomerCareId { get; set; }
 
     [JsonProperty("customerCareName")]
-    public string CustomerCareName { get; set; }
+    public string CustomerCareName { get; set; } = null!;
 
     [JsonProperty("createdAt")]
     public long CreatedAt { get; set; }
@@ -116,10 +116,10 @@ public class OrderInfo
     public long PackedAt { get; set; }
 
     [JsonProperty("description")]
-    public string Description { get; set; }
+    public string Description { get; set; } = null!;
 
     [JsonProperty("privateDescription")]
-    public string PrivateDescription { get; set; }
+    public string PrivateDescription { get; set; } = null!;
 
     [JsonProperty("orderIndex")]
     public int OrderIndex { get; set; }
@@ -131,13 +131,13 @@ public class OrderInfo
     public int Reason { get; set; }
 
     [JsonProperty("handoverIds")]
-    public List<object> HandoverIds { get; set; }
+    public List<object> HandoverIds { get; set; } = null!;
 
     [JsonProperty("tags")]
-    public List<Tag> Tags { get; set; }
+    public List<Tag> Tags { get; set; } = null!;
 
     [JsonProperty("trackingUrl")]
-    public string TrackingUrl { get; set; }
+    public string TrackingUrl { get; set; } = null!;
 }
 
 public class Tag
@@ -146,13 +146,13 @@ public class Tag
     public int Id { get; set; }
 
     [JsonProperty("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 
     [JsonProperty("textColor")]
-    public string TextColor { get; set; }
+    public string TextColor { get; set; } = null!;
 
     [JsonProperty("bgColor")]
-    public string BgColor { get; set; }
+    public string BgColor { get; set; } = null!;
 
     [JsonProperty("status")]
     public int Status { get; set; }
@@ -164,7 +164,7 @@ public class Channel
     public int SaleChannel { get; set; }
 
     [JsonProperty("trafficSource")]
-    public string TrafficSource { get; set; }
+    public string TrafficSource { get; set; } = null!;
 
     [JsonProperty("fbAdsId")]
     public int FbAdsId { get; set; }
@@ -173,10 +173,10 @@ public class Channel
     public int FbPsid { get; set; }
 
     [JsonProperty("affiliate")]
-    public Affiliate Affiliate { get; set; }
+    public Affiliate Affiliate { get; set; } = null!;
 
     [JsonProperty("marketing")]
-    public List<object> Marketing { get; set; }
+    public List<object> Marketing { get; set; } = null!;
 }
 
 public class Affiliate
@@ -197,13 +197,13 @@ public class ShippingAddress
     public int Id { get; set; }
 
     [JsonProperty("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 
     [JsonProperty("mobile")]
-    public string Mobile { get; set; }
+    public string Mobile { get; set; } = null!;
 
     [JsonProperty("address")]
-    public string Address { get; set; }
+    public string Address { get; set; } = null!;
 
     [JsonProperty("cityId")]
     public int CityId { get; set; }
@@ -215,7 +215,7 @@ public class ShippingAddress
     public int WardId { get; set; }
 
     [JsonProperty("location")]
-    public string Location { get; set; }
+    public string Location { get; set; } = null!;
 }
 
 public class Product
@@ -227,13 +227,13 @@ public class Product
     public int TypeId { get; set; }
 
     [JsonProperty("code")]
-    public string Code { get; set; }
+    public string Code { get; set; } = null!;
 
     [JsonProperty("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 
     [JsonProperty("barcode")]
-    public string Barcode { get; set; }
+    public string Barcode { get; set; } = null!;
 
     [JsonProperty("weight")]
     public double Weight { get; set; }
@@ -290,10 +290,10 @@ public class Product
     public int ImeiId { get; set; }
 
     [JsonProperty("imeiIds")]
-    public List<object> ImeiIds { get; set; }
+    public List<object> ImeiIds { get; set; } = null!;
 
     [JsonProperty("imeiCodes")]
-    public List<object> ImeiCodes { get; set; }
+    public List<object> ImeiCodes { get; set; } = null!;
 
     [JsonProperty("transactionFee")]
     public decimal TransactionFee { get; set; }
@@ -311,13 +311,13 @@ public class Product
     public decimal UsedPointAmount { get; set; }
 
     [JsonProperty("image")]
-    public string Image { get; set; }
+    public string Image { get; set; } = null!;
 
     [JsonProperty("shippingWeight")]
-    public string ShippingWeight { get; set; }
+    public string ShippingWeight { get; set; } = null!;
 
     [JsonProperty("unit")]
-    public Unit Unit { get; set; }
+    public Unit Unit { get; set; } = null!;
 }
 
 public class Unit
@@ -326,7 +326,7 @@ public class Unit
     public int Id { get; set; }
 
     [JsonProperty("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 
     [JsonProperty("quantity")]
     public int Quantity { get; set; }
@@ -347,10 +347,10 @@ public class Carrier
     public int Id { get; set; }
 
     [JsonProperty("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 
     [JsonProperty("service")]
-    public CarrierService Service { get; set; }
+    public CarrierService Service { get; set; } = null!;
 
     [JsonProperty("checkGoods")]
     public int CheckGoods { get; set; }
@@ -413,22 +413,22 @@ public class CarrierService
 public class Payment
 {
     [JsonProperty("usedPoints")]
-    public UsedPoints UsedPoints { get; set; }
+    public UsedPoints UsedPoints { get; set; } = null!;
 
     [JsonProperty("vat")]
-    public Vat Vat { get; set; }
+    public Vat Vat { get; set; } = null!;
 
     [JsonProperty("discount")]
-    public PaymentDiscount Discount { get; set; }
+    public PaymentDiscount Discount { get; set; } = null!;
 
     [JsonProperty("deposit")]
-    public Deposit Deposit { get; set; }
+    public Deposit Deposit { get; set; } = null!;
 
     [JsonProperty("transfer")]
-    public Transfer Transfer { get; set; }
+    public Transfer Transfer { get; set; } = null!;
 
     [JsonProperty("credit")]
-    public Credit Credit { get; set; }
+    public Credit Credit { get; set; } = null!;
 
     [JsonProperty("codAmount")]
     public decimal CodAmount { get; set; }
@@ -452,7 +452,7 @@ public class UsedPoints
 public class Vat
 {
     [JsonProperty("percent")]
-    public string Percent { get; set; } // Dữ liệu trả về lúc là string "8%", lúc không có field này nên để string
+    public string Percent { get; set; } = null!; // Dữ liệu trả về lúc là string "8%", lúc không có field này nên để string
 
     [JsonProperty("amount")]
     public decimal Amount { get; set; }
@@ -461,7 +461,7 @@ public class Vat
 public class PaymentDiscount
 {
     [JsonProperty("percent")]
-    public string Percent { get; set; }
+    public string Percent { get; set; } = null!;
 
     [JsonProperty("amount")]
     public decimal Amount { get; set; }
@@ -485,7 +485,7 @@ public class Transfer
     public int AccountId { get; set; }
 
     [JsonProperty("name")]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
 }
 
 public class Credit
@@ -496,4 +496,3 @@ public class Credit
     [JsonProperty("accountId")]
     public int AccountId { get; set; }
 }
-  

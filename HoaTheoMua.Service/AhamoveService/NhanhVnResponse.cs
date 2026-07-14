@@ -1,21 +1,21 @@
-﻿namespace HoaTheoMua.Service.AhaMoveService;
+﻿using System.Text.Json.Serialization;
 
-using System.Text.Json.Serialization;
+namespace HoaTheoMua.Service.AhamoveService;
 
 public class NhanhProductListResponse
 {
     [JsonPropertyName("code")]
     public int Code { get; set; }
 
-    [JsonPropertyName("paginator")]
-    public NhanhResponsePaginator Paginator { get; set; }
+    [JsonPropertyName("paginator")] 
+    public NhanhResponsePaginator Paginator { get; set; }  = null!;
 
     [JsonPropertyName("data")]
-    public List<NhanhProductData> Data { get; set; }
+    public List<NhanhProductData> Data { get; set; }  = null!;
     [JsonPropertyName("errorCode")]
-    public string ErrorCode { get; set; }
+    public string ErrorCode { get; set; }  = null!;
     [JsonPropertyName("messages")]
-    public object Messages { get; set; }
+    public object Messages { get; set; }  = null!;
 }
 
 public class NhanhResponsePaginator
@@ -23,7 +23,7 @@ public class NhanhResponsePaginator
     // Trường này trong JSON mẫu trả về object hoặc string ("next": {"id": 100} hoặc string)
     // Để linh hoạt nhất với Nhanh.vn, ta có thể dùng object hoặc cụ thể hóa nếu biết chắc kiểu dữ liệu
     [JsonPropertyName("next")]
-    public object Next { get; set; }
+    public object Next { get; set; }  = null!;
 }
 
 public class NhanhProductData
@@ -35,16 +35,16 @@ public class NhanhProductData
     public int? ParentId { get; set; }
 
     [JsonPropertyName("code")]
-    public string Code { get; set; }
+    public string Code { get; set; }  = null!;
 
     [JsonPropertyName("barcode")]
-    public string Barcode { get; set; }
+    public string Barcode { get; set; }  = null!;
 
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string Name { get; set; }  = null!;
 
     [JsonPropertyName("otherName")]
-    public string OtherName { get; set; }
+    public string OtherName { get; set; }  = null!;
 
     [JsonPropertyName("status")]
     public int Status { get; set; }
@@ -62,10 +62,10 @@ public class NhanhProductData
     public int? InternalCategoryId { get; set; }
 
     [JsonPropertyName("prices")]
-    public NhanhPrices Prices { get; set; }
+    public NhanhPrices Prices { get; set; }  = new();
 
     [JsonPropertyName("images")]
-    public NhanhImages Images { get; set; }
+    public NhanhImages Images { get; set; }  = null!;
 
     [JsonPropertyName("warranty")]
     [JsonConverter(typeof(NhanhWarrantyConverter))]
@@ -78,22 +78,22 @@ public class NhanhProductData
     public int Type { get; set; }
 
     [JsonPropertyName("shipping")]
-    public NhanhShipping Shipping { get; set; }
+    public NhanhShipping Shipping { get; set; } = new();
 
     [JsonPropertyName("countryName")]
-    public string CountryName { get; set; }
+    public string CountryName { get; set; }  = null!;
 
     [JsonPropertyName("units")]
-    public NhanhUnits Units { get; set; }
+    public NhanhUnits Units { get; set; }  = null!;
 
     [JsonPropertyName("combos")]
-    public List<NhanhCombo> Combos { get; set; }
+    public List<NhanhCombo> Combos { get; set; }  = null!;
 
     [JsonPropertyName("inventory")]
-    public NhanhInventory Inventory { get; set; }
+    public NhanhInventory Inventory { get; set; }  = null!;
 
     [JsonPropertyName("attributes")]
-    public List<NhanhAttribute> Attributes { get; set; }
+    public List<NhanhAttribute> Attributes { get; set; }  = null!;
 
     [JsonPropertyName("updatedAt")]
     public long UpdatedAt { get; set; } // Sử dụng long vì thời gian thường là Unix Timestamp
@@ -129,10 +129,10 @@ public class NhanhPrices
 public class NhanhImages
 {
     [JsonPropertyName("avatar")]
-    public string Avatar { get; set; }
+    public string Avatar { get; set; }  = null!;
 
     [JsonPropertyName("others")]
-    public List<string> Others { get; set; }
+    public List<string> Others { get; set; }  = null!;
 }
 
 public class NhanhWarranty
@@ -141,10 +141,10 @@ public class NhanhWarranty
     public int Month { get; set; }
 
     [JsonPropertyName("phone")]
-    public string Phone { get; set; }
+    public string Phone { get; set; }  = null!;
 
     [JsonPropertyName("address")]
-    public string Address { get; set; }
+    public string Address { get; set; }  = null!;
 }
 
 public class NhanhShipping
@@ -165,10 +165,10 @@ public class NhanhShipping
 public class NhanhUnits
 {
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string Name { get; set; }  = null!;
 
-    [JsonPropertyName("list")]
-    public List<NhanhUnitItem> List { get; set; }
+    [JsonPropertyName("list")] 
+    public List<NhanhUnitItem> List { get; set; }  = null!;
 }
 
 public class NhanhUnitItem
@@ -177,13 +177,13 @@ public class NhanhUnitItem
     public int Id { get; set; }
 
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string Name { get; set; }  = null!;
 
     [JsonPropertyName("quantity")]
     public double Quantity { get; set; }
 
     [JsonPropertyName("price")]
-    public NhanhUnitPrice Price { get; set; }
+    public NhanhUnitPrice Price { get; set; }  = null!;
 }
 
 public class NhanhUnitPrice
@@ -204,10 +204,10 @@ public class NhanhCombo
     public int Id { get; set; }
 
     [JsonPropertyName("code")]
-    public string Code { get; set; }
+    public string Code { get; set; }  = null!;
 
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string Name { get; set; }  = null!;
 
     [JsonPropertyName("quantity")]
     public decimal Quantity { get; set; }
@@ -234,10 +234,10 @@ public class NhanhInventory
     public double Available { get; set; }
 
     [JsonPropertyName("warranty")]
-    public NhanhInventoryWarranty Warranty { get; set; }
+    public NhanhInventoryWarranty Warranty { get; set; }  = null!;
 
     [JsonPropertyName("depots")]
-    public List<NhanhDepot> Depots { get; set; }
+    public List<NhanhDepot> Depots { get; set; }  = null!;
 }
 
 public class NhanhInventoryWarranty
@@ -273,8 +273,8 @@ public class NhanhDepot
     public double Available { get; set; }
 
     [JsonPropertyName("warranty")]
-    public NhanhInventoryWarranty Warranty { get; set; }
-}
+    public NhanhInventoryWarranty Warranty { get; set; }  = null!;
+} 
 
 public class NhanhAttribute
 {
@@ -282,19 +282,19 @@ public class NhanhAttribute
     public int Id { get; set; }
 
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string Name { get; set; }  = null!;
 
     [JsonPropertyName("nameOther")]
-    public string NameOther { get; set; }
+    public string NameOther { get; set; }  = null!;
 
     [JsonPropertyName("value")]
-    public string Value { get; set; }
+    public string Value { get; set; }  = null!;
 
     [JsonPropertyName("code")]
-    public string Code { get; set; }
+    public string Code { get; set; }  = null!;
 
     [JsonPropertyName("codeOther")]
-    public string CodeOther { get; set; }
+    public string CodeOther { get; set; }  = null!;
 }
 
 /////////////

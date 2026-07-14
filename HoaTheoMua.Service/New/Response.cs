@@ -10,7 +10,7 @@ public class NewResponse
     public int ViewCount { get; set; }
     public string? PictureUrl { get; set; }
     public string? slug { get; set; }
-    public string Status { get; set; }
+    public string Status { get; set; } = null!;
     public required UserResponse User { get; set; }
     public required List<CategoryResponse> Categories { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
@@ -40,7 +40,7 @@ public class NewResponseV2
     public int ViewCount { get; set; }
     public string? PictureUrl { get; set; }
     public string? slug { get; set; }
-    public string Status { get; set; }
+    public string Status { get; set; }  = null!;
     public Guid UserId { get; set; }
     public List<Guid> CategoryIds { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; }

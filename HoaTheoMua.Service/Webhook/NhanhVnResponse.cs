@@ -8,5 +8,5 @@ public class OrderData
     public int Id { get; set; } // ID đơn hàng  
 
     [JsonPropertyName("trackingUrl")]
-    public string TrackingUrl { get; set; } // Lịch trình đơn hàng
+    public string TrackingUrl { get; set; } = null!;// Lịch trình đơn hàng
 }

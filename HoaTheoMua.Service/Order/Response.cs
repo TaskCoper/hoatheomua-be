@@ -10,8 +10,8 @@ public class Response
     public class GetOrderResponse
     {
         public Guid OrderId { get; set; }
-        public string Status { get; set; }
-        public string TrackNumber { get; set; }
+        public string Status { get; set; } = null!;
+        public string TrackNumber { get; set; } = null!;
         //public int? NhanhOrderId { get; set; } 
         //public string NhanhTrackingUrl { get; set; } = string.Empty;
         public string AhahaMoveOrderId { get; set; } = string.Empty;
@@ -35,8 +35,8 @@ public class Response
     public class GetOrderByIdResponse
     {
         public Guid OrderId { get; set; }
-        public string Status { get; set; }
-        public string TrackNumber { get; set; }
+        public string Status { get; set; } = null!;
+        public string TrackNumber { get; set; } = null!;
        // public int? NhanhOrderId { get; set; } 
        // public string? NhanhTrackingUrl { get; set; } = string.Empty;
         public string? AhahaMoveOrderId { get; set; } = string.Empty;
@@ -100,58 +100,58 @@ public class Response
         public int Id { get; set; }
 
         [JsonPropertyName("name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
     }
     
     public class TaxcodeResponse
     {
         [JsonPropertyName("code")]
-        public string Code { get; set; }
+        public string Code { get; set; } = null!;
 
         [JsonPropertyName("desc")]
-        public string Desc { get; set; }
+        public string Desc { get; set; } = null!;
 
         [JsonPropertyName("data")]
-        public CompanyData Data { get; set; }
+        public CompanyData Data { get; set; } = null!;
 
         [JsonPropertyName("metadata")]
-        public Metadata Metadata { get; set; }
+        public Metadata Metadata { get; set; } = null!;
     }
 
     public class CompanyData
     {
         [JsonPropertyName("id")]
-        public string Id { get; set; }
+        public string Id { get; set; } = null!;
 
         [JsonPropertyName("name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
 
         [JsonPropertyName("internationalName")]
-        public string InternationalName { get; set; }
+        public string InternationalName { get; set; } = null!;
 
         [JsonPropertyName("shortName")]
-        public string ShortName { get; set; }
+        public string ShortName { get; set; } = null!;
 
         [JsonPropertyName("address")]
-        public string Address { get; set; }
+        public string Address { get; set; } = null!;
 
         [JsonPropertyName("status")]
-        public string Status { get; set; }
+        public string Status { get; set; } = null!;
     }
 
     public class Metadata
     {
         [JsonPropertyName("disclaimer")]
-        public string Disclaimer { get; set; }
+        public string Disclaimer { get; set; } = null!;
 
         [JsonPropertyName("source")]
-        public string Source { get; set; }
+        public string Source { get; set; } = null!;
 
         [JsonPropertyName("updatedAt")]
         public DateTime UpdatedAt { get; set; }
 
         [JsonPropertyName("contact")]
-        public string Contact { get; set; }
+        public string Contact { get; set; } = null!;
     }
     
 }

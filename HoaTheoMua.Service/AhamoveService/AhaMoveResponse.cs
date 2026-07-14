@@ -1,16 +1,12 @@
 ﻿using System.Text.Json.Nodes;
-
-namespace HoaTheoMua.Service.AhaMoveService;
-
-using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
+namespace HoaTheoMua.Service.AhamoveService;
 
- public class ServiceDetailsResponse
+public class ServiceDetailsResponse
     {
         [JsonPropertyName("_id")]
-        public string Id { get; set; }
+        public string Id { get; set; } = null!;
 
         [JsonPropertyName("enable")]
         public bool? Enable { get; set; }
@@ -19,31 +15,31 @@ using System.Text.Json.Serialization;
         public int? Order { get; set; }
 
         [JsonPropertyName("city_id")]
-        public string CityId { get; set; }
+        public string CityId { get; set; } = null!;
 
         [JsonPropertyName("name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
 
         [JsonPropertyName("name_vi_vn")]
-        public string NameViVn { get; set; }
+        public string NameViVn { get; set; } = null!;
 
         [JsonPropertyName("name_en_us")]
-        public string NameEnUs { get; set; }
+        public string NameEnUs { get; set; } = null!;
 
         [JsonPropertyName("icon_url")]
-        public string IconUrl { get; set; }
+        public string IconUrl { get; set; } = null!;
 
         [JsonPropertyName("map_icon_url")]
-        public string MapIconUrl { get; set; }
+        public string MapIconUrl { get; set; } = null!;
 
         [JsonPropertyName("distance_fee")]
-        public string DistanceFee { get; set; }
+        public string DistanceFee { get; set; } = null!;
 
         [JsonPropertyName("partner_distance_fee")]
-        public string PartnerDistanceFee { get; set; }
+        public string PartnerDistanceFee { get; set; } = null!;
 
         [JsonPropertyName("commission_type")]
-        public string CommissionType { get; set; }
+        public string CommissionType { get; set; } = null!;
 
         [JsonPropertyName("commission_value")]
         public double? CommissionValue { get; set; }
@@ -100,52 +96,52 @@ using System.Text.Json.Serialization;
         public int? MaxConcurrentOrders { get; set; }
 
         [JsonPropertyName("fee_description_en_us")]
-        public string FeeDescriptionEnUs { get; set; }
+        public string FeeDescriptionEnUs { get; set; } = null!;
 
         [JsonPropertyName("description_en_us")]
-        public string DescriptionEnUs { get; set; }
+        public string DescriptionEnUs { get; set; } = null!;
 
         [JsonPropertyName("description_vi_vn")]
-        public string DescriptionViVn { get; set; }
+        public string DescriptionViVn { get; set; } = null!;
 
         [JsonPropertyName("fee_description_vi_vn")]
-        public string FeeDescriptionViVn { get; set; }
+        public string FeeDescriptionViVn { get; set; } = null!;
 
         [JsonPropertyName("parent_id")]
-        public string ParentId { get; set; }
+        public string ParentId { get; set; } = null!;
 
         [JsonPropertyName("supplier_description")]
-        public string SupplierDescription { get; set; }
+        public string SupplierDescription { get; set; } = null!;
 
         [JsonPropertyName("notify_package_return")]
         public bool? NotifyPackageReturn { get; set; }
 
         [JsonPropertyName("uniform_verify_message_vi_vn")]
-        public string UniformVerifyMessageViVn { get; set; }
+        public string UniformVerifyMessageViVn { get; set; } = null!;
 
         [JsonPropertyName("uniform_verify_message_en_us")]
-        public string UniformVerifyMessageEnUs { get; set; }
+        public string UniformVerifyMessageEnUs { get; set; } = null!;
 
         [JsonPropertyName("note")]
-        public string Note { get; set; }
+        public string Note { get; set; } = null!;
 
         [JsonPropertyName("request_list")]
-        public string RequestList { get; set; }
+        public string RequestList { get; set; } = null!;
 
         [JsonPropertyName("cross_service")]
-        public CrossService CrossService { get; set; }
+        public CrossService CrossService { get; set; } = null!;
 
         [JsonPropertyName("delivery_type")]
-        public string DeliveryType { get; set; }
+        public string DeliveryType { get; set; } = null!;
 
         [JsonPropertyName("pool_min_score")]
         public int? PoolMinScore { get; set; }
 
         [JsonPropertyName("redirect_url")]
-        public string RedirectUrl { get; set; }
+        public string RedirectUrl { get; set; } = null!;
 
         [JsonPropertyName("redirect_service_id")]
-        public string RedirectServiceId { get; set; }
+        public string RedirectServiceId { get; set; } = null!;
 
         [JsonPropertyName("require_redirect")]
         public bool? RequireRedirect { get; set; }
@@ -154,13 +150,13 @@ using System.Text.Json.Serialization;
         public bool? SetIdleStatusWhenCreatingOrder { get; set; }
 
         [JsonPropertyName("distance_fee_v3")]
-        public DistanceFeeV3 DistanceFeeV3 { get; set; }
+        public DistanceFeeV3 DistanceFeeV3 { get; set; } = null!;
 
         [JsonPropertyName("partner_distance_fee_v3")]
-        public object PartnerDistanceFeeV3 { get; set; }
+        public object PartnerDistanceFeeV3 { get; set; } = null!;
 
         [JsonPropertyName("cod_commission")]
-        public CodCommission CodCommission { get; set; }
+        public CodCommission CodCommission { get; set; } = null!;
 
         [JsonPropertyName("pending_period")]
         public int? PendingPeriod { get; set; }
@@ -175,22 +171,22 @@ using System.Text.Json.Serialization;
         public bool? LimitCall { get; set; }
 
         [JsonPropertyName("RouteAPIUrl")]
-        public string RouteAPIUrl { get; set; }
+        public string RouteAPIUrl { get; set; } = null!;
 
         [JsonPropertyName("is_saas")]
         public bool? IsSaas { get; set; }
 
         [JsonPropertyName("group_name_en_us")]
-        public string GroupNameEnUs { get; set; }
+        public string GroupNameEnUs { get; set; } = null!;
 
         [JsonPropertyName("group_name_vi_vn")]
-        public string GroupNameViVn { get; set; }
+        public string GroupNameViVn { get; set; } = null!;
 
         [JsonPropertyName("group_id")]
-        public string GroupId { get; set; }
+        public string GroupId { get; set; } = null!;
 
         [JsonPropertyName("enable_platform")]
-        public List<string> EnablePlatform { get; set; }
+        public List<string> EnablePlatform { get; set; } = null!;
 
         [JsonPropertyName("StopFailed")]
         public int? StopFailed { get; set; }
@@ -199,16 +195,16 @@ using System.Text.Json.Serialization;
         public int? RebroadcastLimit { get; set; }
 
         [JsonPropertyName("cross_city")]
-        public CrossCity CrossCity { get; set; }
+        public CrossCity CrossCity { get; set; } = null!;
 
         [JsonPropertyName("available_districts")]
-        public List<string> AvailableDistricts { get; set; }
+        public List<string> AvailableDistricts { get; set; } = null!;
 
         [JsonPropertyName("max_cod")]
         public decimal? MaxCod { get; set; }
 
         [JsonPropertyName("saas_distance_fee_v3")]
-        public object SaasDistanceFeeV3 { get; set; }
+        public object SaasDistanceFeeV3 { get; set; } = null!;
 
         [JsonPropertyName("saas_stop_fee")]
         public decimal? SaasStopFee { get; set; }
@@ -229,7 +225,7 @@ using System.Text.Json.Serialization;
         public bool? RequirePof { get; set; }
 
         [JsonPropertyName("pof_type")]
-        public string PofType { get; set; }
+        public string PofType { get; set; } = null!;
 
         [JsonPropertyName("enable_upload_pof")]
         public bool? EnableUploadPof { get; set; }
@@ -238,36 +234,36 @@ using System.Text.Json.Serialization;
         public bool? RequirePop { get; set; }
 
         [JsonPropertyName("pop_type")]
-        public string PopType { get; set; }
+        public string PopType { get; set; } = null!;
 
         [JsonPropertyName("require_pod")]
         public bool? RequirePod { get; set; }
 
         [JsonPropertyName("pod_type")]
-        public string PodType { get; set; }
-
+        public string PodType { get; set; } = null!;
+ 
         [JsonPropertyName("hour_fee")]
-        public object HourFee { get; set; }
+        public object HourFee { get; set; } = null!;
 
         [JsonPropertyName("boundary_restricted")]
-        public BoundaryRestricted BoundaryRestricted { get; set; }
+        public BoundaryRestricted BoundaryRestricted { get; set; } = null!;
 
         // ✅ FIX: Đổi từ JsonArray → List<SpecialRequest> để deserialize đúng
         [JsonPropertyName("requests")]
-        public List<SpecialRequest> Requests { get; set; }
+        public List<SpecialRequest> Requests { get; set; } = null!;
 
         // ✅ THÊM MỚI: Có trong JSON nhưng class cũ thiếu
         [JsonPropertyName("vehicle_info")]
-        public VehicleInfo VehicleInfo { get; set; }
+        public VehicleInfo VehicleInfo { get; set; } = null!;
 
         [JsonPropertyName("weight_fee")]
-        public object WeightFee { get; set; }
+        public object WeightFee { get; set; } = null!;
 
         [JsonPropertyName("partner_weight_fee")]
-        public object PartnerWeightFee { get; set; }
+        public object PartnerWeightFee { get; set; } = null!;
 
         [JsonPropertyName("map_icon_3d")]
-        public MapIcon3d MapIcon3d { get; set; }
+        public MapIcon3d MapIcon3d { get; set; } = null!;
 
         [JsonPropertyName("is_tip_allowed")]
         public bool? IsTipAllowed { get; set; }
@@ -277,8 +273,8 @@ using System.Text.Json.Serialization;
 
         // key là "0"–"6" (ngày trong tuần), value là list surge
         [JsonPropertyName("surge_hours")]
-        public Dictionary<string, List<SurgeHour>> SurgeHours { get; set; }
-
+        public Dictionary<string, List<SurgeHour>> SurgeHours { get; set; } = null!;
+ 
         [JsonPropertyName("partner_stop_fee")]
         public decimal? PartnerStopFee { get; set; }
 
@@ -287,10 +283,10 @@ using System.Text.Json.Serialization;
 
         // key là trạng thái đơn (vd: "ACCEPTED"), value là số giây
         [JsonPropertyName("user_cancellation_window_in_seconds")]
-        public Dictionary<string, int> UserCancellationWindowInSeconds { get; set; }
+        public Dictionary<string, int> UserCancellationWindowInSeconds { get; set; } = null!;
 
         [JsonPropertyName("surge_rate_by_days_from_booking")]
-        public object SurgeRateByDaysFromBooking { get; set; }
+        public object SurgeRateByDaysFromBooking { get; set; } = null!;
     }
 
     // =====================================================================
@@ -303,7 +299,7 @@ using System.Text.Json.Serialization;
         public bool? Enable { get; set; }
 
         [JsonPropertyName("services")]
-        public List<string> Services { get; set; }
+        public List<string> Services { get; set; } = null!;
     }
 
     public class CrossCity
@@ -312,16 +308,16 @@ using System.Text.Json.Serialization;
         public bool? Enable { get; set; }
 
         [JsonPropertyName("cities")]
-        public List<string> Cities { get; set; }
+        public List<string> Cities { get; set; } = null!;
     }
 
     public class DistanceFeeV3
     {
         [JsonPropertyName("blocks")]
-        public List<FeeBlock> Blocks { get; set; }
+        public List<FeeBlock> Blocks { get; set; } = null!;
 
         [JsonPropertyName("hour_rates")]
-        public List<HourRate> HourRates { get; set; }
+        public List<HourRate> HourRates { get; set; } = null!;
     }
 
     public class FeeBlock
@@ -361,7 +357,7 @@ using System.Text.Json.Serialization;
 
         // null hoặc array of CodCommissionBlock — dùng JsonArray cho an toàn
         [JsonPropertyName("blocks")]
-        public JsonArray Blocks { get; set; }
+        public JsonArray Blocks { get; set; } = null!;
     }
 
     public class CodCommissionBlock
@@ -373,7 +369,7 @@ using System.Text.Json.Serialization;
         public decimal? To { get; set; }
 
         [JsonPropertyName("type")]
-        public string Type { get; set; }
+        public string Type { get; set; } = null!;
 
         [JsonPropertyName("value")]
         public double? Value { get; set; }
@@ -385,11 +381,11 @@ using System.Text.Json.Serialization;
     public class BoundaryRestricted
     {
         [JsonPropertyName("type")]
-        public string Type { get; set; }
+        public string Type { get; set; } = null!;
 
         // Mảng lồng nhau phức tạp — giữ JsonArray
         [JsonPropertyName("coordinates")]
-        public JsonArray Coordinates { get; set; }
+        public JsonArray Coordinates { get; set; } = null!;
     }
 
     public class VehicleInfo
@@ -410,7 +406,7 @@ using System.Text.Json.Serialization;
     public class MapIcon3d
     {
         [JsonPropertyName("url")]
-        public string Url { get; set; }
+        public string Url { get; set; } = null!;
 
         [JsonPropertyName("sprite_size")]
         public int? SpriteSize { get; set; }
@@ -419,10 +415,10 @@ using System.Text.Json.Serialization;
         public int? SpriteCount { get; set; }
 
         [JsonPropertyName("original_icon_url")]
-        public string OriginalIconUrl { get; set; }
+        public string OriginalIconUrl { get; set; } = null!;
 
         [JsonPropertyName("ads_icon_url")]
-        public string AdsIconUrl { get; set; }
+        public string AdsIconUrl { get; set; } = null!;
 
         [JsonPropertyName("ads_icon_size")]
         public int? AdsIconSize { get; set; }
@@ -437,7 +433,7 @@ using System.Text.Json.Serialization;
         public int? EndTime { get; set; }
 
         [JsonPropertyName("surge_type")]
-        public string SurgeType { get; set; }
+        public string SurgeType { get; set; } = null!;
 
         [JsonPropertyName("surge_value")]
         public decimal? SurgeValue { get; set; }
@@ -449,34 +445,34 @@ using System.Text.Json.Serialization;
     public class SpecialRequest
     {
         [JsonPropertyName("_id")]
-        public string Id { get; set; }
+        public string Id { get; set; } = null!;
 
         [JsonPropertyName("description")]
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
 
         [JsonPropertyName("description_en_us")]
-        public string DescriptionEnUs { get; set; }
+        public string DescriptionEnUs { get; set; } = null!;
 
         [JsonPropertyName("description_vi_vn")]
-        public string DescriptionViVn { get; set; }
+        public string DescriptionViVn { get; set; } = null!;
 
         [JsonPropertyName("enable")]
         public bool Enable { get; set; }
 
         [JsonPropertyName("icon_url")]
-        public string IconUrl { get; set; }
+        public string IconUrl { get; set; } = null!;
 
         [JsonPropertyName("img_url")]
-        public string ImgUrl { get; set; }
+        public string ImgUrl { get; set; } = null!;
 
         [JsonPropertyName("name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
 
         [JsonPropertyName("name_en_us")]
-        public string NameEnUs { get; set; }
+        public string NameEnUs { get; set; } = null!;
 
         [JsonPropertyName("name_vi_vn")]
-        public string NameViVn { get; set; }
+        public string NameViVn { get; set; } = null!;
 
         [JsonPropertyName("order")]
         public int Order { get; set; }
@@ -488,17 +484,17 @@ using System.Text.Json.Serialization;
         public decimal Price { get; set; }
 
         [JsonPropertyName("service_id")]
-        public string ServiceId { get; set; }
+        public string ServiceId { get; set; } = null!;
 
         // "BOOLEAN" | "TIER" | "COD_COMMISSION" | "COD_INSURANCE" | "INPUT" | "PER_UNIT" | "COMMISSION_DISTANCE_PERCENTAGE"
         [JsonPropertyName("type")]
-        public string Type { get; set; }
+        public string Type { get; set; } = null!;
 
         [JsonPropertyName("device_types")]
-        public List<string> DeviceTypes { get; set; }
+        public List<string> DeviceTypes { get; set; } = null!;
 
         [JsonPropertyName("service_group_id")]
-        public string ServiceGroupId { get; set; }
+        public string ServiceGroupId { get; set; } = null!;
 
         [JsonPropertyName("transfer_cod")]
         public bool TransferCod { get; set; }
@@ -513,30 +509,30 @@ using System.Text.Json.Serialization;
         public int? AppliedStpNum { get; set; }
 
         // null hoặc object tùy loại request — giữ object
-        [JsonPropertyName("none_cod_price_blocks")]
-        public object NoneCodPriceBlocks { get; set; }
+        [JsonPropertyName("none_cod_price_blocks")] 
+        public object NoneCodPriceBlocks { get; set; } = null!;
 
         [JsonPropertyName("subtype")]
-        public string Subtype { get; set; }
+        public string Subtype { get; set; } = null!;
 
         [JsonPropertyName("max_pod")]
         public decimal? MaxPod { get; set; }
 
         [JsonPropertyName("cod_commission")]
-        public CodCommission CodCommission { get; set; }
+        public CodCommission CodCommission { get; set; } = null!;
 
         [JsonPropertyName("group_id")]
-        public string GroupId { get; set; }
+        public string GroupId { get; set; } = null!;
 
         // Chỉ có khi type = "TIER"
         [JsonPropertyName("tier_list")]
-        public List<TierItem> TierList { get; set; }
+        public List<TierItem> TierList { get; set; } = null!;
 
         [JsonPropertyName("support_remarks")]
         public bool? SupportRemarks { get; set; }
 
         [JsonPropertyName("supplier_description_url")]
-        public string SupplierDescriptionUrl { get; set; }
+        public string SupplierDescriptionUrl { get; set; } = null!;
 
         [JsonPropertyName("no_commission")]
         public bool? NoCommission { get; set; }
@@ -552,24 +548,24 @@ using System.Text.Json.Serialization;
         public bool? SendSms { get; set; }
 
         [JsonPropertyName("sms_template_v3")]
-        public string SmsTemplateV3 { get; set; }
+        public string SmsTemplateV3 { get; set; } = null!;
 
         [JsonPropertyName("sms_demo")]
-        public string SmsDemo { get; set; }
+        public string SmsDemo { get; set; } = null!;
 
         // Chỉ có ở SGN-BIKE-INSURANCE
         [JsonPropertyName("price_blocks")]
-        public List<InsurancePriceBlock> PriceBlocks { get; set; }
+        public List<InsurancePriceBlock> PriceBlocks { get; set; } = null!;
 
         [JsonPropertyName("description_url")]
-        public string DescriptionUrl { get; set; }
+        public string DescriptionUrl { get; set; } = null!;
 
         [JsonPropertyName("benefit_url")]
-        public string BenefitUrl { get; set; }
+        public string BenefitUrl { get; set; } = null!;
 
         // Chỉ có ở SGN-BIKE-FRAGILE
         [JsonPropertyName("options")]
-        public List<FragileOption> Options { get; set; }
+        public List<FragileOption> Options { get; set; } = null!;
 
         [JsonPropertyName("max_distance")]
         public long? MaxDistance { get; set; }
@@ -579,13 +575,13 @@ using System.Text.Json.Serialization;
         public bool? RequirePod { get; set; }
 
         [JsonPropertyName("pod_type")]
-        public string PodType { get; set; }
+        public string PodType { get; set; } = null!;
 
         [JsonPropertyName("require_por")]
         public bool? RequirePor { get; set; }
 
         [JsonPropertyName("por_type")]
-        public string PorType { get; set; }
+        public string PorType { get; set; } = null!;
 
         [JsonPropertyName("delivery_option")]
         public bool? DeliveryOption { get; set; }
@@ -594,13 +590,13 @@ using System.Text.Json.Serialization;
     public class TierItem
     {
         [JsonPropertyName("code")]
-        public string Code { get; set; }
+        public string Code { get; set; } = null!;
 
         [JsonPropertyName("name_vi_vn")]
-        public string NameViVn { get; set; }
+        public string NameViVn { get; set; } = null!;
 
         [JsonPropertyName("name_en_us")]
-        public string NameEnUs { get; set; }
+        public string NameEnUs { get; set; } = null!;
 
         [JsonPropertyName("selectable")]
         public bool Selectable { get; set; }
@@ -609,19 +605,19 @@ using System.Text.Json.Serialization;
         public decimal Price { get; set; }
 
         [JsonPropertyName("price_description_vi_vn")]
-        public string PriceDescriptionViVn { get; set; }
+        public string PriceDescriptionViVn { get; set; } = null!;
 
         [JsonPropertyName("price_description_en_us")]
-        public string PriceDescriptionEnUs { get; set; }
-
+        public string PriceDescriptionEnUs { get; set; } = null!;
+ 
         [JsonPropertyName("description_vi_vn")]
-        public string DescriptionViVn { get; set; }
+        public string DescriptionViVn { get; set; } = null!;
 
         [JsonPropertyName("description_en_us")]
-        public string DescriptionEnUs { get; set; }
+        public string DescriptionEnUs { get; set; } = null!;
 
         [JsonPropertyName("img_url")]
-        public string ImgUrl { get; set; }
+        public string ImgUrl { get; set; } = null!;
     }
 
     public class InsurancePriceBlock
@@ -636,7 +632,7 @@ using System.Text.Json.Serialization;
         public decimal? Price { get; set; }
 
         [JsonPropertyName("type")]
-        public string Type { get; set; }
+        public string Type { get; set; } = null!;
 
         [JsonPropertyName("value")]
         public double? Value { get; set; }
@@ -645,13 +641,13 @@ using System.Text.Json.Serialization;
     public class FragileOption
     {
         [JsonPropertyName("code")]
-        public string Code { get; set; }
+        public string Code { get; set; } = null!;
 
         [JsonPropertyName("name_vi_vn")]
-        public string NameViVn { get; set; }
+        public string NameViVn { get; set; } = null!;
 
         [JsonPropertyName("name_en_us")]
-        public string NameEnUs { get; set; }
+        public string NameEnUs { get; set; } = null!;
 
         [JsonPropertyName("selectable")]
         public bool Selectable { get; set; }
@@ -660,10 +656,10 @@ using System.Text.Json.Serialization;
         public decimal Price { get; set; }
 
         [JsonPropertyName("short_name_vi_vn")]
-        public string ShortNameViVn { get; set; }
+        public string ShortNameViVn { get; set; } = null!;
 
         [JsonPropertyName("short_name_en_us")]
-        public string ShortNameEnUs { get; set; }
+        public string ShortNameEnUs { get; set; } = null!;
 
         [JsonPropertyName("need_user_input")]
         public bool? NeedUserInput { get; set; }
