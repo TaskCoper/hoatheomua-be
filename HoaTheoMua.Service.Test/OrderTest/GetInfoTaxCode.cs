@@ -66,7 +66,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var currentUser = new Mock<ICurrentUserService>().Object;
             var productService = new Mock<ProductService>().Object;
 
-            return new OrderServiceImpl(CreateMockDbContext(), currentUser, httpClient, productService, mockConfig.Object);
+            return new OrderServiceImpl(CreateMockDbContext(), currentUser, httpClient, productService, mockConfig.Object, new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
         }
         
         // HAPPY CASE: VietQR trả về HTTP 200, code "00" và có data

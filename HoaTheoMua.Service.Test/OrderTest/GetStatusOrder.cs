@@ -83,7 +83,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 currentUser,
                 new HttpClient(),
                 mockProductService.Object,
-                mockConfig.Object);
+                mockConfig.Object,
+                new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
         }
 
         private static ICurrentUserService CreateMockCurrentUserService(Guid userId, bool isVerified = true)

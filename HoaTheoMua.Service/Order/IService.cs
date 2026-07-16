@@ -1,3 +1,4 @@
+using HoaTheoMua.Service.BaoKim;
 using HoaTheoMua.Service.Models;
 
 namespace HoaTheoMua.Service.Order;
@@ -10,7 +11,7 @@ public interface IService
     
     //--------------------
     Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize);
-    Task<string> CreateOrder(Request.CreateOrderRequest request);
+    Task<CreateOrderResponse> CreateOrder(Request.CreateOrderRequest request);
     Task<BaseResponse> GetOrderById (Guid id);
     Task<string> GetStatusOrder(Guid id);
     

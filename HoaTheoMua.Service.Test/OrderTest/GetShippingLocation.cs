@@ -53,7 +53,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 new Mock<ICurrentUserService>().Object,
                 httpClient,
                 new Mock<HoaTheoMua.Service.Product.IService>().Object,
-                mockConfig.Object);
+                mockConfig.Object,
+                new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
         }
 
         private static HttpResponseMessage JsonResponse(string rawJson, HttpStatusCode statusCode = HttpStatusCode.OK)

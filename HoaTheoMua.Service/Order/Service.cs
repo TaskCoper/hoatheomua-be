@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.BaoKim;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -20,6 +21,7 @@ public class Service : IService
     private readonly ICurrentUserService _currentUser;
     private readonly HttpClient _httpClient;
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
+    private readonly HoaTheoMua.Service.BaoKim.IService _baoKimService;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
 
@@ -27,12 +29,13 @@ public class Service : IService
         ICurrentUserService currentUser,
         HttpClient httpClient,
         HoaTheoMua.Service.Product.IService serviceProduct,
-        IConfiguration configuration)
+        IConfiguration configuration, BaoKim.IService baoKimService)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
+        _baoKimService = baoKimService;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
@@ -84,8 +87,13 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
 
-    //------------
-    public async Task<string> CreateOrder(Request.CreateOrderRequest request)
+    // Nhanh.vn depot the shop ships from, used when the config value is absent.
+    private const int DefaultDepotId = 129255;
+
+    // VAT applied to the product subtotal when the buyer requests an invoice.
+    private const decimal VatRate = 0.08m;
+
+    public async Task<CreateOrderResponse> CreateOrder(Request.CreateOrderRequest request)
     {
         var userId = _currentUser.GetRequiredUserId();
 
@@ -95,249 +103,31 @@ public class Service : IService
             throw new UnauthorizedException("User is not verified");
         }
 
-        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
-        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
-        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
-        var depotId = configs.GetValue("nhanhvn.default_depot", 129255);
-        var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/list?appId=" + appId + "&businessId=" + businessId;
-        var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
-        {
-            Filters = new NhanhVnRequest.NhanhFilters()
-            {
-                Id = request.Items.Select(x => x.ItemId).ToList(),
-                Status = [1, 2]
-            },
-            Paginator = new NhanhVnRequest.NhanhPaginator()
-            {
-                Size = 50,
-                Sort = new Dictionary<string, string>()
-                {
-                    { "id", "desc" }
-                },
-                Next = new Dictionary<string, int>()
-                {
-                    { "id", 0 }
-                },
-            }
-        };
+        var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var depotId = nhanhConfigs.GetValue("nhanhvn.default_depot", DefaultDepotId);
 
-        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
-        nhanhHttpRequest.Headers.Add("Authorization", token);
-        nhanhHttpRequest.Content = JsonContent.Create(nhanhVnProductRequest);
+        var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
 
-        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
+        // Requested quantity keyed by product id — reused for pricing and order details.
+        var quantityByItemId = request.Items.ToDictionary(x => x.ItemId, x => x.Number);
 
-        NhanhProductListResponse? productNhanhResult = null;
-
-        if (nhanhVnResponse.IsSuccessStatusCode)
-        {
-            productNhanhResult = await nhanhVnResponse.Content.ReadFromJsonAsync<NhanhProductListResponse>();
-        }
-        else
-        {
-            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
-        }
-
-        if (productNhanhResult == null || productNhanhResult.Data == null)
-        {
-            throw new BadRequestException("NhanhVnResponse returned null or empty data");
-        }
-
-        // foreach (var x in productNhanhResult.Data)
-        // {
-        //     var userItem = request.Items.First(item => item.ItemId == x.Id);
-        //     //var targetAvailable = x.Inventory.Available;
-        //     
-        //     var targetAvailable =  _serviceProduct.GetProductDetails(userItem);
-        //
-        //     
-        //     Console.WriteLine("Hhuhu: " + targetAvailable);
-        //
-        //     if (userItem.Number > targetAvailable)
-        //     {
-        //         throw new BadRequestException($"Sản phẩm '{x.Name}' không đủ hàng (Yêu cầu: {userItem.Number}, Kho có: {targetAvailable})");
-        //     }
-        //     
-        //     
-        // }
-
-        foreach (var item in request.Items)
-        {
-            var productDetailRequest = new HoaTheoMua.Service.Product.Request.ProductDetailRequest
-            {
-                Filters = new HoaTheoMua.Service.Product.Request.ProductDetailFilters
-                {
-                    Id = item.ItemId.ToString()
-                }
-            };
-
-            var objectItems = await _serviceProduct.GetProductDetails(productDetailRequest);
-
-            var json = JsonConvert.SerializeObject(objectItems);
-            var jObject = JObject.Parse(json);
-
-            var depots = jObject["Data"]?["Inventory"]?["Depots"] as JArray;
-
-            if (depots == null || depots.Count == 0)
-            {
-                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho");
-            }
-
-            var targetDepot = depots.FirstOrDefault(d => (int?)d["Id"] == depotId);
-
-            if (targetDepot == null)
-            {
-                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot 129255");
-            }
-
-            double available = (double?)targetDepot["Available"] ?? 0;
-
-            if (item.Number > available)
-            {
-                throw new BadRequestException($"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {available})");
-            }
-        }
-
-        var getItemsInProduct = productNhanhResult.Data
-            .Select(x => x.Id)
-            .ToHashSet();
-
-        var existItems = request.Items.FirstOrDefault(items => !getItemsInProduct.Contains(items.ItemId));
-
-        if (existItems != null)
+        // Every requested item must exist in the catalog before we check stock or shipping.
+        var catalogIds = products.Select(x => x.Id).ToHashSet();
+        if (request.Items.Any(x => !catalogIds.Contains(x.ItemId)))
         {
             throw new BadRequestException("Đơn hàng không tồn tại trong hệ thống");
         }
 
-        var dictionaryIds = request.Items.ToDictionary(x => x.ItemId, x => x.Number);
-
-        var itemsRequest = productNhanhResult.Data.Select(
-            x => new AhaMoveRequest.AhamoveItem()
-            {
-                Id = x.Id.ToString(),
-                Name = x.Name,
-                Price = (int)x.Prices.Retail,
-                Num = dictionaryIds[x.Id]
-            }
-        ).ToList();
-
-        var packageDetailRequest = productNhanhResult.Data.Select(
-            x => new AhaMoveRequest.PackageDetail()
-            {
-                Height = x.Shipping.Height,
-                Weight = x.Shipping.Weight,
-                Length = x.Shipping.Length,
-                Width = x.Shipping.Width,
-                Description = x.Name
-            }
-        ).ToList();
+        await EnsureItemsInStockAsync(request.Items, depotId);
 
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
 
-        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        var totalShippingFee = await EstimateShippingFeeAsync(request, products, quantityByItemId, companyAddress);
 
-        var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
-        {
-            OrderTime = request.OrderTime,
-            IdleUntil = request.OrderTime > 0 ? request.OrderTime : 0,
-            // OrderTime = 0,
-            Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
-            {
-                new AhaMoveRequest.AhamoveLocationPoint() // Thang nay cua SHop minh, Lay tu DB ra
-                {
-                    Latitude = companyAddress?.Latitude ?? 0,
-                    Longitude = companyAddress?.Longitude ?? 0,
-                    Address = companyAddress?.AddressLine ?? "",
-                    ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
-                    FullName = companyAddress!.FullName,
-                    Phone = companyAddress.PhoneNumber,
-                    Remarks = companyAddress.Remarks!,
-                },
-                new AhaMoveRequest.AhamoveLocationPoint()
-                {
-                    Latitude =  request.Latitude,
-                    Longitude =  request.Longitude,
-                    Address = request.Address,
-                    ShortAddress =  request.ShortAddress,
-                    FullName =  request.FullName,
-                    Phone =  request.Phone,
-                    Remarks =  request.Remarks,
-                },
-            },
-            PaymentMethod = "CASH",
-            Remarks = request.Remarks,
-            Items = itemsRequest,
-            PackageDetail = packageDetailRequest,
-            Services = new List<AhaMoveRequest.ServiceRequest>()
-            {
-                new AhaMoveRequest.ServiceRequest()
-                {
-                    Id = "SGN-BIKE",
-                    Requests = new List<AhaMoveRequest.ItemsRequest>()
-                    {
-                        // new AhaMoveRequest.ItemsRequest()
-                        // {
-                        //     Id = "SGN-BIKE-SMS",
-                        // },
-                        // new AhaMoveRequest.ItemsRequest()
-                        // {
-                        //     Id = "SGN-BIKE-FRAGILE",
-                        // },
-                        // new AhaMoveRequest.ItemsRequest()
-                        // {
-                        //     Id = "SGN-BIKE-BULKY",
-                        //     TierCode = "TIER_2"
-                        // },
-                        new AhaMoveRequest.ItemsRequest()
-                        {
-                            Id = "SGN-BIKE-BAGA"
-                        },
-                    }
-                },
-            }
-        };
-        Console.WriteLine("BUG CHA PA: " + createRequest.OrderTime);
-        Console.WriteLine("BUG CHA PA: " + createRequest.IdleUntil);
-        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders/estimates";
-        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
-        var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
-        ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
-        ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
-
-        HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
-
-        List<ServiceResponse>? ahamoveResult = null;
-
-        if (ahamoveResponse.IsSuccessStatusCode)
-        {
-            ahamoveResult = await ahamoveResponse.Content.ReadFromJsonAsync<List<ServiceResponse>>();
-        }
-        else
-        {
-            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
-        }
-
-        if (ahamoveResult == null || ahamoveResult.Any() == false)
-        {
-            throw new BadRequestException("Ahamove returned null or empty data");
-        }
-
-        var totalShippingFee = ahamoveResult[0].Data.TotalFee;
-        //var totalProductFee = productNhanhResult.Data.Select(x => x.Prices.Retail).Sum();
-        var totalProductFee = productNhanhResult.Data.Sum(x =>
-            x.Prices.Retail * request.Items.First(item => item.ItemId.Equals(x.Id)).Number);
-
-        var vatFee = 0m;
-
-        if (!string.IsNullOrEmpty(request.TaxCode))
-        {
-            vatFee = totalProductFee * 0.08m;
-        }
+        var totalProductFee = products.Sum(x => x.Prices.Retail * quantityByItemId[x.Id]);
+        var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
 
         var newOrder = new Repository.Entity.Order()
         {
@@ -370,18 +160,16 @@ public class Service : IService
             ReceiptEmail = request.ReceiptEmail,
             IsExportInvoice = request.IsExportInvoice,
             InvoiceType = request.InvoiceType,
-
         };
 
-
-        var newOrderDetails = productNhanhResult.Data.Select(x => new OrderDetails
+        var newOrderDetails = products.Select(x => new OrderDetails
         {
             Id = Guid.NewGuid(),
             OrderId = newOrder.Id,
             Name = x.Name,
             ItemId = x.Id,
             Price = (int)x.Prices.Retail,
-            Number = request.Items.First(item => item.ItemId.Equals(x.Id)).Number,
+            Number = quantityByItemId[x.Id],
             Height = x.Shipping.Height,
             Weight = x.Shipping.Weight,
             Length = x.Shipping.Length,
@@ -389,11 +177,190 @@ public class Service : IService
             CreatedAt = DateTime.UtcNow,
         });
 
+        var baoKimTokenResponse = await _baoKimService.CreateAccessToken();
+
+        var createBaoKimOrderResponse = await _baoKimService.CreateOrder(
+            baoKimTokenResponse.Data.AccessToken,
+            newOrder, newOrderDetails);
+
         await _dbContext.Orders.AddAsync(newOrder);
         await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
         await _dbContext.SaveChangesAsync();
 
-        return newOrder.Id.ToString();
+        return createBaoKimOrderResponse.Data;
+    }
+
+    // Fetches the catalog rows for the requested items from Nhanh.vn.
+    private async Task<List<NhanhProductData>> FetchNhanhProductsAsync(
+        List<AhaMoveRequest.Items> items,
+        GroupConfig configs)
+    {
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl)
+                       + "/product/list?appId=" + appId + "&businessId=" + businessId;
+
+        var productListRequest = new NhanhVnRequest.NhanhProductListRequest()
+        {
+            Filters = new NhanhVnRequest.NhanhFilters()
+            {
+                Id = items.Select(x => x.ItemId).ToList(),
+                Status = [1, 2]
+            },
+            Paginator = new NhanhVnRequest.NhanhPaginator()
+            {
+                Size = 50,
+                Sort = new Dictionary<string, string>() { { "id", "desc" } },
+                Next = new Dictionary<string, int>() { { "id", 0 } },
+            }
+        };
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
+        httpRequest.Headers.Add("Authorization", token);
+        httpRequest.Content = JsonContent.Create(productListRequest);
+
+        using var response = await _httpClient.SendAsync(httpRequest);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new BadRequestException($"NhanhVn API HTTP Error ({response.StatusCode})");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<NhanhProductListResponse>();
+        if (result == null || result.Data == null)
+        {
+            throw new BadRequestException("NhanhVnResponse returned null or empty data");
+        }
+
+        return result.Data;
+    }
+
+    // Verifies every requested item has enough stock in the target depot.
+    private async Task EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
+    {
+        foreach (var item in items)
+        {
+            var productDetailRequest = new HoaTheoMua.Service.Product.Request.ProductDetailRequest
+            {
+                Filters = new HoaTheoMua.Service.Product.Request.ProductDetailFilters
+                {
+                    Id = item.ItemId.ToString()
+                }
+            };
+
+            var detail = await _serviceProduct.GetProductDetails(productDetailRequest);
+
+            var json = JsonConvert.SerializeObject(detail);
+            var depots = JObject.Parse(json)["Data"]?["Inventory"]?["Depots"] as JArray;
+
+            if (depots == null || depots.Count == 0)
+            {
+                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho");
+            }
+
+            var targetDepot = depots.FirstOrDefault(d => (int?)d["Id"] == depotId);
+            if (targetDepot == null)
+            {
+                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot {depotId}");
+            }
+
+            double available = (double?)targetDepot["Available"] ?? 0;
+            if (item.Number > available)
+            {
+                throw new BadRequestException($"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {available})");
+            }
+        }
+    }
+
+    // Calls Ahamove to estimate the shipping fee from the shop's warehouse to the buyer.
+    private async Task<decimal> EstimateShippingFeeAsync(
+        Request.CreateOrderRequest request,
+        List<NhanhProductData> products,
+        IReadOnlyDictionary<int, int> quantityByItemId,
+        Repository.Entity.CompanyAddress? companyAddress)
+    {
+        var itemsRequest = products.Select(x => new AhaMoveRequest.AhamoveItem()
+        {
+            Id = x.Id.ToString(),
+            Name = x.Name,
+            Price = (int)x.Prices.Retail,
+            Num = quantityByItemId[x.Id]
+        }).ToList();
+
+        var packageDetailRequest = products.Select(x => new AhaMoveRequest.PackageDetail()
+        {
+            Height = x.Shipping.Height,
+            Weight = x.Shipping.Weight,
+            Length = x.Shipping.Length,
+            Width = x.Shipping.Width,
+            Description = x.Name
+        }).ToList();
+
+        var estimateRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
+        {
+            OrderTime = request.OrderTime,
+            IdleUntil = request.OrderTime > 0 ? request.OrderTime : 0,
+            Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
+            {
+                new AhaMoveRequest.AhamoveLocationPoint() // Điểm lấy hàng: kho của shop, lấy từ DB.
+                {
+                    Latitude = companyAddress?.Latitude ?? 0,
+                    Longitude = companyAddress?.Longitude ?? 0,
+                    Address = companyAddress?.AddressLine ?? "",
+                    ShortAddress = (companyAddress?.AddressLine + ", " + companyAddress?.Ward + ", " + companyAddress?.City) ?? "",
+                    FullName = companyAddress!.FullName,
+                    Phone = companyAddress.PhoneNumber,
+                    Remarks = companyAddress.Remarks!,
+                },
+                new AhaMoveRequest.AhamoveLocationPoint()
+                {
+                    Latitude = request.Latitude,
+                    Longitude = request.Longitude,
+                    Address = request.Address,
+                    ShortAddress = request.ShortAddress,
+                    FullName = request.FullName,
+                    Phone = request.Phone,
+                    Remarks = request.Remarks,
+                },
+            },
+            PaymentMethod = "CASH",
+            Remarks = request.Remarks,
+            Items = itemsRequest,
+            PackageDetail = packageDetailRequest,
+            Services = new List<AhaMoveRequest.ServiceRequest>()
+            {
+                new AhaMoveRequest.ServiceRequest()
+                {
+                    Id = "SGN-BIKE",
+                    Requests = new List<AhaMoveRequest.ItemsRequest>()
+                    {
+                        new AhaMoveRequest.ItemsRequest() { Id = "SGN-BIKE-BAGA" },
+                    }
+                },
+            }
+        };
+
+        var ahamoveConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders/estimates";
+        var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
+        httpRequest.Headers.Add("Authorization", ahamoveToken);
+        httpRequest.Content = JsonContent.Create(estimateRequest);
+
+        using var response = await _httpClient.SendAsync(httpRequest);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new BadRequestException($"Ahamove API HTTP Error ({response.StatusCode})");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<List<ServiceResponse>>();
+        if (result == null || result.Count == 0)
+        {
+            throw new BadRequestException("Ahamove returned null or empty data");
+        }
+
+        return result[0].Data.TotalFee;
     }
 
     public async Task<BaseResponse> GetOrderById(Guid id)

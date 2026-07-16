@@ -162,7 +162,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return mockDbContext;
         }
 
-        private static OrderServiceImpl CreateService(AppDbContext dbContext, HttpClient httpClient, ICurrentUserService currentUser, ProductService productService)
+        private static OrderServiceImpl CreateService(AppDbContext dbContext, HttpClient httpClient, ICurrentUserService currentUser, ProductService productService, HoaTheoMua.Service.BaoKim.IService? baoKimService = null)
         {
             var mockConfig = new Mock<IConfiguration>();
             var mockConfigSection = new Mock<IConfigurationSection>();
@@ -174,7 +174,47 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 currentUser,
                 httpClient,
                 productService,
-                mockConfig.Object);
+                mockConfig.Object,
+                baoKimService ?? CreateMockBaoKimService());
+        }
+
+        // BaoKim is an injected dependency (not the shared HttpClient), so we mock it directly.
+        // Both calls return the success code (100) with a payment URL so CreateOrder completes.
+        private static HoaTheoMua.Service.BaoKim.IService CreateMockBaoKimService(
+            string paymentUrl = "https://pay.baokim.vn/checkout/abc",
+            string mrcOrderId = "MRC-001")
+        {
+            var mock = new Mock<HoaTheoMua.Service.BaoKim.IService>();
+
+            mock.Setup(x => x.CreateAccessToken())
+                .ReturnsAsync(new HoaTheoMua.Service.BaoKim.BaoKimResponse<HoaTheoMua.Service.BaoKim.TokenResponse>
+                {
+                    Code = 100,
+                    Message = "OK",
+                    Data = new HoaTheoMua.Service.BaoKim.TokenResponse
+                    {
+                        AccessToken = "test_access_token",
+                        TokenType = "Bearer"
+                    }
+                });
+
+            mock.Setup(x => x.CreateOrder(
+                    It.IsAny<string>(),
+                    It.IsAny<OrderEntity>(),
+                    It.IsAny<IEnumerable<OrderDetailEntity>>()))
+                .ReturnsAsync(new HoaTheoMua.Service.BaoKim.BaoKimResponse<HoaTheoMua.Service.BaoKim.CreateOrderResponse>
+                {
+                    Code = 100,
+                    Message = "OK",
+                    Data = new HoaTheoMua.Service.BaoKim.CreateOrderResponse
+                    {
+                        OrderId = 999,
+                        MrcOrderId = mrcOrderId,
+                        PaymentUrl = paymentUrl
+                    }
+                });
+
+            return mock.Object;
         }
 
         private static ICurrentUserService CreateMockCurrentUserService(Guid userId, bool isVerified = true)
@@ -294,7 +334,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             // Assert
             Assert.NotNull(result);
-            Assert.True(Guid.TryParse(result, out _));
+            Assert.Equal("https://pay.baokim.vn/checkout/abc", result.PaymentUrl);
+            Assert.Equal("MRC-001", result.MrcOrderId);
             Assert.Single(orders);
             Assert.Equal("Pending", orders[0].Status);
             Assert.Equal(100000m, orders[0].TotalFee); // product 50k + ship 50k

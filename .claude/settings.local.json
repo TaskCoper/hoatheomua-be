@@ -9,7 +9,10 @@
       "Bash(git --no-pager diff --stat -- HoaTheoMua.Service/)",
       "Bash(git --no-pager diff -- HoaTheoMua.Service/RecruitmentRequests/Service.cs HoaTheoMua.Service/Webhook/Service.cs)",
       "Bash(git --no-pager diff -w --stat -- HoaTheoMua.Service/Order/)",
-      "Bash(git --no-pager diff -w -- HoaTheoMua.Service/Order/Service.cs)"
+      "Bash(git --no-pager diff -w -- HoaTheoMua.Service/Order/Service.cs)",
+      "Bash(cd *)",
+      "Bash(python3 -c \"import json; print\\(json.load\\(open\\('HoaTheoMua.API/appsettings.Development.json'\\)\\)['BaoKimOption']['PrivateKey']\\)\")",
+      "Bash(openssl pkey *)"
     ]
   }
 }

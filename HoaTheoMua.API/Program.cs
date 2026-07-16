@@ -18,6 +18,7 @@ using AddressService = HoaTheoMua.Service.Address;
 using IService = HoaTheoMua.Service.AhamoveService.IService;
 using NhanhVnService = HoaTheoMua.Service.NhanhVnService;
 using Service = HoaTheoMua.Service.AhamoveService.Service;
+using BaoKimService = HoaTheoMua.Service.BaoKim;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -58,6 +59,7 @@ builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
 builder.Services.AddHttpClient<IService, Service>();
+builder.Services.AddHttpClient<BaoKimService.IService, BaoKimService.Service>();
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
 builder.Services.AddScoped<AddressService.IService, AddressService.Service>();

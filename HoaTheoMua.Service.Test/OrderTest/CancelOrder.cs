@@ -80,7 +80,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var currentUser = new Mock<ICurrentUserService>().Object;
             var productService = new Mock<ProductService>().Object;
 
-            return new OrderServiceImpl(dbContext, currentUser, httpClient, productService, mockConfig.Object);
+            return new OrderServiceImpl(dbContext, currentUser, httpClient, productService, mockConfig.Object, new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
         }
         
         // HAPPY CASE: Đơn đang Pending => hủy thành công, status đổi thành Cancelled
