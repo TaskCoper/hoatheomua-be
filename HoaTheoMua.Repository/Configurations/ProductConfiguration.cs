@@ -20,6 +20,12 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.ParentProductId)
             .HasMaxLength(100);
 
+        builder.Property(p => p.ParentProductCode)
+            .HasMaxLength(200);
+
+        builder.Property(p => p.ParentProductName)
+            .HasMaxLength(500);
+
         builder.Property(p => p.Barcode)
             .HasMaxLength(200);
 
@@ -30,6 +36,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasMaxLength(200);
 
         builder.Property(p => p.ProductName)
+            .HasMaxLength(500);
+
+        builder.Property(p => p.OtherName)
             .HasMaxLength(500);
 
         builder.Property(p => p.Unit)
@@ -53,14 +62,23 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.CategoryName)
             .HasMaxLength(300);
 
+        builder.Property(p => p.InternalCategoryCode)
+            .HasMaxLength(100);
+
         builder.Property(p => p.Brand)
             .HasMaxLength(200);
 
         builder.Property(p => p.Supplier)
             .HasMaxLength(500);
 
+        builder.Property(p => p.WarrantyAddress)
+            .HasMaxLength(1000);
+
         builder.Property(p => p.Slug)
             .HasMaxLength(500);
+
+        builder.Property(p => p.ProductLabel)
+            .HasMaxLength(300);
 
         builder.Property(p => p.PriceLabel)
             .HasMaxLength(100);
@@ -70,6 +88,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.Color)
             .HasMaxLength(100);
+
+        builder.Property(p => p.Origin)
+            .HasMaxLength(200);
 
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("now()");

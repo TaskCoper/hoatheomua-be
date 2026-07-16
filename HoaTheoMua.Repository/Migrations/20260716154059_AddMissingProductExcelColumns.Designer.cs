@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260713052202_MakeProductExcelMappingComplete")]
-    partial class MakeProductExcelMappingComplete
+    [Migration("20260716154059_AddMissingProductExcelColumns")]
+    partial class AddMissingProductExcelColumns
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -684,7 +684,13 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("DeliveringStock")
                         .HasColumnType("numeric");
 
+                    b.Property<decimal?>("Height")
+                        .HasColumnType("numeric");
+
                     b.Property<decimal?>("Held")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("HeldComponents")
                         .HasColumnType("numeric");
 
                     b.Property<decimal?>("ImportPrice")
@@ -700,8 +706,15 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("InternalCategoryCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<decimal?>("Length")
+                        .HasColumnType("numeric");
 
                     b.Property<DateTimeOffset?>("NhanhCreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -713,9 +726,25 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("OldPrice")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("Origin")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OtherName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ParentProductCode")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("ParentProductId")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ParentProductName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<decimal?>("PendingImportStock")
                         .HasColumnType("numeric");
@@ -736,6 +765,10 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("ProductCode")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ProductLabel")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
 
                     b.Property<string>("ProductName")
                         .HasMaxLength(500)
@@ -796,8 +829,15 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("WarehouseStock")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("WarrantyAddress")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<int?>("WarrantyMonths")
                         .HasColumnType("integer");
+
+                    b.Property<decimal?>("WarrantyStock")
+                        .HasColumnType("numeric");
 
                     b.Property<int?>("WebOrder")
                         .HasColumnType("integer");
@@ -818,6 +858,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<decimal?>("WholesalePriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Width")
                         .HasColumnType("numeric");
 
                     b.HasKey("Id");

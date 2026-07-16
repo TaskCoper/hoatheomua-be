@@ -8,10 +8,13 @@ public class Product : BaseEntity<Guid>, IAuditableEntity
 
     public string? NhanhProductId { get; set; }
     public string? ParentProductId { get; set; }
+    public string? ParentProductCode { get; set; }
+    public string? ParentProductName { get; set; }
     public string? Barcode { get; set; }
     public string? ProductType { get; set; }
     public string? ProductCode { get; set; }
     public string? ProductName { get; set; }
+    public string? OtherName { get; set; }
     public string? Unit { get; set; }
     public string? CoverImage { get; set; }
 
@@ -46,23 +49,32 @@ public class Product : BaseEntity<Guid>, IAuditableEntity
     public decimal? StockError { get; set; }
     public decimal? Held { get; set; }
     public decimal? AvailableForSale { get; set; }
+    public decimal? WarrantyStock { get; set; }
+    public decimal? HeldComponents { get; set; }
     public decimal? PendingImportStock { get; set; }
     public decimal? PreOrder { get; set; }
 
     public string? Status { get; set; }
     public string? CategoryCode { get; set; }
     public string? CategoryName { get; set; }
+    public string? InternalCategoryCode { get; set; }
     public string? Brand { get; set; }
     public string? Supplier { get; set; }
+    public string? WarrantyAddress { get; set; }
     public string? Slug { get; set; }
+    public decimal? Length { get; set; }
+    public decimal? Width { get; set; }
+    public decimal? Height { get; set; }
     public int? WebOrder { get; set; }
     public DateTimeOffset? NhanhCreatedAt { get; set; }
 
+    public string? ProductLabel { get; set; }
     public decimal? BranchPriceDuplicate { get; set; }
     public decimal? WholesaleBranchPriceDuplicate { get; set; }
     public string? PriceLabel { get; set; }
     public string? Size { get; set; }
     public string? Color { get; set; }
+    public string? Origin { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }

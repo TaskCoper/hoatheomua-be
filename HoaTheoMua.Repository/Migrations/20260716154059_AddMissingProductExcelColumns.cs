@@ -5,7 +5,7 @@
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class MakeProductExcelMappingComplete : Migration
+    public partial class AddMissingProductExcelColumns : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -62,7 +62,32 @@ namespace HoaTheoMua.Repository.Migrations
                 nullable: true);
 
             migrationBuilder.AddColumn<decimal>(
+                name: "Height",
+                table: "Products",
+                type: "numeric",
+                nullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "HeldComponents",
+                table: "Products",
+                type: "numeric",
+                nullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
                 name: "ImportVat",
+                table: "Products",
+                type: "numeric",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "InternalCategoryCode",
+                table: "Products",
+                type: "character varying(100)",
+                maxLength: 100,
+                nullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "Length",
                 table: "Products",
                 type: "numeric",
                 nullable: true);
@@ -71,6 +96,41 @@ namespace HoaTheoMua.Repository.Migrations
                 name: "OldPrice",
                 table: "Products",
                 type: "numeric",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "Origin",
+                table: "Products",
+                type: "character varying(200)",
+                maxLength: 200,
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "OtherName",
+                table: "Products",
+                type: "character varying(500)",
+                maxLength: 500,
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "ParentProductCode",
+                table: "Products",
+                type: "character varying(200)",
+                maxLength: 200,
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "ParentProductName",
+                table: "Products",
+                type: "character varying(500)",
+                maxLength: 500,
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "ProductLabel",
+                table: "Products",
+                type: "character varying(300)",
+                maxLength: 300,
                 nullable: true);
 
             migrationBuilder.AddColumn<int>(
@@ -98,6 +158,19 @@ namespace HoaTheoMua.Repository.Migrations
                 type: "numeric",
                 nullable: true);
 
+            migrationBuilder.AddColumn<string>(
+                name: "WarrantyAddress",
+                table: "Products",
+                type: "character varying(1000)",
+                maxLength: 1000,
+                nullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "WarrantyStock",
+                table: "Products",
+                type: "numeric",
+                nullable: true);
+
             migrationBuilder.AddColumn<int>(
                 name: "WebOrder",
                 table: "Products",
@@ -118,6 +191,12 @@ namespace HoaTheoMua.Repository.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "WholesaleBranchPriceWithVat",
+                table: "Products",
+                type: "numeric",
+                nullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "Width",
                 table: "Products",
                 type: "numeric",
                 nullable: true);
@@ -150,11 +229,47 @@ namespace HoaTheoMua.Repository.Migrations
                 table: "Products");
 
             migrationBuilder.DropColumn(
+                name: "Height",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "HeldComponents",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
                 name: "ImportVat",
                 table: "Products");
 
             migrationBuilder.DropColumn(
+                name: "InternalCategoryCode",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "Length",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
                 name: "OldPrice",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "Origin",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "OtherName",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "ParentProductCode",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "ParentProductName",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "ProductLabel",
                 table: "Products");
 
             migrationBuilder.DropColumn(
@@ -174,6 +289,14 @@ namespace HoaTheoMua.Repository.Migrations
                 table: "Products");
 
             migrationBuilder.DropColumn(
+                name: "WarrantyAddress",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "WarrantyStock",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
                 name: "WebOrder",
                 table: "Products");
 
@@ -187,6 +310,10 @@ namespace HoaTheoMua.Repository.Migrations
 
             migrationBuilder.DropColumn(
                 name: "WholesaleBranchPriceWithVat",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "Width",
                 table: "Products");
 
             migrationBuilder.AlterColumn<string>(
