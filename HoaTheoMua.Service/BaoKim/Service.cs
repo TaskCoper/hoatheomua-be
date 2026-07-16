@@ -95,7 +95,7 @@ public class Service : IService
                 Address = order.Address,
                 Gender = 1
             },
-            PaymentMethod = order.PaymentMethod
+            PaymentMethod = Repository.Enum.PaymentMethod.VA
         };
 
         // Serialize once, sign those exact bytes, then send the same string.
