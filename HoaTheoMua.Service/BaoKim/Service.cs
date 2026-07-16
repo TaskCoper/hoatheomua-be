@@ -116,14 +116,33 @@ public class Service : IService
             throw new BadRequestException($"BaoKim API HTTP Error ({(int)response.StatusCode}): {json}");
         }
 
-        var result = JsonSerializer.Deserialize<BaoKimResponse<CreateOrderResponse>>(json, SignedJsonOptions);
+        // Check the business code before strict deserialization: on a non-success code BaoKim's
+        // `data` payload is an error shape that lacks the required order fields, so parsing it into
+        // CreateOrderResponse would throw a raw 500 and mask the real reason the order was rejected.
+        using (var doc = JsonDocument.Parse(json))
+        {
+            var root = doc.RootElement;
+            var code = root.TryGetProperty("code", out var codeEl) ? codeEl.GetInt32() : int.MinValue;
+            if (code != BaoKimConstant.SuccessCode)
+            {
+                var message = root.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : null;
+                throw new BadRequestException($"BaoKim create order failed ({code}): {message}. Raw: {json}");
+            }
+        }
+
+        BaoKimResponse<CreateOrderResponse>? result;
+        try
+        {
+            result = JsonSerializer.Deserialize<BaoKimResponse<CreateOrderResponse>>(json, SignedJsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            throw new BadRequestException($"BaoKim create order returned an unexpected payload: {ex.Message}. Raw: {json}");
+        }
+
         if (result == null || result.Data == null)
         {
             throw new BadRequestException("BaoKim returned null or empty data");
-        }
-        if (result.Code != BaoKimConstant.SuccessCode)
-        {
-            throw new BadRequestException($"BaoKim create order failed ({result.Code}): {result.Message}");
         }
 
         return result;
