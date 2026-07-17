@@ -7,21 +7,21 @@ namespace HoaTheoMua.Repository;
 
 public class AppDbContext : DbContext
 {
-    public  AppDbContext(DbContextOptions options) : base(options)
+    public AppDbContext(DbContextOptions options) : base(options)
     {}
-    public DbSet<CategoryNews> CategoryNewsList { get; set; }
-    public DbSet<News> NewsList { get; set; }
-    public DbSet<CategoryNewsDetail> CategoryNewsDetails { get; set; }
-    public DbSet<CompanyAddress> CompanyAddresses { get; set; }
-    public DbSet<AuditLog> AuditLogs { get; set; }
-    public DbSet<Order> Orders { get; set; }
-    public DbSet<Transaction> Transactions { get; set; }
-    public DbSet<Config> Configs { get; set; }
-    public DbSet<JobDescriptions> JobDescriptions { get; set; }
-    public DbSet<RecruitmentRequest> RecruitmentRequests { get; set; }
-    public DbSet<Address> Addresses { get; set; }
+    public virtual DbSet<CategoryNews> CategoryNewsList { get; set; }
+    public virtual DbSet<News> NewsList { get; set; }
+    public virtual DbSet<CategoryNewsDetail> CategoryNewsDetails { get; set; }
+    public virtual DbSet<CompanyAddress> CompanyAddresses { get; set; }
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
+    public virtual DbSet<Order> Orders { get; set; }
+    public virtual DbSet<Transaction> Transactions { get; set; }
+    public virtual DbSet<Config> Configs { get; set; }
+    public virtual DbSet<JobDescriptions> JobDescriptions { get; set; }
+    public virtual DbSet<RecruitmentRequest> RecruitmentRequests { get; set; }
+    public virtual DbSet<Address> Addresses { get; set; }
 
-    public DbSet<OrderDetails> OrderDetails { get; set; }
+    public virtual DbSet<OrderDetails> OrderDetails { get; set; }
     public DbSet<Product> Products { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

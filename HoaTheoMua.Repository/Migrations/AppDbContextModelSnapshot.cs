@@ -514,6 +514,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<long>("OrderTime")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasColumnType("text");

@@ -43,6 +43,13 @@ x-api-env: &api-env
   NhanhVnOption__BusinessId: ${NHANHVN_BUSINESS_ID}
   NhanhVnOption__BaseUrl: ${NHANHVN_BASE_URL}
 
+  # BaoKim (payment gateway — PrivateKey is a PEM block; its newlines pass through as-is)
+  BaoKimOption__BaseUrl: ${BAOKIM_BASE_URL}
+  BaoKimOption__MerchantCode: ${BAOKIM_MERCHANT_CODE}
+  BaoKimOption__ClientId: ${BAOKIM_CLIENT_ID}
+  BaoKimOption__ClientSecret: ${BAOKIM_CLIENT_SECRET}
+  BaoKimOption__PrivateKey: ${BAOKIM_PRIVATE_KEY}
+
   AllowedHosts: "*"
 
 x-api-base: &api-base

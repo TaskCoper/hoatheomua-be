@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
-using HoaTheoMua.Service.AhaMoveService;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -21,11 +21,11 @@ public partial class Service : IService
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
     private readonly Config.IService _configService;
-    private readonly HoaTheoMua.Service.AhaMoveService.IService _ahaMoveService;
+    private readonly AhamoveService.IService _ahaMoveService;
 
     public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration, 
         HoaTheoMua.Service.Order.IService orderService,  Config.IService configService,
-        HoaTheoMua.Service.AhaMoveService.IService ahaMoveService)
+        AhamoveService.IService ahaMoveService)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
@@ -223,7 +223,7 @@ public partial class Service : IService
 
         if (order.OrderTime == 0 && tags.Count == 0)
         {
-            var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
+            var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
                 {
                     Id = x.Id.ToString(),
                     Name = x.Name,
@@ -232,7 +232,7 @@ public partial class Service : IService
                 }
             ).ToList();
 
-            var packageDetailRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.PackageDetail()
+            var packageDetailRequest = order. OrderDetails.Select(x => new AhaMoveRequest.PackageDetail()
                 {
                     Height = x.Height,
                     Weight = x.Weight,
@@ -245,13 +245,13 @@ public partial class Service : IService
             var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
             var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
 
-            var createRequest = new AhaMoveService.AhaMoveRequest.AhaMoveShippingFeeRequest()
+            var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
             {
                 OrderTime = order.OrderTime,
                 IdleUntil = order.OrderTime > 0 ? order.OrderTime : 0,
-                Paths = new List<AhaMoveService.AhaMoveRequest.AhamoveLocationPoint>()
+                Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
                 {
-                    new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint() 
+                    new AhaMoveRequest.AhamoveLocationPoint() 
                     {
                         Latitude = companyAddress?.Latitude ?? 0,
                         Longitude = companyAddress?.Longitude ?? 0,
@@ -261,7 +261,7 @@ public partial class Service : IService
                         Phone = companyAddress.PhoneNumber,
                         Remarks = companyAddress.Remarks!,
                     },
-                    new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint()
+                    new AhaMoveRequest.AhamoveLocationPoint()
                     {
                         Latitude = order.Latitude,
                         Longitude = order.Longitude,
@@ -314,12 +314,12 @@ public partial class Service : IService
             }
             else
             {
-                throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+                throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
             }
 
             if (createAhamoveOrderResult == null)
             {
-                throw new Exception("Ahamove returned null or empty data");
+                throw new BadRequestException("Ahamove returned null or empty data");
             }
 
             order.AhahaMoveOrderId = createAhamoveOrderResult.OrderId;
@@ -509,7 +509,7 @@ public partial class Service : IService
 
         if (!nhanhVnResponse.IsSuccessStatusCode)
         {
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode}): {nhanhRawContent}");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode}): {nhanhRawContent}");
         }
 
         using var nhanhDoc = JsonDocument.Parse(nhanhRawContent);
@@ -525,13 +525,13 @@ public partial class Service : IService
             || !nhanhRoot.TryGetProperty("data", out var nhanhDataElement)
             || nhanhDataElement.ValueKind != JsonValueKind.Object)
         {
-            throw new Exception($"NhanhVn order creation failed: {nhanhRawContent}");
+            throw new BadRequestException($"NhanhVn order creation failed: {nhanhRawContent}");
         }
 
         var createOrderNhanhResult = nhanhDataElement.Deserialize<OrderData>();
         if (createOrderNhanhResult == null)
         {
-            throw new Exception($"NhanhVn order creation failed: {nhanhRawContent}");
+            throw new BadRequestException($"NhanhVn order creation failed: {nhanhRawContent}");
         }
 
         order.NhanhOrderId = createOrderNhanhResult.Id;

@@ -30,10 +30,13 @@ echo "Branch name '$current_branch' is valid"
 
 echo "Running pre-push checks..."
 
-echo "[1/2] Restoring solution"
+echo "[1/3] Restoring solution"
 dotnet restore HoaTheoMua.sln --nologo
 
-echo "[2/2] Building solution"
+echo "[2/3] Building solution"
 dotnet build HoaTheoMua.sln -c Release --no-restore --nologo
+
+echo "[3/3] Running tests"
+dotnet test HoaTheoMua.sln -c Release --no-build --no-restore --nologo
 
 echo "Pre-push checks passed"

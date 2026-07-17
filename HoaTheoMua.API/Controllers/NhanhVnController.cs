@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Service.AhaMoveService;
+﻿using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.NhanhVnService;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +10,10 @@ namespace HoaTheoMua.Controllers;
 public class NhanhVnController : ControllerBase
 {
     private readonly IService _nhanhVnService;
-    private readonly Service.AhaMoveService.IService _ahamoveService;
+    private readonly Service.AhamoveService.IService _ahamoveService;
 
     // Dependency Injection thông qua Constructor tương tự Ahamove
-    public NhanhVnController(IService nhanhVnService,  Service.AhaMoveService.IService ahamoveService)
+    public NhanhVnController(IService nhanhVnService,  Service.AhamoveService.IService ahamoveService)
     {
         _nhanhVnService = nhanhVnService;
         _ahamoveService = ahamoveService;
