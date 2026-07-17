@@ -14,7 +14,12 @@
       "Bash(python3 -c \"import json; print\\(json.load\\(open\\('HoaTheoMua.API/appsettings.Development.json'\\)\\)['BaoKimOption']['PrivateKey']\\)\")",
       "Bash(openssl pkey *)",
       "Bash(dotnet run *)",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(python3 topem.py)",
+      "Bash(openssl dgst *)",
+      "Bash(xxd -p -c32)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 - __TRACKED_VAR__/baokim_public.pem)"
     ]
   }
 }

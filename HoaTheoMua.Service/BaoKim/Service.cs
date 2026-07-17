@@ -7,6 +7,7 @@ using System.Text.Json;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace HoaTheoMua.Service.BaoKim;
 
@@ -14,6 +15,7 @@ public class Service : IService
 {
     private readonly BaoKimOption _baoKimOption = new();
     private readonly HttpClient _httpClient;
+    private readonly IHostEnvironment? _environment;
 
     // Emits raw UTF-8 (no \uXXXX escaping) so the bytes we sign match the bytes we send,
     // which is what BaoKim's signature verification requires.
@@ -22,11 +24,17 @@ public class Service : IService
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    public Service(HttpClient httpClient, IConfiguration configuration)
+    // `environment` is optional so tests can construct this without a host. A null environment is
+    // treated as non-Development, i.e. diagnostics stay off — the safe default, since the wrong
+    // guess here dumps payment details into logs.
+    public Service(HttpClient httpClient, IConfiguration configuration, IHostEnvironment? environment = null)
     {
         _httpClient = httpClient;
+        _environment = environment;
         configuration.GetSection(nameof(BaoKimOption)).Bind(_baoKimOption);
     }
+
+    private bool IsDevelopment => _environment?.IsDevelopment() ?? false;
 
     public async Task<BaoKimResponse<TokenResponse>> CreateAccessToken()
     {
@@ -98,11 +106,16 @@ public class Service : IService
         }
     }
 
-    // Temporary bring-up diagnostics for the BaoKim callback, matching the Console.WriteLine idiom
-    // already used for gateway debugging elsewhere. Only runs on the failure paths, so a working
-    // callback stays quiet. Remove once verification is confirmed against a real callback.
+    // Bring-up diagnostics for the BaoKim callback, matching the Console.WriteLine idiom already
+    // used for gateway debugging elsewhere. Development-only and failure-path-only: the dump
+    // includes the raw callback body, which carries payment details that must not reach prod logs.
     private void LogSignatureDiagnostics(string rawBody, string signature)
     {
+        if (!IsDevelopment)
+        {
+            return;
+        }
+
         Console.WriteLine("[BAOKIM SIG] ---------- signature diagnostics ----------");
         Console.WriteLine($"[BAOKIM SIG] body: {rawBody.Length} chars, sha256={Sha256Hex(Encoding.UTF8.GetBytes(rawBody))}");
         Console.WriteLine($"[BAOKIM SIG] raw body: {rawBody}");

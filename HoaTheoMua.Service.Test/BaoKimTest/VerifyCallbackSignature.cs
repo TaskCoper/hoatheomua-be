@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using HoaTheoMua.Service.BaoKim;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Moq;
 using Xunit;
 using BaoKimServiceImpl = HoaTheoMua.Service.BaoKim.Service;
@@ -23,7 +24,8 @@ namespace HoaTheoMua.Service.Test.BaoKimTest
             return (rsa.ExportPkcs8PrivateKeyPem(), rsa.ExportSubjectPublicKeyInfoPem());
         }
 
-        private static BaoKimServiceImpl CreateService(string publicKeyPem)
+        private static BaoKimServiceImpl CreateService(
+            string publicKeyPem, string? environmentName = null, string privateKeyPem = "")
         {
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?>
@@ -32,13 +34,39 @@ namespace HoaTheoMua.Service.Test.BaoKimTest
                     ["BaoKimOption:MerchantCode"] = "hoatheomua",
                     ["BaoKimOption:ClientId"] = "hoatheomua",
                     ["BaoKimOption:ClientSecret"] = "secret",
-                    ["BaoKimOption:PrivateKey"] = "",
+                    ["BaoKimOption:PrivateKey"] = privateKeyPem,
                     ["BaoKimOption:PublicKey"] = publicKeyPem
                 })
                 .Build();
 
+            IHostEnvironment? environment = null;
+            if (environmentName != null)
+            {
+                var mockEnvironment = new Mock<IHostEnvironment>();
+                mockEnvironment.Setup(x => x.EnvironmentName).Returns(environmentName);
+                environment = mockEnvironment.Object;
+            }
+
             return new BaoKimServiceImpl(
-                new HttpClient(new Mock<HttpMessageHandler>().Object), configuration);
+                new HttpClient(new Mock<HttpMessageHandler>().Object), configuration, environment);
+        }
+
+        // Chay `act` va thu lai moi thu no ghi ra Console.
+        private static string CaptureConsole(Action act)
+        {
+            var writer = new StringWriter();
+            var previous = Console.Out;
+            Console.SetOut(writer);
+            try
+            {
+                act();
+            }
+            finally
+            {
+                Console.SetOut(previous);
+            }
+
+            return writer.ToString();
         }
 
         // TEST CASE 01: Chữ ký hợp lệ do đúng khoá của BaoKim ký -> chấp nhận.
@@ -149,6 +177,68 @@ namespace HoaTheoMua.Service.Test.BaoKimTest
             // Assert
             var exception = Assert.Throws<ServerException>(act);
             Assert.Contains("PublicKey is not configured", exception.Message);
+        }
+
+        // TEST CASE 08: O Production, chan doan KHONG duoc ghi ra log.
+        // Chan doan co dump raw body cua callback — chua thong tin thanh toan cua khach.
+        [Fact]
+        public void VerifyCallbackSignature_InProduction_LogsNothing()
+        {
+            // Arrange: chu ky sai -> di vao dung nhanh co ghi chan doan.
+            var (attackerPrivatePem, _) = CreateKeyPair();
+            var (_, baoKimPublicPem) = CreateKeyPair();
+            var forgedSignature = BaoKimSigner.Sign(SampleBody, attackerPrivatePem);
+            var service = CreateService(baoKimPublicPem, environmentName: "Production");
+
+            // Act
+            var output = CaptureConsole(
+                () => Assert.Throws<UnauthorizedException>(
+                    () => service.VerifyCallbackSignature(SampleBody, forgedSignature)));
+
+            // Assert
+            Assert.Equal(string.Empty, output);
+            Assert.DoesNotContain("BAOKIM SIG", output);
+            Assert.DoesNotContain(SampleBody, output); // raw body khong duoc ro ri
+        }
+
+        // TEST CASE 09: O Development, chan doan PHAI duoc ghi ra (day la muc dich cua no).
+        [Fact]
+        public void VerifyCallbackSignature_InDevelopment_LogsDiagnostics()
+        {
+            // Arrange
+            var (attackerPrivatePem, _) = CreateKeyPair();
+            var (_, baoKimPublicPem) = CreateKeyPair();
+            var forgedSignature = BaoKimSigner.Sign(SampleBody, attackerPrivatePem);
+            var service = CreateService(baoKimPublicPem, environmentName: "Development");
+
+            // Act
+            var output = CaptureConsole(
+                () => Assert.Throws<UnauthorizedException>(
+                    () => service.VerifyCallbackSignature(SampleBody, forgedSignature)));
+
+            // Assert
+            Assert.Contains("BAOKIM SIG", output);
+            Assert.Contains("consistent with RSA-2048", output);
+        }
+
+        // TEST CASE 10: Khong co IHostEnvironment -> mac dinh coi nhu KHONG phai Development.
+        // Fail-safe: doan sai o day se do du lieu thanh toan ra log.
+        [Fact]
+        public void VerifyCallbackSignature_WithoutHostEnvironment_DefaultsToSilent()
+        {
+            // Arrange
+            var (attackerPrivatePem, _) = CreateKeyPair();
+            var (_, baoKimPublicPem) = CreateKeyPair();
+            var forgedSignature = BaoKimSigner.Sign(SampleBody, attackerPrivatePem);
+            var service = CreateService(baoKimPublicPem, environmentName: null);
+
+            // Act
+            var output = CaptureConsole(
+                () => Assert.Throws<UnauthorizedException>(
+                    () => service.VerifyCallbackSignature(SampleBody, forgedSignature)));
+
+            // Assert
+            Assert.Equal(string.Empty, output);
         }
 
         // TEST CASE 07: PublicKey cấu hình sai định dạng PEM -> ServerException (500).
