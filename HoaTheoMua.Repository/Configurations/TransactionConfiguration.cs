@@ -9,8 +9,11 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
 {
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
-        builder.Property(t => t.SePayId)
-            .IsRequired();
+        // The gateway's own id for the payment event: BaoKim's alphanumeric `request_id`, or the
+        // SePay transaction id rendered as text.
+        builder.Property(t => t.RequestId)
+            .IsRequired()
+            .HasMaxLength(100);
 
         builder.Property(t => t.Gateway)
             .HasMaxLength(50);

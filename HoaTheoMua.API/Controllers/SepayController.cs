@@ -1,7 +1,10 @@
 ﻿using System.Text;
+using System.Text.Json;
+using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Webhook;
 using Microsoft.AspNetCore.Mvc;
+using BaoKimService = HoaTheoMua.Service.BaoKim;
 
 namespace HoaTheoMua.Controllers;
 
@@ -9,10 +12,16 @@ namespace HoaTheoMua.Controllers;
 public class SepayController : ControllerBase
 {
     private readonly IService _sepayService;
+    private readonly BaoKimService.IService _baoKimService;
 
-    public SepayController(IService sepayService)
+    // Mirrors the MVC pipeline's own options, since this controller deserializes the BaoKim
+    // callback by hand rather than through model binding.
+    private static readonly JsonSerializerOptions CallbackJsonOptions = new(JsonSerializerDefaults.Web);
+
+    public SepayController(IService sepayService, BaoKimService.IService baoKimService)
     {
         _sepayService = sepayService;
+        _baoKimService = baoKimService;
     }
 
     [HttpPost("/api/v1/sepay")]
@@ -22,48 +31,38 @@ public class SepayController : ControllerBase
         return Ok(ApiResponseFactory.Base("success", true, "", HttpContext.TraceIdentifier));
     }
 
-    [HttpPost("api/v1/baokim")]
+    // Deliberately not [FromBody]: the signature covers the exact bytes BaoKim sent, and
+    // re-serializing a bound DTO would not reproduce them (property order, spacing and escaping all
+    // differ), so the body is read raw, verified, and only then deserialized.
+    [HttpPost("/api/v1/baokim")]
     public async Task<IActionResult> BaoKimWebhookHandler()
     {
-        // Đọc body
-        Request.EnableBuffering();
+        using var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8);
+        var rawBody = await reader.ReadToEndAsync();
 
-        string body;
-        using (var reader = new StreamReader(
-                   Request.Body,
-                   Encoding.UTF8,
-                   leaveOpen: true))
+        _baoKimService.VerifyCallbackSignature(
+            rawBody, HttpContext.Request.Headers["Signature"].FirstOrDefault());
+
+        BaoKimPaymentCallback? request;
+        try
         {
-            body = await reader.ReadToEndAsync();
-            Request.Body.Position = 0;
+            request = JsonSerializer.Deserialize<BaoKimPaymentCallback>(rawBody, CallbackJsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            throw new BadRequestException($"Malformed BaoKim callback body: {ex.Message}");
         }
 
-        // Lấy headers
-        var headers = Request.Headers.ToDictionary(
-            h => h.Key,
-            h => h.Value.ToString());
-
-        // Lấy query string
-        var query = Request.Query.ToDictionary(
-            q => q.Key,
-            q => q.Value.ToString());
-
-        Console.WriteLine(new
+        if (request == null)
         {
-            Method = Request.Method,
-            Path = Request.Path,
-            Query = query,
-            Headers = headers,
-            Body = body
-        });
+            throw new BadRequestException("Empty BaoKim callback body");
+        }
 
-        return Ok(new
-        {
-            Method = Request.Method,
-            Path = Request.Path,
-            Query = query,
-            Headers = headers,
-            Body = body
-        });
+        await _sepayService.BaoKimWebHookHandler(request);
+
+        // BaoKim reads `code` out of the body to decide whether to redeliver, so this returns the
+        // gateway's own ack shape rather than the usual ApiResponseFactory envelope, which has no
+        // `code` field and would make BaoKim retry every successful delivery.
+        return Ok(new BaoKimCallbackAck());
     }
 }

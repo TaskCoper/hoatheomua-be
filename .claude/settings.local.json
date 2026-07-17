@@ -12,7 +12,9 @@
       "Bash(git --no-pager diff -w -- HoaTheoMua.Service/Order/Service.cs)",
       "Bash(cd *)",
       "Bash(python3 -c \"import json; print\\(json.load\\(open\\('HoaTheoMua.API/appsettings.Development.json'\\)\\)['BaoKimOption']['PrivateKey']\\)\")",
-      "Bash(openssl pkey *)"
+      "Bash(openssl pkey *)",
+      "Bash(dotnet run *)",
+      "Bash(python3 -)"
     ]
   }
 }

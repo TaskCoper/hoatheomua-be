@@ -9,4 +9,9 @@ public interface IService
     Task<BaoKimResponse<CreateOrderResponse>> CreateOrder(
         string accessToken,
         Repository.Entity.Order order);
+
+    // Throws UnauthorizedException unless `signature` is a valid BaoKim signature over rawBody.
+    // The callback endpoint has to be anonymous — BaoKim cannot present a JWT — so this is the
+    // only thing standing between a POST and a dispatched courier.
+    void VerifyCallbackSignature(string rawBody, string? signature);
 }

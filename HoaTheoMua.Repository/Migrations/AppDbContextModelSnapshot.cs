@@ -735,8 +735,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<long>("SePayId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("SubAccount")
                         .IsRequired()
@@ -756,6 +758,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("paymentMethod")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

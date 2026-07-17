@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -59,6 +60,40 @@ public class Service : IService
         }
 
         return result;
+    }
+
+    public void VerifyCallbackSignature(string rawBody, string? signature)
+    {
+        if (string.IsNullOrWhiteSpace(_baoKimOption.PublicKey))
+        {
+            // Fail closed. Without the key we cannot tell a genuine callback from a forged one, and
+            // a forged one flips an order to Paid and dispatches a courier for free.
+            throw new ServerException(
+                "BaoKimOption.PublicKey is not configured, so callback signatures cannot be verified");
+        }
+
+        if (string.IsNullOrWhiteSpace(signature))
+        {
+            throw new UnauthorizedException("Missing BaoKim callback signature");
+        }
+
+        bool isValid;
+        try
+        {
+            isValid = BaoKimSigner.Verify(rawBody, signature, _baoKimOption.PublicKey);
+        }
+        // System.ArgumentException, not the Exceptions/ one this file imports.
+        catch (Exception ex) when (ex is System.ArgumentException or CryptographicException)
+        {
+            // The configured key itself is unusable. That is our misconfiguration, so it must not
+            // masquerade as the caller sending a bad signature.
+            throw new ServerException($"BaoKimOption.PublicKey is not a usable PEM public key: {ex.Message}");
+        }
+
+        if (!isValid)
+        {
+            throw new UnauthorizedException("Invalid BaoKim callback signature");
+        }
     }
 
     public async Task<BaoKimResponse<CreateOrderResponse>> CreateOrder(
