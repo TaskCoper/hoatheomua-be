@@ -94,10 +94,20 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             };
         }
 
+        // Models BaoKim's real fee arithmetic, verified against both the documented sample and a
+        // live callback:
+        //   transaction.total_amount = grossAmount + user_fee   (what the buyer is charged)
+        //   transaction.amount       = grossAmount - merchant_fee  (NET settled to us; can go
+        //                                                           negative when fees exceed the
+        //                                                           order)
+        // grossAmount is order.total_amount. Defaulting merchant_fee to 0 the way the docs' sample
+        // does would make `amount` coincidentally equal the order total and hide that difference.
         private static BaoKimTransaction CreateBaoKimTransaction(
             long id = 940826,
             int status = 1,
-            decimal amount = 100000m,
+            decimal grossAmount = 100000m,
+            decimal merchantFee = 0m,
+            decimal userFee = 0m,
             string? description = "Thanh toan don hang")
         {
             return new BaoKimTransaction
@@ -107,10 +117,10 @@ namespace HoaTheoMua.Service.Test.WebhookTest
                 MrcOrderId = Guid.NewGuid().ToString(),
                 Type = 1,
                 PaymentMethod = 1,
-                MerchantFee = 0m,
-                UserFee = 330m,
-                TotalAmount = amount + 330m,
-                Amount = amount,
+                MerchantFee = merchantFee,
+                UserFee = userFee,
+                TotalAmount = grossAmount + userFee,
+                Amount = grossAmount - merchantFee,
                 Description = description,
                 Status = status,
                 CompletedAt = new DateTime(2026, 6, 9, 3, 46, 32, DateTimeKind.Utc),
@@ -149,7 +159,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
                     },
                     Transaction = transactions ?? new List<BaoKimTransaction>
                     {
-                        CreateBaoKimTransaction(amount: totalAmount)
+                        CreateBaoKimTransaction(grossAmount: totalAmount)
                     }
                 },
                 TokenResult = null
@@ -631,9 +641,9 @@ namespace HoaTheoMua.Service.Test.WebhookTest
                 transactions: new List<BaoKimTransaction>
                 {
                     CreateBaoKimTransaction(
-                        id: 111, status: 0, amount: 1m, description: "Giao dich that bai"),
+                        id: 111, status: 0, grossAmount: 1m, description: "Giao dich that bai"),
                     CreateBaoKimTransaction(
-                        id: 222, status: 1, amount: order.TotalFee, description: "Giao dich hoan thanh")
+                        id: 222, status: 1, grossAmount: order.TotalFee, description: "Giao dich hoan thanh")
                 });
 
             // Act
@@ -672,6 +682,45 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             Assert.Equal(order.TotalFee, transaction.TransferAmount); // fallback: order.total_amount
             // request_id nam o cap cao nhat nen van con du ngay ca khi transaction bi null.
             Assert.Equal("B2B6A278C9815BD7EQ4AVPVZCI", transaction.RequestId);
+            Assert.Equal("Paid", order.Status);
+        }
+
+        // TEST CASE 15: merchant_fee lon hon gia tri don -> transaction.amount AM (-177600).
+        // So lieu lay tu callback that: order.total_amount=160000, merchant_fee=337600,
+        // amount=-177600. TransferAmount phai la so tien khach tra (160000), khong phai so tien
+        // rong sau phi. Payload mau trong tai lieu co merchant_fee=0 nen amount trung voi tong
+        // tien don — che mat khac biet nay.
+        [Fact]
+        public async Task BaoKimWebHookHandler_MerchantFeeExceedsOrder_StoresGrossNotNegativeNet()
+        {
+            // Arrange
+            var order = CreateOrder(orderTime: 1700000000, totalFee: 160000m);
+            var capturedTransactions = new List<TransactionEntity>();
+            var dbContext = CreateMockDbContext(
+                new List<OrderEntity> { order },
+                new List<CompanyAddressEntity> { CreateCompanyAddress() },
+                capturedTransactions).Object;
+
+            var handler = CreateHttpHandler(AhamoveSuccess(), NhanhSuccess());
+            var service = CreateService(dbContext, new HttpClient(handler.Object));
+
+            var baoKimTransaction = CreateBaoKimTransaction(
+                id: 1163292, status: 1, grossAmount: 160000m, merchantFee: 337600m, userFee: 0m);
+
+            // Kiem tra lai gia dinh: BaoKim that su gui amount am.
+            Assert.Equal(-177600m, baoKimTransaction.Amount);
+
+            var request = CreateCallback(order.Id, totalAmount: 160000m,
+                transactions: new List<BaoKimTransaction> { baoKimTransaction });
+
+            // Act
+            await service.BaoKimWebHookHandler(request);
+
+            // Assert
+            var transaction = Assert.Single(capturedTransactions);
+            Assert.Equal(160000m, transaction.TransferAmount);
+            Assert.True(transaction.TransferAmount > 0,
+                "TransferAmount khong duoc am khi khach da thanh toan thanh cong");
             Assert.Equal("Paid", order.Status);
         }
 

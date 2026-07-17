@@ -273,7 +273,12 @@ public partial class Service : IService
             Content = paymentResult.ResultMessage ?? string.Empty,
             TransferType = "in",
             Description = baoKimTransaction?.Description ?? paymentResult.ResultMessage ?? string.Empty,
-            TransferAmount = baoKimTransaction?.Amount ?? baoKimOrder.TotalAmount,
+            // The gross the buyer paid — deliberately NOT transaction.amount, which is the net
+            // settlement after fees (amount = total_amount - merchant_fee - user_fee) and can even
+            // be negative: a real 160,000 payment carrying a 337,600 merchant_fee reported
+            // amount = -177,600. The docs' sample happens to have zero merchant_fee, which makes
+            // amount look like the order total and hides this.
+            TransferAmount = baoKimOrder.TotalAmount,
             Accumulated = 0,
             ReferenceCode = baoKimOrder.Id.ToString(),
 
