@@ -77,8 +77,8 @@ public class OrderSourceNextPage
 }
 
 
-//
-public class NhanhWebhookInventoryRequest
+//webhook-inventory-request
+public class NhanhInventoryChangeWebhookRequest
     {
         [JsonPropertyName("event")]
         public string Event { get; set; } = string.Empty;
@@ -168,3 +168,317 @@ public class NhanhWebhookInventoryRequest
         [JsonPropertyName("warranty")]
         public NhanhWarranty Warranty { get; set; } = new();
     }
+    
+//webhook-add-item-request
+public class NhanhProductAddWebhookRequest
+{
+    [JsonPropertyName("event")]
+    public string Event { get; set; } = string.Empty; // Sẽ là "productAdd"
+
+    [JsonPropertyName("businessId")]
+    public long BusinessId { get; set; }
+
+    // Điểm khác biệt: "data" ở sự kiện này là một Object đơn lẻ, không phải Array
+    [JsonPropertyName("data")]
+    public List<NhanhProductDetailDto> Data { get; set; } = new();
+}
+
+public class NhanhProductDetailDto
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("parentId")]
+    public long ParentId { get; set; }
+
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+
+    [JsonPropertyName("barcode")]
+    public string? Barcode { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("otherName")]
+    public string? OtherName { get; set; }
+
+    [JsonPropertyName("status")]
+    public string? Status { get; set; }
+
+    [JsonPropertyName("category")]
+    public NhanhCategoryDto? Category { get; set; }
+
+    [JsonPropertyName("internalCategory")]
+    public NhanhCategoryDto? InternalCategory { get; set; }
+
+    [JsonPropertyName("prices")]
+    public NhanhPricesDto? Prices { get; set; }
+
+    [JsonPropertyName("vat")]
+    public int? Vat { get; set; }
+
+    [JsonPropertyName("images")]
+    public NhanhImagesDto? Images { get; set; }
+
+    [JsonPropertyName("warranty")]
+    public NhanhWarrantyDto? Warranty { get; set; }
+
+    [JsonPropertyName("brand")]
+    public NhanhBrandDto? Brand { get; set; }
+
+    [JsonPropertyName("type")]
+    public NhanhTypeDto? Type { get; set; }
+
+    [JsonPropertyName("shipping")]
+    public NhanhShippingDto? Shipping { get; set; }
+
+    [JsonPropertyName("countryName")]
+    public string? CountryName { get; set; }
+
+    [JsonPropertyName("units")]
+    public NhanhUnitsDto? Units { get; set; }
+
+    [JsonPropertyName("combos")]
+    public List<NhanhComboItemDto> Combos { get; set; } = new();
+
+    [JsonPropertyName("inventory")]
+    public NhanhInventoryDto? Inventory { get; set; }
+
+    [JsonPropertyName("attributes")]
+    public List<NhanhAttributeDto>? Attributes { get; set; } = new();
+
+    [JsonPropertyName("updatedAt")]
+    public long UpdatedAt { get; set; }
+
+    [JsonPropertyName("createdAt")]
+    public long CreatedAt { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("content")]
+    public string? Content { get; set; }
+
+    [JsonPropertyName("suppliers")]
+    public NhanhSupplierDto? Suppliers { get; set; }
+
+    [JsonPropertyName("videos")]
+    public List<NhanhVideoDto> Videos { get; set; } = new();
+
+    [JsonPropertyName("branchPrices")]
+    public List<NhanhBranchPriceDto>? BranchPrices { get; set; } = new();
+
+    [JsonPropertyName("childs")]
+    public List<object> Childs { get; set; } = new();
+}
+
+public class NhanhCategoryDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
+
+public class NhanhPricesDto
+{
+    [JsonPropertyName("retail")]
+    public double Retail { get; set; }
+    [JsonPropertyName("import")]
+    public double Import { get; set; }
+    [JsonPropertyName("old")]
+    public double Old { get; set; }
+    [JsonPropertyName("wholesale")]
+    public double Wholesale { get; set; }
+    [JsonPropertyName("avgCost")]
+    public double AvgCost { get; set; }
+}
+
+public class NhanhImagesDto
+{
+    [JsonPropertyName("avatar")]
+    public string? Avatar { get; set; }
+    [JsonPropertyName("others")]
+    public List<string> Others { get; set; } = new();
+}
+
+public class NhanhWarrantyDto
+{
+    [JsonPropertyName("month")]
+    public int? Month { get; set; }
+    [JsonPropertyName("phone")]
+    public string? Phone { get; set; }
+    [JsonPropertyName("address")]
+    public string? Address { get; set; }
+}
+
+public class NhanhBrandDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
+
+public class NhanhTypeDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
+
+public class NhanhShippingDto
+{
+    [JsonPropertyName("length")]
+    public double Length { get; set; }
+    [JsonPropertyName("width")]
+    public double Width { get; set; }
+    [JsonPropertyName("height")]
+    public double Height { get; set; }
+    [JsonPropertyName("weight")]
+    public double Weight { get; set; }
+}
+
+public class NhanhUnitsDto
+{
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+    [JsonPropertyName("list")]
+    public List<NhanhUnitItemDto> List { get; set; } = new();
+}
+
+public class NhanhUnitItemDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+    [JsonPropertyName("quantity")]
+    public double Quantity { get; set; }
+    [JsonPropertyName("price")]
+    public NhanhUnitPricesDto? Price { get; set; }
+}
+
+public class NhanhUnitPricesDto
+{
+    [JsonPropertyName("retail")]
+    public double Retail { get; set; }
+    [JsonPropertyName("import")]
+    public double Import { get; set; }
+    [JsonPropertyName("wholesale")]
+    public double Wholesale { get; set; }
+}
+
+public class NhanhComboItemDto
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+    [JsonPropertyName("quantity")]
+    public double Quantity { get; set; }
+}
+
+public class NhanhInventoryDto
+{
+    [JsonPropertyName("remain")]
+    public double Remain { get; set; }
+    [JsonPropertyName("shipping")]
+    public double Shipping { get; set; }
+    [JsonPropertyName("damaged")]
+    public double Damaged { get; set; }
+    [JsonPropertyName("holding")]
+    public double Holding { get; set; }
+    [JsonPropertyName("transfering")]
+    public double Transfering { get; set; }
+    [JsonPropertyName("warranty")]
+    public double Warranty { get; set; }
+    [JsonPropertyName("warrantyHolding")]
+    public double WarrantyHolding { get; set; }
+    [JsonPropertyName("holdingNew")]
+    public double HoldingNew { get; set; }
+    [JsonPropertyName("shippingExport")]
+    public double ShippingExport { get; set; }
+    [JsonPropertyName("available")]
+    public double Available { get; set; }
+    [JsonPropertyName("depots")]
+    public List<NhanhDepotInventoryDto> Depots { get; set; } = new();
+}
+
+public class NhanhDepotInventoryDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    [JsonPropertyName("remain")]
+    public double Remain { get; set; }
+    [JsonPropertyName("shipping")]
+    public double Shipping { get; set; }
+    [JsonPropertyName("damaged")]
+    public double Damaged { get; set; }
+    [JsonPropertyName("holding")]
+    public double Holding { get; set; }
+    [JsonPropertyName("transfering")]
+    public double Transfering { get; set; }
+    [JsonPropertyName("warranty")]
+    public double Warranty { get; set; }
+    [JsonPropertyName("warrantyHolding")]
+    public double WarrantyHolding { get; set; }
+    [JsonPropertyName("holdingNew")]
+    public double HoldingNew { get; set; }
+    [JsonPropertyName("shippingExport")]
+    public double ShippingExport { get; set; }
+    [JsonPropertyName("available")]
+    public double Available { get; set; }
+}
+
+public class NhanhAttributeDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+    [JsonPropertyName("value")]
+    public string? Value { get; set; }
+}
+
+public class NhanhSupplierDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+    [JsonPropertyName("mobile")]
+    public string? Mobile { get; set; }
+}
+
+public class NhanhVideoDto
+{
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+    [JsonPropertyName("src")]
+    public string? Src { get; set; }
+}
+
+public class NhanhBranchPriceDto
+{
+    [JsonPropertyName("branch")]
+    public NhanhBranchDto? Branch { get; set; }
+    [JsonPropertyName("price")]
+    public double Price { get; set; }
+    [JsonPropertyName("wholesalePrice")]
+    public double WholesalePrice { get; set; }
+}
+
+public class NhanhBranchDto
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
