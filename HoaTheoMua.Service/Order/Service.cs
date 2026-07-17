@@ -180,8 +180,7 @@ public class Service : IService
         var baoKimTokenResponse = await _baoKimService.CreateAccessToken();
 
         var createBaoKimOrderResponse = await _baoKimService.CreateOrder(
-            baoKimTokenResponse.Data.AccessToken,
-            newOrder, newOrderDetails);
+            baoKimTokenResponse.Data.AccessToken, newOrder);
 
         await _dbContext.Orders.AddAsync(newOrder);
         await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);

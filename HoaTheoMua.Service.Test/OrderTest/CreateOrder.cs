@@ -200,8 +200,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             mock.Setup(x => x.CreateOrder(
                     It.IsAny<string>(),
-                    It.IsAny<OrderEntity>(),
-                    It.IsAny<IEnumerable<OrderDetailEntity>>()))
+                    It.IsAny<OrderEntity>()))
                 .ReturnsAsync(new HoaTheoMua.Service.BaoKim.BaoKimResponse<HoaTheoMua.Service.BaoKim.CreateOrderResponse>
                 {
                     Code = 100,

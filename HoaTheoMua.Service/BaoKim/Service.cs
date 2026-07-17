@@ -63,8 +63,7 @@ public class Service : IService
 
     public async Task<BaoKimResponse<CreateOrderResponse>> CreateOrder(
         string accessToken,
-        Repository.Entity.Order order,
-        IEnumerable<OrderDetails> orderDetails)
+        Repository.Entity.Order order)
     {
         var requestId = Guid.NewGuid().ToString();
 
@@ -78,14 +77,14 @@ public class Service : IService
             TotalAmount = (long)order.TotalFee,
             UrlSuccess = $"{BaoKimConstant.PaymentSuccessUrl}?requestId={requestId}&orderId={order.Id}",
             UrlFail = $"{BaoKimConstant.PaymentFailUrl}?requestId={requestId}&orderId={order.Id}",
-            Items = orderDetails.Select(x => new OrderItem
-            {
-                Code = x.ItemId.ToString(),
-                Name = x.Name,
-                Amount = (long)x.Price,
-                Quantity = x.Number,
-                Link = $"{BaoKimConstant.ProductUrl}/{x.ItemId}"
-            }).ToList(),
+            // Items = orderDetails.Select(x => new OrderItem
+            // {
+            //     Code = x.ItemId.ToString(),
+            //     Name = x.Name,
+            //     Amount = (long)x.Price,
+            //     Quantity = x.Number,
+            //     Link = $"{BaoKimConstant.ProductUrl}/{x.ItemId}"
+            // }).ToList(),
             CustomerInfo = new CustomerInfo
             {
                 Code = order.UserId.ToString(),
