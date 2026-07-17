@@ -86,7 +86,15 @@ public class Service : IService
                 Quantity = x.Number,
                 Link = $"{BaoKimConstant.ProductUrl}/{x.ItemId}"
             }).ToList(),
-            CustomerInfo = null,
+            CustomerInfo = new CustomerInfo
+            {
+                Code = order.UserId.ToString(),
+                Name = order.FullName,
+                Email = order.ReceiptEmail ?? "khachkhongcoemail@gmail.com",
+                Phone = order.Phone,
+                Address = order.Address,
+                Gender = 1
+            },
             PaymentMethod = Repository.Enum.PaymentMethod.VA
         };
 
