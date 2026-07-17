@@ -2,7 +2,6 @@ using System.Globalization;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using MiniExcelLibs;
 
 namespace HoaTheoMua.Service.ProductImport;
@@ -12,87 +11,99 @@ using ProductEntity = HoaTheoMua.Repository.Entity.Product;
 public class Service : IService
 {
     private readonly AppDbContext _dbContext;
-    private readonly ILogger<Service> _logger;
 
-    public Service(AppDbContext dbContext, ILogger<Service> logger)
+    public Service(AppDbContext dbContext)
     {
         _dbContext = dbContext;
-        _logger = logger;
     }
 
     public async Task<Response.ImportResult> ImportFromExcel(Stream fileStream)
     {
-        // Đệm vào MemoryStream vì file cần đọc 2 lần (validate header + parse)
-        using var ms = new MemoryStream();
-        await fileStream.CopyToAsync(ms);
+        var result = new Response.ImportResult();
 
-        // Chỉ phần đọc file mới bọc thành 400 — lỗi DB để middleware trả 500
-        var rows = await ReadAndValidateAsync(ms);
-
-        var batch = await BuildUpsertBatchAsync(rows);
-
-        _dbContext.Products.AddRange(batch.ToInsert);
-        // Entity trong ToUpdate đã được change tracker theo dõi — không cần UpdateRange.
-        // SaveChangesAsync tự chạy trong 1 transaction → all-or-nothing sẵn.
-        await _dbContext.SaveChangesAsync();
-
-        return new Response.ImportResult
-        {
-            TotalRecords = rows.Count,
-            InsertedCount = batch.ToInsert.Count,
-            UpdatedCount = batch.ToUpdate.Count
-        };
-    }
-
-    // ── Đọc & validate file ────────────────────────────────────────────
-
-    /** Validate header + parse toàn bộ dòng. Mọi lỗi đọc file → 400 (lỗi do file upload). */
-    private async Task<List<Request.ExcelRow>> ReadAndValidateAsync(MemoryStream ms)
-    {
         try
         {
-            // 1. Kiểm tra dòng header: cột A chứa "ID" và có 40+ cột
-            ms.Position = 0;
-            var headerRow = (await MiniExcel.QueryAsync(ms, useHeaderRow: false))
-                .FirstOrDefault() as IDictionary<string, object?>;
+            using var ms = await BufferStreamAsync(fileStream);
+            await ValidateFileStructureAsync(ms);
 
-            if (headerRow is not { Count: > 0 })
-                throw new BadRequestException("Excel file is empty");
+            var rows = await ReadRowsAsync(ms);
+            result.TotalRecords = rows.Count;
 
-            headerRow.TryGetValue("A", out var valA);
-            var colA = valA?.ToString() ?? "";
+            var isb = await BuildUpsertBatchAsync(rows);
+            await PersistBatchAsync(isb);
 
-            if (!colA.Contains("ID", StringComparison.OrdinalIgnoreCase) || headerRow.Count < 40)
-                throw new BadRequestException(
-                    "Invalid file format. Please upload an Excel file exported from Nhanh.vn.");
-
-            // 2. Parse dòng dữ liệu, gán số dòng Excel gốc để truy vết
-            ms.Position = 0;
-            var rows = (await MiniExcel.QueryAsync<Request.ExcelRow>(ms)).ToList();
-
-            if (rows.Count == 0)
-                throw new BadRequestException("Excel file contains no data");
-
-            for (var i = 0; i < rows.Count; i++)
-                rows[i].SourceRowNumber = i + 2;
-
-            return rows;
+            result.InsertedCount = isb.ToInsert.Count;
+            result.UpdatedCount = isb.ToUpdate.Count;
         }
         catch (AppException) { throw; }
-        catch (Exception ex) // file hỏng / không phải xlsx thật
+        catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to read product import Excel file");
+            Console.WriteLine($"Import error: {ex.Message}");
             throw new BadRequestException($"Excel processing error: {ex.Message}");
         }
+
+        return result;
+    }
+
+    // ── Orchestration helpers ──────────────────────────────────────────
+
+    /** Sao chép file stream vào MemoryStream để có thể seek (đọc nhiều lần). */
+    //Tải toàn bộ nội dung của file từ network stream vào ram của server (memory stream)
+    private static async Task<MemoryStream> BufferStreamAsync(Stream source)
+    {
+        var ms = new MemoryStream();
+        await source.CopyToAsync(ms);
+        return ms;
+    }
+
+    /** Kiểm tra dòng header: cột A phải chứa "ID" và file phải có 40+ cột. */
+    //Validate cái file excel được nhận vào, có null không, cột đầu tiên có chứa id không
+    //  có đủ độ dài tối thiếu không
+    private static async Task ValidateFileStructureAsync(MemoryStream ms)
+    {
+        ms.Position = 0;
+        var rawRows = await MiniExcel.QueryAsync(ms, useHeaderRow: false);
+        var headerRow = rawRows.FirstOrDefault() as IDictionary<string, object?>;
+
+        if (headerRow is not { Count: > 0 })
+            throw new BadRequestException("Excel file is empty");
+
+        headerRow.TryGetValue("A", out var valA);
+        var colA = valA?.ToString() ?? "";
+
+        if (string.IsNullOrWhiteSpace(colA) ||
+            !colA.Contains("ID", StringComparison.OrdinalIgnoreCase) ||
+            headerRow.Count < 40)
+        {
+            throw new BadRequestException(
+                "Invalid file format. Please upload an Excel file exported from Nhanh.vn.");
+        }
+    }
+
+    /** Parse dòng Excel qua MiniExcel và gán SourceRowNumber để truy vết. */
+    private async Task<List<Request.ExcelRow>> ReadRowsAsync(MemoryStream ms)
+    {
+        ms.Position = 0;
+        var rows = (await MiniExcel.QueryAsync<Request.ExcelRow>(ms)).ToList();
+
+        if (rows.Count == 0)
+            throw new BadRequestException("Excel file contains no data");
+
+        for (var i = 0; i < rows.Count; i++)
+            rows[i].SourceRowNumber = i + 2;
+
+        return rows;
     }
 
     // ── Upsert batch ───────────────────────────────────────────────────
 
-    private readonly record struct ImportBatch(
-        List<ProductEntity> ToInsert,
-        List<ProductEntity> ToUpdate);
+    private struct ImportBatch
+    {
+        public List<ProductEntity> ToInsert;
+        public List<ProductEntity> ToUpdate;
+    }
 
-    /** Nạp sản phẩm hiện có theo NhanhProductId (1 query), phân loại từng dòng insert/update. */
+    /** Nạp sản phẩm từ DB theo NhanhProductId, phân loại từng dòng là insert hay update. */
     private async Task<ImportBatch> BuildUpsertBatchAsync(List<Request.ExcelRow> rows)
     {
         var idsInFile = rows
@@ -100,42 +111,57 @@ public class Service : IService
             .Where(id => id != null)
             .Distinct()
             .ToList();
-
-        var map = idsInFile.Count > 0
+    //lúc này ta có được một list nhanhProdcutId từ file excel mà ta đã nhờ miniExcel đọc qua
+        var existingMap = idsInFile.Count > 0
             ? await _dbContext.Products
                 .Where(p => p.NhanhProductId != null && idsInFile.Contains(p.NhanhProductId) && !p.IsDeleted)
                 .ToDictionaryAsync(p => p.NhanhProductId!)
             : new Dictionary<string, ProductEntity>();
-
-        var batch = new ImportBatch(new List<ProductEntity>(), new List<ProductEntity>());
+    //lúc này ta có một dictionary chứ với key là: nhanhProductId và value là entity tương ứng của nó
+        var batch = new ImportBatch
+        {
+            ToInsert = new List<ProductEntity>(),
+            ToUpdate = new List<ProductEntity>()
+        };
 
         foreach (var row in rows)
         {
-            var cleanId = NullIfEmpty(row.NhanhProductId);
-
-            if (cleanId != null && map.TryGetValue(cleanId, out var product))
-            {
-                batch.ToUpdate.Add(product);
-            }
-            else
-            {
-                product = new ProductEntity { Id = Guid.NewGuid(), CreatedAt = DateTimeOffset.UtcNow };
-                batch.ToInsert.Add(product);
-
-                // Đưa entity mới vào map — nếu file có dòng thứ 2 trùng ID,
-                // dòng đó sẽ update entity này thay vì insert thêm bản ghi trùng
-                if (cleanId != null)
-                    map[cleanId] = product;
-            }
-
+            var product = ResolveProduct(row, existingMap, out var isUpdate);
             ApplyRowToProduct(row, product);
             product.UpdatedAt = DateTimeOffset.UtcNow;
+
+            if (isUpdate)
+                batch.ToUpdate.Add(product);
+            else
+                batch.ToInsert.Add(product);
         }
 
         return batch;
     }
 
-    /** Áp dụng toàn bộ giá trị từ ExcelRow vào Product entity (map 62 cột A → BJ). */
+    /** Tìm product theo NhanhProductId, nếu có thì update, không có thì tạo mới. */
+    private static ProductEntity ResolveProduct(
+        Request.ExcelRow row,
+        Dictionary<string, ProductEntity> existingMap,
+        out bool isUpdate)
+    {
+        var cleanId = NullIfEmpty(row.NhanhProductId);
+
+        if (cleanId != null && existingMap.TryGetValue(cleanId, out var existing))
+        {
+            isUpdate = true;
+            return existing;
+        }
+
+        isUpdate = false;
+        return new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    /** Áp dụng toàn bộ giá trị từ ExcelRow vào Product entity (map 50 cột). */
     private static void ApplyRowToProduct(
         Request.ExcelRow row,
         ProductEntity product)
@@ -210,6 +236,28 @@ public class Service : IService
         product.Size = NullIfEmpty(row.Size);
         product.Color = NullIfEmpty(row.Color);
         product.Origin = NullIfEmpty(row.Origin);
+    }
+
+    /** Lưu batch vào DB trong 1 transaction (rollback nếu lỗi). */
+    private async Task PersistBatchAsync(ImportBatch batch)
+    {
+        await using var tx = await _dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            if (batch.ToInsert.Count > 0)
+                await _dbContext.Products.AddRangeAsync(batch.ToInsert);
+
+            if (batch.ToUpdate.Count > 0)
+                _dbContext.Products.UpdateRange(batch.ToUpdate);
+
+            await _dbContext.SaveChangesAsync();
+            await tx.CommitAsync();
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
     }
 
     // ── Parse helpers ──────────────────────────────────────────────────
