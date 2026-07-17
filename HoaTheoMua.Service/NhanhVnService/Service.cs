@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace HoaTheoMua.Service.NhanhVnService;
@@ -114,17 +115,45 @@ public class Service: IService
         return nhanhProductOrderSource;
     }
 
-    public Task<string> WebhookNhanhVnInventory(NhanhWebhookInventoryRequest request)
+    public async Task<string> WebhookNhanhVnInventory(NhanhWebhookInventoryRequest request)
     {
         if (request == null || request.Data == null || !request.Data.Any())
         {
             throw new BadRequestException("Không có dữ liệu thay đổi tồn kho.");
         }
-        
-        var productIdFromWebhook = request.Data.Select(x => x.AppProductId).Distinct().ToList();
-        
-        //var productIdFromDb = await _appDbContext.
-        
-        throw new NotImplementedException();
+
+        var nhanhProductIds = request.Data
+            .Select(x => x.Id.ToString()).Distinct().ToList();
+
+        var products = await _appDbContext.Products
+            .Where(x => !x.IsDeleted && nhanhProductIds.Contains(x.NhanhProductId!))
+            .ToListAsync();
+
+        foreach (var item in request.Data)
+        {
+            var itemId = item.Id.ToString();
+
+            var product = products.FirstOrDefault(x => x.NhanhProductId == itemId);
+
+            if (product != null)
+            {
+                product.AvailableForSale = (decimal?)item.Available;
+                product.ProductCode = item.Code;
+                product.TotalStock = (decimal?)item.Remain;
+                product.Stock = (decimal?)item.Remain;
+                product.DeliveringStock = (decimal?)item.Shipping;
+                product.StockError = (decimal?)item.Damaged;
+                product.Held = (decimal?)item.Holding;
+                product.StockTransferring = (decimal?)item.Transfering;
+                
+                product.WarehouseStock = (decimal?)item.Warranty.Remain;
+                product.WarrantyStock = (decimal?)item.Warranty.Remain;
+                product.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        await _appDbContext.SaveChangesAsync();
+
+        return "Cập nhật tồn kho thành công";
     }
 }

@@ -32,6 +32,14 @@ public class NhanhVnController : ControllerBase
         var result = await _nhanhVnService.GetOrderSource(request);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
     }
+
+    [HttpPost("/api/v1/nhanh-vn/webhook/inventory")]
+    public async Task<IActionResult> WebhookNhanhVnInventory([FromBody] NhanhWebhookInventoryRequest request)
+    {
+        var result = await _nhanhVnService.WebhookNhanhVnInventory(request);
+        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
+    }
+
     [HttpPost("/api/v1/nhanh-vn/depot")]
     public async Task<IActionResult> GetNhanhVnDepot([FromBody] NhanhVnRequest.DepotRequest  request)
     {
