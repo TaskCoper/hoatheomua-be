@@ -74,6 +74,7 @@ public class Service : IService
 
         if (string.IsNullOrWhiteSpace(signature))
         {
+            LogSignatureDiagnostics(rawBody, signature: "<none>");
             throw new UnauthorizedException("Missing BaoKim callback signature");
         }
 
@@ -92,7 +93,73 @@ public class Service : IService
 
         if (!isValid)
         {
+            LogSignatureDiagnostics(rawBody, signature);
             throw new UnauthorizedException("Invalid BaoKim callback signature");
+        }
+    }
+
+    // Temporary bring-up diagnostics for the BaoKim callback, matching the Console.WriteLine idiom
+    // already used for gateway debugging elsewhere. Only runs on the failure paths, so a working
+    // callback stays quiet. Remove once verification is confirmed against a real callback.
+    private void LogSignatureDiagnostics(string rawBody, string signature)
+    {
+        Console.WriteLine("[BAOKIM SIG] ---------- signature diagnostics ----------");
+        Console.WriteLine($"[BAOKIM SIG] body: {rawBody.Length} chars, sha256={Sha256Hex(Encoding.UTF8.GetBytes(rawBody))}");
+        Console.WriteLine($"[BAOKIM SIG] raw body: {rawBody}");
+        Console.WriteLine($"[BAOKIM SIG] signature header value: {signature}");
+
+        // The decoded length identifies the scheme. 256 bytes is an RSA-2048 signature, i.e. what we
+        // assume, so a failure is about the KEY. 32 bytes would mean HMAC-SHA256 — a different
+        // scheme entirely, which no public key could ever fix.
+        try
+        {
+            var signatureBytes = Convert.FromBase64String(signature);
+            Console.WriteLine(
+                $"[BAOKIM SIG] signature is base64 -> {signatureBytes.Length} bytes " +
+                $"({(signatureBytes.Length == 256 ? "consistent with RSA-2048" : "NOT an RSA-2048 signature")})");
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine("[BAOKIM SIG] signature is NOT base64 — hex, or some other encoding?");
+        }
+
+        // Fingerprints only: enough to identify which key is loaded, without printing the key.
+        var configured = KeyFingerprint(_baoKimOption.PublicKey, isPrivate: false);
+        var ourOwn = KeyFingerprint(_baoKimOption.PrivateKey, isPrivate: true);
+        Console.WriteLine($"[BAOKIM SIG] configured PublicKey fingerprint      : {configured}");
+        Console.WriteLine($"[BAOKIM SIG] public half of our own PrivateKey     : {ourOwn}");
+
+        if (configured == ourOwn)
+        {
+            Console.WriteLine(
+                "[BAOKIM SIG] >>> THOSE MATCH: the configured PublicKey is OUR OWN key, so we are " +
+                "checking BaoKim's signature against a key BaoKim does not hold. This can never " +
+                "succeed. Set BaoKimOption.PublicKey to BaoKim's public key from the merchant " +
+                "dashboard.");
+        }
+
+        Console.WriteLine("[BAOKIM SIG] -------------------------------------------");
+    }
+
+    private static string Sha256Hex(byte[] data) => Convert.ToHexString(SHA256.HashData(data));
+
+    // Fingerprints the PUBLIC half of either key, so the two are directly comparable.
+    private static string KeyFingerprint(string pem, bool isPrivate)
+    {
+        if (string.IsNullOrWhiteSpace(pem))
+        {
+            return "<not configured>";
+        }
+
+        try
+        {
+            using var rsa = RSA.Create();
+            rsa.ImportFromPem(pem);
+            return Sha256Hex(rsa.ExportSubjectPublicKeyInfo())[..16];
+        }
+        catch (Exception ex)
+        {
+            return $"<unusable {(isPrivate ? "private" : "public")} key: {ex.GetType().Name}>";
         }
     }
 

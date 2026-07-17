@@ -11,5 +11,5 @@ public class BaoKimOption
     // BaoKim's public key (not ours), used to verify the Signature header on inbound callbacks.
     // Obtain it from the BaoKim merchant dashboard. Empty means callbacks cannot be authenticated,
     // and the webhook fails closed rather than fulfilling orders on unverified input.
-    public string PublicKey { get; set; } = "";
+    public string PublicKey { get; set; } = null!;
 }

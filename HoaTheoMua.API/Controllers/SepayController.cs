@@ -40,6 +40,17 @@ public class SepayController : ControllerBase
         using var reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8);
         var rawBody = await reader.ReadToEndAsync();
 
+        // Temporary bring-up logging. Dumping every header is the point: it shows whether BaoKim
+        // actually names the header "Signature" (we would otherwise read null and report it as
+        // missing) and what casing it uses. Remove once the callback is verified end to end.
+        Console.WriteLine("[BAOKIM WEBHOOK] ---------- incoming callback ----------");
+        foreach (var header in HttpContext.Request.Headers)
+        {
+            Console.WriteLine($"[BAOKIM WEBHOOK] header {header.Key}: {header.Value}");
+        }
+        Console.WriteLine($"[BAOKIM WEBHOOK] body: {rawBody}");
+        Console.WriteLine("[BAOKIM WEBHOOK] -------------------------------------");
+
         _baoKimService.VerifyCallbackSignature(
             rawBody, HttpContext.Request.Headers["Signature"].FirstOrDefault());
 
