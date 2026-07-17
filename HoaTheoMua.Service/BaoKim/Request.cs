@@ -52,6 +52,7 @@ public class CreateOrderRequest
     public required string UrlFail { get; set; }
 
     [JsonPropertyName("items")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<OrderItem>? Items { get; set; }
 
     [JsonPropertyName("customer_info")]
