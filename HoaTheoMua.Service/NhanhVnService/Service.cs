@@ -113,4 +113,10 @@ public class Service: IService
 
         return nhanhProductOrderSource;
     }
+
+    public Task<string> WebhookNhanhVnInventory(NhanhWebhookInventoryRequest request)
+    {
+        
+        throw new NotImplementedException();
+    }
 }
