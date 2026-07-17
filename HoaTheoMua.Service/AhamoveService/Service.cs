@@ -278,7 +278,7 @@ public class Service: IService
             string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
 
             // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
-            Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
+            // Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
 
 
             nhanhProductDepot = await nhanhVnResponse.Content.ReadFromJsonAsync<DepotResponse>();

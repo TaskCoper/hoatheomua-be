@@ -49,9 +49,9 @@ public class Service: IService
 
         var newRequest = JsonSerializer.Deserialize<object>(json);
 
-        Console.WriteLine(
-            $"[DEBUG NHANH.VN RAW DATA]: {JsonSerializer.Serialize(newRequest)}"
-        );
+        // Console.WriteLine(
+        //     $"[DEBUG NHANH.VN RAW DATA]: {JsonSerializer.Serialize(newRequest)}"
+        // );
         
         
         // var nhanhProductListRequest = new Request.ProductListRequest()
@@ -87,7 +87,7 @@ public class Service: IService
             string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
 
             // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
-            Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
+            // Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
 
 
             nhanhProductList = await nhanhVnResponse.Content.ReadFromJsonAsync< NhanhVnProductListResponse.NhanhVnProductResponse>();
@@ -173,7 +173,7 @@ public class Service: IService
             string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
     
             // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
-            Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
+            // Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
 
             // 2. Cấu hình bắt buộc phải truyền kèm để kích hoạt Custom Converter của bạn
             var options = new JsonSerializerOptions()

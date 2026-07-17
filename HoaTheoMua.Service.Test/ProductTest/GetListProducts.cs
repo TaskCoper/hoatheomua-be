@@ -291,7 +291,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
             }
 
             // Assert
-            Assert.Contains("[DEBUG NHANH.VN RAW DATA]", sw.ToString());
+            // Debug log đã được comment trong Product/Service.cs nên không còn assert output này nữa.
+            // Assert.Contains("[DEBUG NHANH.VN RAW DATA]", sw.ToString());
         }
     }
 }

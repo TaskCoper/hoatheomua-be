@@ -14,12 +14,12 @@ public class SepayController : ControllerBase
     {
         _sepayService = sepayService;
     }
-    
+
     [HttpPost("/api/v1/sepay")]
     public async Task<IActionResult> SepayWebhookHandler([FromBody] Request.SepayWebhookRequest request)
     {
         await _sepayService.SepayWebhookHandler(request);
-        return Ok(ApiResponseFactory.Base("success", true, "",HttpContext.TraceIdentifier));
+        return Ok(ApiResponseFactory.Base("success", true, "", HttpContext.TraceIdentifier));
     }
 
     [HttpPost("api/v1/baokim")]
@@ -47,6 +47,15 @@ public class SepayController : ControllerBase
         var query = Request.Query.ToDictionary(
             q => q.Key,
             q => q.Value.ToString());
+
+        Console.WriteLine(new
+        {
+            Method = Request.Method,
+            Path = Request.Path,
+            Query = query,
+            Headers = headers,
+            Body = body
+        });
 
         return Ok(new
         {
