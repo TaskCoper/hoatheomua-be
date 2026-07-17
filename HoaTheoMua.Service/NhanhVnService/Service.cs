@@ -116,6 +116,14 @@ public class Service: IService
 
     public Task<string> WebhookNhanhVnInventory(NhanhWebhookInventoryRequest request)
     {
+        if (request == null || request.Data == null || !request.Data.Any())
+        {
+            throw new BadRequestException("Không có dữ liệu thay đổi tồn kho.");
+        }
+        
+        var productIdFromWebhook = request.Data.Select(x => x.AppProductId).Distinct().ToList();
+        
+        //var productIdFromDb = await _appDbContext.
         
         throw new NotImplementedException();
     }
