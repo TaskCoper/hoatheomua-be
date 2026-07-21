@@ -58,6 +58,7 @@ public class Response
         public decimal? VatFee { get; set; }
         public DateTimeOffset CreateAt { get; set; }
         public string? PaymentUrl { get; set; }
+        public PaymentMethod PaymentMethod { get; set; }
         
         public OrderTransactionResponse? Transaction { get; set; }
         public List<OrderDetailsResponse>  Details { get; set; } = new List<OrderDetailsResponse>();

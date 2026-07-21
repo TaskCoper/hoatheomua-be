@@ -392,6 +392,7 @@ public class Service : IService
             TrackNumber = orders.TrackNumber,
             TaxCode = orders.TaxCode,
             PaymentUrl = orders.PaymentUrl,
+            PaymentMethod = orders.PaymentMethod,
             //NhanhOrderId = orders.NhanhOrderId,
             //NhanhTrackingUrl = orders.NhanhTrackingUrl,
             AhahaMoveOrderId = orders.AhahaMoveOrderId,
