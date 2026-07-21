@@ -39,9 +39,11 @@ namespace HoaTheoMua.Service.Test.OrderTest
             List<OrderDetailEntity>? details = null,
             List<TransactionEntity>? transactions = null)
         {
+            var orderId = id ?? Guid.NewGuid();
+            
             return new OrderEntity
             {
-                Id = id ?? Guid.NewGuid(),
+                Id = orderId,
                 UserId = userId ?? TestUserId,
                 Status = "Pending",
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -57,7 +59,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Phone = "0987654321",
                 TotalFee = totalFee,
                 OrderDetails = details ?? new List<OrderDetailEntity>(),
-                Transactions = transactions ?? new List<TransactionEntity>()
+                Transactions = transactions ?? new List<TransactionEntity>(),
+                PaymentUrl = $"https://qr.sepay.vn/img?acc=96247BENTRAN&bank=BIDV&amount=782000&des=HTM-{orderId}&template=qronly"
             };
         }
 
