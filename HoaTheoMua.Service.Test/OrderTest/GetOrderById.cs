@@ -277,7 +277,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.NotNull(response);
             var orderResult = Assert.IsType<HoaTheoMua.Service.Order.Response.GetOrderByIdResponse>(response.Value);
             var expectedQrUrl = $"https://qr.sepay.vn/img?acc=96247BENTRAN&bank=BIDV&amount=782000&des=HTM-{orderId}&template=qronly";
-            Assert.Equal(expectedQrUrl, orderResult.QrCodeUrl);
+            Assert.Equal(expectedQrUrl, orderResult.PaymentUrl);
         }
 
         // Test case 08: Order chưa có transaction
