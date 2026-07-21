@@ -194,7 +194,7 @@ public class Service : IService
             UrlFail = $"{BaoKimConstant.PaymentFailUrl}?requestId={requestId}&orderId={order.Id}",
             // Items = orderDetails.Select(x => new OrderItem
             // {
-            //     Code = x.ItemId.ToString(),
+            //     Code = x.ItemId.ToString(),cho
             //     Name = x.Name,
             //     Amount = (long)x.Price,
             //     Quantity = x.Number,
@@ -209,7 +209,7 @@ public class Service : IService
                 Address = order.Address,
                 Gender = 1
             },
-            PaymentMethod = Repository.Enum.PaymentMethod.VA
+            PaymentMethod = order.PaymentMethod
         };
 
         // Serialize once, sign those exact bytes, then send the same string.

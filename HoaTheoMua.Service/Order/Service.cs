@@ -150,6 +150,7 @@ public class Service : IService
             ProductFee = totalProductFee,
             TotalFee = totalProductFee + totalShippingFee + vatFee,
             Vat = vatFee,
+            PaymentMethod = request.PaymentMethod,
 
             TagIds = request.TagIds,
             TaxCode = request.TaxCode,
