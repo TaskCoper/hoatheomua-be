@@ -989,3 +989,15 @@ public class NhanhOrderDeleteWebhookRequest
     [JsonPropertyName("data")]
     public List<long> Data { get; set; } = [];
 }
+
+public class NhanhProductDeleteWebhookRequest
+{
+    [JsonPropertyName("event")]
+    public string? Event { get; set; }
+
+    [JsonPropertyName("businessId")]
+    public long BusinessId { get; set; }
+
+    [JsonPropertyName("data")]
+    public List<long> Data { get; set; } = new();
+}
