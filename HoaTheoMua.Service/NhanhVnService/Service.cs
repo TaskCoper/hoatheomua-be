@@ -139,15 +139,17 @@ public class Service: IService
             {
                 product.AvailableForSale = (decimal?)item.Available;
                 product.ProductCode = item.Code;
-                product.TotalStock = (decimal?)item.Remain;
+                product.TotalStock = (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
                 product.Stock = (decimal?)item.Remain;
                 product.DeliveringStock = (decimal?)item.Shipping;
                 product.StockError = (decimal?)item.Damaged;
-                product.Held = (decimal?)item.Holding;
+                product.Held = (decimal?)item.Holding;//tạm giữ các kho
                 product.StockTransferring = (decimal?)item.Transfering;
+                // product.HeldComponents = item.Holding;
                 
-                product.WarehouseStock = (decimal?)item.Warranty!.Remain;
+                // product.WarehouseStock = (decimal?)item.Warranty.Remain;
                 product.WarrantyStock = (decimal?)item.Warranty.Remain;
+                product.HeldComponents = (decimal?)item.Warranty.Holding;
                 product.UpdatedAt = DateTimeOffset.UtcNow;
             }
         }
@@ -159,33 +161,29 @@ public class Service: IService
 
     public async Task<string> WebhookNhanhVnProductAdd(NhanhProductAddWebhookRequest request)
     {
-        if (request == null || request.Data == null || !request.Data.Any())
+        if (request == null || request.Data == null)
         {
             throw new BadRequestException("Không có dữ liệu thay đổi khi thêm sản phẩm.");
         }
 
-        var nhanhProductIds = request.Data.Select(x => x.Id.ToString()).Distinct().ToList();
+        var item = request.Data;
+        var nhanhProductId = item.Id.ToString();
 
-        var existingProducts = await _appDbContext.Products
-            .Where(x => !x.IsDeleted && nhanhProductIds.Contains(x.NhanhProductId!))
-            .ToListAsync();
+        var existingProduct = await _appDbContext.Products
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == nhanhProductId);
 
-        if (existingProducts.Any())
+        if (existingProduct != null)
         {
             throw new BadRequestException("Có sản phẩm đã tồn tại trong hệ thống");
         }
 
-        var newProducts = new List<HoaTheoMua.Repository.Entity.Product>();
-
-        foreach (var item in request.Data)
+        var product = new HoaTheoMua.Repository.Entity.Product
         {
-            var product = new HoaTheoMua.Repository.Entity.Product
-            {
-                Id = Guid.NewGuid(),
-                NhanhProductId = item.Id.ToString(),
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
-            };
+            Id = Guid.NewGuid(),
+            NhanhProductId = item.Id.ToString(),
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
             
             product.ParentProductId = item.ParentId != 0 ? item.ParentId.ToString() : null;
             product.ProductCode = item.Code;
@@ -238,9 +236,9 @@ public class Service: IService
             // Tồn kho
             if (item.Inventory != null)
             {
-                product.TotalStock = (decimal)item.Inventory.Remain;
-                product.Stock = (decimal)item.Inventory.Remain;
-                product.WarehouseStock = (decimal)item.Inventory.Remain;
+                product.TotalStock = (decimal)item.Inventory.Remain;//tổng tồn
+                //product.Stock = (decimal)item.Inventory.Remain;// tồn
+                product.WarehouseStock = (decimal)item.Inventory.Remain;//tồn trong kho
                 product.DeliveringStock = (decimal)item.Inventory.Shipping;
                 product.StockError = (decimal)item.Inventory.Damaged;
                 product.Held = (decimal)item.Inventory.Holding;
@@ -280,16 +278,10 @@ public class Service: IService
                 product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt);
             }
 
-            newProducts.Add(product);
-        }
+        await _appDbContext.Products.AddAsync(product);
+        await _appDbContext.SaveChangesAsync();
 
-        if (newProducts.Any())
-        {
-            await _appDbContext.Products.AddRangeAsync(newProducts);
-            await _appDbContext.SaveChangesAsync();
-        }
-
-        return $"Thêm mới thành công {newProducts.Count} sản phẩm từ Nhanh.vn.";
+        return $"Thêm mới thành công 1 sản phẩm từ Nhanh.vn.";
     }
 
     public async Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest request)
@@ -587,151 +579,138 @@ public class Service: IService
 
     public async Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest request)
     {
-        if (request == null || request.Data == null || !request.Data.Any())
+        if (request == null || request.Data == null)
         {
             throw new BadRequestException("Không có dữ liệu thay đổi khi cập nhật sản phẩm.");
         }
 
-        var nhanhProductIds = request.Data.Select(x => x.Id.ToString()).Distinct().ToList();
+        var item = request.Data;
+        var nhanhProductId = item.Id.ToString();
 
-        var existingProducts = await _appDbContext.Products
-            .Where(x => !x.IsDeleted && nhanhProductIds.Contains(x.NhanhProductId!))
-            .ToListAsync();
+        var product = await _appDbContext.Products
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == nhanhProductId);
 
-        var newProducts = new List<HoaTheoMua.Repository.Entity.Product>();
+        var isNew = false;
+
+        if (product == null)
+        {
+            product = new HoaTheoMua.Repository.Entity.Product
+            {
+                Id = Guid.NewGuid(),
+                NhanhProductId = item.Id.ToString(),
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            isNew = true;
+        }
+
         var updatedCount = 0;
 
-        foreach (var item in request.Data)
+        product.UpdatedAt = DateTimeOffset.UtcNow;
+        product.ParentProductId = item.ParentId != 0 ? item.ParentId.ToString() : null;
+        product.ProductCode = item.Code;
+        product.Barcode = item.Barcode;
+        product.ProductName = item.Name;
+        product.OtherName = item.OtherName;
+        product.Status = item.Status;
+
+        // Danh mục
+        product.CategoryCode = item.Category?.Code;
+        product.CategoryName = item.Category?.Name;
+        product.InternalCategoryCode = item.InternalCategory?.Code;
+        product.ProductType = item.Type?.Name;
+
+        // Giá
+        if (item.Prices != null)
         {
-            var product = existingProducts.FirstOrDefault(x => x.NhanhProductId == item.Id.ToString());
-            var isNew = false;
+            product.Price = (decimal)item.Prices.Retail;
+            product.ImportPrice = (decimal)item.Prices.Import;
+            product.OldPrice = (decimal)item.Prices.Old;
+            product.WholesalePrice = (decimal)item.Prices.Wholesale;
+            product.CostPrice = (decimal)item.Prices.AvgCost;
+        }
+        product.Vat = item.Vat;
 
-            if (product == null)
-            {
-                product = new HoaTheoMua.Repository.Entity.Product
-                {
-                    Id = Guid.NewGuid(),
-                    NhanhProductId = item.Id.ToString(),
-                    CreatedAt = DateTimeOffset.UtcNow
-                };
-                isNew = true;
-            }
+        // Ảnh
+        product.CoverImage = item.Images?.Avatar;
 
-            product.UpdatedAt = DateTimeOffset.UtcNow;
-            product.ParentProductId = item.ParentId != 0 ? item.ParentId.ToString() : null;
-            product.ProductCode = item.Code;
-            product.Barcode = item.Barcode;
-            product.ProductName = item.Name;
-            product.OtherName = item.OtherName;
-            product.Status = item.Status;
+        // Bảo hành
+        product.WarrantyMonths = item.Warranty?.Month;
+        product.WarrantyAddress = item.Warranty?.Address;
 
-            // Danh mục
-            product.CategoryCode = item.Category?.Code;
-            product.CategoryName = item.Category?.Name;
-            product.InternalCategoryCode = item.InternalCategory?.Code;
-            product.ProductType = item.Type?.Name;
+        // Thương hiệu & nhà cung cấp
+        product.Brand = item.Brand?.Name;
+        product.Supplier = item.Suppliers?.Name;
 
-            // Giá
-            if (item.Prices != null)
-            {
-                product.Price = (decimal)item.Prices.Retail;
-                product.ImportPrice = (decimal)item.Prices.Import;
-                product.OldPrice = (decimal)item.Prices.Old;
-                product.WholesalePrice = (decimal)item.Prices.Wholesale;
-                product.CostPrice = (decimal)item.Prices.AvgCost;
-            }
-            product.Vat = item.Vat;
-
-            // Ảnh
-            product.CoverImage = item.Images?.Avatar;
-
-            // Bảo hành
-            product.WarrantyMonths = item.Warranty?.Month;
-            product.WarrantyAddress = item.Warranty?.Address;
-
-            // Thương hiệu & nhà cung cấp
-            product.Brand = item.Brand?.Name;
-            product.Supplier = item.Suppliers?.Name;
-
-            // Kích thước & cân nặng
-            if (item.Shipping != null)
-            {
-                product.Length = (decimal)item.Shipping.Length;
-                product.Width = (decimal)item.Shipping.Width;
-                product.Height = (decimal)item.Shipping.Height;
-                product.Weight = (decimal)item.Shipping.Weight;
-            }
-
-            // Xuất xứ & đơn vị tính
-            product.Origin = item.CountryName;
-            product.Unit = item.Units?.Name;
-
-            // Tồn kho
-            if (item.Inventory != null)
-            {
-                product.TotalStock = (decimal)item.Inventory.Remain;
-                product.Stock = (decimal)item.Inventory.Remain;
-                product.WarehouseStock = (decimal)item.Inventory.Remain;
-                product.DeliveringStock = (decimal)item.Inventory.Shipping;
-                product.StockError = (decimal)item.Inventory.Damaged;
-                product.Held = (decimal)item.Inventory.Holding;
-                product.StockTransferring = (decimal)item.Inventory.Transfering;
-                product.AvailableForSale = (decimal)item.Inventory.Available;
-                product.WarrantyStock = (decimal)item.Inventory.Warranty;
-                product.HeldComponents = (decimal)item.Inventory.WarrantyHolding;
-            }
-
-            // Branch Prices (Lấy chi nhánh đầu tiên nếu có)
-            if (item.BranchPrices != null && item.BranchPrices.Any())
-            {
-                var firstBranchPrice = item.BranchPrices.First();
-                product.BranchPrice = (decimal)firstBranchPrice.Price;
-                product.WholesaleBranchPrice = (decimal)firstBranchPrice.WholesalePrice;
-            }
-
-            // Attributes (Size, Color)
-            if (item.Attributes != null && item.Attributes.Any())
-            {
-                var sizeAttr = item.Attributes
-                    .FirstOrDefault(a => 
-                        a.Name != null && (a.Name.Equals("Kích thước", StringComparison.OrdinalIgnoreCase) 
-                                           || a.Name.Equals("Size", StringComparison.OrdinalIgnoreCase)));
-                if (sizeAttr != null) product.Size = sizeAttr.Value;
-
-                var colorAttr = item.Attributes
-                    .FirstOrDefault(a => 
-                        a.Name != null && (a.Name.Equals("Màu sắc", StringComparison.OrdinalIgnoreCase) 
-                                           || a.Name.Equals("Color", StringComparison.OrdinalIgnoreCase)));
-                if (colorAttr != null) product.Color = colorAttr.Value;
-            }
-
-            // Nhanh CreatedAt
-            if (item.CreatedAt > 0)
-            {
-                product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt);
-            }
-
-            if (isNew)
-            {
-                newProducts.Add(product);
-            }
-            else
-            {
-                updatedCount++;
-            }
+        // Kích thước & cân nặng
+        if (item.Shipping != null)
+        {
+            product.Length = (decimal)item.Shipping.Length;
+            product.Width = (decimal)item.Shipping.Width;
+            product.Height = (decimal)item.Shipping.Height;
+            product.Weight = (decimal)item.Shipping.Weight;
         }
 
-        if (newProducts.Any())
+        // Xuất xứ & đơn vị tính
+        product.Origin = item.CountryName;
+        product.Unit = item.Units?.Name;
+
+        // Tồn kho
+        if (item.Inventory != null)
         {
-            await _appDbContext.Products.AddRangeAsync(newProducts);
+            product.TotalStock = (decimal)item.Inventory.Remain;
+            // product.Stock = (decimal)item.Inventory.Remain;
+            product.WarehouseStock = (decimal)item.Inventory.Remain;
+            product.DeliveringStock = (decimal)item.Inventory.Shipping;
+            product.StockError = (decimal)item.Inventory.Damaged;
+            product.Held = (decimal)item.Inventory.Holding;
+            product.StockTransferring = (decimal)item.Inventory.Transfering;
+            product.AvailableForSale = (decimal)item.Inventory.Available;
+            product.WarrantyStock = (decimal)item.Inventory.Warranty;
+            product.HeldComponents = (decimal)item.Inventory.WarrantyHolding;
         }
 
-        if (newProducts.Any() || updatedCount > 0)
+        // Branch Prices (Lấy chi nhánh đầu tiên nếu có)
+        if (item.BranchPrices != null && item.BranchPrices.Any())
         {
-            await _appDbContext.SaveChangesAsync();
+            var firstBranchPrice = item.BranchPrices.First();
+            product.BranchPrice = (decimal)firstBranchPrice.Price;
+            product.WholesaleBranchPrice = (decimal)firstBranchPrice.WholesalePrice;
         }
 
-        return $"Cập nhật thành công {updatedCount} sản phẩm, thêm mới {newProducts.Count} sản phẩm từ Nhanh.vn.";
+        // Attributes (Size, Color)
+        if (item.Attributes != null && item.Attributes.Any())
+        {
+            var sizeAttr = item.Attributes
+                .FirstOrDefault(a =>
+                    a.Name != null && (a.Name.Equals("Kích thước", StringComparison.OrdinalIgnoreCase)
+                                       || a.Name.Equals("Size", StringComparison.OrdinalIgnoreCase)));
+            if (sizeAttr != null) product.Size = sizeAttr.Value;
+
+            var colorAttr = item.Attributes
+                .FirstOrDefault(a =>
+                    a.Name != null && (a.Name.Equals("Màu sắc", StringComparison.OrdinalIgnoreCase)
+                                       || a.Name.Equals("Color", StringComparison.OrdinalIgnoreCase)));
+            if (colorAttr != null) product.Color = colorAttr.Value;
+        }
+
+        // Nhanh CreatedAt
+        if (item.CreatedAt > 0)
+        {
+            product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt);
+        }
+
+        if (isNew)
+        {
+            await _appDbContext.Products.AddAsync(product);
+        }
+        else
+        {
+            updatedCount++;
+        }
+
+        await _appDbContext.SaveChangesAsync();
+
+        return $"Cập nhật thành công {updatedCount} sản phẩm, thêm mới {(isNew ? 1 : 0)} sản phẩm từ Nhanh.vn.";
     }
 
     public async Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest request)

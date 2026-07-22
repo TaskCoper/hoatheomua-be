@@ -178,9 +178,9 @@ public class NhanhProductAddWebhookRequest
     [JsonPropertyName("businessId")]
     public long BusinessId { get; set; }
 
-    // Điểm khác biệt: "data" ở sự kiện này là một Object đơn lẻ, không phải Array
+    // "data" ở sự kiện này là một object đơn lẻ, không phải array
     [JsonPropertyName("data")]
-    public List<NhanhProductDetailDto> Data { get; set; } = new();
+    public NhanhProductDetailDto? Data { get; set; }
 }
 
 public class NhanhProductDetailDto
