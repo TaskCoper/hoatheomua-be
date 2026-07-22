@@ -634,6 +634,247 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("OrderDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("AvailableForSale")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal?>("BranchPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("BranchPriceDuplicate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("BranchPriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Brand")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CategoryCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CategoryName")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("CostPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("CoverImage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<decimal?>("DeliveringStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Height")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Held")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("HeldComponents")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ImportPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ImportPriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ImportVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ImportVatMode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("InternalCategoryCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("Length")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset?>("NhanhCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NhanhProductId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("OldPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Origin")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OtherName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ParentProductCode")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ParentProductId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ParentProductName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal?>("PendingImportStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PreOrder")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PriceLabel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("PriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ProductCode")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ProductLabel")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ProductName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ProductType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("ProfitPercentage")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("SaleVatMode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Size")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("SourceRowNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("Stock")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("StockError")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("StockTransferring")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Supplier")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal?>("TotalStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("Vat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WarehouseStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("WarrantyAddress")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int?>("WarrantyMonths")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("WarrantyStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("WebOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Weight")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesaleBranchPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesaleBranchPriceDuplicate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesaleBranchPriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesalePrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesalePriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Width")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NhanhProductId")
+                        .IsUnique()
+                        .HasFilter("\"NhanhProductId\" IS NOT NULL");
+
+                    b.ToTable("Products");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>
                 {
                     b.Property<Guid>("Id")
