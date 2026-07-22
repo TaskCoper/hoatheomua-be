@@ -11,4 +11,6 @@ public interface IService
     Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest request);
     Task<string> WebhookNhanhVnOrderUpdate(NhanhOrderAddWebhookRequest request);
     Task<string> WebhookNhanhVnOrderDelete(NhanhOrderDeleteWebhookRequest request);
+    Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest request);
+    Task<string> WebhookNhanhVnProductDelete(string productId);
 }

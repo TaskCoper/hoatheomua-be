@@ -75,4 +75,18 @@ public class NhanhVnController : ControllerBase
         var result = await _nhanhVnService.WebhookNhanhVnOrderDelete(request);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
     }
+
+    [HttpPost("/api/v1/nhanh-vn/webhook/update-product")]
+    public async Task<IActionResult> WebhookNhanhVnProductUpdate([FromBody] NhanhProductAddWebhookRequest request)
+    {
+        var result = await _nhanhVnService.WebhookNhanhVnProductUpdate(request);
+        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
+    }
+
+    [HttpPost("/api/v1/nhanh-vn/webhook/delete-product")]
+    public async Task<IActionResult> WebhookNhanhVnDeleteProduct([FromBody] string request)
+    {
+        var result = await _nhanhVnService.WebhookNhanhVnProductDelete(request);
+        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
+    }
 }
