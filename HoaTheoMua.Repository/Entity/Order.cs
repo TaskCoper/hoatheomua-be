@@ -22,6 +22,7 @@ public class Order: BaseEntity<Guid>,IAuditableEntity
     public  string? NhanhTrackingUrl { get; set; }
     public  string? AhahaMoveOrderId { get; set; }
     public  string? AhahaMoveTrackingUrl { get; set; }
+    public string? PaymentUrl { get; set; }
     public decimal ShippingFee { get; set; }
     public decimal ProductFee { get; set; }
     public decimal TotalFee { get; set; }

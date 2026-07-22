@@ -39,9 +39,11 @@ namespace HoaTheoMua.Service.Test.OrderTest
             List<OrderDetailEntity>? details = null,
             List<TransactionEntity>? transactions = null)
         {
+            var orderId = id ?? Guid.NewGuid();
+            
             return new OrderEntity
             {
-                Id = id ?? Guid.NewGuid(),
+                Id = orderId,
                 UserId = userId ?? TestUserId,
                 Status = "Pending",
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -57,7 +59,37 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Phone = "0987654321",
                 TotalFee = totalFee,
                 OrderDetails = details ?? new List<OrderDetailEntity>(),
-                Transactions = transactions ?? new List<TransactionEntity>()
+                Transactions = transactions ?? new List<TransactionEntity>(),
+                PaymentUrl = $"https://qr.sepay.vn/img?acc=96247BENTRAN&bank=BIDV&amount=782000&des=HTM-{orderId}&template=qronly"
+            };
+        }
+
+        // Transaction has a wide set of required members that these tests never assert on; this
+        // keeps each case down to the few fields it actually cares about.
+        private static TransactionEntity CreateTransaction(
+            Guid orderId,
+            decimal transferAmount,
+            string code,
+            string gateway,
+            DateTime transactionDate,
+            DateTimeOffset createdAt)
+        {
+            return new TransactionEntity
+            {
+                Id = Guid.NewGuid(),
+                OrderId = orderId,
+                RequestId = $"REQ-{code}",
+                Gateway = gateway,
+                Code = code,
+                TransferAmount = transferAmount,
+                TransactionDate = transactionDate,
+                CreatedAt = createdAt,
+                AccountNumber = string.Empty,
+                SubAccount = string.Empty,
+                Content = string.Empty,
+                TransferType = string.Empty,
+                Description = string.Empty,
+                ReferenceCode = string.Empty
             };
         }
 
@@ -111,7 +143,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             };
             var transactions = new List<TransactionEntity>
             {
-                new TransactionEntity { Id = Guid.NewGuid(), OrderId = orderId, TransferAmount = 100000m, Code = "TX-001", TransactionDate = DateTime.UtcNow, Gateway = "Sepay", CreatedAt = DateTime.UtcNow }
+                CreateTransaction(orderId, 100000m, "TX-001", "Sepay", DateTime.UtcNow, DateTime.UtcNow)
             };
             var order = CreateOrder(id: orderId, userId: TestUserId, details: details, transactions: transactions);
             var dbContext = CreateMockDbContext(new List<OrderEntity> { order }).Object;
@@ -248,7 +280,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.NotNull(response);
             var orderResult = Assert.IsType<HoaTheoMua.Service.Order.Response.GetOrderByIdResponse>(response.Value);
             var expectedQrUrl = $"https://qr.sepay.vn/img?acc=96247BENTRAN&bank=BIDV&amount=782000&des=HTM-{orderId}&template=qronly";
-            Assert.Equal(expectedQrUrl, orderResult.QrCodeUrl);
+            Assert.Equal(expectedQrUrl, orderResult.PaymentUrl);
         }
 
         // Test case 08: Order chưa có transaction
@@ -278,16 +310,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
             // Arrange
             var orderId = Guid.NewGuid();
             var now = DateTime.UtcNow;
-            var oldTx = new TransactionEntity
-            {
-                Id = Guid.NewGuid(), OrderId = orderId, TransferAmount = 50000m, Code = "TX-OLD", Gateway = "Gateway",
-                CreatedAt = now.AddMinutes(-10), TransactionDate = now.AddMinutes(-10)
-            };
-            var newTx = new TransactionEntity
-            {
-                Id = Guid.NewGuid(), OrderId = orderId, TransferAmount = 100000m, Code = "TX-NEW", Gateway = "Gateway",
-                CreatedAt = now, TransactionDate = now
-            };
+            var oldTx = CreateTransaction(
+                orderId, 50000m, "TX-OLD", "Gateway", now.AddMinutes(-10), now.AddMinutes(-10));
+            var newTx = CreateTransaction(
+                orderId, 100000m, "TX-NEW", "Gateway", now, now);
             var order = CreateOrder(id: orderId, userId: TestUserId, transactions: new List<TransactionEntity> { oldTx, newTx });
             var dbContext = CreateMockDbContext(new List<OrderEntity> { order }).Object;
             var currentUser = CreateMockCurrentUserService(TestUserId);

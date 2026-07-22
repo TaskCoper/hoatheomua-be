@@ -150,6 +150,7 @@ public class Service : IService
             ProductFee = totalProductFee,
             TotalFee = totalProductFee + totalShippingFee + vatFee,
             Vat = vatFee,
+            PaymentMethod = request.PaymentMethod,
 
             TagIds = request.TagIds,
             TaxCode = request.TaxCode,
@@ -181,6 +182,8 @@ public class Service : IService
 
         var createBaoKimOrderResponse = await _baoKimService.CreateOrder(
             baoKimTokenResponse.Data.AccessToken, newOrder);
+
+        newOrder.PaymentUrl = createBaoKimOrderResponse.Data.PaymentUrl;
 
         await _dbContext.Orders.AddAsync(newOrder);
         await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
@@ -378,19 +381,6 @@ public class Service : IService
             throw new NotFoundException("Order not found ");
         }
 
-        // decimal totalAmount = itemAmount + shippingFee;
-        decimal totalAmount = orders.TotalFee;
-
-        string description = $"HTM-{orders.Id.ToString()}";
-        string bankName = "BIDV";
-        string bankAccount = "96247BENTRAN";
-        string qrCodeUrl = $"https://qr.sepay.vn/img?" +
-                           $"acc={bankAccount}&" +
-                           $"bank={bankName}&" +
-                           $"amount={totalAmount}&" +
-                           $"des={description}&" +
-                           $"template=qronly";
-
         var lastTransaction = orders.Transactions
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefault();
@@ -401,7 +391,8 @@ public class Service : IService
             Status = orders.Status,
             TrackNumber = orders.TrackNumber,
             TaxCode = orders.TaxCode,
-            QrCodeUrl = qrCodeUrl,
+            PaymentUrl = orders.PaymentUrl,
+            PaymentMethod = orders.PaymentMethod,
             //NhanhOrderId = orders.NhanhOrderId,
             //NhanhTrackingUrl = orders.NhanhTrackingUrl,
             AhahaMoveOrderId = orders.AhahaMoveOrderId,

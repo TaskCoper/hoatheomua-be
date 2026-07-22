@@ -673,7 +673,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
 
             // Assert
             var transaction = Assert.Single(capturedTransactions);
-            Assert.Equal(request.Id, transaction.SePayId);
+            Assert.Equal(request.Id.ToString(), transaction.RequestId);
             Assert.Equal(request.Gateway, transaction.Gateway);
             Assert.Equal(request.AccountNumber, transaction.AccountNumber);
             Assert.Equal(request.SubAccount, transaction.SubAccount);

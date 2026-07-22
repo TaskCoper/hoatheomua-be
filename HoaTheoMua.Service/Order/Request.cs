@@ -10,7 +10,8 @@ public class Request
     {
         public string? TaxCode { get; set; }
         public List<long>? TagIds { get; set; }
-        
+
+        public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.VA;
         
         public string? IdentityNumber {get; set; }
     
