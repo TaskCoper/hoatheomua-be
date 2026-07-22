@@ -1,0 +1,381 @@
+using HoaTheoMua.Repository;
+using CategoryProductEntity = HoaTheoMua.Repository.Entity.CategoryProduct;
+using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Service.Common;
+using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace HoaTheoMua.Service.CategoryProduct;
+
+public class Service : IService
+{
+    private readonly AppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUser;
+
+    public Service(AppDbContext dbContext, ICurrentUserService currentUser)
+    {
+        _dbContext = dbContext;
+        _currentUser = currentUser;
+    }
+
+    private async Task<CategoryProductEntity?> GetActiveCategory(Guid categoryId)
+    {
+        return await _dbContext.CategoryProducts.FirstOrDefaultAsync(x => x.Id == categoryId && !x.IsDeleted);
+    }
+
+    private static Response.CategoryProductResponse MapCategoryResponse(CategoryProductEntity category)
+    {
+        return new Response.CategoryProductResponse()
+        {
+            categoryId = category.Id,
+            name = category.Name,
+            startTime = category.StartTime,
+            endTime = category.EndTime,
+            type = category.Type,
+            isActive = category.IsActive,
+            userId = category.UserId,
+            parentId = category.ParentCategoryProductId,
+        };
+    }
+
+    public async Task<Response.CreateCategoryProductResponse> CreateCateProduct(Request.CreateCategoryProductRequest request)
+    {
+        var userId = _currentUser.GetRequiredUserId();
+
+        if (string.IsNullOrWhiteSpace(request.name))
+        {
+            throw new BadRequestException("CATEGORY_NAME_REQUIRED");
+        }
+
+        var isDuplicateName = await _dbContext.CategoryProducts.AnyAsync(x =>
+            !x.IsDeleted &&
+            x.ParentCategoryProductId == request.parentId &&
+            x.Name == request.name);
+        if (isDuplicateName)
+        {
+            throw new ConflictException("CATEGORY_ALREADY_EXISTS");
+        }
+
+        var newCate = new CategoryProductEntity()
+        {
+            Id = Guid.NewGuid(),
+            Name = request.name,
+            StartTime = request.startTime,
+            EndTime = request.endTime,
+            Type = request.type,
+            IsActive = request.isActive,
+            UserId = userId,
+        };
+
+        if (request.parentId != null)
+        {
+            var parentCategory = await GetActiveCategory(request.parentId.Value);
+            if (parentCategory == null)
+            {
+                throw new NotFoundException("CATEGORY_NOT_FOUND");
+            }
+
+            if (parentCategory.ParentCategoryProductId != null)
+            {
+                throw new BadRequestException("CATEGORY_PARENT_INVALID");
+            }
+
+            newCate.ParentCategoryProductId = request.parentId;
+        }
+
+        await _dbContext.CategoryProducts.AddAsync(newCate);
+        await _dbContext.SaveChangesAsync();
+
+        return new Response.CreateCategoryProductResponse()
+        {
+            categoryId = newCate.Id,
+            name = newCate.Name,
+            startTime = newCate.StartTime,
+            endTime = newCate.EndTime,
+            type = newCate.Type,
+            isActive = newCate.IsActive,
+            parentId = newCate.ParentCategoryProductId,
+            userId = newCate.UserId,
+        };
+    }
+
+    public async Task<BasePaginationResponse> GetCateProducts(int pageIndex, int pageSize, string? keyword)
+    {
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+
+        var cateResponse = await _dbContext.CategoryProducts
+            .Where(x => !x.IsDeleted)
+            .Select(x => new Response.CategoryProductResponse()
+            {
+                categoryId = x.Id,
+                name = x.Name,
+                startTime = x.StartTime,
+                endTime = x.EndTime,
+                type = x.Type,
+                isActive = x.IsActive,
+                userId = x.UserId,
+                parentId = x.ParentCategoryProductId,
+            }).ToListAsync();
+
+        var listCateId = cateResponse.ToDictionary(x => x.categoryId);
+        var parentCate = new List<Response.CategoryProductResponse>();
+
+        foreach (var item in cateResponse)
+        {
+            if (item.parentId == null)
+            {
+                parentCate.Add(item);
+            }
+            else
+            {
+                if (listCateId.TryGetValue(item.parentId.Value, out var parentItem))
+                {
+                    parentItem.children ??= new List<Response.CategoryProductResponse>();
+                    parentItem.children.Add(item);
+                }
+            }
+        }
+
+        if (keyword != null)
+        {
+            var kw = keyword.Trim().ToLower();
+            parentCate = parentCate.Where(x => x.name.Trim().ToLower().Contains(kw)).ToList();
+        }
+
+        var count = parentCate.Count;
+        var catePageResponse = parentCate
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return ApiResponseFactory.BasePagination(
+            items: catePageResponse,
+            pageIndex: pageIndex,
+            pageSize: pageSize,
+            totalCount: count);
+    }
+
+    public async Task<Response.CategoryProductResponse> GetCateProduct(Guid categoryId)
+    {
+        var category = await GetActiveCategory(categoryId);
+        if (category == null)
+        {
+            throw new NotFoundException("CATEGORY_NOT_FOUND");
+        }
+
+        var result = MapCategoryResponse(category);
+        if (category.ParentCategoryProductId != null)
+        {
+            var parentCateId = category.ParentCategoryProductId.Value;
+            result.Parent = await _dbContext.CategoryProducts
+                .Where(x => x.Id == parentCateId && !x.IsDeleted)
+                .Select(x => new Response.CategoryProductResponse()
+                {
+                    categoryId = x.Id,
+                    name = x.Name,
+                    startTime = x.StartTime,
+                    endTime = x.EndTime,
+                    type = x.Type,
+                    isActive = x.IsActive,
+                    userId = x.UserId,
+                    parentId = x.ParentCategoryProductId,
+                    children = new List<Response.CategoryProductResponse>(),
+                }).FirstOrDefaultAsync();
+        }
+
+        var childCategories = await _dbContext.CategoryProducts
+            .Where(x => x.ParentCategoryProductId == categoryId && !x.IsDeleted)
+            .Select(c => new Response.CategoryProductResponse()
+            {
+                categoryId = c.Id,
+                name = c.Name,
+                startTime = c.StartTime,
+                endTime = c.EndTime,
+                type = c.Type,
+                isActive = c.IsActive,
+                parentId = c.ParentCategoryProductId,
+                userId = c.UserId
+            })
+            .ToListAsync();
+
+        var productDetails = await _dbContext.CategoryProductDetails
+            .Where(x => x.CategoryProductId == categoryId && !x.IsDeleted)
+            .Select(x => x.ProductId)
+            .ToListAsync();
+
+        result.children = childCategories;
+        result.productCount = productDetails.Count;
+        result.productIds = productDetails;
+
+        return result;
+    }
+
+    public async Task<Response.CategoryProductResponse> UpdateCateProduct(Guid categoryId, Request.UpdateCategoryProductRequest request)
+    {
+        var category = await GetActiveCategory(categoryId);
+        if (category == null)
+        {
+            throw new NotFoundException("CATEGORY_NOT_FOUND");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.name))
+        {
+            throw new BadRequestException("CATEGORY_NAME_REQUIRED");
+        }
+
+        if (request.parentId == categoryId)
+        {
+            throw new BadRequestException("CATEGORY_PARENT_INVALID");
+        }
+
+        var isDuplicateName = await _dbContext.CategoryProducts.AnyAsync(x =>
+            !x.IsDeleted &&
+            x.Id != categoryId &&
+            x.ParentCategoryProductId == request.parentId &&
+            x.Name == request.name);
+        if (isDuplicateName)
+        {
+            throw new ConflictException("CATEGORY_ALREADY_EXISTS");
+        }
+
+        if (request.parentId != null)
+        {
+            var parentCategory = await GetActiveCategory(request.parentId.Value);
+            if (parentCategory == null)
+            {
+                throw new NotFoundException("PARENT_CATEGORY_NOT_FOUND");
+            }
+
+            if (parentCategory.ParentCategoryProductId != null)
+            {
+                throw new BadRequestException("CATEGORY_PARENT_INVALID");
+            }
+
+            var hasChildren = await _dbContext.CategoryProducts.AnyAsync(x =>
+                !x.IsDeleted && x.ParentCategoryProductId == categoryId);
+            if (hasChildren)
+            {
+                throw new BadRequestException("CATEGORY_PARENT_INVALID");
+            }
+        }
+
+        category.Name = request.name;
+        category.StartTime = request.startTime;
+        category.EndTime = request.endTime;
+        category.Type = request.type;
+        category.IsActive = request.isActive;
+        category.ParentCategoryProductId = request.parentId;
+        category.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+        return await GetCateProduct(categoryId);
+    }
+
+    public async Task AssignProductsToCategory(Guid categoryId, Request.AssignProductsToCategoryRequest request)
+    {
+        var category = await GetActiveCategory(categoryId);
+        if (category == null)
+        {
+            throw new NotFoundException("CATEGORY_NOT_FOUND");
+        }
+
+        using var transaction = await _dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            var existingDetails = await _dbContext.CategoryProductDetails
+                .Where(x => x.CategoryProductId == categoryId && !x.IsDeleted)
+                .ToListAsync();
+
+            var oldProductIds = existingDetails.Select(x => x.ProductId).ToList();
+            var newProductIds = request.productIds ?? new List<Guid>();
+
+            var toDelete = existingDetails.Where(x => !newProductIds.Contains(x.ProductId)).ToList();
+            var toAddIds = newProductIds.Where(id => !oldProductIds.Contains(id)).ToList();
+
+            if (toDelete.Any())
+            {
+                var now = DateTimeOffset.UtcNow;
+                foreach (var detail in toDelete)
+                {
+                    detail.IsDeleted = true;
+                    detail.UpdatedAt = now;
+                }
+            }
+
+            if (toAddIds.Any())
+            {
+                var validAddIds = await _dbContext.Products
+                    .Where(p => !p.IsDeleted && toAddIds.Contains(p.Id))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var newJunctions = validAddIds.Select(productId => new CategoryProductDetail
+                {
+                    Id = Guid.NewGuid(),
+                    CategoryProductId = categoryId,
+                    ProductId = productId,
+                    CreatedAt = DateTimeOffset.UtcNow
+                });
+
+                await _dbContext.CategoryProductDetails.AddRangeAsync(newJunctions);
+            }
+
+            await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task DeleteCateProduct(Guid categoryId)
+    {
+        var category = await GetActiveCategory(categoryId);
+        if (category == null)
+        {
+            throw new NotFoundException("CATEGORY_NOT_FOUND");
+        }
+
+        var categories = new List<CategoryProductEntity> { category };
+        if (category.ParentCategoryProductId == null)
+        {
+            var childCategories = await _dbContext.CategoryProducts
+                .Where(x => !x.IsDeleted && x.ParentCategoryProductId == categoryId)
+                .ToListAsync();
+            categories.AddRange(childCategories);
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        using var transaction = await _dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            foreach (var item in categories)
+            {
+                item.IsDeleted = true;
+                item.UpdatedAt = now;
+
+                var details = await _dbContext.CategoryProductDetails
+                    .Where(x => x.CategoryProductId == item.Id && !x.IsDeleted)
+                    .ToListAsync();
+
+                foreach (var detail in details)
+                {
+                    detail.IsDeleted = true;
+                    detail.UpdatedAt = now;
+                }
+            }
+
+            await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+}

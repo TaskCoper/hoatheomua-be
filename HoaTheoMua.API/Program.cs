@@ -6,6 +6,7 @@ using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
 using AssemblyReference = HoaTheoMua.Service.AssemblyReference;
 using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
+using CategoryProductService = HoaTheoMua.Service.CategoryProduct;
 using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
 using NewService = HoaTheoMua.Service.New;
 using JobDescriptionService = HoaTheoMua.Service.JobDescriptions;
@@ -52,6 +53,7 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<HoaTheoMua.Service.Common.ICurrentUserService, HoaTheoMua.Service.Common.CurrentUserService>();
 builder.Services.AddScoped<CategoryNewsService.IService, CategoryNewsService.Service>();
+builder.Services.AddScoped<CategoryProductService.IService, CategoryProductService.Service>();
 builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService.Service>();
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();

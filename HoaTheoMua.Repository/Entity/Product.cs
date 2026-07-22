@@ -76,6 +76,8 @@ public class Product : BaseEntity<Guid>, IAuditableEntity
     public string? Color { get; set; }
     public string? Origin { get; set; }
 
+    public ICollection<CategoryProductDetail> CategoryProductDetails { get; set; } = new List<CategoryProductDetail>();
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
 }
