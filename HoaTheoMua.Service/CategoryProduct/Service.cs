@@ -76,11 +76,6 @@ public class Service : IService
                 throw new NotFoundException("CATEGORY_NOT_FOUND");
             }
 
-            if (parentCategory.ParentCategoryProductId != null)
-            {
-                throw new BadRequestException("CATEGORY_PARENT_INVALID");
-            }
-
             newCate.ParentCategoryProductId = request.parentId;
         }
 
@@ -185,8 +180,16 @@ public class Service : IService
                 }).FirstOrDefaultAsync();
         }
 
-        var childCategories = await _dbContext.CategoryProducts
-            .Where(x => x.ParentCategoryProductId == categoryId && !x.IsDeleted)
+        var productDetails = await _dbContext.CategoryProductDetails
+            .Where(x => x.CategoryProductId == categoryId && !x.IsDeleted)
+            .Select(x => x.ProductId)
+            .ToListAsync();
+
+        result.productCount = productDetails.Count;
+        result.productIds = productDetails;
+
+        var allActive = await _dbContext.CategoryProducts
+            .Where(x => !x.IsDeleted)
             .Select(c => new Response.CategoryProductResponse()
             {
                 categoryId = c.Id,
@@ -196,18 +199,26 @@ public class Service : IService
                 type = c.Type,
                 isActive = c.IsActive,
                 parentId = c.ParentCategoryProductId,
-                userId = c.UserId
+                userId = c.UserId,
+                children = new List<Response.CategoryProductResponse>()
             })
             .ToListAsync();
 
-        var productDetails = await _dbContext.CategoryProductDetails
-            .Where(x => x.CategoryProductId == categoryId && !x.IsDeleted)
-            .Select(x => x.ProductId)
-            .ToListAsync();
+        var listCateId = allActive.ToDictionary(x => x.categoryId);
 
-        result.children = childCategories;
-        result.productCount = productDetails.Count;
-        result.productIds = productDetails;
+        foreach (var item in allActive)
+        {
+            if (item.parentId != null && listCateId.TryGetValue(item.parentId.Value, out var parentItem))
+            {
+                parentItem.children ??= new List<Response.CategoryProductResponse>();
+                parentItem.children.Add(item);
+            }
+        }
+
+        if (listCateId.TryGetValue(categoryId, out var targetResponse))
+        {
+            result.children = targetResponse.children;
+        }
 
         return result;
     }
@@ -248,16 +259,15 @@ public class Service : IService
                 throw new NotFoundException("PARENT_CATEGORY_NOT_FOUND");
             }
 
-            if (parentCategory.ParentCategoryProductId != null)
+            var currentParentId = request.parentId;
+            while (currentParentId != null)
             {
-                throw new BadRequestException("CATEGORY_PARENT_INVALID");
-            }
-
-            var hasChildren = await _dbContext.CategoryProducts.AnyAsync(x =>
-                !x.IsDeleted && x.ParentCategoryProductId == categoryId);
-            if (hasChildren)
-            {
-                throw new BadRequestException("CATEGORY_PARENT_INVALID");
+                if (currentParentId == categoryId)
+                {
+                    throw new BadRequestException("CATEGORY_PARENT_INVALID");
+                }
+                var p = await GetActiveCategory(currentParentId.Value);
+                currentParentId = p?.ParentCategoryProductId;
             }
         }
 
@@ -340,14 +350,19 @@ public class Service : IService
             throw new NotFoundException("CATEGORY_NOT_FOUND");
         }
 
+        var allActive = await _dbContext.CategoryProducts.Where(x => !x.IsDeleted).ToListAsync();
         var categories = new List<CategoryProductEntity> { category };
-        if (category.ParentCategoryProductId == null)
+
+        void AddDescendants(Guid parentId)
         {
-            var childCategories = await _dbContext.CategoryProducts
-                .Where(x => !x.IsDeleted && x.ParentCategoryProductId == categoryId)
-                .ToListAsync();
-            categories.AddRange(childCategories);
+            var children = allActive.Where(x => x.ParentCategoryProductId == parentId).ToList();
+            foreach (var child in children)
+            {
+                categories.Add(child);
+                AddDescendants(child.Id);
+            }
         }
+        AddDescendants(categoryId);
 
         var now = DateTimeOffset.UtcNow;
         using var transaction = await _dbContext.Database.BeginTransactionAsync();
