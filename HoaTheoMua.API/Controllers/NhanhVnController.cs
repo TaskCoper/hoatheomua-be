@@ -63,7 +63,7 @@ public class NhanhVnController : ControllerBase
     }
 
     [HttpPost("/api/v1/nhanh-vn/webhook/order-update")]
-    public async Task<IActionResult> WebhookNhanhVnOrderUpdate([FromBody] NhanhOrderAddWebhookRequest request)
+    public async Task<IActionResult> WebhookNhanhVnOrderUpdate([FromBody] NhanhOrderUpdateWebhookRequest request)
     {
         var result = await _nhanhVnService.WebhookNhanhVnOrderUpdate(request);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));

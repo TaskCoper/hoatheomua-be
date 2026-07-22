@@ -286,258 +286,259 @@ public class Service: IService
 
     public async Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest request)
     {
-        if (request == null || request.Data == null || !request.Data.Any())
+        if (request == null || request.Data == null)
         {
             throw new BadRequestException("Không có dữ liệu thay đổi đơn hàng");
         }
-        
-        var nhanhOrderIds = request.Data
-            .Select(x => x.Info.Id)
-            .Distinct()
-            .ToList();
-        
-        var existingOrders = await _appDbContext.Orders
-            .Where(x => !x.IsDeleted
-                        && x.NhanhOrderId.HasValue
-                        && nhanhOrderIds.Contains(x.NhanhOrderId.Value))
-            .ToListAsync();
 
-        if (existingOrders.Any())
+        var item = request.Data;
+
+        if (item.Info.Id <= 0 || item.Info.Id > int.MaxValue)
+        {
+            throw new BadRequestException("ID đơn hàng từ Nhanh.vn không hợp lệ.");
+        }
+
+        var existingOrder = await _appDbContext.Orders
+            .FirstOrDefaultAsync(x => !x.IsDeleted
+                                      && x.NhanhOrderId.HasValue
+                                      && x.NhanhOrderId.Value == item.Info.Id);
+
+        if (existingOrder != null)
         {
             throw new BadRequestException("Có đơn hàng đã tồn tại trong hệ thống.");
         }
-        
-        var newOrders = new List<HoaTheoMua.Repository.Entity.Order>();
-        var newOrderDetails = new List<HoaTheoMua.Repository.Entity.OrderDetails>();
-        
-        foreach(var item in request.Data)
+
+        var productFee = item.Products.Sum(x =>
+            (x.Price ?? 0) * (x.Quantity ?? 0));
+
+        var shippingFee = item.Carrier?.CustomerShipFee
+                          ?? item.Carrier?.ShipFee
+                          ?? 0;
+
+        var taxCode = item.Payment?.Vat?.TaxCode;
+        var vatFee = item.Payment?.Vat?.Amount ?? 0;
+        //var isExportInvoice = !string.IsNullOrWhiteSpace(taxCode) || vatFee > 0;
+
+        var order = new HoaTheoMua.Repository.Entity.Order
         {
-            if (item.Info.Id <= 0 || item.Info.Id > int.MaxValue)
+            //field required
+            Id = Guid.NewGuid(),
+            Status = item.Info.Status?.ToString() ?? string.Empty,
+            TrackNumber = item.Carrier?.CarrierCode ?? string.Empty,
+            
+            FullName = item.ShippingAddress?.Name ?? string.Empty,
+            Phone = item.ShippingAddress?.Mobile ?? string.Empty,
+            Address = item.ShippingAddress?.Address ?? string.Empty,
+            ShortAddress = item.ShippingAddress?.Address ?? string.Empty, //Address
+            Ward = (int)(item.ShippingAddress?.WardId ?? 0),
+            City = (int)(item.ShippingAddress?.CityId ?? 0),
+            
+            Remarks = item.Info.Description ?? string.Empty,
+            OrderTime = item.Info.CreatedAt ?? 0,
+            NhanhTrackingUrl = item.Info.TrackingUrl,
+            
+            ShippingFee = shippingFee,
+            ProductFee = productFee,
+            TotalFee = productFee + shippingFee + vatFee,
+            Vat = vatFee,
+            // PaymentMethod = HoaTheoMua.Repository.Enum.PaymentMethod.VA,
+            TaxCode = taxCode,
+            // ReceiptFullName = item.ShippingAddress?.Name,
+            // ReceiptPhoneNumber = item.ShippingAddress?.Mobile,
+            // ReceiptAddress = item.ShippingAddress?.Address,
+            // ReceiptEmail = item.ShippingAddress?.Email,
+            //IsExportInvoice = isExportInvoice,
+            // InvoiceType = !string.IsNullOrWhiteSpace(taxCode)
+            //     ? HoaTheoMua.Repository.Enum.InvoiceType.Business
+            //     : null,
+        };
+
+        order.NhanhOrderId = (int)item.Info.Id;
+        order.CreatedAt = DateTimeOffset.UtcNow;
+        order.UpdatedAt = DateTimeOffset.UtcNow;
+        order.UserId = Guid.TryParse(item.ShippingAddress?.Id, out var userId)
+            ? userId
+            : Guid.Empty; //UserId from Nhanh.vn
+
+        // Thời gian tạo đơn phía Nhanh.vn
+        if (item.Info.CreatedAt > 0)
+        {
+            order.CreatedAt = DateTimeOffset.FromUnixTimeSeconds(
+                item.Info.CreatedAt.Value);
+        }
+
+        // Thời gian cập nhật đơn phía Nhanh.vn
+        if (item.Info.UpdatedAt > 0)
+        {
+            order.UpdatedAt = DateTimeOffset.FromUnixTimeSeconds(
+                item.Info.UpdatedAt.Value);
+        }
+
+        var nhanhProductIds = item.Products
+            .Select(x => x.Id.ToString())
+            .Distinct()
+            .ToList();
+
+        var productsInDb = await _appDbContext.Products
+            .Where(x => !x.IsDeleted
+                        && x.NhanhProductId != null
+                        && nhanhProductIds.Contains(x.NhanhProductId))
+            .ToListAsync();
+
+        var productByNhanhId = productsInDb.ToDictionary(x => x.NhanhProductId!);
+        var newOrderDetails = new List<HoaTheoMua.Repository.Entity.OrderDetails>();
+
+        // Sản phẩm trong đơn
+        foreach (var productItem in item.Products)
+        {
+            if (productItem.Id <= 0 || productItem.Id > int.MaxValue)
             {
-                throw new BadRequestException("ID đơn hàng từ Nhanh.vn không hợp lệ.");
+                throw new BadRequestException(
+                    $"ID sản phẩm Nhanh.vn không hợp lệ: {productItem.Id}");
             }
 
-            var productFee = item.Products.Sum(x =>
-                ((x.Price ?? 0) * (x.Quantity ?? 0)) - (x.Discount ?? 0));
-
-            var shippingFee = item.Carrier?.CustomerShipFee
-                              ?? item.Carrier?.ShipFee
-                              ?? 0;
-
-            var order = new HoaTheoMua.Repository.Entity.Order
+            if (!productItem.Quantity.HasValue || productItem.Quantity <= 0)
             {
-                //field required
+                throw new BadRequestException(
+                    $"Số lượng sản phẩm không hợp lệ: {productItem.Name}");
+            }
+
+            productByNhanhId.TryGetValue(productItem.Id.ToString(), out var productInDb);
+
+            var orderDetail = new HoaTheoMua.Repository.Entity.OrderDetails
+            {
                 Id = Guid.NewGuid(),
-                Status = item.Info.Status?.ToString() ?? string.Empty,
-                TrackNumber = item.Carrier?.CarrierCode ?? string.Empty,
-                FullName = item.ShippingAddress?.Name ?? string.Empty,
-                Phone = item.ShippingAddress?.Mobile ?? string.Empty,
-                Address = item.ShippingAddress?.Address ?? string.Empty,
-                ShortAddress = item.ShippingAddress?.Address ?? string.Empty, //Address
-                Ward = (int)(item.ShippingAddress?.WardId ?? 0),
-                City = (int)(item.ShippingAddress?.CityId ?? 0),
-                Remarks = item.Info.Description ?? string.Empty,
-                OrderTime = item.Info.CreatedAt ?? 0,
+                OrderId = order.Id,
+
+                ItemId = (int)productItem.Id,
+                Name = productItem.Name ?? string.Empty,
+                Number = (int)productItem.Quantity.Value,
+                Price = productItem.Price ?? 0,
+
+                Weight = (double)(productInDb?.Weight ?? productItem.Weight ?? 0m),
+                Length = (double)(productInDb?.Length ?? 0m),
+                Width = (double)(productInDb?.Width ?? 0m),
+                Height = (double)(productInDb?.Height ?? 0m),
+
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
             };
 
-            order.NhanhOrderId = (int)item.Info.Id;
-            order.CreatedAt = DateTimeOffset.UtcNow;
-            order.UpdatedAt = DateTimeOffset.UtcNow;
-            order.UserId = Guid.TryParse(item.ShippingAddress?.Id, out var userId)
-                ? userId
-                : Guid.Empty; //UserId from Nhanh.vn
-            order.ShippingFee = shippingFee;
-            order.ProductFee = productFee;
-            order.TotalFee = productFee + shippingFee; //(Price * Quantity - Discount) + ShipFee
+            // orderDetail.ItemId = (int)productItem.Id;
+            // orderDetail.Name = productItem.Name ?? productItem.Code ?? string.Empty;
+            // orderDetail.Number = (int)productItem.Quantity.Value;
+            // orderDetail.Price = productItem.Price ?? 0;
+            // orderDetail.Weight = (double)(productInDb?.Weight ?? productItem.Weight ?? 0m);
+            // orderDetail.Length = (double)(productInDb?.Length ?? 0m);
+            // orderDetail.Width = (double)(productInDb?.Width ?? 0m);
+            // orderDetail.Height = (double)(productInDb?.Height ?? 0m);
 
-            order.TaxCode = item.Payment!.Vat.TaxCode ?? string.Empty;
-            order.Vat = item.Payment!.Vat.Value ?? 0;
-
-            // Thời gian tạo đơn phía Nhanh.vn
-            if (item.Info.CreatedAt > 0)
-            {
-                order.CreatedAt = DateTimeOffset.FromUnixTimeSeconds(
-                    item.Info.CreatedAt.Value);
-            }
-
-            // Thời gian cập nhật đơn phía Nhanh.vn
-            if (item.Info.UpdatedAt > 0)
-            {
-                order.UpdatedAt = DateTimeOffset.FromUnixTimeSeconds(
-                    item.Info.UpdatedAt.Value);
-            }
-            
-            var nhanhProductIds = request.Data
-                .SelectMany(x => x.Products)
-                .Select(x => x.Id.ToString())
-                .Distinct()
-                .ToList();
-
-            var productsInDb = await _appDbContext.Products
-                .Where(x => !x.IsDeleted
-                            && x.NhanhProductId != null
-                            && nhanhProductIds.Contains(x.NhanhProductId))
-                .ToListAsync();
-
-            var productByNhanhId = productsInDb.ToDictionary(x => x.NhanhProductId!);
-
-            // Sản phẩm trong đơn
-            foreach (var productItem in item.Products)
-            {
-                if (productItem.Id <= 0 || productItem.Id > int.MaxValue)
-                {
-                    throw new BadRequestException(
-                        $"ID sản phẩm Nhanh.vn không hợp lệ: {productItem.Id}");
-                }
-
-                if (!productItem.Quantity.HasValue || productItem.Quantity <= 0)
-                {
-                    throw new BadRequestException(
-                        $"Số lượng sản phẩm không hợp lệ: {productItem.Name}");
-                }
-                
-                productByNhanhId.TryGetValue(productItem.Id.ToString(), out var productInDb);
-                
-                var orderDetail = new HoaTheoMua.Repository.Entity.OrderDetails
-                {
-                    Id = Guid.NewGuid(),
-                    OrderId = order.Id,
-
-                    ItemId = (int)productItem.Id,
-                    Name = productItem.Name ?? productItem.Code ?? string.Empty,
-                    Number = (int)productItem.Quantity.Value,
-                    Price = productItem.Price ?? 0,
-                    
-                    Weight = (double)(productInDb?.Weight ?? productItem.Weight ?? 0m),
-                    Length = (double)(productInDb?.Length ?? 0m),
-                    Width = (double)(productInDb?.Width ?? 0m),
-                    Height = (double)(productInDb?.Height ?? 0m),
-
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow,
-                };
-
-                orderDetail.ItemId = (int)productItem.Id;
-                orderDetail.Name = productItem.Name ?? productItem.Code ?? string.Empty;
-                orderDetail.Number = (int)productItem.Quantity.Value;
-                orderDetail.Price = productItem.Price ?? 0;
-                orderDetail.Weight = (double)(productInDb?.Weight ?? productItem.Weight ?? 0m);
-                orderDetail.Length = (double)(productInDb?.Length ?? 0m);
-                orderDetail.Width = (double)(productInDb?.Width ?? 0m);
-                orderDetail.Height = (double)(productInDb?.Height ?? 0m);
-                
-                newOrderDetails.Add(orderDetail);
-            }
-
-            newOrders.Add(order);
+            newOrderDetails.Add(orderDetail);
         }
 
-        if (newOrders.Any())
-        {
-            await _appDbContext.Orders.AddRangeAsync(newOrders);
-            await _appDbContext.OrderDetails.AddRangeAsync(newOrderDetails);
-            await _appDbContext.SaveChangesAsync();
-        }
+        await _appDbContext.Orders.AddAsync(order);
+        await _appDbContext.OrderDetails.AddRangeAsync(newOrderDetails);
+        await _appDbContext.SaveChangesAsync();
 
-        return $"Thêm mới thành công {newOrders.Count} đơn hàng từ Nhanh.vn.";
+        return $"Thêm mới thành công 1 đơn hàng từ Nhanh.vn.";
     }
 
-    public async Task<string> WebhookNhanhVnOrderUpdate(NhanhOrderAddWebhookRequest request)
+    public async Task<string> WebhookNhanhVnOrderUpdate(NhanhOrderUpdateWebhookRequest request)
     {
-        if (request.Data == null || request.Data.Count == 0)
+        if (request == null || request.Data == null)
         {
             throw new BadRequestException("Không có dữ liệu cập nhật đơn hàng");
         }
-        
-        var nhanhOrderIds = request.Data
-            .Where(x => x.Info.Id > 0 && x.Info.Id <= int.MaxValue)
-            .Select(x => (int)x.Info.Id)
-            .Distinct()
-            .ToList();
-        
-        var ordersByNhanhId = await _appDbContext.Orders
-            .Where(x => !x.IsDeleted
-                        && x.NhanhOrderId.HasValue
-                        && nhanhOrderIds.Contains(x.NhanhOrderId.Value))
-            .ToDictionaryAsync(x => x.NhanhOrderId!.Value); //chuyển thành dictionary 
 
-        var existingOrders = await _appDbContext.Orders
-            .Where(x => !x.IsDeleted
-                        && x.NhanhOrderId.HasValue
-                        && nhanhOrderIds.Contains(x.NhanhOrderId.Value))
-            .ToListAsync();
-        
-        var updatedCount = 0; //hợp lệ và cập nhật thành công
-        var ignoredCount = 0; //order có ID ko hợp lệ
-        
-        foreach (var item in request.Data)
+        var item = request.Data;
+        var updatedCount = 0;
+        var ignoredCount = 0;
+
+        if (item.Info.Id <= 0 || item.Info.Id > int.MaxValue)
         {
-            if (item.Info.Id <= 0 || item.Info.Id > int.MaxValue)
-            {
-                ignoredCount++;
-                continue;
-            }
-
-            var nhanhOrderId = (int)item.Info.Id;
-
-            // Không tạo đơn mới trong event update.
-            if (!ordersByNhanhId.TryGetValue(nhanhOrderId, out var order))
-            {
-                ignoredCount++;
-                continue;
-            }
-
-            var incomingUpdatedAt = item.Info.UpdatedAt.HasValue
-                ? DateTimeOffset.FromUnixTimeSeconds(item.Info.UpdatedAt.Value)
-                : (DateTimeOffset?)null;
-
-            // Webhook đến trễ hoặc bị gửi lại: bỏ qua, vẫn trả HTTP 200.
-            if (incomingUpdatedAt.HasValue
-                && order.UpdatedAt.HasValue
-                && incomingUpdatedAt <= order.UpdatedAt.Value)
-            {
-                ignoredCount++;
-                continue;
-            }
-
-            // Nhanh.vn là nguồn sự thật cho các trường bên dưới.
-            order.Status = item.Info.Status.ToString()!;
-            order.TrackNumber = item.Carrier?.CarrierCode ?? order.TrackNumber;
-            order.NhanhTrackingUrl = item.Info.TrackingUrl ?? order.NhanhTrackingUrl;
-
-            if (!string.IsNullOrWhiteSpace(item.Info.Description))
-            {
-                order.Remarks = item.Info.Description;
-            }
-
-            if (item.Carrier?.CustomerShipFee != null)
-            {
-                order.ShippingFee = item.Carrier.CustomerShipFee.Value;
-                order.TotalFee = order.ProductFee + order.ShippingFee;
-            }
-
-            // Chỉ cập nhật địa chỉ nếu payload thật sự có gửi.
-            if (item.ShippingAddress != null)
-            {
-                order.FullName = item.ShippingAddress.Name ?? order.FullName;
-                order.Phone = item.ShippingAddress.Mobile ?? order.Phone;
-                order.Address = item.ShippingAddress.Address ?? order.Address;
-                order.ShortAddress = item.ShippingAddress.Address ?? order.ShortAddress;
-
-                if (item.ShippingAddress.CityId is <= int.MaxValue and >= 0)
-                {
-                    order.City = (int)item.ShippingAddress.CityId.Value;
-                }
-
-                if (item.ShippingAddress.WardId is <= int.MaxValue and >= 0)
-                {
-                    order.Ward = (int)item.ShippingAddress.WardId.Value;
-                }
-            }
-
-            order.UpdatedAt = incomingUpdatedAt ?? DateTimeOffset.UtcNow;
-            updatedCount++;
+            return $"Cập nhật {updatedCount} đơn; bỏ qua {ignoredCount + 1} đơn.";
         }
+
+        var nhanhOrderId = (int)item.Info.Id;
+
+        var order = await _appDbContext.Orders
+            .FirstOrDefaultAsync(x => !x.IsDeleted
+                                      && x.NhanhOrderId.HasValue
+                                      && x.NhanhOrderId.Value == nhanhOrderId);
+
+        // Không tạo đơn mới trong event update.
+        if (order == null)
+        {
+            return $"Cập nhật {updatedCount} đơn; bỏ qua {ignoredCount + 1} đơn.";
+        }
+
+        var incomingUpdatedAt = item.Info.UpdatedAt.HasValue
+            ? DateTimeOffset.FromUnixTimeSeconds(item.Info.UpdatedAt.Value)
+            : (DateTimeOffset?)null;
+
+        // Webhook đến trễ hoặc bị gửi lại: bỏ qua, vẫn trả HTTP 200.
+        if (incomingUpdatedAt.HasValue
+            && order.UpdatedAt.HasValue
+            && incomingUpdatedAt <= order.UpdatedAt.Value)
+        {
+            return $"Cập nhật {updatedCount} đơn; bỏ qua {ignoredCount + 1} đơn.";
+        }
+
+        // Nhanh.vn là nguồn sự thật cho các trường bên dưới.
+        order.Status = item.Info.Status?.ToString() ?? order.Status;
+        order.TrackNumber = item.Carrier?.CarrierCode ?? order.TrackNumber;
+        order.NhanhTrackingUrl = item.Info.TrackingUrl ?? order.NhanhTrackingUrl;
+
+        if (!string.IsNullOrWhiteSpace(item.Info.Description))
+        {
+            order.Remarks = item.Info.Description;
+        }
+
+        if (item.Info.CreatedAt > 0)
+        {
+            order.OrderTime = item.Info.CreatedAt.Value;
+        }
+
+        if (item.ShippingAddress != null)
+        {
+            order.FullName = item.ShippingAddress.Name ?? order.FullName;
+            order.Phone = item.ShippingAddress.Mobile ?? order.Phone;
+            order.Address = item.ShippingAddress.Address ?? order.Address;
+            order.ShortAddress = item.ShippingAddress.Address ?? order.ShortAddress;
+
+            if (item.ShippingAddress.CityId is <= int.MaxValue and >= 0)
+            {
+                order.City = (int)item.ShippingAddress.CityId.Value;
+            }
+
+            if (item.ShippingAddress.WardId is <= int.MaxValue and >= 0)
+            {
+                order.Ward = (int)item.ShippingAddress.WardId.Value;
+            }
+        }
+
+        if (item.Products != null && item.Products.Any())
+        {
+            order.ProductFee = item.Products.Sum(x =>
+                (x.Price ?? 0) * (x.Quantity ?? 0));
+        }
+
+        var shippingFee = item.Carrier?.CustomerShipFee
+                          ?? item.Carrier?.ShipFee;
+        if (shippingFee != null)
+        {
+            order.ShippingFee = shippingFee.Value;
+        }
+
+        if (item.Payment?.Vat != null)
+        {
+            order.TaxCode = item.Payment.Vat.TaxCode ?? order.TaxCode;
+            order.Vat = item.Payment.Vat.Amount ?? order.Vat ?? 0;
+        }
+
+        order.TotalFee = order.ProductFee + order.ShippingFee + (order.Vat ?? 0);
+        order.UpdatedAt = incomingUpdatedAt ?? DateTimeOffset.UtcNow;
+        updatedCount++;
 
         await _appDbContext.SaveChangesAsync();
 

@@ -483,7 +483,7 @@ public class NhanhBranchDto
     public string? Name { get; set; }
 }
 
-//webhook-order-add and webhook-order-update
+//webhook-order-add
 public class NhanhOrderAddWebhookRequest
 {
     [JsonPropertyName("event")]
@@ -493,7 +493,20 @@ public class NhanhOrderAddWebhookRequest
     public long BusinessId { get; set; }
 
     [JsonPropertyName("data")]
-    public List<NhanhOrderAddDataDto> Data { get; set; } = new();
+    public NhanhOrderAddDataDto? Data { get; set; }
+}
+
+//webhook-order-update
+public class NhanhOrderUpdateWebhookRequest
+{
+    [JsonPropertyName("event")]
+    public string Event { get; set; } = string.Empty;
+
+    [JsonPropertyName("businessId")]
+    public long BusinessId { get; set; }
+
+    [JsonPropertyName("data")]
+    public NhanhOrderAddDataDto? Data { get; set; }
 }
 
 public class NhanhOrderAddDataDto
