@@ -441,8 +441,30 @@ public class Service: IService
         return $"Cập nhật thành công {updatedCount} sản phẩm, thêm mới {newProducts.Count} sản phẩm từ Nhanh.vn.";
     }
 
-    public async Task<string> WebhookNhanhVnProductDelete(string productId)
+    public async Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest request)
     {
-        throw new NotImplementedException();
+        if (request == null || request.Data == null || !request.Data.Any())
+        {
+            throw new BadRequestException("Không có dữ liệu thay đổi khi xóa sản phẩm.");
+        }
+
+        var deletedIds = request.Data.Select(id => id.ToString()).ToList();
+
+        var productsToDelete = await _appDbContext.Products
+            .Where(x => !x.IsDeleted && deletedIds.Contains(x.NhanhProductId!))
+            .ToListAsync();
+
+        if (productsToDelete.Any())
+        {
+            foreach (var p in productsToDelete)
+            {
+                p.IsDeleted = true;
+                p.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+
+            await _appDbContext.SaveChangesAsync();
+        }
+
+        return $"Xóa thành công {productsToDelete.Count} sản phẩm từ Nhanh.vn.";
     }
 }

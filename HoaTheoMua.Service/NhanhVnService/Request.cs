@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.NhanhVnService;
 
@@ -481,4 +481,16 @@ public class NhanhBranchDto
     public int Id { get; set; }
     [JsonPropertyName("name")]
     public string? Name { get; set; }
+}
+
+public class NhanhProductDeleteWebhookRequest
+{
+    [JsonPropertyName("event")]
+    public string? Event { get; set; }
+
+    [JsonPropertyName("businessId")]
+    public long BusinessId { get; set; }
+
+    [JsonPropertyName("data")]
+    public List<long> Data { get; set; } = new();
 }

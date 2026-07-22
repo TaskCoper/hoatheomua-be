@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.NhanhVnService;
 using Microsoft.AspNetCore.Mvc;
@@ -63,7 +63,7 @@ public class NhanhVnController : ControllerBase
     }
 
     [HttpPost("/api/v1/nhanh-vn/webhook/delete-product")]
-    public async Task<IActionResult> WebhookNhanhVnDeleteProduct([FromBody] string request)
+    public async Task<IActionResult> WebhookNhanhVnDeleteProduct([FromBody] NhanhProductDeleteWebhookRequest request)
     {
         var result = await _nhanhVnService.WebhookNhanhVnProductDelete(request);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));

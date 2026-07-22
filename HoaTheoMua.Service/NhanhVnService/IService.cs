@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Service.User;
+using HoaTheoMua.Service.User;
 
 namespace HoaTheoMua.Service.NhanhVnService;
 
@@ -9,5 +9,5 @@ public interface IService
     Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest request);
     Task<string> WebhookNhanhVnProductAdd(NhanhProductAddWebhookRequest request);
     Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest request);
-    Task<string> WebhookNhanhVnProductDelete(string productId);
+    Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest request);
 }
