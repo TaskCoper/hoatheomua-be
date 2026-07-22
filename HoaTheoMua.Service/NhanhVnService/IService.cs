@@ -8,5 +8,6 @@ public interface IService
     Task<OrderSourceResponse>  GetOrderSource(OrderSourceRequest orderSourceRequest);
     Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest request);
     Task<string> WebhookNhanhVnProductAdd(NhanhProductAddWebhookRequest request);
-    
+    Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest request);
+    Task<string> WebhookNhanhVnProductDelete(string productId);
 }
