@@ -50,6 +50,15 @@ services:
       NhanhVnOption__BusinessId: ${NHANHVN_BUSINESS_ID}
       NhanhVnOption__BaseUrl: ${NHANHVN_BASE_URL}
 
+      # BaoKim Configuration (the keys are PEM blocks with real newlines).
+      # PublicKey is BaoKim's own key, used to verify inbound webhook signatures.
+      BaoKimOption__BaseUrl: ${BAOKIM_BASE_URL}
+      BaoKimOption__MerchantCode: ${BAOKIM_MERCHANT_CODE}
+      BaoKimOption__ClientId: ${BAOKIM_CLIENT_ID}
+      BaoKimOption__ClientSecret: ${BAOKIM_CLIENT_SECRET}
+      BaoKimOption__PrivateKey: ${BAOKIM_PRIVATE_KEY}
+      BaoKimOption__PublicKey: ${BAOKIM_PUBLIC_KEY}
+
       # Allowed Hosts
       AllowedHosts: "*"
     volumes:

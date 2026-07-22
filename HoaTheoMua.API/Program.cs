@@ -1,6 +1,6 @@
 using FluentValidation;
-using HoaTheoMua.Extension;
 using HoaTheoMua.Extentions;
+using HoaTheoMua.Filters;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
@@ -10,20 +10,24 @@ using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
 using NewService = HoaTheoMua.Service.New;
 using JobDescriptionService = HoaTheoMua.Service.JobDescriptions;
 using RecruitmentRequestService = HoaTheoMua.Service.RecruitmentRequests;
-using AhamoveService = HoaTheoMua.Service.AhaMoveService;
 using OrderService = HoaTheoMua.Service.Order;
 using WebhookService = HoaTheoMua.Service.Webhook;
 using ProductService = HoaTheoMua.Service.Product;
 using ConfigService = HoaTheoMua.Service.Config;
 using AddressService = HoaTheoMua.Service.Address;
+using AhamoveService = HoaTheoMua.Service.AhamoveService;
 using NhanhVnService = HoaTheoMua.Service.NhanhVnService;
+using BaoKimService = HoaTheoMua.Service.BaoKim;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();
 
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationActionFilter>();
+}).AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
@@ -53,7 +57,8 @@ builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
-builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>();
+builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>("AhamoveService");
+builder.Services.AddHttpClient<BaoKimService.IService, BaoKimService.Service>("BaoKimService");
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
 builder.Services.AddScoped<AddressService.IService, AddressService.Service>();

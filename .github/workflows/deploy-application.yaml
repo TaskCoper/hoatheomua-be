@@ -65,6 +65,15 @@ jobs:
       NHANHVN_BUSINESS_ID: ${{ secrets.NHANHVN_BUSINESS_ID }}
       NHANHVN_BASE_URL: ${{ secrets.NHANHVN_BASE_URL }}
 
+      # BaoKim (the KEY secrets are multi-line PEM blocks — GitHub preserves their newlines).
+      # PUBLIC_KEY is BaoKim's own key and verifies inbound webhook signatures.
+      BAOKIM_BASE_URL: ${{ secrets.BAOKIM_BASE_URL }}
+      BAOKIM_MERCHANT_CODE: ${{ secrets.BAOKIM_MERCHANT_CODE }}
+      BAOKIM_CLIENT_ID: ${{ secrets.BAOKIM_CLIENT_ID }}
+      BAOKIM_CLIENT_SECRET: ${{ secrets.BAOKIM_CLIENT_SECRET }}
+      BAOKIM_PRIVATE_KEY: ${{ secrets.BAOKIM_PRIVATE_KEY }}
+      BAOKIM_PUBLIC_KEY: ${{ secrets.BAOKIM_PUBLIC_KEY }}
+
       # Cloudflare
       CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
 

@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
-using HoaTheoMua.Service.AhaMoveService;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -21,11 +21,11 @@ public partial class Service : IService
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
     private readonly Config.IService _configService;
-    private readonly HoaTheoMua.Service.AhaMoveService.IService _ahaMoveService;
+    private readonly AhamoveService.IService _ahaMoveService;
 
-    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration, 
-        HoaTheoMua.Service.Order.IService orderService,  Config.IService configService,
-        HoaTheoMua.Service.AhaMoveService.IService ahaMoveService)
+    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration,
+        HoaTheoMua.Service.Order.IService orderService, Config.IService configService,
+        AhamoveService.IService ahaMoveService)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
@@ -154,11 +154,153 @@ public partial class Service : IService
             throw new NotFoundException("Order not on Pending");
             ;
         }
-        
+
         if (order.TotalFee != request.TransferAmount)
         {
             throw new ConflictException("Transfer amount must be equal to transfer amount");
         }
+
+        var transactionEntity = new Transaction()
+        {
+            // SePay has no request_id of its own, so its transaction id stands in as the gateway's
+            // identifier for this event.
+            RequestId = request.Id.ToString(),
+            Gateway = request.Gateway,
+            // SePay only ever reaches us via the VNPay QR bank transfer.
+            paymentMethod = PaymentMethod.VNPayQR,
+            TransactionDate = DateTime.TryParse(request.TransactionDate, out DateTime parsedDate)
+                ? parsedDate.ToUniversalTime()
+                : DateTime.UtcNow,
+            AccountNumber = request.AccountNumber,
+            SubAccount = request.SubAccount,
+            Code = request.Code,
+            Content = request.Content,
+            TransferType = request.TransferType,
+            Description = request.Description,
+            TransferAmount = request.TransferAmount,
+            Accumulated = request.Accumulated,
+            ReferenceCode = request.ReferenceCode,
+
+            OrderId = order.Id,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        await FulfillPaidOrder(order, transactionEntity);
+    }
+
+    public async Task BaoKimWebHookHandler(BaoKimPaymentCallback request)
+    {
+        var paymentResult = request.PaymentResult;
+        if (paymentResult?.Order == null)
+        {
+            throw new BadRequestException("Missing payment_result.order");
+        }
+
+        var baoKimOrder = paymentResult.Order;
+
+        // We send our own Order.Id as mrc_order_id when creating the BaoKim order (see
+        // BaoKim.Service.CreateOrder), so it comes back verbatim — none of the memo-parsing
+        // guesswork SePay needs.
+        if (!Guid.TryParse(baoKimOrder.MrcOrderId, out var orderId))
+        {
+            throw new BadRequestException("Invalid mrc_order_id format");
+        }
+
+        var order = await _dbContext.Orders
+            .Include(x => x.OrderDetails)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order == null)
+        {
+            throw new NotFoundException("Order not found for mrc_order_id");
+        }
+
+        // Anything that isn't a completed payment (failed, cancelled, still pending at the gateway)
+        // is acknowledged and dropped: the order stays Pending, and redelivering it would not
+        // change the outcome.
+        if (paymentResult.ResultCode != BaoKim.BaoKimConstant.CallbackSuccessResultCode
+            || baoKimOrder.Status != BaoKim.BaoKimConstant.CallbackCompletedStatus)
+        {
+            return;
+        }
+
+        // BaoKim redelivers until it gets an ack, so a replay of an order we already fulfilled is
+        // expected traffic rather than an error — ack it and skip fulfilment instead of throwing,
+        // which would otherwise re-run the Ahamove/NhanhVn calls or spin the retry schedule.
+        if (order.Status == "Paid")
+        {
+            return;
+        }
+
+        if (order.Status != "Pending")
+        {
+            throw new ConflictException($"Order is not Pending (current: {order.Status})");
+        }
+
+        // CreateOrder sends total_amount as (long)order.TotalFee, so compare on that same
+        // truncation — comparing the raw decimal would reject a correct payment.
+        if ((long)order.TotalFee != (long)baoKimOrder.TotalAmount)
+        {
+            throw new ConflictException("Paid amount does not match the order total");
+        }
+
+        // `transaction` is a list because BaoKim can split a payment; the completed entry is the one
+        // that actually settled. The null-conditionals are load-bearing: an explicit
+        // "transaction": null in the payload overwrites the property initializer with null.
+        var baoKimTransaction =
+            paymentResult.Transaction?.FirstOrDefault(
+                t => t.Status == BaoKim.BaoKimConstant.CallbackCompletedStatus)
+            ?? paymentResult.Transaction?.FirstOrDefault();
+
+        var baoKimTransactionEntity = new Transaction()
+        {
+            // BaoKim's own id for this callback. Alphanumeric ("B2B6A278C9815BD7EQ4AVPVZCI"), which
+            // is why the column is text rather than the long SePay used.
+            RequestId = request.RequestId,
+            Gateway = "BaoKim",
+            // BaoKim reports how the buyer actually paid. Guard the cast: an int outside the enum
+            // would otherwise be persisted as a meaningless value. We always request VA in
+            // CreateOrder, so that is the honest fallback.
+            paymentMethod = Enum.IsDefined(typeof(PaymentMethod), baoKimOrder.PaymentMethod)
+                ? (PaymentMethod)baoKimOrder.PaymentMethod
+                : PaymentMethod.VA,
+            TransactionDate = ToUtcOrNow(baoKimTransaction?.CompletedAt ?? baoKimOrder.CompletedAt),
+            // BaoKim settles into a virtual account it owns and reports no bank account back, so
+            // these SePay-shaped columns have nothing to carry (they are NOT NULL).
+            AccountNumber = string.Empty,
+            SubAccount = string.Empty,
+            Code = baoKimOrder.MrcOrderId,
+            Content = paymentResult.ResultMessage ?? string.Empty,
+            TransferType = "in",
+            Description = baoKimTransaction?.Description ?? paymentResult.ResultMessage ?? string.Empty,
+            // The gross the buyer paid — deliberately NOT transaction.amount, which is the net
+            // settlement after fees (amount = total_amount - merchant_fee - user_fee) and can even
+            // be negative: a real 160,000 payment carrying a 337,600 merchant_fee reported
+            // amount = -177,600. The docs' sample happens to have zero merchant_fee, which makes
+            // amount look like the order total and hides this.
+            TransferAmount = baoKimOrder.TotalAmount,
+            Accumulated = 0,
+            ReferenceCode = baoKimOrder.Id.ToString(),
+
+            OrderId = order.Id,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        await FulfillPaidOrder(order, baoKimTransactionEntity);
+    }
+
+    // BaoKim leaves completed_at null until a payment settles, and an empty value deserializes to
+    // default(DateTime), whose Kind is Unspecified — Npgsql rejects that outright on the
+    // timestamptz column, which would turn a good payment into a 500 and a retry storm.
+    private static DateTime ToUtcOrNow(DateTime? value)
+        => value is { } completedAt && completedAt != default
+            ? DateTime.SpecifyKind(completedAt, DateTimeKind.Utc)
+            : DateTime.UtcNow;
+
+    // Shared tail for both gateways: flip the order to Paid, dispatch it to Ahamove and NhanhVn,
+    // then persist the order and its gateway transaction in one SaveChanges.
+    private async Task FulfillPaidOrder(Repository.Entity.Order order, Transaction transaction)
+    {
         order.Status = "Paid";
 
         //  var newOrders = await AhaMoveCreateOrder();
@@ -176,9 +318,9 @@ public partial class Service : IService
         var vnDt = new DateTimeOffset();
         if (order.OrderTime > 0)
         {
-             vnDt = DateTimeOffset
-                .FromUnixTimeSeconds(order.OrderTime)
-                .ToOffset(TimeSpan.FromHours(7));
+            vnDt = DateTimeOffset
+               .FromUnixTimeSeconds(order.OrderTime)
+               .ToOffset(TimeSpan.FromHours(7));
 
             privateDescription += $"\n-------------------------\nGiao: {vnDt:dd/MM/yyyy}";
         }
@@ -186,7 +328,7 @@ public partial class Service : IService
         if (order.IsExportInvoice == true && order.InvoiceType != null)
         {
             privateDescription += "\n-------------------------";
-            
+
             if (order.InvoiceType == InvoiceType.Business)
             {
                 if (!string.IsNullOrWhiteSpace(order.TaxCode))
@@ -214,7 +356,7 @@ public partial class Service : IService
                 privateDescription += $"\nSĐT:{order.ReceiptPhoneNumber}";
             }
         }
-        
+
         const long vatTagId = 253L;
         var tags = order.TagIds ?? new List<long>();
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
@@ -223,35 +365,35 @@ public partial class Service : IService
 
         if (order.OrderTime == 0 && tags.Count == 0)
         {
-            var itemsRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.AhamoveItem()
-                {
-                    Id = x.Id.ToString(),
-                    Name = x.Name,
-                    Price = (int)x.Price,
-                    Num = x.Number
-                }
+            var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
+            {
+                Id = x.Id.ToString(),
+                Name = x.Name,
+                Price = (int)x.Price,
+                Num = x.Number
+            }
             ).ToList();
 
-            var packageDetailRequest = order.OrderDetails.Select(x => new AhaMoveService.AhaMoveRequest.PackageDetail()
-                {
-                    Height = x.Height,
-                    Weight = x.Weight,
-                    Length = x.Length,
-                    Width = x.Width,
-                    Description = x.Name
-                }
+            var packageDetailRequest = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail()
+            {
+                Height = x.Height,
+                Weight = x.Weight,
+                Length = x.Length,
+                Width = x.Width,
+                Description = x.Name
+            }
             ).ToList();
 
             var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
             var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
 
-            var createRequest = new AhaMoveService.AhaMoveRequest.AhaMoveShippingFeeRequest()
+            var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
             {
                 OrderTime = order.OrderTime,
                 IdleUntil = order.OrderTime > 0 ? order.OrderTime : 0,
-                Paths = new List<AhaMoveService.AhaMoveRequest.AhamoveLocationPoint>()
+                Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
                 {
-                    new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint() 
+                    new AhaMoveRequest.AhamoveLocationPoint()
                     {
                         Latitude = companyAddress?.Latitude ?? 0,
                         Longitude = companyAddress?.Longitude ?? 0,
@@ -261,7 +403,7 @@ public partial class Service : IService
                         Phone = companyAddress.PhoneNumber,
                         Remarks = companyAddress.Remarks!,
                     },
-                    new AhaMoveService.AhaMoveRequest.AhamoveLocationPoint()
+                    new AhaMoveRequest.AhamoveLocationPoint()
                     {
                         Latitude = order.Latitude,
                         Longitude = order.Longitude,
@@ -314,12 +456,12 @@ public partial class Service : IService
             }
             else
             {
-                throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+                throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
             }
 
             if (createAhamoveOrderResult == null)
             {
-                throw new Exception("Ahamove returned null or empty data");
+                throw new BadRequestException("Ahamove returned null or empty data");
             }
 
             order.AhahaMoveOrderId = createAhamoveOrderResult.OrderId;
@@ -327,21 +469,21 @@ public partial class Service : IService
         }
 
         var productNhanhVnRequest = new List<Product>();
-        
+
         if (order.TaxCode != null && order.InvoiceType == InvoiceType.Business && order.IsExportInvoice == true)
         {
-             productNhanhVnRequest = order.OrderDetails.Select(
-                x => new Product()
-                {
-                    Id = x.ItemId,
-                    Price = x.Price,
-                    Quantity = x.Number,
-                    Vat = 8,
-                }
-            ).ToList();
+            productNhanhVnRequest = order.OrderDetails.Select(
+               x => new Product()
+               {
+                   Id = x.ItemId,
+                   Price = x.Price,
+                   Quantity = x.Number,
+                   Vat = 8,
+               }
+           ).ToList();
         }
         else
-        { 
+        {
             productNhanhVnRequest = order.OrderDetails.Select(
                 x => new Product()
                 {
@@ -351,13 +493,10 @@ public partial class Service : IService
                 }
             ).ToList();
         }
-        
+
         //var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
         var prefixOrderId = order.Id.ToString().Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
 
-        
-        
-        
         var nhanhVnRequest = new OrderRoot
         {
             Depot = new Depot
@@ -397,7 +536,7 @@ public partial class Service : IService
                 FbPsId = "",
                 PostId = "",
                 FbAdsId = 0,
-                SourceFrom = "", 
+                SourceFrom = "",
                 Id = 0
             },
             Carrier = new Carrier
@@ -411,7 +550,7 @@ public partial class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m, // Hậu tố 'm' biểu thị kiểu decimal
-                DeliveryDate =  (order.OrderTime > 0)  ? vnDt.ToString("yyyy-MM-dd") : "",
+                DeliveryDate = (order.OrderTime > 0) ? vnDt.ToString("yyyy-MM-dd") : "",
                 // DeliveryDate =  "2026-07-05",
                 DeliveryHour = "",
                 DeliveryMinute = "",
@@ -484,17 +623,17 @@ public partial class Service : IService
                 UseManualDiscount = 0
             }
         };
-        
+
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
         var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
         var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
         var createNhanhOrderApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/order/add?appId=" + appId + "&businessId=" + businessId;
-        
+
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, createNhanhOrderApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhVnRequest);
-        
+
         // var debugJson = await nhanhHttpRequest.Content.ReadAsStringAsync();
         // Console.WriteLine("NhanhVN request body: " + debugJson);
         //
@@ -509,7 +648,7 @@ public partial class Service : IService
 
         if (!nhanhVnResponse.IsSuccessStatusCode)
         {
-            throw new Exception($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode}): {nhanhRawContent}");
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode}): {nhanhRawContent}");
         }
 
         using var nhanhDoc = JsonDocument.Parse(nhanhRawContent);
@@ -525,44 +664,22 @@ public partial class Service : IService
             || !nhanhRoot.TryGetProperty("data", out var nhanhDataElement)
             || nhanhDataElement.ValueKind != JsonValueKind.Object)
         {
-            throw new Exception($"NhanhVn order creation failed: {nhanhRawContent}");
+            throw new BadRequestException($"NhanhVn order creation failed: {nhanhRawContent}");
         }
 
         var createOrderNhanhResult = nhanhDataElement.Deserialize<OrderData>();
         if (createOrderNhanhResult == null)
         {
-            throw new Exception($"NhanhVn order creation failed: {nhanhRawContent}");
+            throw new BadRequestException($"NhanhVn order creation failed: {nhanhRawContent}");
         }
 
         order.NhanhOrderId = createOrderNhanhResult.Id;
         order.NhanhTrackingUrl = createOrderNhanhResult.TrackingUrl;
-        
+
         _dbContext.Orders.Update(order);
-
-        var transactionEntity = new Transaction()
-        {
-            SePayId = request.Id,
-            Gateway = request.Gateway,
-            TransactionDate = DateTime.TryParse(request.TransactionDate, out DateTime parsedDate)
-                ? parsedDate.ToUniversalTime()
-                : DateTime.UtcNow,
-            AccountNumber = request.AccountNumber,
-            SubAccount = request.SubAccount,
-            Code = request.Code,
-            Content = request.Content,
-            TransferType = request.TransferType,
-            Description = request.Description,
-            TransferAmount = request.TransferAmount,
-            Accumulated = request.Accumulated,
-            ReferenceCode = request.ReferenceCode,
-
-            OrderId = order.Id,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-        _dbContext.Transactions.Add(transactionEntity);
+        _dbContext.Transactions.Add(transaction);
 
         await _dbContext.SaveChangesAsync();
-
     }
 
     private async Task<string> ConvertTimeDelivery(Repository.Entity.Order order)
@@ -575,7 +692,7 @@ public partial class Service : IService
         var orderTagConfig = await _configService.GetNhanhVnOrderTag();
 
         var deliveryTime = orderTagConfig.Options?
-            .FirstOrDefault(x => 
+            .FirstOrDefault(x =>
                 x.Value.HasValue && order.TagIds.Contains(x.Value.Value));
 
         if (deliveryTime == null)
@@ -594,25 +711,25 @@ public partial class Service : IService
 
         return $"{time:D2}:00:00";
     }
-    
+
 }
 
 //     
-    //     List<AhaMoveResponse.ServiceResponse>? ahamoveResult = null;
-    //     
-    //     if (ahamoveResponse.IsSuccessStatusCode)
-    //     {
-    //         ahamoveResult = await ahamoveResponse.Content.ReadFromJsonAsync<List<AhaMoveResponse.ServiceResponse>>();
-    //     } else
-    //     {
-    //         // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-    //         throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
-    //     }
-    //     
-    //     if (ahamoveResult == null || ahamoveResult.Any() == false)
-    //     {
-    //         throw new Exception("Ahamove returned null or empty data");
-    //     }   
-    //     
-    //     return new {ahamoveResult};
-    // }
+//     List<AhaMoveResponse.ServiceResponse>? ahamoveResult = null;
+//     
+//     if (ahamoveResponse.IsSuccessStatusCode)
+//     {
+//         ahamoveResult = await ahamoveResponse.Content.ReadFromJsonAsync<List<AhaMoveResponse.ServiceResponse>>();
+//     } else
+//     {
+//         // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
+//         throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+//     }
+//     
+//     if (ahamoveResult == null || ahamoveResult.Any() == false)
+//     {
+//         throw new Exception("Ahamove returned null or empty data");
+//     }   
+//     
+//     return new {ahamoveResult};
+// }

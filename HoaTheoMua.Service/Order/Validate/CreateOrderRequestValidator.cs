@@ -1,6 +1,6 @@
 using FluentValidation;
 using HoaTheoMua.Repository.Enum;
-using HoaTheoMua.Service.AhaMoveService.Validate;
+using HoaTheoMua.Service.AhamoveService.Validate;
 using HoaTheoMua.Service.Common;
 
 namespace HoaTheoMua.Service.Order.Validate;

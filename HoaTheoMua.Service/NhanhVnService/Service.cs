@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using HoaTheoMua.Repository;
-using HoaTheoMua.Service.AhaMoveService;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.Extensions.Configuration;
 
@@ -43,7 +43,7 @@ public class Service: IService
             string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
 
             // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
-            Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
+            // Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
 
 
             nhanhProductOrderLable = await nhanhVnResponse.Content.ReadFromJsonAsync<OrderLabelResponse>();
@@ -90,7 +90,7 @@ public class Service: IService
             string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
 
             // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
-            Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
+            // Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
 
 
             nhanhProductOrderSource = await nhanhVnResponse.Content.ReadFromJsonAsync<OrderSourceResponse>();

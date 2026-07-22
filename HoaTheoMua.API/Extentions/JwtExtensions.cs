@@ -68,6 +68,29 @@ public static class JwtExtensions
                             throw new ExpiredAccessTokenException();
                         }
                         return Task.CompletedTask;
+                    },
+                    OnChallenge = context =>
+                    {
+                        // Mirror taskcoper-be's OnChallenge: a 401 challenge means an [Authorize]
+                        // endpoint was reached without a usable access token. Distinguish a *missing*
+                        // access token (the caller still holds a refresh cookie, so the client should
+                        // silently refresh) from an outright *invalid* one. Expired tokens never reach
+                        // here — OnAuthenticationFailed already short-circuits them above.
+                        var hasAccessTokenCookie = context.Request.Cookies.TryGetValue(CookieExtensions.AccessTokenCookieName, out var accessTokenCookie)
+                            && !string.IsNullOrWhiteSpace(accessTokenCookie);
+                        var hasRefreshTokenCookie = context.Request.Cookies.TryGetValue(CookieExtensions.RefreshTokenCookieName, out var refreshTokenCookie)
+                            && !string.IsNullOrWhiteSpace(refreshTokenCookie);
+                        var hasAuthorizationHeader = !string.IsNullOrWhiteSpace(context.Request.Headers.Authorization.ToString());
+                        var hasTokenInRequest = hasAccessTokenCookie || hasAuthorizationHeader;
+
+                        // Unlike taskcoper-be we do NOT clear cookies in the invalid case: this service
+                        // only reads the forwarded auth cookies (it never issues or deletes them).
+                        if (!hasTokenInRequest && hasRefreshTokenCookie)
+                        {
+                            throw new MissingAccessTokenException();
+                        }
+
+                        throw new InvalidAccessTokenException();
                     }
                 };
             });

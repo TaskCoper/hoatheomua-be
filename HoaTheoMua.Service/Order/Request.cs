@@ -1,15 +1,17 @@
 ﻿using System.Text.Json.Serialization;
 using HoaTheoMua.Repository.Enum;
+using HoaTheoMua.Service.AhamoveService;
 
 namespace HoaTheoMua.Service.Order;
 
 public class Request
 {
-    public class CreateOrderRequest : AhaMoveService.AhaMoveRequest.EstimateShippingFeeRequest
+    public class CreateOrderRequest : AhaMoveRequest.EstimateShippingFeeRequest
     {
         public string? TaxCode { get; set; }
         public List<long>? TagIds { get; set; }
-        
+
+        public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.VA;
         
         public string? IdentityNumber {get; set; }
     
