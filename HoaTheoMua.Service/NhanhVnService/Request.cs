@@ -482,3 +482,510 @@ public class NhanhBranchDto
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 }
+
+//webhook-order-add and webhook-order-update
+public class NhanhOrderAddWebhookRequest
+{
+    [JsonPropertyName("event")]
+    public string Event { get; set; } = string.Empty;
+
+    [JsonPropertyName("businessId")]
+    public long BusinessId { get; set; }
+
+    [JsonPropertyName("data")]
+    public List<NhanhOrderAddDataDto> Data { get; set; } = new();
+}
+
+public class NhanhOrderAddDataDto
+{
+    [JsonPropertyName("info")]
+    public NhanhOrderInfoDto Info { get; set; } = new();
+
+    [JsonPropertyName("channel")]
+    public NhanhOrderChannelDto? Channel { get; set; }
+
+    [JsonPropertyName("shippingAddress")]
+    public NhanhShippingAddressDto? ShippingAddress { get; set; }
+
+    [JsonPropertyName("products")]
+    public List<NhanhOrderProductDto> Products { get; set; } = [];
+
+    [JsonPropertyName("carrier")]
+    public NhanhCarrierDto? Carrier { get; set; }
+
+    [JsonPropertyName("payment")]
+    public NhanhPaymentDto? Payment { get; set; }
+
+    [JsonPropertyName("originalOrder")]
+    public NhanhOriginalOrderDto? OriginalOrder { get; set; }
+}
+
+public class NhanhOrderInfoDto
+{
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    [JsonPropertyName("depotId")]
+    public long? DepotId { get; set; }
+
+    [JsonPropertyName("pickupDepotId")]
+    public long? PickupDepotId { get; set; }
+
+    [JsonPropertyName("type")]
+    public int? Type { get; set; }
+
+    [JsonPropertyName("status")]
+    public int? Status { get; set; }
+
+    [JsonPropertyName("createdBy")]
+    public NhanhEmployeeDto? CreatedBy { get; set; }
+
+    [JsonPropertyName("sale")]
+    public NhanhEmployeeDto? Sale { get; set; }
+
+    [JsonPropertyName("technicalStaff")]
+    public NhanhEmployeeDto? TechnicalStaff { get; set; }
+
+    [JsonPropertyName("customerCare")]
+    public NhanhEmployeeDto? CustomerCare { get; set; }
+
+    // Unix timestamp
+    [JsonPropertyName("createdAt")]
+    public long? CreatedAt { get; set; }
+
+    // Unix timestamp
+    [JsonPropertyName("updatedAt")]
+    public long? UpdatedAt { get; set; }
+
+    // Unix timestamp
+    [JsonPropertyName("confirmedAt")]
+    public long? ConfirmedAt { get; set; }
+
+    // Unix timestamp
+    [JsonPropertyName("packedAt")]
+    public long? PackedAt { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("privateDescription")]
+    public string? PrivateDescription { get; set; }
+
+    [JsonPropertyName("trackingUrl")]
+    public string? TrackingUrl { get; set; }
+}
+
+public class NhanhEmployeeDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
+
+public class NhanhOrderChannelDto
+{
+    [JsonPropertyName("appOrderId")]
+    public string? AppOrderId { get; set; }
+
+    [JsonPropertyName("appShopId")]
+    public string? AppShopId { get; set; }
+
+    [JsonPropertyName("appShopName")]
+    public string? AppShopName { get; set; }
+
+    [JsonPropertyName("saleChannel")]
+    public int? SaleChannel { get; set; }
+
+    [JsonPropertyName("trafficSource")]
+    public NhanhTrafficSourceDto? TrafficSource { get; set; }
+
+    [JsonPropertyName("facebook")]
+    public NhanhFacebookChannelDto? Facebook { get; set; }
+
+    [JsonPropertyName("utmCampaign")]
+    public string? UtmCampaign { get; set; }
+
+    [JsonPropertyName("domain")]
+    public string? Domain { get; set; }
+}
+
+public class NhanhTrafficSourceDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
+
+public class NhanhFacebookChannelDto
+{
+    [JsonPropertyName("pageId")]
+    public string? PageId { get; set; }
+
+    [JsonPropertyName("conversationId")]
+    public string? ConversationId { get; set; }
+
+    [JsonPropertyName("adId")]
+    public string? AdId { get; set; }
+
+    [JsonPropertyName("postId")]
+    public string? PostId { get; set; }
+}
+
+public class NhanhShippingAddressDto
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("mobile")]
+    public string? Mobile { get; set; }
+
+    [JsonPropertyName("email")]
+    public string? Email { get; set; }
+
+    [JsonPropertyName("address")]
+    public string? Address { get; set; }
+
+    [JsonPropertyName("cityId")]
+    public long? CityId { get; set; }
+
+    [JsonPropertyName("districtId")]
+    public long? DistrictId { get; set; }
+
+    [JsonPropertyName("wardId")]
+    public long? WardId { get; set; }
+
+    [JsonPropertyName("locationVersion")]
+    public string? LocationVersion { get; set; }
+}
+
+public class NhanhOrderProductDto
+{
+    [JsonPropertyName("id")]
+    public long                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Id { get; set; }
+
+    [JsonPropertyName("typeId")]
+    public long? TypeId { get; set; }
+
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("avatar")]
+    public string? Avatar { get; set; }
+
+    [JsonPropertyName("weight")]
+    public decimal? Weight { get; set; }
+
+    [JsonPropertyName("quantity")]
+    public decimal? Quantity { get; set; }
+
+    [JsonPropertyName("price")]
+    public decimal? Price { get; set; }
+
+    [JsonPropertyName("originalPrice")]
+    public decimal? OriginalPrice { get; set; }
+
+    [JsonPropertyName("discount")]
+    public decimal? Discount { get; set; }
+
+    [JsonPropertyName("available")]
+    public decimal? Available { get; set; }
+
+    [JsonPropertyName("avgCost")]
+    public decimal? AverageCost { get; set; }
+
+    [JsonPropertyName("vat")]
+    public NhanhProductVatDto? Vat { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("imei")]
+    public NhanhProductImeiDto? Imei { get; set; }
+
+    [JsonPropertyName("batch")]
+    public NhanhProductBatchDto? Batch { get; set; }
+
+    [JsonPropertyName("combos")]
+    public List<NhanhProductRelationDto> Combos { get; set; } = [];
+
+    [JsonPropertyName("unit")]
+    public NhanhProductUnitDto? Unit { get; set; }
+
+    [JsonPropertyName("gifts")]
+    public List<NhanhProductRelationDto> Gifts { get; set; } = [];
+}
+
+public class NhanhProductVatDto
+{
+    [JsonPropertyName("value")]
+    public int? Value { get; set; }
+
+    [JsonPropertyName("amount")]
+    public decimal? Amount { get; set; }
+}
+
+public class NhanhProductImeiDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+}
+
+public class NhanhProductBatchDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("manufactureDate")]
+    public string? ManufactureDate { get; set; }
+
+    [JsonPropertyName("expiredDate")]
+    public string? ExpiredDate { get; set; }
+}
+
+public class NhanhProductRelationDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("quantity")]
+    public int? Quantity { get; set; }
+}
+
+public class NhanhProductUnitDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("quantity")]
+    public int? Quantity { get; set; }
+}
+
+public class NhanhCarrierDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("orderPackageSize")]
+    public NhanhOrderPackageSizeDto? OrderPackageSize { get; set; }
+
+    [JsonPropertyName("service")]
+    public NhanhCarrierServiceDto? Service { get; set; }
+
+    [JsonPropertyName("carrierCode")]
+    public string? CarrierCode { get; set; }
+
+    [JsonPropertyName("isPartDelivery")]
+    public int? IsPartDelivery { get; set; }
+
+    [JsonPropertyName("sendCarrier")]
+    public NhanhSendCarrierDto? SendCarrier { get; set; }
+
+    [JsonPropertyName("deliveryDate")]
+    public string? DeliveryDate { get; set; }
+
+    [JsonPropertyName("weight")]
+    public int? Weight { get; set; }
+
+    [JsonPropertyName("shipFee")]
+    public decimal? ShipFee { get; set; }
+
+    [JsonPropertyName("codFee")]
+    public decimal? CodFee { get; set; }
+
+    [JsonPropertyName("declaredFee")]
+    public decimal? DeclaredFee { get; set; }
+
+    [JsonPropertyName("returnFee")]
+    public decimal? ReturnFee { get; set; }
+
+    [JsonPropertyName("customerShipFee")]
+    public decimal? CustomerShipFee { get; set; }
+}
+
+public class NhanhOrderPackageSizeDto
+{
+    [JsonPropertyName("height")]
+    public int? Height { get; set; }
+
+    [JsonPropertyName("merge")]
+    public int? Merge { get; set; }
+
+    [JsonPropertyName("length")]
+    public int? Length { get; set; }
+
+    [JsonPropertyName("weight")]
+    public int? Weight { get; set; }
+
+    [JsonPropertyName("width")]
+    public int? Width { get; set; }
+}
+
+public class NhanhCarrierServiceDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+}
+
+public class NhanhSendCarrierDto
+{
+    [JsonPropertyName("type")]
+    public int? Type { get; set; }
+
+    [JsonPropertyName("date")]
+    public string? Date { get; set; }
+}
+
+public class NhanhPaymentDto
+{
+    [JsonPropertyName("couponCode")]
+    public string? CouponCode { get; set; }
+
+    [JsonPropertyName("credit")]
+    public NhanhCreditPaymentDto? Credit { get; set; }
+
+    [JsonPropertyName("deposit")]
+    public NhanhDepositPaymentDto? Deposit { get; set; }
+
+    [JsonPropertyName("discount")]
+    public NhanhOrderDiscountDto? Discount { get; set; }
+
+    [JsonPropertyName("transfer")]
+    public NhanhTransferPaymentDto? Transfer { get; set; }
+
+    [JsonPropertyName("usedPoints")]
+    public NhanhUsedPointsDto? UsedPoints { get; set; }
+
+    [JsonPropertyName("vat")]
+    public NhanhPaymentVatDto? Vat { get; set; }
+}
+
+public class NhanhCreditPaymentDto
+{
+    [JsonPropertyName("amount")]
+    public decimal? Amount { get; set; }
+
+    [JsonPropertyName("accountId")]
+    public long? AccountId { get; set; }
+
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+}
+
+public class NhanhDepositPaymentDto
+{
+    [JsonPropertyName("amount")]
+    public decimal? Amount { get; set; }
+
+    [JsonPropertyName("accountId")]
+    public long? AccountId { get; set; }
+}
+
+public class NhanhOrderDiscountDto
+{
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("amount")]
+    public decimal? Amount { get; set; }
+}
+
+public class NhanhTransferPaymentDto
+{
+    [JsonPropertyName("amount")]
+    public decimal? Amount { get; set; }
+
+    [JsonPropertyName("accountId")]
+    public long? AccountId { get; set; }
+}
+
+public class NhanhUsedPointsDto
+{
+    [JsonPropertyName("points")]
+    public int? Points { get; set; }
+
+    [JsonPropertyName("amount")]
+    public decimal? Amount { get; set; }
+}
+
+public class NhanhPaymentVatDto
+{
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("value")]
+    public decimal? Value { get; set; }
+
+    [JsonPropertyName("amount")]
+    public decimal? Amount { get; set; }
+
+    [JsonPropertyName("taxCode")]
+    public string? TaxCode { get; set; }
+
+    [JsonPropertyName("taxDate")]
+    public string? TaxDate { get; set; }
+}
+
+public class NhanhOriginalOrderDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("channel")]
+    public NhanhOriginalOrderChannelDto? Channel { get; set; }
+}
+
+public class NhanhOriginalOrderChannelDto
+{
+    [JsonPropertyName("appOrderId")]
+    public string? AppOrderId { get; set; }
+
+    [JsonPropertyName("appShopId")]
+    public string? AppShopId { get; set; }
+
+    [JsonPropertyName("saleChannel")]
+    public int? SaleChannel { get; set; }
+}
+
+//webhook-order-delete
+public class NhanhOrderDeleteWebhookRequest
+{
+    [JsonPropertyName("event")]
+    public string Event { get; set; } = string.Empty;
+
+    [JsonPropertyName("businessId")]
+    public long BusinessId { get; set; }
+
+    [JsonPropertyName("data")]
+    public List<long> Data { get; set; } = [];
+}
