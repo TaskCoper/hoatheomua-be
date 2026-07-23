@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.NhanhVnService;
 
@@ -76,6 +77,18 @@ public class OrderSourceNextPage
     public int? Id { get; set; }
 }
 
+
+public class NhanhWebhookEnvelopeRequest
+{
+    [JsonPropertyName("event")]
+    public string Event { get; set; } = string.Empty;
+
+    [JsonPropertyName("businessId")]
+    public long BusinessId { get; set; }
+
+    [JsonPropertyName("data")]
+    public JsonElement Data { get; set; }
+}
 
 //webhook-inventory-request
 public class NhanhInventoryChangeWebhookRequest

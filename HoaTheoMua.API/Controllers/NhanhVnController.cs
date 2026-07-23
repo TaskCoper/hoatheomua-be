@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.NhanhVnService;
@@ -41,52 +42,10 @@ public class NhanhVnController : ControllerBase
         // return Ok(result);
     }
     
-    [HttpPost("/api/v1/nhanh-vn/webhook/inventory")]
-    public async Task<IActionResult> WebhookNhanhVnInventory([FromBody] NhanhInventoryChangeWebhookRequest request)
+    [HttpPost("/api/v1/nhanh-vn/webhook")]
+    public async Task<IActionResult> Webhook([FromBody] JsonElement body)
     {
-        var result = await _nhanhVnService.WebhookNhanhVnInventory(request);
-        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
-    }
-    
-    [HttpPost("/api/v1/nhanh-vn/webhook/add-product")]
-    public async Task<IActionResult> WebhookNhanhVnAddProduct([FromBody] NhanhProductAddWebhookRequest request)
-    {
-        var result = await _nhanhVnService.WebhookNhanhVnProductAdd(request);
-        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
-    }
-
-    [HttpPost("/api/v1/nhanh-vn/webhook/order-add")]
-    public async Task<IActionResult> WebhookNhanhVnOrderAdd([FromBody] NhanhOrderAddWebhookRequest request)
-    {
-        var result = await _nhanhVnService.WebhookNhanhVnOrderAdd(request);
-        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
-    }
-
-    [HttpPost("/api/v1/nhanh-vn/webhook/order-update")]
-    public async Task<IActionResult> WebhookNhanhVnOrderUpdate([FromBody] NhanhOrderUpdateWebhookRequest request)
-    {
-        var result = await _nhanhVnService.WebhookNhanhVnOrderUpdate(request);
-        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
-    }
-
-    [HttpPost("/api/v1/nhanh-vn/webhook/order-delete")]
-    public async Task<IActionResult> WebhookNhanhVnOrderDelete([FromBody] NhanhOrderDeleteWebhookRequest request)
-    {
-        var result = await _nhanhVnService.WebhookNhanhVnOrderDelete(request);
-        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
-    }
-
-    [HttpPost("/api/v1/nhanh-vn/webhook/update-product")]
-    public async Task<IActionResult> WebhookNhanhVnProductUpdate([FromBody] NhanhProductAddWebhookRequest request)
-    {
-        var result = await _nhanhVnService.WebhookNhanhVnProductUpdate(request);
-        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
-    }
-
-    [HttpPost("/api/v1/nhanh-vn/webhook/delete-product")]
-    public async Task<IActionResult> WebhookNhanhVnDeleteProduct([FromBody] NhanhProductDeleteWebhookRequest request)
-    {
-        var result = await _nhanhVnService.WebhookNhanhVnProductDelete(request);
+        var result = await _nhanhVnService.HandleWebhook(body);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
     }
 }

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
@@ -113,6 +114,65 @@ public class Service: IService
         }
 
         return nhanhProductOrderSource;
+    }
+
+    public async Task<string> HandleWebhook(JsonElement body)
+    {
+        var evt = body.TryGetProperty("event", out var e) ? e.GetString() : null;
+
+        var businessIdWebhook = body.TryGetProperty("businessId", out var value) ? value.ToString() : null;
+
+        if (businessIdWebhook == null)
+        {
+            throw new BadRequestException("Không tìm thấy businessId");
+        }
+
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        if (businessIdWebhook != businessId.ToString())
+        {
+            throw new ConflictException("Business Id không khớp");
+        }
+        
+        return evt switch
+        {
+            NhanhWebhookEvents.InventoryChange =>
+                await WebhookNhanhVnInventory(Deserialize<NhanhInventoryChangeWebhookRequest>(body)),
+
+            NhanhWebhookEvents.ProductAdd =>
+                await WebhookNhanhVnProductAdd(Deserialize<NhanhProductAddWebhookRequest>(body)),
+
+            NhanhWebhookEvents.ProductUpdate =>
+                await WebhookNhanhVnProductUpdate(Deserialize<NhanhProductAddWebhookRequest>(body)),
+
+            NhanhWebhookEvents.ProductDelete =>
+                await WebhookNhanhVnProductDelete(Deserialize<NhanhProductDeleteWebhookRequest>(body)),
+
+            NhanhWebhookEvents.OrderAdd =>
+                await WebhookNhanhVnOrderAdd(Deserialize<NhanhOrderAddWebhookRequest>(body)),
+
+            NhanhWebhookEvents.OrderUpdate =>
+                await WebhookNhanhVnOrderUpdate(Deserialize<NhanhOrderUpdateWebhookRequest>(body)),
+
+            NhanhWebhookEvents.OrderDelete =>
+                await WebhookNhanhVnOrderDelete(Deserialize<NhanhOrderDeleteWebhookRequest>(body)),
+
+            _ => "ignored"
+        };
+    }
+    private static T Deserialize<T>(JsonElement body)
+    {
+        var result = body.Deserialize<T>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        if (result == null)
+        {
+            throw new BadRequestException("Payload webhook Nhanh.vn không hợp lệ.");
+        }
+
+        return result;
     }
 
     public async Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest request)
