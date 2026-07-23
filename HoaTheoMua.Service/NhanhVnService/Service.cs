@@ -379,7 +379,57 @@ public class Service: IService
 
         var taxCode = item.Payment?.Vat?.TaxCode;
         var vatFee = item.Payment?.Vat?.Amount ?? 0;
-        //var isExportInvoice = !string.IsNullOrWhiteSpace(taxCode) || vatFee > 0;
+
+        var privateDescription = item.Info.PrivateDescription ?? string.Empty;
+        string? parsedTaxCode = null;
+        string? receiptFullName = null;
+        string? receiptPhoneNumber = null;
+        string? receiptAddress = null;
+        string? receiptEmail = null;
+        string? identityNumber = null;
+        bool? isExportInvoice = false;
+        HoaTheoMua.Repository.Enum.InvoiceType? invoiceType = null;
+
+        var lines = privateDescription
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("MST:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Business;
+                parsedTaxCode = line.Replace("MST:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("Tên:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
+                receiptFullName = line.Replace("Tên:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("CCCD:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
+                identityNumber = line.Replace("CCCD:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("ĐC:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
+                receiptAddress = line.Replace("ĐC:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("Email:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                receiptEmail = line.Replace("Email:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("SĐT:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                receiptPhoneNumber = line.Replace("SĐT:", string.Empty).Trim();
+            }
+        }
 
         var order = new HoaTheoMua.Repository.Entity.Order
         {
@@ -387,32 +437,31 @@ public class Service: IService
             Id = Guid.NewGuid(),
             Status = item.Info.Status?.ToString() ?? string.Empty,
             TrackNumber = item.Carrier?.CarrierCode ?? string.Empty,
-            
+
             FullName = item.ShippingAddress?.Name ?? string.Empty,
             Phone = item.ShippingAddress?.Mobile ?? string.Empty,
             Address = item.ShippingAddress?.Address ?? string.Empty,
             ShortAddress = item.ShippingAddress?.Address ?? string.Empty, //Address
             Ward = (int)(item.ShippingAddress?.WardId ?? 0),
             City = (int)(item.ShippingAddress?.CityId ?? 0),
-            
+
             Remarks = item.Info.Description ?? string.Empty,
             OrderTime = item.Info.CreatedAt ?? 0,
             NhanhTrackingUrl = item.Info.TrackingUrl,
-            
+
             ShippingFee = shippingFee,
             ProductFee = productFee,
             TotalFee = productFee + shippingFee + vatFee,
             Vat = vatFee,
             // PaymentMethod = HoaTheoMua.Repository.Enum.PaymentMethod.VA,
-            TaxCode = taxCode,
-            // ReceiptFullName = item.ShippingAddress?.Name,
-            // ReceiptPhoneNumber = item.ShippingAddress?.Mobile,
-            // ReceiptAddress = item.ShippingAddress?.Address,
-            // ReceiptEmail = item.ShippingAddress?.Email,
-            //IsExportInvoice = isExportInvoice,
-            // InvoiceType = !string.IsNullOrWhiteSpace(taxCode)
-            //     ? HoaTheoMua.Repository.Enum.InvoiceType.Business
-            //     : null,
+            TaxCode = parsedTaxCode ?? taxCode,
+            ReceiptFullName = receiptFullName,
+            ReceiptPhoneNumber = receiptPhoneNumber,
+            ReceiptAddress = receiptAddress,
+            ReceiptEmail = receiptEmail,
+            IdentityNumber = identityNumber,
+            IsExportInvoice = isExportInvoice,
+            InvoiceType = invoiceType,
         };
 
         order.NhanhOrderId = (int)item.Info.Id;
