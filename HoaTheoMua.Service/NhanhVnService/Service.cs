@@ -370,15 +370,19 @@ public class Service: IService
             throw new BadRequestException("Có đơn hàng đã tồn tại trong hệ thống.");
         }
 
-        var productFee = item.Products.Sum(x =>
+        var totalProductFee = item.Products.Sum(x =>
             (x.Price ?? 0) * (x.Quantity ?? 0));
 
-        var shippingFee = item.Carrier?.CustomerShipFee
-                          ?? item.Carrier?.ShipFee
-                          ?? 0;
+        var totalShippingFee = item.Carrier?.CustomerShipFee
+                               ?? item.Carrier?.ShipFee
+                               ?? 0;
 
         var taxCode = item.Payment?.Vat?.TaxCode;
-        var vatFee = item.Payment?.Vat?.Amount ?? 0;
+        var vatFee = string.IsNullOrEmpty(taxCode) ? 0 : totalProductFee * 0.08m;
+        if (vatFee == 0 && item.Payment?.Vat?.Amount is > 0)
+        {
+            vatFee = item.Payment.Vat.Amount.Value;
+        }
 
         var privateDescription = item.Info.PrivateDescription ?? string.Empty;
         string? parsedTaxCode = null;
@@ -449,9 +453,9 @@ public class Service: IService
             OrderTime = item.Info.CreatedAt ?? 0,
             NhanhTrackingUrl = item.Info.TrackingUrl,
 
-            ShippingFee = shippingFee,
-            ProductFee = productFee,
-            TotalFee = productFee + shippingFee + vatFee,
+            ShippingFee = totalShippingFee,
+            ProductFee = totalProductFee,
+            TotalFee = totalShippingFee + totalProductFee + vatFee,
             Vat = vatFee,
             // PaymentMethod = HoaTheoMua.Repository.Enum.PaymentMethod.VA,
             TaxCode = parsedTaxCode ?? taxCode,
@@ -575,7 +579,7 @@ public class Service: IService
         // Không tạo đơn mới trong event update.
         if (order == null)
         {
-            return "Đơn hàng không tồn tại";
+            throw new ConflictException("Đơn hàng không tồn tại");
         }
 
         var incomingUpdatedAt = item.Info.UpdatedAt.HasValue
@@ -623,26 +627,87 @@ public class Service: IService
             }
         }
 
+        var taxCode = item.Payment?.Vat?.TaxCode;
+        var totalProductFee = order.ProductFee;
         if (item.Products != null && item.Products.Any())
         {
-            order.ProductFee = item.Products.Sum(x =>
+            totalProductFee = item.Products.Sum(x =>
                 (x.Price ?? 0) * (x.Quantity ?? 0));
+            order.ProductFee = totalProductFee;
         }
 
-        var shippingFee = item.Carrier?.CustomerShipFee
-                          ?? item.Carrier?.ShipFee;
-        if (shippingFee != null)
+        var totalShippingFee = item.Carrier?.CustomerShipFee
+                               ?? item.Carrier?.ShipFee
+                               ?? order.ShippingFee;
+        order.ShippingFee = totalShippingFee;
+
+        var vatFee = string.IsNullOrEmpty(taxCode) ? 0 : totalProductFee * 0.08m;
+        if (vatFee == 0 && item.Payment?.Vat?.Amount is > 0)
         {
-            order.ShippingFee = shippingFee.Value;
+            vatFee = item.Payment.Vat.Amount.Value;
         }
 
-        if (item.Payment?.Vat != null)
+        var privateDescription = item.Info.PrivateDescription ?? string.Empty;
+        string? parsedTaxCode = null;
+        string? receiptFullName = null;
+        string? receiptPhoneNumber = null;
+        string? receiptAddress = null;
+        string? receiptEmail = null;
+        string? identityNumber = null;
+        bool? isExportInvoice = false;
+        HoaTheoMua.Repository.Enum.InvoiceType? invoiceType = null;
+
+        foreach (var line in privateDescription.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            order.TaxCode = item.Payment.Vat.TaxCode ?? order.TaxCode;
-            order.Vat = item.Payment.Vat.Amount ?? order.Vat ?? 0;
+            if (line.StartsWith("MST:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Business;
+                parsedTaxCode = line.Replace("MST:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("Tên:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
+                receiptFullName = line.Replace("Tên:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("CCCD:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
+                identityNumber = line.Replace("CCCD:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("ĐC:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
+                receiptAddress = line.Replace("ĐC:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("Email:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                receiptEmail = line.Replace("Email:", string.Empty).Trim();
+            }
+            else if (line.StartsWith("SĐT:", StringComparison.OrdinalIgnoreCase))
+            {
+                isExportInvoice = true;
+                receiptPhoneNumber = line.Replace("SĐT:", string.Empty).Trim();
+            }
         }
 
-        order.TotalFee = order.ProductFee + order.ShippingFee + (order.Vat ?? 0);
+        order.TaxCode = parsedTaxCode ?? taxCode;
+        order.ReceiptFullName = receiptFullName;
+        order.ReceiptPhoneNumber = receiptPhoneNumber;
+        order.ReceiptAddress = receiptAddress;
+        order.ReceiptEmail = receiptEmail;
+        order.IdentityNumber = identityNumber;
+        order.IsExportInvoice = isExportInvoice;
+        order.InvoiceType = invoiceType;
+
+        order.ProductFee = totalProductFee;
+        order.ShippingFee = totalShippingFee;
+        order.Vat = vatFee;
+        order.TotalFee = totalProductFee + totalShippingFee + vatFee;
         order.UpdatedAt = incomingUpdatedAt ?? DateTimeOffset.UtcNow;
         updatedCount++;
 
