@@ -157,7 +157,7 @@ public class Service: IService
             NhanhWebhookEvents.OrderDelete =>
                 await WebhookNhanhVnOrderDelete(Deserialize<NhanhOrderDeleteWebhookRequest>(body)),
 
-            _ => "ignored"
+            _ => throw new BadRequestException("Không tồn tại webhooks")
         };
     }
     private static T Deserialize<T>(JsonElement body)
@@ -341,7 +341,7 @@ public class Service: IService
         await _appDbContext.Products.AddAsync(product);
         await _appDbContext.SaveChangesAsync();
 
-        return $"Thêm mới thành công 1 sản phẩm từ Nhanh.vn.";
+        return "Thêm mới thành công sản phẩm";
     }
 
     public async Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest request)
@@ -500,7 +500,7 @@ public class Service: IService
         await _appDbContext.OrderDetails.AddRangeAsync(newOrderDetails);
         await _appDbContext.SaveChangesAsync();
 
-        return $"Thêm mới thành công 1 đơn hàng từ Nhanh.vn.";
+        return $"Thêm mới thành công 1 đơn hàng ";
     }
 
     public async Task<string> WebhookNhanhVnOrderUpdate(NhanhOrderUpdateWebhookRequest request)
@@ -514,11 +514,6 @@ public class Service: IService
         var updatedCount = 0;
         var ignoredCount = 0;
 
-        if (item.Info.Id <= 0 || item.Info.Id > int.MaxValue)
-        {
-            return $"Cập nhật {updatedCount} đơn; bỏ qua {ignoredCount + 1} đơn.";
-        }
-
         var nhanhOrderId = (int)item.Info.Id;
 
         var order = await _appDbContext.Orders
@@ -529,7 +524,7 @@ public class Service: IService
         // Không tạo đơn mới trong event update.
         if (order == null)
         {
-            return $"Cập nhật {updatedCount} đơn; bỏ qua {ignoredCount + 1} đơn.";
+            return "Đơn hàng không tồn tại";
         }
 
         var incomingUpdatedAt = item.Info.UpdatedAt.HasValue
@@ -634,7 +629,7 @@ public class Service: IService
             await _appDbContext.SaveChangesAsync();
         }
 
-        var ignoredCount = request.Data.Count - orders.Count;
+        var ignoredCount = request.Data.Count - orders.Count;//những đơn hàng tồn tại trong request nhưng không tồn tại trong db
         return $"Xoá {orders.Count} đơn; bỏ qua {ignoredCount} đơn.";
     }
 
