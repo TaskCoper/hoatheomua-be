@@ -171,7 +171,7 @@ public class Service: IService
         {
             throw new BadRequestException("Payload webhook Nhanh.vn không hợp lệ.");
         }
-
+    
         return result;
     }
 
@@ -195,23 +195,25 @@ public class Service: IService
 
             var product = products.FirstOrDefault(x => x.NhanhProductId == itemId);
 
-            if (product != null)
+            if (product == null)
             {
-                product.AvailableForSale = (decimal?)item.Available;
-                product.ProductCode = item.Code;
-                product.TotalStock = (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
-                product.Stock = (decimal?)item.Remain;
-                product.DeliveringStock = (decimal?)item.Shipping;
-                product.StockError = (decimal?)item.Damaged;
-                product.Held = (decimal?)item.Holding;//tạm giữ các kho
-                product.StockTransferring = (decimal?)item.Transfering;
-                // product.HeldComponents = item.Holding;
-                
-                // product.WarehouseStock = (decimal?)item.Warranty.Remain;
-                product.WarrantyStock = (decimal?)item.Warranty.Remain;
-                product.HeldComponents = (decimal?)item.Warranty.Holding;
-                product.UpdatedAt = DateTimeOffset.UtcNow;
+                throw new ConflictException($"Sản phẩm với id: {itemId} không tồn tại trong hệ thống");
             }
+  
+            product.AvailableForSale = (decimal?)item.Available;
+            product.ProductCode = item.Code;
+            product.TotalStock = (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
+            product.Stock = (decimal?)item.Remain;
+            product.DeliveringStock = (decimal?)item.Shipping;
+            product.StockError = (decimal?)item.Damaged;
+            product.Held = (decimal?)item.Holding;//tạm giữ các kho
+            product.StockTransferring = (decimal?)item.Transfering;
+            // product.HeldComponents = item.Holding;
+            
+            // product.WarehouseStock = (decimal?)item.Warranty.Remain;
+            product.WarrantyStock = (decimal?)item.Warranty.Remain;
+            product.HeldComponents = (decimal?)item.Warranty.Holding;
+            product.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
         await _appDbContext.SaveChangesAsync();
@@ -646,21 +648,11 @@ public class Service: IService
         var product = await _appDbContext.Products
             .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == nhanhProductId);
 
-        var isNew = false;
-
         if (product == null)
         {
-            product = new HoaTheoMua.Repository.Entity.Product
-            {
-                Id = Guid.NewGuid(),
-                NhanhProductId = item.Id.ToString(),
-                CreatedAt = DateTimeOffset.UtcNow
-            };
-            isNew = true;
+            throw new ConflictException($"Sản phẩm với id: {nhanhProductId} không tồn tại trong hệ thống");
         }
-
-        var updatedCount = 0;
-
+        
         product.UpdatedAt = DateTimeOffset.UtcNow;
         product.ParentProductId = item.ParentId != 0 ? item.ParentId.ToString() : null;
         product.ProductCode = item.Code;
@@ -755,18 +747,9 @@ public class Service: IService
             product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt);
         }
 
-        if (isNew)
-        {
-            await _appDbContext.Products.AddAsync(product);
-        }
-        else
-        {
-            updatedCount++;
-        }
-
         await _appDbContext.SaveChangesAsync();
 
-        return $"Cập nhật thành công {updatedCount} sản phẩm, thêm mới {(isNew ? 1 : 0)} sản phẩm từ Nhanh.vn.";
+        return $"Cập nhật thành công";
     }
 
     public async Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest request)
@@ -791,6 +774,10 @@ public class Service: IService
             }
 
             await _appDbContext.SaveChangesAsync();
+        }
+        else
+        {
+            throw new ConflictException("Sản phẩm không tồn tại");
         }
 
         return $"Xóa thành công {productsToDelete.Count} sản phẩm từ Nhanh.vn.";
