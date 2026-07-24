@@ -3,6 +3,7 @@ using System.Text.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -116,11 +117,19 @@ public class Service: IService
         return nhanhProductOrderSource;
     }
 
-    public async Task<string> HandleWebhook(JsonElement body)
+    public async Task<string> HandleWebhook(JsonElement? body)
     {
-        var evt = body.TryGetProperty("event", out var e) ? e.GetString() : null;
 
-        var businessIdWebhook = body.TryGetProperty("businessId", out var value) ? value.ToString() : null;
+        if (body == null)
+        {
+            return "Thành công";
+        }
+
+        var json = body.Value;
+        
+        var evt = json.TryGetProperty("event", out var e) ? e.GetString() : null;
+
+        var businessIdWebhook = json.TryGetProperty("businessId", out var value) ? value.ToString() : null;
 
         if (businessIdWebhook == null)
         {
@@ -137,16 +146,16 @@ public class Service: IService
         return evt switch
         {
             NhanhWebhookEvents.InventoryChange =>
-                await WebhookNhanhVnInventory(Deserialize<NhanhInventoryChangeWebhookRequest>(body)),
+                await WebhookNhanhVnInventory(Deserialize<NhanhInventoryChangeWebhookRequest>(json)),
 
             NhanhWebhookEvents.ProductAdd =>
-                await WebhookNhanhVnProductAdd(Deserialize<NhanhProductAddWebhookRequest>(body)),
+                await WebhookNhanhVnProductAdd(Deserialize<NhanhProductAddWebhookRequest>(json)),
 
             NhanhWebhookEvents.ProductUpdate =>
-                await WebhookNhanhVnProductUpdate(Deserialize<NhanhProductAddWebhookRequest>(body)),
+                await WebhookNhanhVnProductUpdate(Deserialize<NhanhProductAddWebhookRequest>(json)),
 
             NhanhWebhookEvents.ProductDelete =>
-                await WebhookNhanhVnProductDelete(Deserialize<NhanhProductDeleteWebhookRequest>(body)),
+                await WebhookNhanhVnProductDelete(Deserialize<NhanhProductDeleteWebhookRequest>(json)),
 
             // NhanhWebhookEvents.OrderAdd =>
             //     await WebhookNhanhVnOrderAdd(Deserialize<NhanhOrderAddWebhookRequest>(body)),
@@ -175,11 +184,11 @@ public class Service: IService
         return result;
     }
 
-    public async Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest request)
+    public async Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest? request)
     {
         if (request == null || request.Data == null || !request.Data.Any())
         {
-            throw new BadRequestException("Không có dữ liệu thay đổi tồn kho.");
+            return "Thành công";
         }
 
         var nhanhProductIds = request.Data
@@ -221,11 +230,11 @@ public class Service: IService
         return "Cập nhật tồn kho thành công";
     }
 
-    public async Task<string> WebhookNhanhVnProductAdd(NhanhProductAddWebhookRequest request)
+    public async Task<string> WebhookNhanhVnProductAdd(NhanhProductAddWebhookRequest? request)
     {
         if (request == null || request.Data == null)
         {
-            throw new BadRequestException("Không có dữ liệu thay đổi khi thêm sản phẩm.");
+            return "Thành công";
         }
 
         var item = request.Data;
@@ -346,7 +355,7 @@ public class Service: IService
         return "Thêm mới thành công sản phẩm";
     }
 
-    public async Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest request)
+    public async Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest? request)
     {
         if (request == null || request.Data == null)
         {
@@ -753,7 +762,7 @@ public class Service: IService
     {
         if (request == null || request.Data == null)
         {
-            throw new BadRequestException("Không có dữ liệu thay đổi khi cập nhật sản phẩm.");
+            return "Thành công";        
         }
 
         var item = request.Data;
@@ -870,7 +879,7 @@ public class Service: IService
     {
         if (request == null || request.Data == null || !request.Data.Any())
         {
-            throw new BadRequestException("Không có dữ liệu thay đổi khi xóa sản phẩm.");
+            return "Thành công";
         }
 
         var deletedIds = request.Data.Select(id => id.ToString()).ToList();

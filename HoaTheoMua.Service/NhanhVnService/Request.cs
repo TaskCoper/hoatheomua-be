@@ -94,14 +94,14 @@ public class NhanhWebhookEnvelopeRequest
 public class NhanhInventoryChangeWebhookRequest
     {
         [JsonPropertyName("event")]
-        public string Event { get; set; } = string.Empty;
+        public string? Event { get; set; } = string.Empty;
 
         [JsonPropertyName("businessId")]
-        public long BusinessId { get; set; }
+        public long? BusinessId { get; set; }
 
         // Map trực tiếp trường data thành List các sản phẩm thay đổi tồn kho
         [JsonPropertyName("data")]
-        public List<NhanhInventoryItem> Data { get; set; } = new();
+        public List<NhanhInventoryItem>? Data { get; set; } = new();
     }
 
     // Chi tiết từng sản phẩm trong mảng data
@@ -186,10 +186,10 @@ public class NhanhInventoryChangeWebhookRequest
 public class NhanhProductAddWebhookRequest
 {
     [JsonPropertyName("event")]
-    public string Event { get; set; } = string.Empty; // Sẽ là "productAdd"
+    public string? Event { get; set; } = string.Empty; // Sẽ là "productAdd"
 
     [JsonPropertyName("businessId")]
-    public long BusinessId { get; set; }
+    public long? BusinessId { get; set; }
 
     // "data" ở sự kiện này là một object đơn lẻ, không phải array
     [JsonPropertyName("data")]
@@ -500,10 +500,10 @@ public class NhanhBranchDto
 public class NhanhOrderAddWebhookRequest
 {
     [JsonPropertyName("event")]
-    public string Event { get; set; } = string.Empty;
+    public string? Event { get; set; } = string.Empty;
 
     [JsonPropertyName("businessId")]
-    public long BusinessId { get; set; }
+    public long? BusinessId { get; set; }
 
     [JsonPropertyName("data")]
     public NhanhOrderAddDataDto? Data { get; set; }

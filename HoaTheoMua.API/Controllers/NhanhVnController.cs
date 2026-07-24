@@ -43,7 +43,7 @@ public class NhanhVnController : ControllerBase
     }
     
     [HttpPost("/api/v1/nhanh-vn/webhook")]
-    public async Task<IActionResult> Webhook([FromBody] JsonElement body)
+    public async Task<IActionResult> Webhook([FromBody] JsonElement? body)
     {
         Console.WriteLine(body);
         

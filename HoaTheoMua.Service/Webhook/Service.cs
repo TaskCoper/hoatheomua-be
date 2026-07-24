@@ -397,7 +397,7 @@ public partial class Service : IService
                     {
                         Latitude = companyAddress?.Latitude ?? 0,
                         Longitude = companyAddress?.Longitude ?? 0,
-                        Address = companyAddress?.AddressLine ?? "",
+                        Address =(companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
                         ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
                         FullName = companyAddress!.FullName,
                         Phone = companyAddress.PhoneNumber,
