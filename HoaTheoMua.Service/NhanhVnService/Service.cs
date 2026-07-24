@@ -129,19 +129,19 @@ public class Service: IService
         
         var evt = json.TryGetProperty("event", out var e) ? e.GetString() : null;
 
-        var businessIdWebhook = json.TryGetProperty("businessId", out var value) ? value.ToString() : null;
-
-        if (businessIdWebhook == null)
-        {
-            throw new BadRequestException("Không tìm thấy businessId");
-        }
-
-        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
-        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
-        if (businessIdWebhook != businessId.ToString())
-        {
-            throw new ConflictException("Business Id không khớp");
-        }
+        // var businessIdWebhook = json.TryGetProperty("businessId", out var value) ? value.ToString() : null;
+        //
+        // if (businessIdWebhook == null)
+        // {
+        //     throw new BadRequestException("Không tìm thấy businessId");
+        // }
+        //
+        // var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
+        // var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        // if (businessIdWebhook != businessId.ToString())
+        // {
+        //     throw new ConflictException("Business Id không khớp");
+        // }
         
         return evt switch
         {
