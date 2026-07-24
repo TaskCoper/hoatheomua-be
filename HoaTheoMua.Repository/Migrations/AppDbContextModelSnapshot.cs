@@ -611,6 +611,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal>("ProductFee")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("QrUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("ReceiptAddress")
                         .HasColumnType("text");
 
