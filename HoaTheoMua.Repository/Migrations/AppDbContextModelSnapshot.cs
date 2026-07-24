@@ -208,6 +208,90 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("CategoryNewsDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProduct", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTimeOffset?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid?>("ParentCategoryProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentCategoryProductId");
+
+                    b.ToTable("CategoryProducts");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProductDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoryProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("CategoryProductId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("CategoryProductDetails");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1042,6 +1126,35 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("News");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProduct", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.CategoryProduct", "ParentCategoryProduct")
+                        .WithMany("ChildCategoryProducts")
+                        .HasForeignKey("ParentCategoryProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentCategoryProduct");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProductDetail", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.CategoryProduct", "CategoryProduct")
+                        .WithMany("CategoryProductDetails")
+                        .HasForeignKey("CategoryProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "Product")
+                        .WithMany("CategoryProductDetails")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CategoryProduct");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
@@ -1082,6 +1195,13 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("ChildCategoryNews");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProduct", b =>
+                {
+                    b.Navigation("CategoryProductDetails");
+
+                    b.Navigation("ChildCategoryProducts");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
                 {
                     b.Navigation("recruitmentRequests");
@@ -1097,6 +1217,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("OrderDetails");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
+                {
+                    b.Navigation("CategoryProductDetails");
                 });
 #pragma warning restore 612, 618
         }

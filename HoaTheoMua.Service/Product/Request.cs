@@ -83,4 +83,13 @@ public class Request
         [JsonPropertyName("id")]
         public string Id { get; set; } = null!;
     }
+
+    public class LocalProductQueryRequest
+    {
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+        public decimal? PriceFrom { get; set; }
+        public decimal? PriceTo { get; set; }
+        public List<string>? SortBy { get; set; }
+    }
 }
