@@ -127,7 +127,6 @@ public class Service: IService
 
         var json = body.Value;
         
-        var evt = json.TryGetProperty("event", out var e) ? e.GetString() : null;
 
         // var businessIdWebhook = json.TryGetProperty("businessId", out var value) ? value.ToString() : null;
         //
@@ -143,45 +142,62 @@ public class Service: IService
         //     throw new ConflictException("Business Id không khớp");
         // }
         
-        return evt switch
+        try
         {
-            NhanhWebhookEvents.InventoryChange =>
-                await WebhookNhanhVnInventory(Deserialize<NhanhInventoryChangeWebhookRequest>(json)),
+            var evt = json.TryGetProperty("event", out var e) ? e.GetString() : null;
 
-            NhanhWebhookEvents.ProductAdd =>
-                await WebhookNhanhVnProductAdd(Deserialize<NhanhProductAddWebhookRequest>(json)),
+            switch (evt)
+            {
+                case NhanhWebhookEvents.InventoryChange:
+                {
+                    var req = TryDeserialize<NhanhInventoryChangeWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnInventory(req);
+                }
 
-            NhanhWebhookEvents.ProductUpdate =>
-                await WebhookNhanhVnProductUpdate(Deserialize<NhanhProductAddWebhookRequest>(json)),
+                case NhanhWebhookEvents.ProductAdd:
+                {
+                    var req = TryDeserialize<NhanhProductAddWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnProductAdd(req);
+                }
 
-            NhanhWebhookEvents.ProductDelete =>
-                await WebhookNhanhVnProductDelete(Deserialize<NhanhProductDeleteWebhookRequest>(json)),
+                case NhanhWebhookEvents.ProductUpdate:
+                {
+                    var req = TryDeserialize<NhanhProductAddWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnProductUpdate(req);
+                }
 
-            // NhanhWebhookEvents.OrderAdd =>
-            //     await WebhookNhanhVnOrderAdd(Deserialize<NhanhOrderAddWebhookRequest>(body)),
-            //
-            // NhanhWebhookEvents.OrderUpdate =>
-            //     await WebhookNhanhVnOrderUpdate(Deserialize<NhanhOrderUpdateWebhookRequest>(body)),
-            //
-            // NhanhWebhookEvents.OrderDelete =>
-            //     await WebhookNhanhVnOrderDelete(Deserialize<NhanhOrderDeleteWebhookRequest>(body)),
+                case NhanhWebhookEvents.ProductDelete:
+                {
+                    var req = TryDeserialize<NhanhProductDeleteWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnProductDelete(req);
+                }
 
-            _ => throw new BadRequestException("Không tồn tại webhooks")
-        };
-    }
-    private static T Deserialize<T>(JsonElement body)
-    {
-        var result = body.Deserialize<T>(new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-
-        if (result == null)
-        {
-            throw new BadRequestException("Payload webhook Nhanh.vn không hợp lệ.");
+                default:
+                    return "Thành công";
+            }
         }
-    
-        return result;
+        catch (Exception ex)
+        {
+            return "Có lỗi khi parse json";
+        }
+    }
+    private static T? TryDeserialize<T>(JsonElement body) where T : class
+    {
+        try
+        {
+            return body.Deserialize<T>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     public async Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest? request)
@@ -206,7 +222,7 @@ public class Service: IService
 
             if (product == null)
             {
-                throw new ConflictException($"Sản phẩm với id: {itemId} không tồn tại trong hệ thống");
+               return $"Sản phẩm với id: {itemId} không tồn tại trong hệ thống";
             }
   
             product.AvailableForSale = (decimal?)item.Available;
@@ -220,8 +236,8 @@ public class Service: IService
             // product.HeldComponents = item.Holding;
             
             // product.WarehouseStock = (decimal?)item.Warranty.Remain;
-            product.WarrantyStock = (decimal?)item.Warranty.Remain;
-            product.HeldComponents = (decimal?)item.Warranty.Holding;
+            product.WarrantyStock = (decimal?)item.Warranty?.Remain;
+            product.HeldComponents = (decimal?)item.Warranty?.Holding;
             product.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
@@ -245,7 +261,7 @@ public class Service: IService
 
         if (existingProduct != null)
         {
-            throw new BadRequestException("Có sản phẩm đã tồn tại trong hệ thống");
+           return "Có sản phẩm đã tồn tại trong hệ thống";
         }
 
         var product = new HoaTheoMua.Repository.Entity.Product
@@ -344,9 +360,9 @@ public class Service: IService
             }
 
             // Nhanh CreatedAt
-            if (item.CreatedAt > 0)
+            if (item.CreatedAt is > 0)
             {
-                product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt);
+                product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
             }
 
         await _appDbContext.Products.AddAsync(product);
@@ -758,7 +774,7 @@ public class Service: IService
         return $"Xoá {orders.Count} đơn; bỏ qua {ignoredCount} đơn.";
     }
 
-    public async Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest request)
+    public async Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest? request)
     {
         if (request == null || request.Data == null)
         {
@@ -773,7 +789,7 @@ public class Service: IService
 
         if (product == null)
         {
-            throw new ConflictException($"Sản phẩm với id: {nhanhProductId} không tồn tại trong hệ thống");
+            return $"Sản phẩm với id: {nhanhProductId} không tồn tại trong hệ thống";
         }
         
         product.UpdatedAt = DateTimeOffset.UtcNow;
@@ -865,9 +881,9 @@ public class Service: IService
         }
 
         // Nhanh CreatedAt
-        if (item.CreatedAt > 0)
+        if (item.CreatedAt is > 0)
         {
-            product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt);
+            product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
         }
 
         await _appDbContext.SaveChangesAsync();
@@ -875,7 +891,7 @@ public class Service: IService
         return $"Cập nhật thành công";
     }
 
-    public async Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest request)
+    public async Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest? request)
     {
         if (request == null || request.Data == null || !request.Data.Any())
         {
@@ -900,7 +916,7 @@ public class Service: IService
         }
         else
         {
-            throw new ConflictException("Sản phẩm không tồn tại");
+            return "Sản phẩm không tồn tại";
         }
 
         return $"Xóa thành công {productsToDelete.Count} sản phẩm từ Nhanh.vn.";

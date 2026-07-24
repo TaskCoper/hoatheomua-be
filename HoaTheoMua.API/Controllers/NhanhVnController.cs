@@ -47,7 +47,7 @@ public class NhanhVnController : ControllerBase
     {
         Console.WriteLine(body);
         
-        var result = await _nhanhVnService.HandleWebhook(body);
-        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
+        // var result = await _nhanhVnService.HandleWebhook(body);
+        return Ok(ApiResponseFactory.Base("result", true, "Success", HttpContext.TraceIdentifier));
     }
 }
