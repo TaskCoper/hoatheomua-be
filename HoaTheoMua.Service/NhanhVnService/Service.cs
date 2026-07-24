@@ -277,7 +277,7 @@ public class Service: IService
             product.Barcode = item.Barcode;
             product.ProductName = item.Name;
             product.OtherName = item.OtherName;
-            product.Status = item.Status;
+            product.Status = item.Status?.ToString();
 
             // Danh mục
             product.CategoryCode = item.Category?.Code;
@@ -288,11 +288,11 @@ public class Service: IService
             // Giá
             if (item.Prices != null)
             {
-                product.Price = (decimal)item.Prices.Retail;
-                product.ImportPrice = (decimal)item.Prices.Import;
-                product.OldPrice = (decimal)item.Prices.Old;
-                product.WholesalePrice = (decimal)item.Prices.Wholesale;
-                product.CostPrice = (decimal)item.Prices.AvgCost;
+                product.Price = (decimal?)item.Prices.Retail;
+                product.ImportPrice = (decimal?)item.Prices.Import;
+                product.OldPrice = (decimal?)item.Prices.Old;
+                product.WholesalePrice = (decimal?)item.Prices.Wholesale;
+                product.CostPrice = (decimal?)item.Prices.AvgCost;
             }
             product.Vat = item.Vat;
 
@@ -300,20 +300,28 @@ public class Service: IService
             product.CoverImage = item.Images?.Avatar;
 
             // Bảo hành
-            product.WarrantyMonths = item.Warranty?.Month;
-            product.WarrantyAddress = item.Warranty?.Address;
+            NhanhWarrantyDto? warranty = null;
+            if (item.Warranty.HasValue && item.Warranty.Value.ValueKind == JsonValueKind.Object)
+            {
+                warranty = item.Warranty.Value.Deserialize<NhanhWarrantyDto>(new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            product.WarrantyMonths = warranty?.Month;
+            product.WarrantyAddress = warranty?.Address;
 
             // Thương hiệu & nhà cung cấp
             product.Brand = item.Brand?.Name;
-            product.Supplier = item.Suppliers?.Name;
+            product.Supplier = item.Suppliers?.FirstOrDefault()?.Name;
 
             // Kích thước & cân nặng
             if (item.Shipping != null)
             {
-                product.Length = (decimal)item.Shipping.Length;
-                product.Width = (decimal)item.Shipping.Width;
-                product.Height = (decimal)item.Shipping.Height;
-                product.Weight = (decimal)item.Shipping.Weight;
+                product.Length = (decimal?)item.Shipping.Length;
+                product.Width = (decimal?)item.Shipping.Width;
+                product.Height = (decimal?)item.Shipping.Height;
+                product.Weight = (decimal?)item.Shipping.Weight;
             }
 
             // Xuất xứ & đơn vị tính
@@ -323,24 +331,24 @@ public class Service: IService
             // Tồn kho
             if (item.Inventory != null)
             {
-                product.TotalStock = (decimal)item.Inventory.Remain;//tổng tồn
+                product.TotalStock = (decimal?)item.Inventory.Remain;//tổng tồn
                 //product.Stock = (decimal)item.Inventory.Remain;// tồn
-                product.WarehouseStock = (decimal)item.Inventory.Remain;//tồn trong kho
-                product.DeliveringStock = (decimal)item.Inventory.Shipping;
-                product.StockError = (decimal)item.Inventory.Damaged;
-                product.Held = (decimal)item.Inventory.Holding;
-                product.StockTransferring = (decimal)item.Inventory.Transfering;
-                product.AvailableForSale = (decimal)item.Inventory.Available;
-                product.WarrantyStock = (decimal)item.Inventory.Warranty;
-                product.HeldComponents = (decimal)item.Inventory.WarrantyHolding;
+                product.WarehouseStock = (decimal?)item.Inventory.Remain;//tồn trong kho
+                product.DeliveringStock = (decimal?)item.Inventory.Shipping;
+                product.StockError = (decimal?)item.Inventory.Damaged;
+                product.Held = (decimal?)item.Inventory.Holding;
+                product.StockTransferring = (decimal?)item.Inventory.Transfering;
+                product.AvailableForSale = (decimal?)item.Inventory.Available;
+                product.WarrantyStock = (decimal?)item.Inventory.Warranty?.Remain;
+                product.HeldComponents = (decimal?)item.Inventory.Warranty?.Holding;
             }
 
             // Branch Prices (Lấy chi nhánh đầu tiên nếu có)
             if (item.BranchPrices != null && item.BranchPrices.Any())
             {
                 var firstBranchPrice = item.BranchPrices.First();
-                product.BranchPrice = (decimal)firstBranchPrice.Price;
-                product.WholesaleBranchPrice = (decimal)firstBranchPrice.WholesalePrice;
+                product.BranchPrice = (decimal?)firstBranchPrice.Price;
+                product.WholesaleBranchPrice = (decimal?)firstBranchPrice.WholesalePrice;
             }
 
             // Attributes (Size, Color)
@@ -780,13 +788,13 @@ public class Service: IService
         {
             return "Thành công";        
         }
-
+    
         var item = request.Data;
         var nhanhProductId = item.Id.ToString();
-
+    
         var product = await _appDbContext.Products
             .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == nhanhProductId);
-
+    
         if (product == null)
         {
             return $"Sản phẩm với id: {nhanhProductId} không tồn tại trong hệ thống";
@@ -798,72 +806,80 @@ public class Service: IService
         product.Barcode = item.Barcode;
         product.ProductName = item.Name;
         product.OtherName = item.OtherName;
-        product.Status = item.Status;
-
+        product.Status = item.Status?.ToString();
+    
         // Danh mục
         product.CategoryCode = item.Category?.Code;
         product.CategoryName = item.Category?.Name;
         product.InternalCategoryCode = item.InternalCategory?.Code;
         product.ProductType = item.Type?.Name;
-
+    
         // Giá
         if (item.Prices != null)
         {
-            product.Price = (decimal)item.Prices.Retail;
-            product.ImportPrice = (decimal)item.Prices.Import;
-            product.OldPrice = (decimal)item.Prices.Old;
-            product.WholesalePrice = (decimal)item.Prices.Wholesale;
-            product.CostPrice = (decimal)item.Prices.AvgCost;
+            product.Price = (decimal?)item.Prices.Retail;
+            product.ImportPrice = (decimal?)item.Prices.Import;
+            product.OldPrice = (decimal?)item.Prices.Old;
+            product.WholesalePrice = (decimal?)item.Prices.Wholesale;
+            product.CostPrice = (decimal?)item.Prices.AvgCost;
         }
         product.Vat = item.Vat;
-
+    
         // Ảnh
         product.CoverImage = item.Images?.Avatar;
-
+    
         // Bảo hành
-        product.WarrantyMonths = item.Warranty?.Month;
-        product.WarrantyAddress = item.Warranty?.Address;
-
+        NhanhWarrantyDto? warranty = null;
+        if (item.Warranty.HasValue && item.Warranty.Value.ValueKind == JsonValueKind.Object)
+        {
+            warranty = item.Warranty.Value.Deserialize<NhanhWarrantyDto>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        product.WarrantyMonths = warranty?.Month;
+        product.WarrantyAddress = warranty?.Address;
+    
         // Thương hiệu & nhà cung cấp
         product.Brand = item.Brand?.Name;
-        product.Supplier = item.Suppliers?.Name;
-
+        product.Supplier = item.Suppliers?.FirstOrDefault()?.Name;
+    
         // Kích thước & cân nặng
         if (item.Shipping != null)
         {
-            product.Length = (decimal)item.Shipping.Length;
-            product.Width = (decimal)item.Shipping.Width;
-            product.Height = (decimal)item.Shipping.Height;
-            product.Weight = (decimal)item.Shipping.Weight;
+            product.Length = (decimal?)item.Shipping.Length;
+            product.Width = (decimal?)item.Shipping.Width;
+            product.Height = (decimal?)item.Shipping.Height;
+            product.Weight = (decimal?)item.Shipping.Weight;
         }
-
+    
         // Xuất xứ & đơn vị tính
         product.Origin = item.CountryName;
         product.Unit = item.Units?.Name;
-
+    
         // Tồn kho
         if (item.Inventory != null)
         {
-            product.TotalStock = (decimal)item.Inventory.Remain;
-            // product.Stock = (decimal)item.Inventory.Remain;
-            product.WarehouseStock = (decimal)item.Inventory.Remain;
-            product.DeliveringStock = (decimal)item.Inventory.Shipping;
-            product.StockError = (decimal)item.Inventory.Damaged;
-            product.Held = (decimal)item.Inventory.Holding;
-            product.StockTransferring = (decimal)item.Inventory.Transfering;
-            product.AvailableForSale = (decimal)item.Inventory.Available;
-            product.WarrantyStock = (decimal)item.Inventory.Warranty;
-            product.HeldComponents = (decimal)item.Inventory.WarrantyHolding;
+            product.TotalStock = (decimal?)item.Inventory.Remain;//tổng tồn
+            //product.Stock = (decimal)item.Inventory.Remain;// tồn
+            product.WarehouseStock = (decimal?)item.Inventory.Remain;//tồn trong kho
+            product.DeliveringStock = (decimal?)item.Inventory.Shipping;
+            product.StockError = (decimal?)item.Inventory.Damaged;
+            product.Held = (decimal?)item.Inventory.Holding;
+            product.StockTransferring = (decimal?)item.Inventory.Transfering;
+            product.AvailableForSale = (decimal?)item.Inventory.Available;
+            product.WarrantyStock = (decimal?)item.Inventory.Warranty?.Remain;
+            product.HeldComponents = (decimal?)item.Inventory.Warranty?.Holding;
         }
-
+    
         // Branch Prices (Lấy chi nhánh đầu tiên nếu có)
         if (item.BranchPrices != null && item.BranchPrices.Any())
         {
             var firstBranchPrice = item.BranchPrices.First();
-            product.BranchPrice = (decimal)firstBranchPrice.Price;
-            product.WholesaleBranchPrice = (decimal)firstBranchPrice.WholesalePrice;
+            product.BranchPrice = (decimal?)firstBranchPrice.Price;
+            product.WholesaleBranchPrice = (decimal?)firstBranchPrice.WholesalePrice;
         }
-
+    
         // Attributes (Size, Color)
         if (item.Attributes != null && item.Attributes.Any())
         {
@@ -872,23 +888,23 @@ public class Service: IService
                     a.Name != null && (a.Name.Equals("Kích thước", StringComparison.OrdinalIgnoreCase)
                                        || a.Name.Equals("Size", StringComparison.OrdinalIgnoreCase)));
             if (sizeAttr != null) product.Size = sizeAttr.Value;
-
+    
             var colorAttr = item.Attributes
                 .FirstOrDefault(a =>
                     a.Name != null && (a.Name.Equals("Màu sắc", StringComparison.OrdinalIgnoreCase)
                                        || a.Name.Equals("Color", StringComparison.OrdinalIgnoreCase)));
             if (colorAttr != null) product.Color = colorAttr.Value;
         }
-
+    
         // Nhanh CreatedAt
         if (item.CreatedAt is > 0)
         {
             product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
         }
-
+    
         await _appDbContext.SaveChangesAsync();
-
-        return $"Cập nhật thành công";
+    
+        return "Cập nhật thành công";
     }
 
     public async Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest? request)
