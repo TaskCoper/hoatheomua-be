@@ -73,7 +73,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins(
+                "http://localhost:3000",
+                "https://hoatheomua-dev-client.bentran1vn.com",
+                "https://www.hoatheomua.com"
+                )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
