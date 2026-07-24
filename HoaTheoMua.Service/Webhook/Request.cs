@@ -9,7 +9,7 @@ public class Request
       public string Gateway { get; set; } = null!;
       public string TransactionDate { get; set; } = null!;
       public string AccountNumber { get; set; } = null!;
-      public string SubAccount { get; set; } = null!;
+      public string? SubAccount { get; set; }
       public string Code { get; set; } = null!;
       public string Content { get; set; } = null!;
       public string TransferType { get; set; } = null!;
