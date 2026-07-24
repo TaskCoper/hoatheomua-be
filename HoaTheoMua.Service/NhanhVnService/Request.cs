@@ -77,6 +77,22 @@ public class OrderSourceNextPage
     public int? Id { get; set; }
 }
 
+/// Hùng hotfix nha
+
+public class NhanhWebhookBaseRequest
+{
+    // Map tham số 'event' từ form-data
+    [JsonPropertyName("event")]
+    public string? Event { get; set; }
+
+    // Map tham số 'businessId' từ form-data
+    [JsonPropertyName("businessId")]
+    public long? BusinessId { get; set; }
+
+    // Trường data gửi về là chuỗi JSON string, giữ nguyên string để deserialize sau
+    [JsonPropertyName("data")]
+    public JsonElement? Data { get; set; }
+}
 
 //webhook-inventory-request
 public class NhanhInventoryChangeWebhookRequest
@@ -205,7 +221,7 @@ public class NhanhProductDetailDto
     public string? OtherName { get; set; }
 
     [JsonPropertyName("status")]
-    public string? Status { get; set; }
+    public int? Status { get; set; }
 
     [JsonPropertyName("category")]
     public NhanhCategoryDto? Category { get; set; }
@@ -223,7 +239,7 @@ public class NhanhProductDetailDto
     public NhanhImagesDto? Images { get; set; }
 
     [JsonPropertyName("warranty")]
-    public NhanhWarrantyDto? Warranty { get; set; }
+    public JsonElement? Warranty { get; set; }
 
     [JsonPropertyName("brand")]
     public NhanhBrandDto? Brand { get; set; }
@@ -262,7 +278,7 @@ public class NhanhProductDetailDto
     public string? Content { get; set; }
 
     [JsonPropertyName("suppliers")]
-    public NhanhSupplierDto? Suppliers { get; set; }
+    public List<NhanhSupplierDto>? Suppliers { get; set; }
 
     [JsonPropertyName("videos")]
     public List<NhanhVideoDto>? Videos { get; set; }
@@ -390,24 +406,25 @@ public class NhanhInventoryDto
 {
     [JsonPropertyName("remain")]
     public double? Remain { get; set; }
+
     [JsonPropertyName("shipping")]
     public double? Shipping { get; set; }
+
     [JsonPropertyName("damaged")]
     public double? Damaged { get; set; }
+
     [JsonPropertyName("holding")]
     public double? Holding { get; set; }
+
     [JsonPropertyName("transfering")]
     public double? Transfering { get; set; }
-    [JsonPropertyName("warranty")]
-    public double? Warranty { get; set; }
-    [JsonPropertyName("warrantyHolding")]
-    public double? WarrantyHolding { get; set; }
-    [JsonPropertyName("holdingNew")]
-    public double? HoldingNew { get; set; }
-    [JsonPropertyName("shippingExport")]
-    public double? ShippingExport { get; set; }
+
     [JsonPropertyName("available")]
     public double? Available { get; set; }
+
+    [JsonPropertyName("warranty")]
+    public NhanhWarranty? Warranty { get; set; }
+
     [JsonPropertyName("depots")]
     public List<NhanhDepotInventoryDto>? Depots { get; set; }
 }
@@ -416,26 +433,27 @@ public class NhanhDepotInventoryDto
 {
     [JsonPropertyName("id")]
     public int? Id { get; set; }
+
     [JsonPropertyName("remain")]
     public double? Remain { get; set; }
+
     [JsonPropertyName("shipping")]
     public double? Shipping { get; set; }
+
     [JsonPropertyName("damaged")]
     public double? Damaged { get; set; }
+
     [JsonPropertyName("holding")]
     public double? Holding { get; set; }
+
     [JsonPropertyName("transfering")]
     public double? Transfering { get; set; }
-    [JsonPropertyName("warranty")]
-    public double? Warranty { get; set; }
-    [JsonPropertyName("warrantyHolding")]
-    public double? WarrantyHolding { get; set; }
-    [JsonPropertyName("holdingNew")]
-    public double? HoldingNew { get; set; }
-    [JsonPropertyName("shippingExport")]
-    public double? ShippingExport { get; set; }
+
     [JsonPropertyName("available")]
     public double? Available { get; set; }
+
+    [JsonPropertyName("warranty")]
+    public NhanhWarranty? Warranty { get; set; }
 }
 
 public class NhanhAttributeDto

@@ -43,11 +43,18 @@ public class NhanhVnController : ControllerBase
     }
     
     [HttpPost("/api/v1/nhanh-vn/webhook")]
-    public async Task<IActionResult> Webhook([FromBody] JsonElement? body)
+    public async Task<IActionResult> Webhook(NhanhWebhookBaseRequest? request)
     {
-        Console.WriteLine(body);
+        Console.WriteLine(request);
         
-        var result = await _nhanhVnService.HandleWebhook(body);
+        var result = await _nhanhVnService.HandleWebhook(request);
+        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpPost("/api/v1/nhanh-vn/webhook/order-add")]
+    public async Task<IActionResult> WebhookNhanhVnOrderAdd([FromBody] NhanhOrderAddWebhookRequest request)
+    {
+        var result = await _nhanhVnService.WebhookNhanhVnOrderAdd(request);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
     }
 }

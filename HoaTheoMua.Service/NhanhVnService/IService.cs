@@ -8,7 +8,7 @@ public interface IService
     Task<OrderLabelResponse> GetOrderLabel(OrderLabelRequest orderLabelRequest);
     Task<OrderSourceResponse>  GetOrderSource(OrderSourceRequest orderSourceRequest);
     
-    Task<string> HandleWebhook(JsonElement? body);
+    Task<string> HandleWebhook(NhanhWebhookBaseRequest? request);
     Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest request);
     Task<string> WebhookNhanhVnProductAdd(NhanhProductAddWebhookRequest request);
     Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest request);
