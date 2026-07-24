@@ -381,6 +381,20 @@ public class Service : IService
             throw new NotFoundException("Order not found ");
         }
 
+        decimal totalAmount = orders.TotalFee;
+
+        string description = $"HTM-{orders.Id.ToString()}";
+        string bankName = "MBBank";
+        string bankAccount = "3085299693483";
+        string qrCodeUrl = $"https://qr.sepay.vn/img?" +
+                           $"acc={bankAccount}&" +
+                           $"bank={bankName}&" +
+                           $"amount={totalAmount}&" +
+                           $"des={description}&" +
+                           $"template=qronly&" +
+                           "showinfo=true&" +
+                           "holder=HO KINH DOANH HOA THEO MUA";
+
         var lastTransaction = orders.Transactions
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefault();
@@ -392,6 +406,7 @@ public class Service : IService
             TrackNumber = orders.TrackNumber,
             TaxCode = orders.TaxCode,
             PaymentUrl = orders.PaymentUrl,
+            SepayUrl = qrCodeUrl,
             PaymentMethod = orders.PaymentMethod,
             //NhanhOrderId = orders.NhanhOrderId,
             //NhanhTrackingUrl = orders.NhanhTrackingUrl,

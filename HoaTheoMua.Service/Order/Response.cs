@@ -24,21 +24,21 @@ public class Response
         public InvoiceType? InvoiceType { get; set; }
         public bool? IsExportInvoice { get; set; }
         public string ReceiptAddress { get; set; } = string.Empty;
-        public string ReceiptEmail { get; set; } =  string.Empty;
-        public string ReceiptFullName { get; set; } =   string.Empty;
-        public string ReceiptPhoneNumber { get; set; } =   string.Empty;
-        
+        public string ReceiptEmail { get; set; } = string.Empty;
+        public string ReceiptFullName { get; set; } = string.Empty;
+        public string ReceiptPhoneNumber { get; set; } = string.Empty;
+
         public DateTimeOffset CreateAt { get; set; }
         public DateTimeOffset? UpdateAt { get; set; }
     }
-    
+
     public class GetOrderByIdResponse
     {
         public Guid OrderId { get; set; }
         public string Status { get; set; } = null!;
         public string TrackNumber { get; set; } = null!;
-       // public int? NhanhOrderId { get; set; } 
-       // public string? NhanhTrackingUrl { get; set; } = string.Empty;
+        // public int? NhanhOrderId { get; set; } 
+        // public string? NhanhTrackingUrl { get; set; } = string.Empty;
         public string? AhahaMoveOrderId { get; set; } = string.Empty;
         public string? AhahaMoveTrackingUrl { get; set; } = string.Empty;
         public string? Remark { get; set; }
@@ -49,28 +49,29 @@ public class Response
         public InvoiceType? InvoiceType { get; set; }
         public bool? IsExportInvoice { get; set; }
         public string ReceiptAddress { get; set; } = string.Empty;
-        public string ReceiptEmail { get; set; } =  string.Empty;
-        public string ReceiptFullName { get; set; } =   string.Empty;
-        public string ReceiptPhoneNumber { get; set; } =   string.Empty;
-        public decimal ShippingFee { get; set; } 
+        public string ReceiptEmail { get; set; } = string.Empty;
+        public string ReceiptFullName { get; set; } = string.Empty;
+        public string ReceiptPhoneNumber { get; set; } = string.Empty;
+        public decimal ShippingFee { get; set; }
         public decimal ProductFee { get; set; }
         public decimal TotalFee { get; set; }
         public decimal? VatFee { get; set; }
         public DateTimeOffset CreateAt { get; set; }
         public string? PaymentUrl { get; set; }
+        public string? SepayUrl { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
-        
+
         public OrderTransactionResponse? Transaction { get; set; }
-        public List<OrderDetailsResponse>  Details { get; set; } = new List<OrderDetailsResponse>();
+        public List<OrderDetailsResponse> Details { get; set; } = new List<OrderDetailsResponse>();
     }
-    
+
     public class OrderTransactionResponse
     {
         public decimal TransferAmount { get; set; }
         public string Code { get; set; } = string.Empty;
-        public string? Gateway { get; set; }        
+        public string? Gateway { get; set; }
         public DateTime TransactionDate { get; set; }
-        
+
     }
 
     public class OrderDetailsResponse
@@ -79,13 +80,13 @@ public class Response
         public string Name { get; set; } = string.Empty;
         public int ItemId { get; set; }
         public int Number { get; set; }
-        public decimal Price { get; set; } 
+        public decimal Price { get; set; }
         public double Weight { get; set; }
         public double Length { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
     }
-    
+
     public class NhanhVnLocationResponse
     {
         [JsonPropertyName("code")]
@@ -103,7 +104,7 @@ public class Response
         [JsonPropertyName("name")]
         public string Name { get; set; } = null!;
     }
-    
+
     public class TaxcodeResponse
     {
         [JsonPropertyName("code")]
@@ -154,5 +155,5 @@ public class Response
         [JsonPropertyName("contact")]
         public string Contact { get; set; } = null!;
     }
-    
+
 }
