@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
 
     public virtual DbSet<OrderDetails> OrderDetails { get; set; }
     public DbSet<Product> Products { get; set; }
+    public virtual DbSet<CategoryProduct> CategoryProducts { get; set; }
+    public virtual DbSet<CategoryProductDetail> CategoryProductDetails { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // base.OnModelCreating(modelBuilder);
