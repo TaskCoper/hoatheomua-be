@@ -91,6 +91,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.Origin)
             .HasMaxLength(200);
+        
+        builder.Property(x => x.Position)
+            .HasPrecision(28, 10);
 
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("now()");

@@ -40,5 +40,11 @@ public class ProductController: ControllerBase
         var result = await _productService.GetLocalProductDetail(id);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
-    
+
+    [HttpPut("/api/v1/products/{id:guid}/move")]
+    public async Task<IActionResult> MoveProduct(Guid id, Request.MoveProductRequest request)
+    {
+        var result = await _productService.MoveProduct(id, request);
+        return Ok(result);
+    }
 }

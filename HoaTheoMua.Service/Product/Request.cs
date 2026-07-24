@@ -92,4 +92,11 @@ public class Request
         public decimal? PriceTo { get; set; }
         public List<string>? SortBy { get; set; }
     }
+    
+    public class MoveProductRequest
+    {
+        public Guid? PreviousProductId { get; set; }
+
+        public Guid? NextProductId { get; set; }
+    }
 }
