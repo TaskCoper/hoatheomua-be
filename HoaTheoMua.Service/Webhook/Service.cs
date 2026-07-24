@@ -214,7 +214,7 @@ public partial class Service : IService
                 ? parsedDate.ToUniversalTime()
                 : DateTime.UtcNow,
             AccountNumber = request.AccountNumber,
-            SubAccount = request.SubAccount,
+            SubAccount = request.SubAccount ?? "",
             Code = request.Code,
             Content = request.Content,
             TransferType = request.TransferType,
