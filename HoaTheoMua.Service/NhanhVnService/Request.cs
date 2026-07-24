@@ -1015,5 +1015,5 @@ public class NhanhProductDeleteWebhookRequest
     public long? BusinessId { get; set; }
 
     [JsonPropertyName("data")]
-    public List<long>? Data { get; set; }
+    public List<string>? Data { get; set; }
 }
