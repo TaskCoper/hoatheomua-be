@@ -178,18 +178,53 @@ public class Service : IService
             CreatedAt = DateTime.UtcNow,
         });
 
-        var baoKimTokenResponse = await _baoKimService.CreateAccessToken();
+        if (request.Gateway == "BaoKim")
+        {
+            var baoKimTokenResponse = await _baoKimService.CreateAccessToken();
 
-        var createBaoKimOrderResponse = await _baoKimService.CreateOrder(
-            baoKimTokenResponse.Data.AccessToken, newOrder);
+            var createBaoKimOrderResponse = await _baoKimService.CreateOrder(
+                baoKimTokenResponse.Data.AccessToken, newOrder);
 
-        newOrder.PaymentUrl = createBaoKimOrderResponse.Data.PaymentUrl;
+            newOrder.PaymentUrl = createBaoKimOrderResponse.Data.PaymentUrl;
 
-        await _dbContext.Orders.AddAsync(newOrder);
-        await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
-        await _dbContext.SaveChangesAsync();
+            await _dbContext.Orders.AddAsync(newOrder);
+            await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
+            await _dbContext.SaveChangesAsync();
 
-        return createBaoKimOrderResponse.Data;
+            return createBaoKimOrderResponse.Data;
+        }
+        else if (request.Gateway == "Sepay")
+        {
+            decimal totalAmount = newOrder.TotalFee;
+            string description = $"HTM-{newOrder.Id.ToString()}";
+            string bankName = "MBBank";
+            string bankAccount = "3085299693483";
+            string qrCodeUrl = $"https://qr.sepay.vn/img?" +
+                               $"acc={bankAccount}&" +
+                               $"bank={bankName}&" +
+                               $"amount={totalAmount}&" +
+                               $"des={description}&" +
+                               $"template=qronly&" +
+                               "showinfo=true&" +
+                               "holder=HO KINH DOANH HOA THEO MUA";
+
+            var sepayReponse = new CreateOrderResponse()
+            {
+                MrcOrderId = newOrder.Id.ToString(),
+                PaymentUrl = qrCodeUrl,
+                OrderId = 0
+            };
+
+            newOrder.QrUrl = qrCodeUrl;
+
+            await _dbContext.Orders.AddAsync(newOrder);
+            await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
+            await _dbContext.SaveChangesAsync();
+
+            return sepayReponse;
+        }
+
+        throw new BadRequestException("Not support other gateway");
     }
 
     // Fetches the catalog rows for the requested items from Nhanh.vn.
@@ -381,19 +416,6 @@ public class Service : IService
             throw new NotFoundException("Order not found ");
         }
 
-        decimal totalAmount = orders.TotalFee;
-
-        string description = $"HTM-{orders.Id.ToString()}";
-        string bankName = "MBBank";
-        string bankAccount = "3085299693483";
-        string qrCodeUrl = $"https://qr.sepay.vn/img?" +
-                           $"acc={bankAccount}&" +
-                           $"bank={bankName}&" +
-                           $"amount={totalAmount}&" +
-                           $"des={description}&" +
-                           $"template=qronly&" +
-                           "showinfo=true&" +
-                           "holder=HO KINH DOANH HOA THEO MUA";
 
         var lastTransaction = orders.Transactions
             .OrderByDescending(o => o.CreatedAt)
@@ -406,7 +428,7 @@ public class Service : IService
             TrackNumber = orders.TrackNumber,
             TaxCode = orders.TaxCode,
             PaymentUrl = orders.PaymentUrl,
-            SepayUrl = qrCodeUrl,
+            SepayUrl = orders.QrUrl,
             PaymentMethod = orders.PaymentMethod,
             //NhanhOrderId = orders.NhanhOrderId,
             //NhanhTrackingUrl = orders.NhanhTrackingUrl,

@@ -30,6 +30,7 @@ public class SepayController : ControllerBase
     [HttpPost("/api/v1/sepay")]
     public async Task<IActionResult> SepayWebhookHandler([FromBody] Request.SepayWebhookRequest request)
     {
+        _sepayService.VerifySepayApiKey(HttpContext.Request.Headers.Authorization.FirstOrDefault());
         await _sepayService.SepayWebhookHandler(request);
         return Ok(ApiResponseFactory.Base("success", true, "", HttpContext.TraceIdentifier));
     }

@@ -59,6 +59,9 @@ services:
       BaoKimOption__PrivateKey: ${BAOKIM_PRIVATE_KEY}
       BaoKimOption__PublicKey: ${BAOKIM_PUBLIC_KEY}
 
+      # Sepay Configuration (verifies the "Authorization: Apikey <ApiKey>" header on inbound webhooks)
+      SepayOption__ApiKey: ${SEPAY_API_KEY}
+
       # Allowed Hosts
       AllowedHosts: "*"
     volumes:

@@ -74,6 +74,9 @@ jobs:
       BAOKIM_PRIVATE_KEY: ${{ secrets.BAOKIM_PRIVATE_KEY }}
       BAOKIM_PUBLIC_KEY: ${{ secrets.BAOKIM_PUBLIC_KEY }}
 
+      # Sepay (verifies the "Authorization: Apikey <ApiKey>" header on inbound webhooks)
+      SEPAY_API_KEY: ${{ secrets.SEPAY_API_KEY }}
+
       # Cloudflare
       CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
 
