@@ -148,14 +148,14 @@ public class Service: IService
             NhanhWebhookEvents.ProductDelete =>
                 await WebhookNhanhVnProductDelete(Deserialize<NhanhProductDeleteWebhookRequest>(body)),
 
-            NhanhWebhookEvents.OrderAdd =>
-                await WebhookNhanhVnOrderAdd(Deserialize<NhanhOrderAddWebhookRequest>(body)),
-
-            NhanhWebhookEvents.OrderUpdate =>
-                await WebhookNhanhVnOrderUpdate(Deserialize<NhanhOrderUpdateWebhookRequest>(body)),
-
-            NhanhWebhookEvents.OrderDelete =>
-                await WebhookNhanhVnOrderDelete(Deserialize<NhanhOrderDeleteWebhookRequest>(body)),
+            // NhanhWebhookEvents.OrderAdd =>
+            //     await WebhookNhanhVnOrderAdd(Deserialize<NhanhOrderAddWebhookRequest>(body)),
+            //
+            // NhanhWebhookEvents.OrderUpdate =>
+            //     await WebhookNhanhVnOrderUpdate(Deserialize<NhanhOrderUpdateWebhookRequest>(body)),
+            //
+            // NhanhWebhookEvents.OrderDelete =>
+            //     await WebhookNhanhVnOrderDelete(Deserialize<NhanhOrderDeleteWebhookRequest>(body)),
 
             _ => throw new BadRequestException("Không tồn tại webhooks")
         };

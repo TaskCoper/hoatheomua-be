@@ -45,6 +45,8 @@ public class NhanhVnController : ControllerBase
     [HttpPost("/api/v1/nhanh-vn/webhook")]
     public async Task<IActionResult> Webhook([FromBody] JsonElement body)
     {
+        Console.WriteLine(body);
+        
         var result = await _nhanhVnService.HandleWebhook(body);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
     }
