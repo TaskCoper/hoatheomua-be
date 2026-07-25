@@ -5,6 +5,7 @@ using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -853,5 +854,224 @@ public class Service: IService
         }
 
         return $"Xóa thành công {productsToDelete.Count} sản phẩm từ Nhanh.vn.";
+    }
+
+    public async Task<OrderNhanhVnDto> GetOrderNhanhVnById(Guid id)
+    {
+        var orderQuery = _appDbContext.OrderNhanhVns
+            .Include(x => x.OrderNhanhVnDetails)
+            .Where(x => !x.IsDeleted && x.Id == id);
+
+        var order = await orderQuery.FirstOrDefaultAsync();
+
+        if (order == null)
+        {
+            throw new NotFoundException($"OrderNhanhVn with ID {id} not found.");
+        }
+
+        var orderDto = MapOrderNhanhVnToDto(order);
+
+        return orderDto;
+    }
+
+    public async Task<BasePaginationResponse> GetOrderNhanhVnPagination(int pageIndex, int pageSize)
+    {
+        if (pageIndex <= 0)
+        {
+            pageIndex = 1;
+        }
+
+        if (pageSize <= 0)
+        {
+            pageSize = 10;
+        }
+        var orderQuery = _appDbContext.OrderNhanhVns
+           .Include(x => x.OrderNhanhVnDetails)
+           .Where(x => !x.IsDeleted);
+
+        var totalCount = await orderQuery.CountAsync();
+
+        orderQuery = orderQuery.OrderByDescending(x => x.CreatedAt);
+
+        var skip = (pageIndex - 1) * pageSize;
+
+        orderQuery = orderQuery.Skip(skip);
+        orderQuery = orderQuery.Take(pageSize);
+
+        var orders = await orderQuery.ToListAsync();
+
+        var orderDtos = new List<OrderNhanhVnDto>();
+
+        foreach (var order in orders)
+        {
+            var orderDto = MapOrderNhanhVnToDto(order);
+            orderDtos.Add(orderDto);
+        }
+
+        var response = ApiResponseFactory.BasePagination(orderDtos, pageIndex, pageSize, totalCount);
+
+        return response;
+    }
+
+
+    private OrderNhanhVnDto MapOrderNhanhVnToDto(Repository.Entity.OrderNhanhVn order)
+    {
+        var dto = new OrderNhanhVnDto
+        {
+            Id = order.Id,
+            IdDonHangNhanh = order.IdDonHangNhanh,
+            IdDonHangApi = order.IdDonHangApi,
+            LoaiDon = order.LoaiDon,
+            ThoiGianDonHang = order.ThoiGianDonHang,
+            NguoiTaoDon = order.NguoiTaoDon,
+            CuaHang = order.CuaHang,
+            Nguon = order.Nguon,
+            KhoTaoDon = order.KhoTaoDon,
+            ThanhPhoKhoHang = order.ThanhPhoKhoHang,
+            QuanHuyenKhoHang = order.QuanHuyenKhoHang,
+            KhoLayHang = order.KhoLayHang,
+            ThanhPhoLayHang = order.ThanhPhoLayHang,
+            QuanHuyenLayHang = order.QuanHuyenLayHang,
+            TenKhachHang = order.TenKhachHang,
+            MaKhachHang = order.MaKhachHang,
+            SoDienThoaiKhachHang = order.SoDienThoaiKhachHang,
+            EmailKhachHang = order.EmailKhachHang,
+            CapDoKhachHang = order.CapDoKhachHang,
+            NgaySinhKhachHang = order.NgaySinhKhachHang,
+            ThanhPhoKhachHang = order.ThanhPhoKhachHang,
+            QuanHuyenKhachHang = order.QuanHuyenKhachHang,
+            PhuongXaKhachHang = order.PhuongXaKhachHang,
+            DiaChiKhachHang = order.DiaChiKhachHang,
+            TongKhoiLuong = order.TongKhoiLuong,
+            GiaTriDonHang = order.GiaTriDonHang,
+            PhiVanChuyen = order.PhiVanChuyen,
+            PhiVuotCan = order.PhiVuotCan,
+            PhiKhaiGia = order.PhiKhaiGia,
+            PhiChuyenHoan = order.PhiChuyenHoan,
+            PhiThuTienHo = order.PhiThuTienHo,
+            PhiShipBaoKhach = order.PhiShipBaoKhach,
+            CongVanChuyen = order.CongVanChuyen,
+            HangVanChuyen = order.HangVanChuyen,
+            DichVuVanChuyen = order.DichVuVanChuyen,
+            SoNgayChuyenHang = order.SoNgayChuyenHang,
+            MaVanDon = order.MaVanDon,
+            BienBan = order.BienBan,
+            TienChuyenKhoan = order.TienChuyenKhoan,
+            TaiKhoanChuyenKhoan = order.TaiKhoanChuyenKhoan,
+            TienChietKhau = order.TienChietKhau,
+            TienDatCoc = order.TienDatCoc,
+            TaiKhoanDatCoc = order.TaiKhoanDatCoc,
+            TongThu = order.TongThu,
+            TaiKhoanQuetThe = order.TaiKhoanQuetThe,
+            TienQuetThe = order.TienQuetThe,
+            MaGiaoDichQuetThe = order.MaGiaoDichQuetThe,
+            GhiChuNoiBo = order.GhiChuNoiBo,
+            GhiChuCuaKhach = order.GhiChuCuaKhach,
+            TrangThaiHoaDonDienTu = order.TrangThaiHoaDonDienTu,
+            SoHoaDonDienTu = order.SoHoaDonDienTu,
+            NgayXuatHoaDonDienTu = order.NgayXuatHoaDonDienTu,
+            MaCoQuanThueHoaDonDienTu = order.MaCoQuanThueHoaDonDienTu,
+            TrangThaiDonHang = order.TrangThaiDonHang,
+            LyDoHuy = order.LyDoHuy,
+            NhanVienChamSocKhachHang = order.NhanVienChamSocKhachHang,
+            NgayXacNhan = order.NgayXacNhan,
+            NgayGuiHangVanChuyen = order.NgayGuiHangVanChuyen,
+            NgayBanGiao = order.NgayBanGiao,
+            NgayThanhCong = order.NgayThanhCong,
+            GioThanhCong = order.GioThanhCong,
+            NguonDonHang = order.NguonDonHang,
+            GhiChuHangVanChuyen = order.GhiChuHangVanChuyen,
+            CanNangHangVanChuyen = order.CanNangHangVanChuyen,
+            MaGiamGia = order.MaGiamGia,
+            IdDonTra = order.IdDonTra,
+            IdDonGoc = order.IdDonGoc,
+            SoThuTuTheoNgay = order.SoThuTuTheoNgay,
+            BienBanBanGiao = order.BienBanBanGiao,
+            MaAffiliate = order.MaAffiliate,
+            NhomKhachHang = order.NhomKhachHang,
+            TienVat = order.TienVat,
+            TyLeVat = order.TyLeVat,
+            TienTieuDiem = order.TienTieuDiem,
+            Nhan = order.Nhan,
+            NgayHenThanhToan = order.NgayHenThanhToan,
+            TrangThaiDoiSoat = order.TrangThaiDoiSoat,
+            NgayDoiSoat = order.NgayDoiSoat,
+            TrangThaiThanhToanDoanhNghiep = order.TrangThaiThanhToanDoanhNghiep,
+            NgayThanhToanDoanhNghiep = order.NgayThanhToanDoanhNghiep,
+            NhanVienBanHang = order.NhanVienBanHang,
+            LoiNhuan = order.LoiNhuan,
+            TyLeLoiNhuan = order.TyLeLoiNhuan,
+            FacebookPsid = order.FacebookPsid,
+            FacebookPageUserId = order.FacebookPageUserId,
+            SoDienThoaiFacebook = order.SoDienThoaiFacebook,
+            GiaTriFacebook = order.GiaTriFacebook,
+            IdPhapNhan = order.IdPhapNhan,
+            MaSoThue = order.MaSoThue,
+            EmailNguoiLienHe = order.EmailNguoiLienHe,
+            EmailNguoiLienHeThuHai = order.EmailNguoiLienHeThuHai,
+            SoDienThoaiNguoiLienHe = order.SoDienThoaiNguoiLienHe,
+            TenNguoiLienHe = order.TenNguoiLienHe,
+            MaThamChieu = order.MaThamChieu,
+            DiaChiKhachHangTrenHoaDonDienTu = order.DiaChiKhachHangTrenHoaDonDienTu,
+            TenKhachHangTrenHoaDonDienTu = order.TenKhachHangTrenHoaDonDienTu,
+            LoaiKhachHangHoaDon = order.LoaiKhachHangHoaDon,
+            CoLayHoaDon = order.CoLayHoaDon,
+            MaCoQuanThueHoaDon = order.MaCoQuanThueHoaDon,
+            SoHoaDon = order.SoHoaDon,
+            NgayPhatHanhHoaDon = order.NgayPhatHanhHoaDon,
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt
+        };
+        {
+            var orderDetailDtos = new List<OrderNhanhVnDetailDto>();
+
+            foreach (var orderDetail in order.OrderNhanhVnDetails)
+            {
+                if (!orderDetail.IsDeleted)
+                {
+                    var orderDetailDto = MapOrderNhanhVnDetailToDto(orderDetail);
+                    orderDetailDtos.Add(orderDetailDto);
+                }
+            }
+
+            dto.OrderNhanhVnDetails = orderDetailDtos;
+        }
+
+        return dto;
+    }
+
+    private OrderNhanhVnDetailDto MapOrderNhanhVnDetailToDto(OrderNhanhVnDetail detail)
+    {
+        return new OrderNhanhVnDetailDto
+        {
+            Id = detail.Id,
+            OrderNhanhVnId = detail.OrderNhanhVnId,
+            TenSanPham = detail.TenSanPham,
+            QuaTangKem = detail.QuaTangKem,
+            Imei = detail.Imei,
+            LoHang = detail.LoHang,
+            MaSanPhamCha = detail.MaSanPhamCha,
+            TenSanPhamCha = detail.TenSanPhamCha,
+            MaSanPham = detail.MaSanPham,
+            MaVach = detail.MaVach,
+            DanhMucSanPham = detail.DanhMucSanPham,
+            KhoiLuongSanPham = detail.KhoiLuongSanPham,
+            GiaBan = detail.GiaBan,
+            LoaiGiaSanPham = detail.LoaiGiaSanPham,
+            GiaBanTruocVat = detail.GiaBanTruocVat,
+            TienVatSanPham = detail.TienVatSanPham,
+            SoLuong = detail.SoLuong,
+            ChietKhauMotSanPham = detail.ChietKhauMotSanPham,
+            ChietKhauSanPham = detail.ChietKhauSanPham,
+            GiaSanPhamSauChietKhau = detail.GiaSanPhamSauChietKhau,
+            GhiChuSanPham = detail.GhiChuSanPham,
+            GiaVon = detail.GiaVon,
+            GiaVonDonHang = detail.GiaVonDonHang,
+            DonViTinh = detail.DonViTinh,
+            SoLuongDonViNhoNhat = detail.SoLuongDonViNhoNhat,
+            NhanVienDongGoi = detail.NhanVienDongGoi,
+            CreatedAt = detail.CreatedAt,
+            UpdatedAt = detail.UpdatedAt
+        };
     }
 }
