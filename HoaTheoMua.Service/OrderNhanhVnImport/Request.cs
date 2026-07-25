@@ -6,7 +6,6 @@ public class Request
 {
     public class ExcelRow
     {
-        public int SourceRowNumber { get; set; }
 
         [ExcelColumnIndex(0)] // A - ID
         public string? IdDonHangNhanh { get; set; }
