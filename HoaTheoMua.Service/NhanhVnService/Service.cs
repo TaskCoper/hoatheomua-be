@@ -1022,20 +1022,19 @@ public class Service: IService
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt
         };
+        
+        var orderDetailDtos = new List<OrderNhanhVnDetailDto>();
+
+        foreach (var orderDetail in order.OrderNhanhVnDetails)
         {
-            var orderDetailDtos = new List<OrderNhanhVnDetailDto>();
-
-            foreach (var orderDetail in order.OrderNhanhVnDetails)
+            if (!orderDetail.IsDeleted)
             {
-                if (!orderDetail.IsDeleted)
-                {
-                    var orderDetailDto = MapOrderNhanhVnDetailToDto(orderDetail);
-                    orderDetailDtos.Add(orderDetailDto);
-                }
+                var orderDetailDto = MapOrderNhanhVnDetailToDto(orderDetail);
+                orderDetailDtos.Add(orderDetailDto);
             }
-
-            dto.OrderNhanhVnDetails = orderDetailDtos;
         }
+
+        dto.OrderNhanhVnDetails = orderDetailDtos;
 
         return dto;
     }
