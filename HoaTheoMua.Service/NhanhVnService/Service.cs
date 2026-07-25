@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
@@ -212,7 +213,8 @@ public class Service: IService
         {
             return body.Deserialize<T>(new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true
+                PropertyNameCaseInsensitive = true,
+                NumberHandling = JsonNumberHandling.AllowReadingFromString
             });
         }
         catch (JsonException)
@@ -289,8 +291,8 @@ public class Service: IService
         {
             Id = Guid.NewGuid(),
             NhanhProductId = item.Id.ToString(),
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
         };
             
             product.ParentProductId = item.ParentId != 0 ? item.ParentId.ToString() : null;
@@ -433,7 +435,10 @@ public class Service: IService
             LoaiDon = info.Type?.ToString(),
             ThoiGianDonHang = info.CreatedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.CreatedAt.Value) : null,
             NguoiTaoDon = info.CreatedBy?.Name,
+            NhanVienBanHang = info.Sale?.Name,
+            NhanVienChamSocKhachHang = info.CustomerCare?.Name != null && info.CustomerCare.Id != 0 ? info.CustomerCare.Name : null,
             Nguon = item.Channel?.TrafficSource?.Name,
+            KhoTaoDon = info.DepotId?.ToString(),
 
             TenKhachHang = address?.Name,
             SoDienThoaiKhachHang = address?.Mobile,
@@ -452,6 +457,8 @@ public class Service: IService
             ChietKhauSanPham = (decimal?)products.Sum(p => p.Discount ?? 0),
             GiaSanPhamSauChietKhau = (decimal?)products.Sum(p => (p.Price ?? 0) - (p.Discount ?? 0)),
             GhiChuSanPham = string.Join("; ", products.Select(p => p.Description).Where(d => !string.IsNullOrEmpty(d))),
+            DonViTinh = string.Join(", ", products.Select(p => p.Unit?.Name).Where(u => !string.IsNullOrEmpty(u)).Distinct()),
+            KhoiLuongSanPham = (decimal?)(firstProduct?.Weight ?? 0),
 
             TongKhoiLuong = (decimal?)products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0)),
             GiaTriDonHang = (decimal?)(products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (decimal?)(payment?.Vat?.Amount ?? 0),
@@ -464,28 +471,34 @@ public class Service: IService
             HangVanChuyen = carrier?.Name,
             MaVanDon = carrier?.CarrierCode,
             DichVuVanChuyen = carrier?.Service?.Name,
+            CanNangHangVanChuyen = carrier?.Weight,
 
             TienChuyenKhoan = (decimal?)(payment?.Transfer?.Amount ?? 0),
+            TaiKhoanChuyenKhoan = payment?.Transfer?.AccountId?.ToString(),
             TienDatCoc = (decimal?)(payment?.Deposit?.Amount ?? 0),
+            TaiKhoanDatCoc = payment?.Deposit?.AccountId?.ToString(),
             TienChietKhau = (decimal?)(payment?.Discount?.Amount ?? 0),
             TienVat = (decimal?)(payment?.Vat?.Amount ?? 0),
             TyLeVat = payment?.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment?.Vat?.Value?.ToString() : null,
             TienQuetThe = (decimal?)(payment?.Credit?.Amount ?? 0),
+            TaiKhoanQuetThe = payment?.Credit?.AccountId?.ToString(),
+            MaGiaoDichQuetThe = payment?.Credit?.Code,
             TienTieuDiem = (decimal?)(payment?.UsedPoints?.Amount ?? 0),
+            TrangThaiThanhToanDoanhNghiep = payment?.BusinessPaymentStatus?.ToString(),
 
             GhiChuCuaKhach = info.Description,
             GhiChuNoiBo = info.PrivateDescription,
             TrangThaiDonHang = info.Status?.ToString(),
 
             NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : null,
-            NgayGuiHangVanChuyen = !string.IsNullOrEmpty(carrier?.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate) ? sendDate : null,
-            NgayThanhCong = !string.IsNullOrEmpty(carrier?.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate) ? deliveryDate : null,
+            NgayGuiHangVanChuyen = !string.IsNullOrEmpty(carrier?.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate) ? sendDate.ToUniversalTime() : null,
+            NgayThanhCong = !string.IsNullOrEmpty(carrier?.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate) ? deliveryDate.ToUniversalTime() : null,
 
             MaGiamGia = payment?.CouponCode,
             IdDonGoc = item.OriginalOrder?.Id?.ToString(),
 
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
         };
 
         await _appDbContext.OrderNhanhVns.AddAsync(orderNhanhVn);
@@ -523,7 +536,10 @@ public class Service: IService
         order.LoaiDon = info.Type?.ToString() ?? order.LoaiDon;
         order.ThoiGianDonHang = info.CreatedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.CreatedAt.Value) : order.ThoiGianDonHang;
         order.NguoiTaoDon = info.CreatedBy?.Name ?? order.NguoiTaoDon;
+        order.NhanVienBanHang = info.Sale?.Name ?? order.NhanVienBanHang;
+        order.NhanVienChamSocKhachHang = info.CustomerCare?.Name != null && info.CustomerCare.Id != 0 ? info.CustomerCare.Name : order.NhanVienChamSocKhachHang;
         order.Nguon = item.Channel?.TrafficSource?.Name ?? order.Nguon;
+        order.KhoTaoDon = info.DepotId?.ToString() ?? order.KhoTaoDon;
 
         if (address != null)
         {
@@ -547,6 +563,8 @@ public class Service: IService
             order.ChietKhauSanPham = (decimal?)products.Sum(p => p.Discount ?? 0);
             order.GiaSanPhamSauChietKhau = (decimal?)products.Sum(p => (p.Price ?? 0) - (p.Discount ?? 0));
             order.GhiChuSanPham = string.Join("; ", products.Select(p => p.Description).Where(d => !string.IsNullOrEmpty(d)));
+            order.DonViTinh = string.Join(", ", products.Select(p => p.Unit?.Name).Where(u => !string.IsNullOrEmpty(u)).Distinct());
+            order.KhoiLuongSanPham = (decimal?)(firstProduct?.Weight ?? 0);
             order.TongKhoiLuong = (decimal?)products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0));
             order.GiaTriDonHang = (decimal?)(products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (decimal?)(payment?.Vat?.Amount ?? 0);
         }
@@ -561,32 +579,39 @@ public class Service: IService
             order.HangVanChuyen = carrier.Name ?? order.HangVanChuyen;
             order.MaVanDon = carrier.CarrierCode ?? order.MaVanDon;
             order.DichVuVanChuyen = carrier.Service?.Name ?? order.DichVuVanChuyen;
+            order.CanNangHangVanChuyen = carrier.Weight ?? order.CanNangHangVanChuyen;
 
             if (!string.IsNullOrEmpty(carrier.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate))
-                order.NgayGuiHangVanChuyen = sendDate;
+                order.NgayGuiHangVanChuyen = sendDate.ToUniversalTime();
 
             if (!string.IsNullOrEmpty(carrier.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate))
-                order.NgayThanhCong = deliveryDate;
+                order.NgayThanhCong = deliveryDate.ToUniversalTime();
         }
 
         if (payment != null)
         {
             order.TienChuyenKhoan = (decimal?)(payment.Transfer?.Amount ?? (long?)order.TienChuyenKhoan);
+            order.TaiKhoanChuyenKhoan = payment.Transfer?.AccountId?.ToString() ?? order.TaiKhoanChuyenKhoan;
             order.TienDatCoc = (decimal?)(payment.Deposit?.Amount ?? (long?)order.TienDatCoc);
+            order.TaiKhoanDatCoc = payment.Deposit?.AccountId?.ToString() ?? order.TaiKhoanDatCoc;
             order.TienChietKhau = (decimal?)(payment.Discount?.Amount ?? (long?)order.TienChietKhau);
             order.TienVat = (decimal?)(payment.Vat?.Amount ?? (long?)order.TienVat);
             order.TyLeVat = payment.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment.Vat.Value?.ToString() : order.TyLeVat;
             order.TienQuetThe = (decimal?)(payment.Credit?.Amount ?? (decimal?)order.TienQuetThe);
+            order.TaiKhoanQuetThe = payment.Credit?.AccountId?.ToString() ?? order.TaiKhoanQuetThe;
+            order.MaGiaoDichQuetThe = payment.Credit?.Code ?? order.MaGiaoDichQuetThe;
             order.TienTieuDiem = (decimal?)(payment.UsedPoints?.Amount ?? (decimal?)order.TienTieuDiem);
+            order.TrangThaiThanhToanDoanhNghiep = payment.BusinessPaymentStatus?.ToString() ?? order.TrangThaiThanhToanDoanhNghiep;
             order.MaGiamGia = payment.CouponCode ?? order.MaGiamGia;
         }
 
         order.GhiChuCuaKhach = info.Description ?? order.GhiChuCuaKhach;
         order.GhiChuNoiBo = info.PrivateDescription ?? order.GhiChuNoiBo;
         order.TrangThaiDonHang = info.Status?.ToString() ?? order.TrangThaiDonHang;
-        order.NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : order.NgayXacNhan;
+        order.NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value).ToUniversalTime() : order.NgayXacNhan;
 
-        order.UpdatedAt = DateTimeOffset.UtcNow;
+        order.NguonDonHang = item.Channel?.SaleChannel?.ToString() ?? order.NguonDonHang;
+        order.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
 
         await _appDbContext.SaveChangesAsync();
 
@@ -612,7 +637,7 @@ public class Service: IService
         foreach (var order in orders)
         {
             order.IsDeleted = true;
-            order.UpdatedAt = DateTimeOffset.UtcNow;
+            order.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
         }
 
         if (orders.Count > 0)
