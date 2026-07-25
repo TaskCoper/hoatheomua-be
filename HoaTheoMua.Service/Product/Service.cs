@@ -206,27 +206,32 @@ public class Service: IService
 
     public async Task<BasePaginationResponse> GetLocalProducts(Request.LocalProductQueryRequest request)
     {
-        var pageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
-        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
+        var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
+        var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
 
         var query = _dbContext.Products.AsQueryable();
 
         query = query.Where(x => !x.IsDeleted);
 
-        if (request.PriceFrom.HasValue)
+        if (request.priceFrom.HasValue)
         {
-            query = query.Where(x => x.Price >= request.PriceFrom.Value);
+            query = query.Where(x => x.Price >= request.priceFrom.Value);
         }
-        if (request.PriceTo.HasValue)
+        if (request.priceTo.HasValue)
         {
-            query = query.Where(x => x.Price <= request.PriceTo.Value);
+            query = query.Where(x => x.Price <= request.priceTo.Value);
         }
 
-        if (request.SortBy != null && request.SortBy.Any())
+        if (request.categoryIds != null && request.categoryIds.Any())
+        {
+            query = query.Where(x => x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && request.categoryIds.Contains(cpd.CategoryProductId)));
+        }
+
+        if (request.sortBy != null && request.sortBy.Any())
         {
             IOrderedQueryable<HoaTheoMua.Repository.Entity.Product>? orderedQuery = null;
 
-            foreach (var sortItem in request.SortBy)
+            foreach (var sortItem in request.sortBy)
             {
                 if (string.IsNullOrWhiteSpace(sortItem)) continue;
 
@@ -357,6 +362,11 @@ public class Service: IService
                 {
                     categoryId = cpd.CategoryProduct.Id,
                     name = cpd.CategoryProduct.Name,
+                    name_En = cpd.CategoryProduct.Name_En,
+                    description = cpd.CategoryProduct.Description,
+                    description_En = cpd.CategoryProduct.Description_En,
+                    position = cpd.CategoryProduct.Position,
+                    metaData = cpd.CategoryProduct.MetaData,
                     startTime = cpd.CategoryProduct.StartTime,
                     endTime = cpd.CategoryProduct.EndTime,
                     type = cpd.CategoryProduct.Type,
@@ -368,5 +378,21 @@ public class Service: IService
         };
 
         return response;
+    }
+
+    public async Task<decimal> GetMaxPrice(Guid? categoryId = null)
+    {
+        var query = _dbContext.Products.AsQueryable();
+
+        query = query.Where(x => !x.IsDeleted && x.Price.HasValue);
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(x => x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId.Value));
+        }
+
+        var maxPrice = await query.MaxAsync(x => x.Price);
+
+        return maxPrice ?? 0;
     }
 }

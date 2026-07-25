@@ -30,6 +30,11 @@ public class Service : IService
         {
             categoryId = category.Id,
             name = category.Name,
+            name_En = category.Name_En,
+            description = category.Description,
+            description_En = category.Description_En,
+            position = category.Position,
+            metaData = category.MetaData,
             startTime = category.StartTime,
             endTime = category.EndTime,
             type = category.Type,
@@ -48,6 +53,21 @@ public class Service : IService
             throw new BadRequestException("CATEGORY_NAME_REQUIRED");
         }
 
+        if (string.IsNullOrWhiteSpace(request.name_En))
+        {
+            throw new BadRequestException("CATEGORY_NAME_EN_REQUIRED");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.description))
+        {
+            throw new BadRequestException("CATEGORY_DESCRIPTION_REQUIRED");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.description_En))
+        {
+            throw new BadRequestException("CATEGORY_DESCRIPTION_EN_REQUIRED");
+        }
+
         var isDuplicateName = await _dbContext.CategoryProducts.AnyAsync(x =>
             !x.IsDeleted &&
             x.ParentCategoryProductId == request.parentId &&
@@ -61,6 +81,11 @@ public class Service : IService
         {
             Id = Guid.NewGuid(),
             Name = request.name,
+            Name_En = request.name_En,
+            Description = request.description,
+            Description_En = request.description_En,
+            Position = request.position,
+            MetaData = request.metaData,
             StartTime = request.startTime,
             EndTime = request.endTime,
             Type = request.type,
@@ -86,6 +111,11 @@ public class Service : IService
         {
             categoryId = newCate.Id,
             name = newCate.Name,
+            name_En = newCate.Name_En,
+            description = newCate.Description,
+            description_En = newCate.Description_En,
+            position = newCate.Position,
+            metaData = newCate.MetaData,
             startTime = newCate.StartTime,
             endTime = newCate.EndTime,
             type = newCate.Type,
@@ -106,6 +136,11 @@ public class Service : IService
             {
                 categoryId = x.Id,
                 name = x.Name,
+                name_En = x.Name_En,
+                description = x.Description,
+                description_En = x.Description_En,
+                position = x.Position,
+                metaData = x.MetaData,
                 startTime = x.StartTime,
                 endTime = x.EndTime,
                 type = x.Type,
@@ -170,6 +205,11 @@ public class Service : IService
                 {
                     categoryId = x.Id,
                     name = x.Name,
+                    name_En = x.Name_En,
+                    description = x.Description,
+                    description_En = x.Description_En,
+                    position = x.Position,
+                    metaData = x.MetaData,
                     startTime = x.StartTime,
                     endTime = x.EndTime,
                     type = x.Type,
@@ -194,6 +234,11 @@ public class Service : IService
             {
                 categoryId = c.Id,
                 name = c.Name,
+                name_En = c.Name_En,
+                description = c.Description,
+                description_En = c.Description_En,
+                position = c.Position,
+                metaData = c.MetaData,
                 startTime = c.StartTime,
                 endTime = c.EndTime,
                 type = c.Type,
@@ -236,6 +281,21 @@ public class Service : IService
             throw new BadRequestException("CATEGORY_NAME_REQUIRED");
         }
 
+        if (string.IsNullOrWhiteSpace(request.name_En))
+        {
+            throw new BadRequestException("CATEGORY_NAME_EN_REQUIRED");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.description))
+        {
+            throw new BadRequestException("CATEGORY_DESCRIPTION_REQUIRED");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.description_En))
+        {
+            throw new BadRequestException("CATEGORY_DESCRIPTION_EN_REQUIRED");
+        }
+
         if (request.parentId == categoryId)
         {
             throw new BadRequestException("CATEGORY_PARENT_INVALID");
@@ -272,6 +332,11 @@ public class Service : IService
         }
 
         category.Name = request.name;
+        category.Name_En = request.name_En;
+        category.Description = request.description;
+        category.Description_En = request.description_En;
+        category.Position = request.position;
+        category.MetaData = request.metaData;
         category.StartTime = request.startTime;
         category.EndTime = request.endTime;
         category.Type = request.type;
