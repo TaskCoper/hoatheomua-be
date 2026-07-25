@@ -793,4 +793,60 @@ public class CategoryProductTest
         Assert.Equal(-5, updateResult.position);
         Assert.Equal("{\"new\": \"val\"}", updateResult.metaData);
     }
+
+    [Fact]
+    public async Task CreateCateProduct_MissingRequiredFields_ThrowsBadRequestException()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var req1 = new Request.CreateCategoryProductRequest { name = "", name_En = "En", description = "Desc", description_En = "DescEn", type = CategoryProductType.Fix };
+        var req2 = new Request.CreateCategoryProductRequest { name = "Name", name_En = "", description = "Desc", description_En = "DescEn", type = CategoryProductType.Fix };
+        var req3 = new Request.CreateCategoryProductRequest { name = "Name", name_En = "En", description = "", description_En = "DescEn", type = CategoryProductType.Fix };
+        var req4 = new Request.CreateCategoryProductRequest { name = "Name", name_En = "En", description = "Desc", description_En = "", type = CategoryProductType.Fix };
+
+        // Act & Assert
+        var ex1 = await Assert.ThrowsAsync<BadRequestException>(() => service.CreateCateProduct(req1));
+        Assert.Equal("CATEGORY_NAME_REQUIRED", ex1.Message);
+
+        var ex2 = await Assert.ThrowsAsync<BadRequestException>(() => service.CreateCateProduct(req2));
+        Assert.Equal("CATEGORY_NAME_EN_REQUIRED", ex2.Message);
+
+        var ex3 = await Assert.ThrowsAsync<BadRequestException>(() => service.CreateCateProduct(req3));
+        Assert.Equal("CATEGORY_DESCRIPTION_REQUIRED", ex3.Message);
+
+        var ex4 = await Assert.ThrowsAsync<BadRequestException>(() => service.CreateCateProduct(req4));
+        Assert.Equal("CATEGORY_DESCRIPTION_EN_REQUIRED", ex4.Message);
+    }
+
+    [Fact]
+    public async Task UpdateCateProduct_MissingRequiredFields_ThrowsBadRequestException()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var category = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Original", Name_En = "Original", Description = "Original", Description_En = "Original", Type = CategoryProductType.Fix, IsActive = true };
+        await dbContext.CategoryProducts.AddAsync(category);
+        await dbContext.SaveChangesAsync();
+
+        var req1 = new Request.UpdateCategoryProductRequest { name = "", name_En = "En", description = "Desc", description_En = "DescEn", type = CategoryProductType.Fix };
+        var req2 = new Request.UpdateCategoryProductRequest { name = "Name", name_En = "", description = "Desc", description_En = "DescEn", type = CategoryProductType.Fix };
+        var req3 = new Request.UpdateCategoryProductRequest { name = "Name", name_En = "En", description = "", description_En = "DescEn", type = CategoryProductType.Fix };
+        var req4 = new Request.UpdateCategoryProductRequest { name = "Name", name_En = "En", description = "Desc", description_En = "", type = CategoryProductType.Fix };
+
+        // Act & Assert
+        var ex1 = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCateProduct(category.Id, req1));
+        Assert.Equal("CATEGORY_NAME_REQUIRED", ex1.Message);
+
+        var ex2 = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCateProduct(category.Id, req2));
+        Assert.Equal("CATEGORY_NAME_EN_REQUIRED", ex2.Message);
+
+        var ex3 = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCateProduct(category.Id, req3));
+        Assert.Equal("CATEGORY_DESCRIPTION_REQUIRED", ex3.Message);
+
+        var ex4 = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCateProduct(category.Id, req4));
+        Assert.Equal("CATEGORY_DESCRIPTION_EN_REQUIRED", ex4.Message);
+    }
 }
