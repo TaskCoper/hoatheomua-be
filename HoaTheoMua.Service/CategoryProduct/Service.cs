@@ -77,18 +77,6 @@ public class Service : IService
             throw new ConflictException("CATEGORY_ALREADY_EXISTS");
         }
 
-        if (request.position.HasValue)
-        {
-            var isDuplicatePosition = await _dbContext.CategoryProducts.AnyAsync(x =>
-                !x.IsDeleted &&
-                x.ParentCategoryProductId == request.parentId &&
-                x.Position == request.position.Value);
-            if (isDuplicatePosition)
-            {
-                throw new ConflictException("CATEGORY_POSITION_ALREADY_EXISTS_IN_THIS_LEVEL");
-            }
-        }
-
         var newCate = new CategoryProductEntity()
         {
             Id = Guid.NewGuid(),
@@ -321,19 +309,6 @@ public class Service : IService
         if (isDuplicateName)
         {
             throw new ConflictException("CATEGORY_ALREADY_EXISTS");
-        }
-
-        if (request.position.HasValue)
-        {
-            var isDuplicatePosition = await _dbContext.CategoryProducts.AnyAsync(x =>
-                !x.IsDeleted &&
-                x.Id != categoryId &&
-                x.ParentCategoryProductId == request.parentId &&
-                x.Position == request.position.Value);
-            if (isDuplicatePosition)
-            {
-                throw new ConflictException("CATEGORY_POSITION_ALREADY_EXISTS_IN_THIS_LEVEL");
-            }
         }
 
         if (request.parentId != null)

@@ -74,43 +74,6 @@ public class CategoryProductTest
     }
 
     [Fact]
-    public async Task CreateCateProduct_DuplicatePosition_ThrowsConflictException()
-    {
-        // Arrange
-        using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
-
-        var existing = new CategoryProductEntity
-        {
-            Id = Guid.NewGuid(),
-            Name = "Mùa Đông",
-            Name_En = "Winter",
-            Description = "Mùa đông",
-            Description_En = "Winter",
-            Position = 12.34,
-            Type = CategoryProductType.Fix,
-            IsActive = true,
-            IsDeleted = false
-        };
-        await dbContext.CategoryProducts.AddAsync(existing);
-        await dbContext.SaveChangesAsync();
-
-        var request = new Request.CreateCategoryProductRequest
-        {
-            name = "Mùa Xuân",
-            name_En = "Spring",
-            description = "Mùa xuân",
-            description_En = "Spring",
-            position = 12.34,
-            type = CategoryProductType.Fix
-        };
-
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(() => service.CreateCateProduct(request));
-        Assert.Equal("CATEGORY_POSITION_ALREADY_EXISTS_IN_THIS_LEVEL", ex.Message);
-    }
-
-    [Fact]
     public async Task CreateCateProduct_ParentNestingMoreThanOneLevel_Success()
     {
         // Arrange
@@ -560,33 +523,6 @@ public class CategoryProductTest
         // Act & Assert
         var ex = await Assert.ThrowsAsync<ConflictException>(() => service.UpdateCateProduct(cat1.Id, request));
         Assert.Equal("CATEGORY_ALREADY_EXISTS", ex.Message);
-    }
-
-    [Fact]
-    public async Task UpdateCateProduct_DuplicatePosition_ThrowsConflictException()
-    {
-        // Arrange
-        using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
-
-        var cat1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 1", Name_En = "Cat 1", Description = "Cat 1", Description_En = "Cat 1", Position = 1.5, Type = CategoryProductType.Fix, IsActive = true };
-        var cat2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 2", Name_En = "Cat 2", Description = "Cat 2", Description_En = "Cat 2", Position = 2.5, Type = CategoryProductType.Fix, IsActive = true };
-        await dbContext.CategoryProducts.AddRangeAsync(cat1, cat2);
-        await dbContext.SaveChangesAsync();
-
-        var request = new Request.UpdateCategoryProductRequest
-        {
-            name = "Cat 1 Updated",
-            name_En = "Cat 1 Updated",
-            description = "Cat 1 Updated",
-            description_En = "Cat 1 Updated",
-            position = 2.5,
-            type = CategoryProductType.Fix
-        };
-
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<ConflictException>(() => service.UpdateCateProduct(cat1.Id, request));
-        Assert.Equal("CATEGORY_POSITION_ALREADY_EXISTS_IN_THIS_LEVEL", ex.Message);
     }
 
     [Fact]
