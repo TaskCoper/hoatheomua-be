@@ -24,6 +24,9 @@ public class CategoryProductConfiguration : IEntityTypeConfiguration<CategoryPro
             .IsRequired()
             .HasMaxLength(1000);
 
+        builder.Property(c => c.Position)
+            .HasColumnType("double precision");
+
         builder.Property(c => c.MetaData)
             .HasColumnType("jsonb");
 

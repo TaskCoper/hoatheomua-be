@@ -10,6 +10,7 @@ public class Request
         public required string name_En { get; set; }
         public required string description { get; set; }
         public required string description_En { get; set; }
+        public double? position { get; set; }
         public string? metaData { get; set; }
         public DateTimeOffset? startTime { get; set; }
         public DateTimeOffset? endTime { get; set; }
@@ -24,7 +25,7 @@ public class Request
         public required string name_En { get; set; }
         public required string description { get; set; }
         public required string description_En { get; set; }
-        public int? position { get; set; }
+        public double? position { get; set; }
         public string? metaData { get; set; }
         public DateTimeOffset? startTime { get; set; }
         public DateTimeOffset? endTime { get; set; }

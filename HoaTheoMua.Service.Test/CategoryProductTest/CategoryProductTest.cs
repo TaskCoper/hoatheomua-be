@@ -74,7 +74,7 @@ public class CategoryProductTest
     }
 
     [Fact]
-    public async Task CreateCateProduct_DuplicateName_ThrowsConflictException()
+    public async Task CreateCateProduct_DuplicatePosition_ThrowsConflictException()
     {
         // Arrange
         using var dbContext = CreateInMemoryDbContext();
@@ -87,6 +87,7 @@ public class CategoryProductTest
             Name_En = "Winter",
             Description = "Mùa đông",
             Description_En = "Winter",
+            Position = 12.34,
             Type = CategoryProductType.Fix,
             IsActive = true,
             IsDeleted = false
@@ -96,15 +97,17 @@ public class CategoryProductTest
 
         var request = new Request.CreateCategoryProductRequest
         {
-            name = "Mùa Đông",
-            name_En = "Winter",
-            description = "Mùa đông",
-            description_En = "Winter",
+            name = "Mùa Xuân",
+            name_En = "Spring",
+            description = "Mùa xuân",
+            description_En = "Spring",
+            position = 12.34,
             type = CategoryProductType.Fix
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ConflictException>(() => service.CreateCateProduct(request));
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => service.CreateCateProduct(request));
+        Assert.Equal("CATEGORY_POSITION_ALREADY_EXISTS_IN_THIS_LEVEL", ex.Message);
     }
 
     [Fact]
@@ -566,8 +569,8 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var cat1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 1", Name_En = "Cat 1", Description = "Cat 1", Description_En = "Cat 1", Position = 1, Type = CategoryProductType.Fix, IsActive = true };
-        var cat2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 2", Name_En = "Cat 2", Description = "Cat 2", Description_En = "Cat 2", Position = 2, Type = CategoryProductType.Fix, IsActive = true };
+        var cat1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 1", Name_En = "Cat 1", Description = "Cat 1", Description_En = "Cat 1", Position = 1.5, Type = CategoryProductType.Fix, IsActive = true };
+        var cat2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 2", Name_En = "Cat 2", Description = "Cat 2", Description_En = "Cat 2", Position = 2.5, Type = CategoryProductType.Fix, IsActive = true };
         await dbContext.CategoryProducts.AddRangeAsync(cat1, cat2);
         await dbContext.SaveChangesAsync();
 
@@ -577,7 +580,7 @@ public class CategoryProductTest
             name_En = "Cat 1 Updated",
             description = "Cat 1 Updated",
             description_En = "Cat 1 Updated",
-            position = 2,
+            position = 2.5,
             type = CategoryProductType.Fix
         };
 
@@ -777,7 +780,7 @@ public class CategoryProductTest
             name_En = "Daisy",
             description = "Mô tả cúc",
             description_En = "Desc Daisy",
-            position = -5,
+            position = -5.5,
             metaData = "{\"new\": \"val\"}",
             type = CategoryProductType.Fix,
             isActive = true
@@ -790,7 +793,7 @@ public class CategoryProductTest
         Assert.Equal("Daisy", updateResult.name_En);
         Assert.Equal("Mô tả cúc", updateResult.description);
         Assert.Equal("Desc Daisy", updateResult.description_En);
-        Assert.Equal(-5, updateResult.position);
+        Assert.Equal(-5.5, updateResult.position);
         Assert.Equal("{\"new\": \"val\"}", updateResult.metaData);
     }
 

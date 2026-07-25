@@ -256,8 +256,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid?>("ParentCategoryProductId")
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("Position")
-                        .HasColumnType("integer");
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
 
                     b.Property<DateTimeOffset?>("StartTime")
                         .HasColumnType("timestamp with time zone");

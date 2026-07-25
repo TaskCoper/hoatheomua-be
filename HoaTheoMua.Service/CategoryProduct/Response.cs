@@ -11,7 +11,7 @@ public class Response
         public string? name_En { get; set; }
         public string? description { get; set; }
         public string? description_En { get; set; }
-        public int? position { get; set; }
+        public double? position { get; set; }
         public string? metaData { get; set; }
         public DateTimeOffset? startTime { get; set; }
         public DateTimeOffset? endTime { get; set; }
@@ -28,7 +28,7 @@ public class Response
         public string? name_En { get; set; }
         public string? description { get; set; }
         public string? description_En { get; set; }
-        public int? position { get; set; }
+        public double? position { get; set; }
         public string? metaData { get; set; }
         public DateTimeOffset? startTime { get; set; }
         public DateTimeOffset? endTime { get; set; }
