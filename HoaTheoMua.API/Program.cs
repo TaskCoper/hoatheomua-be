@@ -20,6 +20,7 @@ using AhamoveService = HoaTheoMua.Service.AhamoveService;
 using NhanhVnService = HoaTheoMua.Service.NhanhVnService;
 using ProductImportService = HoaTheoMua.Service.ProductImport;
 using BaoKimService = HoaTheoMua.Service.BaoKim;
+using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,6 +68,7 @@ builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
 builder.Services.AddScoped<AddressService.IService, AddressService.Service>();
 builder.Services.AddScoped<NhanhVnService.IService, NhanhVnService.Service>();
 builder.Services.AddScoped<ProductImportService.IService, ProductImportService.Service>();
+builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
 
 
 

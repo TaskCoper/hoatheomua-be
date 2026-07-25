@@ -86,11 +86,12 @@ public class Request
 
     public class LocalProductQueryRequest
     {
-        public int PageIndex { get; set; } = 1;
-        public int PageSize { get; set; } = 10;
-        public decimal? PriceFrom { get; set; }
-        public decimal? PriceTo { get; set; }
-        public List<string>? SortBy { get; set; }
+        public int pageIndex { get; set; } = 1;
+        public int pageSize { get; set; } = 10;
+        public decimal? priceFrom { get; set; }
+        public decimal? priceTo { get; set; }
+        public List<string>? sortBy { get; set; }
+        public List<Guid>? categoryIds { get; set; }
     }
     
     public class MoveProductRequest

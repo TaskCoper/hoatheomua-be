@@ -52,6 +52,8 @@ x-api-env: &api-env
   BaoKimOption__PrivateKey: ${BAOKIM_PRIVATE_KEY}
   BaoKimOption__PublicKey: ${BAOKIM_PUBLIC_KEY}
 
+  SepayOption__ApiKey: ${SEPAY_API_KEY}
+
   AllowedHosts: "*"
 
 x-api-base: &api-base
