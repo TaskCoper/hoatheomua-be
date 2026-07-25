@@ -378,11 +378,18 @@ public class Service: IService
         return response;
     }
 
-    public async Task<decimal> GetMaxPrice()
+    public async Task<decimal> GetMaxPrice(Guid? categoryId = null)
     {
-        var maxPrice = await _dbContext.Products
-            .Where(x => !x.IsDeleted && x.Price.HasValue)
-            .MaxAsync(x => x.Price);
+        var query = _dbContext.Products.AsQueryable();
+
+        query = query.Where(x => !x.IsDeleted && x.Price.HasValue);
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(x => x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId.Value));
+        }
+
+        var maxPrice = await query.MaxAsync(x => x.Price);
 
         return maxPrice ?? 0;
     }

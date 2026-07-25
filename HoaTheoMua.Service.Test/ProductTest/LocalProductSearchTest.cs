@@ -263,6 +263,38 @@ public class LocalProductSearchTest
     }
 
     [Fact]
+    public async Task GetMaxPrice_WithCategoryId_Success()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var c1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "C1", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
+        var c2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "C2", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
+
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", Price = 50, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", Price = 100, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", Price = 80, IsDeleted = false };
+
+        var j1 = new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c1.Id, ProductId = p1.Id, IsDeleted = false };
+        var j2 = new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c1.Id, ProductId = p3.Id, IsDeleted = false };
+        var j3 = new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c2.Id, ProductId = p2.Id, IsDeleted = false };
+
+        await dbContext.CategoryProducts.AddRangeAsync(c1, c2);
+        await dbContext.Products.AddRangeAsync(p1, p2, p3);
+        await dbContext.CategoryProductDetails.AddRangeAsync(j1, j2, j3);
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        var resultForC1 = await service.GetMaxPrice(c1.Id);
+        var resultForC2 = await service.GetMaxPrice(c2.Id);
+
+        // Assert
+        Assert.Equal(80, resultForC1);
+        Assert.Equal(100, resultForC2);
+    }
+
+    [Fact]
     public async Task GetMaxPrice_NoProducts_ReturnsZero()
     {
         // Arrange
