@@ -11,9 +11,9 @@ public interface IService
     Task<string> HandleWebhook(JsonElement? body);
     Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest request);
     Task<string> WebhookNhanhVnProductAdd(NhanhProductAddWebhookRequest request);
-    Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest request);
-    Task<string> WebhookNhanhVnOrderUpdate(NhanhOrderUpdateWebhookRequest request);
-    Task<string> WebhookNhanhVnOrderDelete(NhanhOrderDeleteWebhookRequest request);
+    // Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest request);
+    // Task<string> WebhookNhanhVnOrderUpdate(NhanhOrderUpdateWebhookRequest request);
+    // Task<string> WebhookNhanhVnOrderDelete(NhanhOrderDeleteWebhookRequest request);
    Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest request);
     Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest request);
 }
