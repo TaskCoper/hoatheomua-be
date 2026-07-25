@@ -89,7 +89,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Addresses", (string)null);
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.AuditLog", b =>
@@ -139,7 +139,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AuditLogs", (string)null);
+                    b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>
@@ -174,7 +174,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("ParentCategoryNewsId");
 
-                    b.ToTable("CategoryNewsList", (string)null);
+                    b.ToTable("CategoryNewsList");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNewsDetail", b =>
@@ -205,7 +205,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("CategoryNewsId", "NewsId")
                         .IsUnique();
 
-                    b.ToTable("CategoryNewsDetails", (string)null);
+                    b.ToTable("CategoryNewsDetails");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProduct", b =>
@@ -256,7 +256,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("ParentCategoryProductId");
 
-                    b.ToTable("CategoryProducts", (string)null);
+                    b.ToTable("CategoryProducts");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProductDetail", b =>
@@ -289,7 +289,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("CategoryProductId", "ProductId")
                         .IsUnique();
 
-                    b.ToTable("CategoryProductDetails", (string)null);
+                    b.ToTable("CategoryProductDetails");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
@@ -353,7 +353,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CompanyAddresses", (string)null);
+                    b.ToTable("CompanyAddresses");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Config", b =>
@@ -398,7 +398,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("Group");
 
-                    b.ToTable("Configs", (string)null);
+                    b.ToTable("Configs");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
@@ -478,7 +478,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("slug")
                         .IsUnique();
 
-                    b.ToTable("JobDescriptions", (string)null);
+                    b.ToTable("JobDescriptions");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.News", b =>
@@ -540,7 +540,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("NewsList", (string)null);
+                    b.ToTable("NewsList");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
@@ -668,7 +668,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
@@ -718,7 +718,447 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderDetails", (string)null);
+                    b.ToTable("OrderDetails");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderNhanhVn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BienBan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BienBanBanGiao")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("CanNangHangVanChuyen")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("CapDoKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("ChietKhauMotSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ChietKhauSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("CoLayHoaDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CongVanChuyen")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CuaHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DanhMucSanPham")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DiaChiKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DiaChiKhachHangTrenHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DichVuVanChuyen")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DonViTinh")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmailKhachHang")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("EmailNguoiLienHe")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("EmailNguoiLienHeThuHai")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("FacebookPageUserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FacebookPsid")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GhiChuCuaKhach")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GhiChuHangVanChuyen")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GhiChuNoiBo")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GhiChuSanPham")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("GiaBan")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("GiaBanTruocVat")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("GiaSanPhamSauChietKhau")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("GiaTriDonHang")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("GiaTriFacebook")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("GiaVon")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("GiaVonDonHang")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("GioThanhCong")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HangVanChuyen")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<long?>("IdDonGoc")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("IdDonHangApi")
+                        .HasMaxLength(100)
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("IdDonHangNhanh")
+                        .IsRequired()
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("IdDonTra")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("IdPhapNhan")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Imei")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("KhoLayHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("KhoTaoDon")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("KhoiLuongSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("LoHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LoaiDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LoaiGiaSanPham")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LoaiKhachHangHoaDon")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("LoiNhuan")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("LyDoHuy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaAffiliate")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaCoQuanThueHoaDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaCoQuanThueHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaGiamGia")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaGiaoDichQuetThe")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaKhachHang")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaSanPham")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaSanPhamCha")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaSoThue")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("MaThamChieu")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaVach")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaVanDon")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("NgayBanGiao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayDoiSoat")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayGuiHangVanChuyen")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayHenThanhToan")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayPhatHanhHoaDon")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgaySinhKhachHang")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayThanhCong")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayThanhToanDoanhNghiep")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayXacNhan")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayXuatHoaDonDienTu")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NguoiTaoDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nguon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NguonDonHang")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Nhan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhanVienBanHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhanVienChamSocKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhanVienDongGoi")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhomKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("PhiChuyenHoan")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PhiKhaiGia")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PhiShipBaoKhach")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PhiThuTienHo")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PhiVanChuyen")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("PhiVuotCan")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PhuongXaKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("QuaTangKem")
+                        .HasColumnType("text");
+
+                    b.Property<string>("QuanHuyenKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("QuanHuyenKhoHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("QuanHuyenLayHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SoDienThoaiFacebook")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SoDienThoaiKhachHang")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("SoDienThoaiNguoiLienHe")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SoHoaDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SoHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SoLuong")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SoLuongDonViNhoNhat")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SoNgayChuyenHang")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SoThuTuTheoNgay")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SourceRowNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TaiKhoanChuyenKhoan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaiKhoanDatCoc")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaiKhoanQuetThe")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TenKhachHang")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("TenKhachHangTrenHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TenNguoiLienHe")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("TenSanPham")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TenSanPhamCha")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThanhPhoKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThanhPhoKhoHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThanhPhoLayHang")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ThoiGianDonHang")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("TienChietKhau")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienChuyenKhoan")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienDatCoc")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienQuetThe")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienTieuDiem")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienVatSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TongKhoiLuong")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TongThu")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("TrangThaiDoiSoat")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TrangThaiDonHang")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TrangThaiHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TrangThaiThanhToanDoanhNghiep")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TyLeLoiNhuan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TyLeVat")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("IdDonHangApi");
+
+                    b.HasIndex("IdDonHangNhanh")
+                        .IsUnique();
+
+                    b.HasIndex("MaKhachHang");
+
+                    b.HasIndex("MaVanDon");
+
+                    b.HasIndex("NguonDonHang");
+
+                    b.HasIndex("SoDienThoaiKhachHang");
+
+                    b.HasIndex("TenKhachHang");
+
+                    b.HasIndex("TrangThaiDonHang");
+
+                    b.ToTable("OrderNhanhVns");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
@@ -959,7 +1399,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsUnique()
                         .HasFilter("\"NhanhProductId\" IS NOT NULL");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>
@@ -1097,7 +1537,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("Transactions", (string)null);
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>

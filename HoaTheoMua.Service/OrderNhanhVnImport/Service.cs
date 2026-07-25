@@ -43,18 +43,14 @@ public class Service : IService
 
         return result;
     }
-
-    // ── Orchestration helpers ──────────────────────────────────────────
-
-    /** Sao chép file stream vào MemoryStream để có thể seek (đọc nhiều lần). */
+    
     private static async Task<MemoryStream> BufferStreamAsync(Stream source)
     {
         var ms = new MemoryStream();
         await source.CopyToAsync(ms);
         return ms;
     }
-
-    /** Kiểm tra dòng header: cột A phải chứa "ID" và file phải có 100+ cột. */
+    
     private static async Task ValidateFileStructureAsync(MemoryStream ms)
     {
         ms.Position = 0;
@@ -76,7 +72,6 @@ public class Service : IService
         }
     }
 
-    /** Parse dòng Excel qua MiniExcel và gán SourceRowNumber để truy vết. */
     private async Task<List<Request.ExcelRow>> ReadRowsAsync(MemoryStream ms)
     {
         ms.Position = 0;
@@ -91,21 +86,17 @@ public class Service : IService
         return rows;
     }
 
-    // ── Upsert batch ───────────────────────────────────────────────────
-
     private struct ImportBatch
     {
         public List<OrderEntity> ToInsert;
         public List<OrderEntity> ToUpdate;
     }
 
-    /** Nạp đơn hàng từ DB theo IdDonHangNhanh, phân loại từng dòng là insert hay update. */
     private async Task<ImportBatch> BuildUpsertBatchAsync(List<Request.ExcelRow> rows)
     {
         var idsInFile = rows
             .Select(r => r.IdDonHangNhanh)
-            .Where(id => id.HasValue)
-            .Select(id => id!.Value)
+            .Where(id => id != null)
             .Distinct()
             .ToList();
         //lúc này ta có được một list IdDonHangNhanh từ file excel mà ta đã nhờ miniExcel đọc qua
@@ -135,8 +126,7 @@ public class Service : IService
 
         return batch;
     }
-
-    /** Tìm order theo IdDonHangNhanh, nếu có thì update, không có thì tạo mới. */
+    
     private static OrderEntity ResolveOrder(
         Request.ExcelRow row,
         Dictionary<long, OrderEntity> existingMap,
@@ -310,10 +300,7 @@ public class Service : IService
             throw;
         }
     }
-
-    // ── Helpers ─────────────────────────────────────────────────────────
-
-    /** Trả về null nếu chuỗi rỗng / chỉ chứa khoảng trắng / là chữ "null". */
+    
     private static string? NullIfEmpty(string? val)
     {
         if (string.IsNullOrWhiteSpace(val)) return null;
