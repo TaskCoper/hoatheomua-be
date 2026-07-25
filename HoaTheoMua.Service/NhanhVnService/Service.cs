@@ -176,6 +176,27 @@ public class Service: IService
                     return await WebhookNhanhVnProductDelete(req);
                 }
 
+                case NhanhWebhookEvents.OrderAdd:
+                {
+                    var req = TryDeserialize<NhanhOrderAddWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnOrderAdd(req);
+                }
+
+                case NhanhWebhookEvents.OrderUpdate:
+                {
+                    var req = TryDeserialize<NhanhOrderUpdateWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnOrderUpdate(req);
+                }
+
+                case NhanhWebhookEvents.OrderDelete:
+                {
+                    var req = TryDeserialize<NhanhOrderDeleteWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnOrderDelete(req);
+                }
+
                 default:
                     return "Thành công";
             }
@@ -383,388 +404,209 @@ public class Service: IService
     {
         if (request == null || request.Data == null)
         {
-            throw new BadRequestException("Không có dữ liệu thay đổi đơn hàng");
+            return "Không có dữ liệu thay đổi đơn hàng";
         }
 
         var item = request.Data;
+        var info = item.Info;
+        var address = item.ShippingAddress;
+        var carrier = item.Carrier; 
+        var payment = item.Payment;
 
-        if (item.Info.Id <= 0 || item.Info.Id > int.MaxValue)
-        {
-            throw new BadRequestException("ID đơn hàng từ Nhanh.vn không hợp lệ.");
-        }
+        var idDonHangNhanh = info.Id.ToString();
 
-        var existingOrder = await _appDbContext.Orders
-            .FirstOrDefaultAsync(x => !x.IsDeleted
-                                      && x.NhanhOrderId.HasValue
-                                      && x.NhanhOrderId.Value == item.Info.Id);
+        var existingOrder = await _appDbContext.OrderNhanhVns
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.IdDonHangNhanh == idDonHangNhanh);
 
         if (existingOrder != null)
         {
-            throw new BadRequestException("Có đơn hàng đã tồn tại trong hệ thống.");
+            return "Có đơn hàng đã tồn tại trong hệ thống.";
         }
 
-        var totalProductFee = item.Products.Sum(x =>
-            (x.Price ?? 0) * (x.Quantity ?? 0));
+        var products = item.Products ?? new List<NhanhOrderProductDto>();
+        var firstProduct = products.FirstOrDefault();
 
-        var totalShippingFee = item.Carrier?.CustomerShipFee
-                               ?? item.Carrier?.ShipFee
-                               ?? 0;
-
-        var taxCode = item.Payment?.Vat?.TaxCode;
-        var vatFee = string.IsNullOrEmpty(taxCode) ? 0 : totalProductFee * 0.08m;
-        if (vatFee == 0 && item.Payment?.Vat?.Amount is > 0)
+        var orderNhanhVn = new HoaTheoMua.Repository.Entity.OrderNhanhVn
         {
-            vatFee = item.Payment.Vat.Amount.Value;
-        }
-
-        var privateDescription = item.Info.PrivateDescription ?? string.Empty;
-        string? parsedTaxCode = null;
-        string? receiptFullName = null;
-        string? receiptPhoneNumber = null;
-        string? receiptAddress = null;
-        string? receiptEmail = null;
-        string? identityNumber = null;
-        bool? isExportInvoice = false;
-        HoaTheoMua.Repository.Enum.InvoiceType? invoiceType = null;
-
-        var lines = privateDescription
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        foreach (var line in lines)
-        {
-            if (line.StartsWith("MST:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Business;
-                parsedTaxCode = line.Replace("MST:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("Tên:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
-                receiptFullName = line.Replace("Tên:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("CCCD:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
-                identityNumber = line.Replace("CCCD:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("ĐC:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
-                receiptAddress = line.Replace("ĐC:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("Email:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                receiptEmail = line.Replace("Email:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("SĐT:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                receiptPhoneNumber = line.Replace("SĐT:", string.Empty).Trim();
-            }
-        }
-
-        var order = new HoaTheoMua.Repository.Entity.Order
-        {
-            //field required
             Id = Guid.NewGuid(),
-            Status = item.Info.Status?.ToString() ?? string.Empty,
-            TrackNumber = item.Carrier?.CarrierCode ?? string.Empty,
+            IdDonHangNhanh = idDonHangNhanh,
+            LoaiDon = info.Type?.ToString(),
+            ThoiGianDonHang = info.CreatedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.CreatedAt.Value) : null,
+            NguoiTaoDon = info.CreatedBy?.Name,
+            Nguon = item.Channel?.TrafficSource?.Name,
 
-            FullName = item.ShippingAddress?.Name ?? string.Empty,
-            Phone = item.ShippingAddress?.Mobile ?? string.Empty,
-            Address = item.ShippingAddress?.Address ?? string.Empty,
-            ShortAddress = item.ShippingAddress?.Address ?? string.Empty, //Address
-            Ward = (int)(item.ShippingAddress?.WardId ?? 0),
-            City = (int)(item.ShippingAddress?.CityId ?? 0),
+            TenKhachHang = address?.Name,
+            SoDienThoaiKhachHang = address?.Mobile,
+            EmailKhachHang = address?.Email,
+            DiaChiKhachHang = address?.Address,
+            ThanhPhoKhachHang = address?.CityId?.ToString(),
+            QuanHuyenKhachHang = address?.DistrictId?.ToString(),
+            PhuongXaKhachHang = address?.WardId?.ToString(),
 
-            Remarks = item.Info.Description ?? string.Empty,
-            OrderTime = item.Info.CreatedAt ?? 0,
-            NhanhTrackingUrl = item.Info.TrackingUrl,
+            TenSanPham = string.Join(", ", products.Select(p => p.Name)),
+            MaSanPham = string.Join(", ", products.Select(p => p.Code)),
+            SoLuong = (int?)products.Sum(p => p.Quantity ?? 0),
+            GiaBan = (decimal?)(firstProduct?.Price ?? 0),
+            TienVatSanPham = (decimal?)products.Sum(p => p.Vat?.Amount ?? 0),
+            ChietKhauMotSanPham = (decimal?)(firstProduct?.Discount ?? 0),
+            ChietKhauSanPham = (decimal?)products.Sum(p => p.Discount ?? 0),
+            GiaSanPhamSauChietKhau = (decimal?)products.Sum(p => (p.Price ?? 0) - (p.Discount ?? 0)),
+            GhiChuSanPham = string.Join("; ", products.Select(p => p.Description).Where(d => !string.IsNullOrEmpty(d))),
 
-            ShippingFee = totalShippingFee,
-            ProductFee = totalProductFee,
-            TotalFee = totalShippingFee + totalProductFee + vatFee,
-            Vat = vatFee,
-            // PaymentMethod = HoaTheoMua.Repository.Enum.PaymentMethod.VA,
-            TaxCode = parsedTaxCode ?? taxCode,
-            ReceiptFullName = receiptFullName,
-            ReceiptPhoneNumber = receiptPhoneNumber,
-            ReceiptAddress = receiptAddress,
-            ReceiptEmail = receiptEmail,
-            IdentityNumber = identityNumber,
-            IsExportInvoice = isExportInvoice,
-            InvoiceType = invoiceType,
+            TongKhoiLuong = (decimal?)products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0)),
+            GiaTriDonHang = (decimal?)(products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (decimal?)(payment?.Vat?.Amount ?? 0),
+            PhiVanChuyen = (decimal?)(carrier?.ShipFee ?? 0),
+            PhiShipBaoKhach = (decimal?)(carrier?.CustomerShipFee ?? 0),
+            PhiThuTienHo = (decimal?)(carrier?.CodFee ?? 0),
+            PhiKhaiGia = (decimal?)(carrier?.DeclaredFee ?? 0),
+            PhiChuyenHoan = (decimal?)(carrier?.ReturnFee ?? 0),
+
+            HangVanChuyen = carrier?.Name,
+            MaVanDon = carrier?.CarrierCode,
+            DichVuVanChuyen = carrier?.Service?.Name,
+
+            TienChuyenKhoan = (decimal?)(payment?.Transfer?.Amount ?? 0),
+            TienDatCoc = (decimal?)(payment?.Deposit?.Amount ?? 0),
+            TienChietKhau = (decimal?)(payment?.Discount?.Amount ?? 0),
+            TienVat = (decimal?)(payment?.Vat?.Amount ?? 0),
+            TyLeVat = payment?.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment?.Vat?.Value?.ToString() : null,
+            TienQuetThe = (decimal?)(payment?.Credit?.Amount ?? 0),
+            TienTieuDiem = (decimal?)(payment?.UsedPoints?.Amount ?? 0),
+
+            GhiChuCuaKhach = info.Description,
+            GhiChuNoiBo = info.PrivateDescription,
+            TrangThaiDonHang = info.Status?.ToString(),
+
+            NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : null,
+            NgayGuiHangVanChuyen = !string.IsNullOrEmpty(carrier?.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate) ? sendDate : null,
+            NgayThanhCong = !string.IsNullOrEmpty(carrier?.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate) ? deliveryDate : null,
+
+            MaGiamGia = payment?.CouponCode,
+            IdDonGoc = item.OriginalOrder?.Id?.ToString(),
+
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        order.NhanhOrderId = (int)item.Info.Id;
-        order.CreatedAt = DateTimeOffset.UtcNow;
-        order.UpdatedAt = DateTimeOffset.UtcNow;
-        order.UserId = Guid.TryParse(item.ShippingAddress?.Id, out var userId)
-            ? userId
-            : Guid.Empty; //UserId from Nhanh.vn
-
-        // Thời gian tạo đơn phía Nhanh.vn
-        if (item.Info.CreatedAt > 0)
-        {
-            order.CreatedAt = DateTimeOffset.FromUnixTimeSeconds(
-                item.Info.CreatedAt.Value);
-        }
-
-        // Thời gian cập nhật đơn phía Nhanh.vn
-        if (item.Info.UpdatedAt > 0)
-        {
-            order.UpdatedAt = DateTimeOffset.FromUnixTimeSeconds(
-                item.Info.UpdatedAt.Value);
-        }
-
-        var nhanhProductIds = item.Products
-            .Select(x => x.Id.ToString())
-            .Distinct()
-            .ToList();
-
-        var productsInDb = await _appDbContext.Products
-            .Where(x => !x.IsDeleted
-                        && x.NhanhProductId != null
-                        && nhanhProductIds.Contains(x.NhanhProductId))
-            .ToListAsync();
-
-        var productByNhanhId = productsInDb.ToDictionary(x => x.NhanhProductId!);
-        var newOrderDetails = new List<HoaTheoMua.Repository.Entity.OrderDetails>();
-
-        // Sản phẩm trong đơn
-        foreach (var productItem in item.Products)
-        {
-            if (productItem.Id <= 0 || productItem.Id > int.MaxValue)
-            {
-                throw new BadRequestException(
-                    $"ID sản phẩm Nhanh.vn không hợp lệ: {productItem.Id}");
-            }
-
-            if (!productItem.Quantity.HasValue || productItem.Quantity <= 0)
-            {
-                throw new BadRequestException(
-                    $"Số lượng sản phẩm không hợp lệ: {productItem.Name}");
-            }
-
-            productByNhanhId.TryGetValue(productItem.Id.ToString(), out var productInDb);
-
-            var orderDetail = new HoaTheoMua.Repository.Entity.OrderDetails
-            {
-                Id = Guid.NewGuid(),
-                OrderId = order.Id,
-
-                ItemId = (int)productItem.Id,
-                Name = productItem.Name ?? string.Empty,
-                Number = (int)productItem.Quantity.Value,
-                Price = productItem.Price ?? 0,
-
-                Weight = (double)(productInDb?.Weight ?? productItem.Weight ?? 0m),
-                Length = (double)(productInDb?.Length ?? 0m),
-                Width = (double)(productInDb?.Width ?? 0m),
-                Height = (double)(productInDb?.Height ?? 0m),
-
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow,
-            };
-
-            // orderDetail.ItemId = (int)productItem.Id;
-            // orderDetail.Name = productItem.Name ?? productItem.Code ?? string.Empty;
-            // orderDetail.Number = (int)productItem.Quantity.Value;
-            // orderDetail.Price = productItem.Price ?? 0;
-            // orderDetail.Weight = (double)(productInDb?.Weight ?? productItem.Weight ?? 0m);
-            // orderDetail.Length = (double)(productInDb?.Length ?? 0m);
-            // orderDetail.Width = (double)(productInDb?.Width ?? 0m);
-            // orderDetail.Height = (double)(productInDb?.Height ?? 0m);
-
-            newOrderDetails.Add(orderDetail);
-        }
-
-        await _appDbContext.Orders.AddAsync(order);
-        await _appDbContext.OrderDetails.AddRangeAsync(newOrderDetails);
+        await _appDbContext.OrderNhanhVns.AddAsync(orderNhanhVn);
         await _appDbContext.SaveChangesAsync();
 
-        return $"Thêm mới thành công 1 đơn hàng ";
+        return "Thêm mới thành công 1 đơn hàng vào bảng OrderNhanhVn";
     }
 
     public async Task<string> WebhookNhanhVnOrderUpdate(NhanhOrderUpdateWebhookRequest request)
     {
         if (request == null || request.Data == null)
         {
-            throw new BadRequestException("Không có dữ liệu cập nhật đơn hàng");
+            return "Không có dữ liệu cập nhật đơn hàng";
         }
 
         var item = request.Data;
-        var updatedCount = 0;
-        var ignoredCount = 0;
+        var info = item.Info;
+        var address = item.ShippingAddress;
+        var carrier = item.Carrier;
+        var payment = item.Payment;
 
-        var nhanhOrderId = (int)item.Info.Id;
+        var idDonHangNhanh = info.Id.ToString();
 
-        var order = await _appDbContext.Orders
-            .FirstOrDefaultAsync(x => !x.IsDeleted
-                                      && x.NhanhOrderId.HasValue
-                                      && x.NhanhOrderId.Value == nhanhOrderId);
+        var order = await _appDbContext.OrderNhanhVns
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.IdDonHangNhanh == idDonHangNhanh);
 
-        // Không tạo đơn mới trong event update.
         if (order == null)
         {
-            throw new ConflictException("Đơn hàng không tồn tại");
+            return "Đơn hàng không tồn tại trong hệ thống.";
         }
 
-        var incomingUpdatedAt = item.Info.UpdatedAt.HasValue
-            ? DateTimeOffset.FromUnixTimeSeconds(item.Info.UpdatedAt.Value)
-            : (DateTimeOffset?)null;
+        var products = item.Products ?? new List<NhanhOrderProductDto>();
+        var firstProduct = products.FirstOrDefault();
 
-        // Webhook đến trễ hoặc bị gửi lại: bỏ qua, vẫn trả HTTP 200.
-        if (incomingUpdatedAt.HasValue
-            && order.UpdatedAt.HasValue
-            && incomingUpdatedAt <= order.UpdatedAt.Value)
+        order.LoaiDon = info.Type?.ToString() ?? order.LoaiDon;
+        order.ThoiGianDonHang = info.CreatedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.CreatedAt.Value) : order.ThoiGianDonHang;
+        order.NguoiTaoDon = info.CreatedBy?.Name ?? order.NguoiTaoDon;
+        order.Nguon = item.Channel?.TrafficSource?.Name ?? order.Nguon;
+
+        if (address != null)
         {
-            return $"Cập nhật {updatedCount} đơn; bỏ qua {ignoredCount + 1} đơn.";
+            order.TenKhachHang = address.Name ?? order.TenKhachHang;
+            order.SoDienThoaiKhachHang = address.Mobile ?? order.SoDienThoaiKhachHang;
+            order.EmailKhachHang = address.Email ?? order.EmailKhachHang;
+            order.DiaChiKhachHang = address.Address ?? order.DiaChiKhachHang;
+            order.ThanhPhoKhachHang = address.CityId?.ToString() ?? order.ThanhPhoKhachHang;
+            order.QuanHuyenKhachHang = address.DistrictId?.ToString() ?? order.QuanHuyenKhachHang;
+            order.PhuongXaKhachHang = address.WardId?.ToString() ?? order.PhuongXaKhachHang;
         }
 
-        // Nhanh.vn là nguồn sự thật cho các trường bên dưới.
-        order.Status = item.Info.Status?.ToString() ?? order.Status;
-        order.TrackNumber = item.Carrier?.CarrierCode ?? order.TrackNumber;
-        order.NhanhTrackingUrl = item.Info.TrackingUrl ?? order.NhanhTrackingUrl;
-
-        if (!string.IsNullOrWhiteSpace(item.Info.Description))
+        if (products.Any())
         {
-            order.Remarks = item.Info.Description;
+            order.TenSanPham = string.Join(", ", products.Select(p => p.Name));
+            order.MaSanPham = string.Join(", ", products.Select(p => p.Code));
+            order.SoLuong = (int?)products.Sum(p => p.Quantity ?? 0);
+            order.GiaBan = (decimal?)(firstProduct?.Price ?? 0);
+            order.TienVatSanPham = (decimal?)products.Sum(p => p.Vat?.Amount ?? 0);
+            order.ChietKhauMotSanPham = (decimal?)(firstProduct?.Discount ?? 0);
+            order.ChietKhauSanPham = (decimal?)products.Sum(p => p.Discount ?? 0);
+            order.GiaSanPhamSauChietKhau = (decimal?)products.Sum(p => (p.Price ?? 0) - (p.Discount ?? 0));
+            order.GhiChuSanPham = string.Join("; ", products.Select(p => p.Description).Where(d => !string.IsNullOrEmpty(d)));
+            order.TongKhoiLuong = (decimal?)products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0));
+            order.GiaTriDonHang = (decimal?)(products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (decimal?)(payment?.Vat?.Amount ?? 0);
         }
 
-        if (item.Info.CreatedAt > 0)
+        if (carrier != null)
         {
-            order.OrderTime = item.Info.CreatedAt.Value;
+            order.PhiVanChuyen = carrier.ShipFee ?? order.PhiVanChuyen;
+            order.PhiShipBaoKhach = carrier.CustomerShipFee ?? order.PhiShipBaoKhach;
+            order.PhiThuTienHo = carrier.CodFee ?? order.PhiThuTienHo;
+            order.PhiKhaiGia = carrier.DeclaredFee ?? order.PhiKhaiGia;
+            order.PhiChuyenHoan = carrier.ReturnFee ?? order.PhiChuyenHoan;
+            order.HangVanChuyen = carrier.Name ?? order.HangVanChuyen;
+            order.MaVanDon = carrier.CarrierCode ?? order.MaVanDon;
+            order.DichVuVanChuyen = carrier.Service?.Name ?? order.DichVuVanChuyen;
+
+            if (!string.IsNullOrEmpty(carrier.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate))
+                order.NgayGuiHangVanChuyen = sendDate;
+
+            if (!string.IsNullOrEmpty(carrier.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate))
+                order.NgayThanhCong = deliveryDate;
         }
 
-        if (item.ShippingAddress != null)
+        if (payment != null)
         {
-            order.FullName = item.ShippingAddress.Name ?? order.FullName;
-            order.Phone = item.ShippingAddress.Mobile ?? order.Phone;
-            order.Address = item.ShippingAddress.Address ?? order.Address;
-            order.ShortAddress = item.ShippingAddress.Address ?? order.ShortAddress;
-
-            if (item.ShippingAddress.CityId is <= int.MaxValue and >= 0)
-            {
-                order.City = (int)item.ShippingAddress.CityId.Value;
-            }
-
-            if (item.ShippingAddress.WardId is <= int.MaxValue and >= 0)
-            {
-                order.Ward = (int)item.ShippingAddress.WardId.Value;
-            }
+            order.TienChuyenKhoan = (decimal?)(payment.Transfer?.Amount ?? (long?)order.TienChuyenKhoan);
+            order.TienDatCoc = (decimal?)(payment.Deposit?.Amount ?? (long?)order.TienDatCoc);
+            order.TienChietKhau = (decimal?)(payment.Discount?.Amount ?? (long?)order.TienChietKhau);
+            order.TienVat = (decimal?)(payment.Vat?.Amount ?? (long?)order.TienVat);
+            order.TyLeVat = payment.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment.Vat.Value?.ToString() : order.TyLeVat;
+            order.TienQuetThe = (decimal?)(payment.Credit?.Amount ?? (decimal?)order.TienQuetThe);
+            order.TienTieuDiem = (decimal?)(payment.UsedPoints?.Amount ?? (decimal?)order.TienTieuDiem);
+            order.MaGiamGia = payment.CouponCode ?? order.MaGiamGia;
         }
 
-        var taxCode = item.Payment?.Vat?.TaxCode;
-        var totalProductFee = order.ProductFee;
-        if (item.Products != null && item.Products.Any())
-        {
-            totalProductFee = item.Products.Sum(x =>
-                (x.Price ?? 0) * (x.Quantity ?? 0));
-            order.ProductFee = totalProductFee;
-        }
+        order.GhiChuCuaKhach = info.Description ?? order.GhiChuCuaKhach;
+        order.GhiChuNoiBo = info.PrivateDescription ?? order.GhiChuNoiBo;
+        order.TrangThaiDonHang = info.Status?.ToString() ?? order.TrangThaiDonHang;
+        order.NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : order.NgayXacNhan;
 
-        var totalShippingFee = item.Carrier?.CustomerShipFee
-                               ?? item.Carrier?.ShipFee
-                               ?? order.ShippingFee;
-        order.ShippingFee = totalShippingFee;
-
-        var vatFee = string.IsNullOrEmpty(taxCode) ? 0 : totalProductFee * 0.08m;
-        if (vatFee == 0 && item.Payment?.Vat?.Amount is > 0)
-        {
-            vatFee = item.Payment.Vat.Amount.Value;
-        }
-
-        var privateDescription = item.Info.PrivateDescription ?? string.Empty;
-        string? parsedTaxCode = null;
-        string? receiptFullName = null;
-        string? receiptPhoneNumber = null;
-        string? receiptAddress = null;
-        string? receiptEmail = null;
-        string? identityNumber = null;
-        bool? isExportInvoice = false;
-        HoaTheoMua.Repository.Enum.InvoiceType? invoiceType = null;
-
-        foreach (var line in privateDescription.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            if (line.StartsWith("MST:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Business;
-                parsedTaxCode = line.Replace("MST:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("Tên:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
-                receiptFullName = line.Replace("Tên:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("CCCD:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
-                identityNumber = line.Replace("CCCD:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("ĐC:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                invoiceType = HoaTheoMua.Repository.Enum.InvoiceType.Personal;
-                receiptAddress = line.Replace("ĐC:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("Email:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                receiptEmail = line.Replace("Email:", string.Empty).Trim();
-            }
-            else if (line.StartsWith("SĐT:", StringComparison.OrdinalIgnoreCase))
-            {
-                isExportInvoice = true;
-                receiptPhoneNumber = line.Replace("SĐT:", string.Empty).Trim();
-            }
-        }
-
-        order.TaxCode = parsedTaxCode ?? taxCode;
-        order.ReceiptFullName = receiptFullName;
-        order.ReceiptPhoneNumber = receiptPhoneNumber;
-        order.ReceiptAddress = receiptAddress;
-        order.ReceiptEmail = receiptEmail;
-        order.IdentityNumber = identityNumber;
-        order.IsExportInvoice = isExportInvoice;
-        order.InvoiceType = invoiceType;
-
-        order.ProductFee = totalProductFee;
-        order.ShippingFee = totalShippingFee;
-        order.Vat = vatFee;
-        order.TotalFee = totalProductFee + totalShippingFee + vatFee;
-        order.UpdatedAt = incomingUpdatedAt ?? DateTimeOffset.UtcNow;
-        updatedCount++;
+        order.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _appDbContext.SaveChangesAsync();
 
-        return $"Cập nhật {updatedCount} đơn; bỏ qua {ignoredCount} đơn.";
+        return "Cập nhật thành công đơn hàng trong bảng OrderNhanhVn";
     }
 
     public async Task<string> WebhookNhanhVnOrderDelete(NhanhOrderDeleteWebhookRequest request)
     {
         if (request?.Data == null || request.Data.Count == 0)
         {
-            throw new BadRequestException("Không có dữ liệu xoá đơn hàng");
+            return "Không có dữ liệu xoá đơn hàng";
         }
 
         var validNhanhOrderIds = request.Data
-            .Where(id => id > 0 && id <= int.MaxValue)
-            .Select(id => (int)id)
+            .Select(id => id.ToString())
             .ToHashSet();
 
-        var orders = await _appDbContext.Orders
+        var orders = await _appDbContext.OrderNhanhVns
             .Where(order => !order.IsDeleted
-                            && order.NhanhOrderId.HasValue
-                            && validNhanhOrderIds.Contains(order.NhanhOrderId.Value))
+                            && validNhanhOrderIds.Contains(order.IdDonHangNhanh!))
             .ToListAsync();
 
         foreach (var order in orders)
@@ -778,8 +620,8 @@ public class Service: IService
             await _appDbContext.SaveChangesAsync();
         }
 
-        var ignoredCount = request.Data.Count - orders.Count;//những đơn hàng tồn tại trong request nhưng không tồn tại trong db
-        return $"Xoá {orders.Count} đơn; bỏ qua {ignoredCount} đơn.";
+        var ignoredCount = request.Data.Count - orders.Count;
+        return $"Xoá {orders.Count} đơn trong bảng OrderNhanhVn; bỏ qua {ignoredCount} đơn.";
     }
 
     public async Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest? request)
