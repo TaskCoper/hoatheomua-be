@@ -94,6 +94,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         
         builder.Property(x => x.Position)
             .HasPrecision(28, 10);
+        
+        builder.Property(x => x.IsPin)
+            .HasDefaultValue(false);
 
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("now()");

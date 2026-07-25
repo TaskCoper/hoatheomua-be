@@ -95,8 +95,6 @@ public class Request
     
     public class MoveProductRequest
     {
-        public Guid? PreviousProductId { get; set; }
-
-        public Guid? NextProductId { get; set; }
+        public decimal Position { get; set; }
     }
 }

@@ -372,97 +372,25 @@ public class Service: IService
 
     public async Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request)
     {
-        const decimal initialPosition  = 0;
-        const decimal positionGap = 1000;
-
         if (request == null)
         {
-            throw new BadRequestException("Dữ liệu di chuyển không hợp lệ.");
-        }
-
-        if (request.PreviousProductId == id || request.NextProductId == id)
-        {
-            throw new BadRequestException(
-                "Sản phẩm không thể đứng trước hoặc sau chính nó.");
-        }
-
-        if (request.PreviousProductId.HasValue &&
-            request.NextProductId.HasValue &&
-            request.PreviousProductId == request.NextProductId)
-        {
-            throw new BadRequestException("Sản phẩm phía trước và phía sau không được giống nhau.");
+            throw new BadRequestException("Invalid movement data.");
         }
         
-        var product = await _dbContext.Products.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+        var product = await _dbContext.Products.FirstOrDefaultAsync(x => x.Id == id &&
+                                                                         !x.IsDeleted &&
+                                                                         x.IsPin == true);
 
         if (product == null)
         {
-            throw new BadRequestException("Không tìm thấy sản phầm.");
+            throw new BadRequestException("Only product with pin can update position");
         }
         
-        decimal? previousPosition = null;
-        decimal? nextPosition = null;
-
-        if (request.PreviousProductId.HasValue)
-        {
-            var queryPreviousPosition = _dbContext.Products.Where(x => x.Id == request.PreviousProductId && !x.IsDeleted);
-
-            var selectedPreviousPosition = queryPreviousPosition.Select(x => x.Position);
-            
-            previousPosition = await selectedPreviousPosition.FirstOrDefaultAsync();
-
-            if (previousPosition == null)
-            {
-                throw new BadRequestException("Không tìm thấy sản phẩm phía trước.");
-            }
-        }
-        
-        if (request.NextProductId.HasValue)
-        {
-            var queryNextPosition = _dbContext.Products.Where(x => x.Id == request.NextProductId && !x.IsDeleted);
-
-            var selectedNextPosition = queryNextPosition.Select(x => x.Position);
-            
-            nextPosition = await selectedNextPosition.FirstOrDefaultAsync();
-
-            if (nextPosition == null)
-            {
-                throw new BadRequestException("Không tìm thấy sản phẩm phía sau.");
-            }
-        }
-
-        decimal newPosition;
-
-        if (previousPosition == null && nextPosition == null)
-        {
-            //danh sách chỉ có 1 sản phầm 
-            newPosition = initialPosition;
-        } 
-        else if (previousPosition != null && nextPosition != null)
-        {
-            // Di chuyển lên đầu
-            newPosition = nextPosition.Value - positionGap;
-        }
-        else if (previousPosition != null && nextPosition == null)
-        {
-            // Di chuyển xuống cuối
-            newPosition = previousPosition.Value + positionGap;
-        }
-        else
-        {
-            if (previousPosition!.Value >= nextPosition!.Value)
-            {
-                throw new BadRequestException("Vị trí sản phẩm phía trước và phía sau không hợp lệ.");
-            }
-            // Di chuển vào giữa
-            newPosition = (previousPosition!.Value + nextPosition!.Value) / 2;
-        }
-        
-        product.Position = newPosition;
+        product.Position = request.Position;
         product.UpdatedAt = DateTimeOffset.UtcNow;
         
         await _dbContext.SaveChangesAsync();
-
+        
         return ApiResponseFactory.Base("Product position updated successfully.");
 
     }

@@ -76,6 +76,7 @@ public class Product : BaseEntity<Guid>, IAuditableEntity
     public string? Color { get; set; }
     public string? Origin { get; set; }
     public decimal Position { get; set; }
+    public bool IsPin { get; set; }
 
     public ICollection<CategoryProductDetail> CategoryProductDetails { get; set; } = new List<CategoryProductDetail>();
 
