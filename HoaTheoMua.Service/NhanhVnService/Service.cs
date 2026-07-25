@@ -2,8 +2,10 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -183,14 +185,14 @@ public class Service: IService
                     if (req == null) return "Thành công";
                     return await WebhookNhanhVnOrderAdd(req);
                 }
-
+                
                 case NhanhWebhookEvents.OrderUpdate:
                 {
                     var req = TryDeserialize<NhanhOrderUpdateWebhookRequest>(json);
                     if (req == null) return "Thành công";
                     return await WebhookNhanhVnOrderUpdate(req);
                 }
-
+                
                 case NhanhWebhookEvents.OrderDelete:
                 {
                     var req = TryDeserialize<NhanhOrderDeleteWebhookRequest>(json);
@@ -408,26 +410,30 @@ public class Service: IService
         {
             return "Không có dữ liệu thay đổi đơn hàng";
         }
-
+    
         var item = request.Data;
+        if (item.Info == null)
+        {
+            return "Không có dữ liệu thay đổi đơn hàng";
+        }
+
         var info = item.Info;
         var address = item.ShippingAddress;
-        var carrier = item.Carrier; 
+        var carrier = item.Carrier;
         var payment = item.Payment;
-
+    
         var idDonHangNhanh = info.Id.ToString();
-
+    
         var existingOrder = await _appDbContext.OrderNhanhVns
             .FirstOrDefaultAsync(x => !x.IsDeleted && x.IdDonHangNhanh == idDonHangNhanh);
-
+    
         if (existingOrder != null)
         {
             return "Có đơn hàng đã tồn tại trong hệ thống.";
         }
-
+    
         var products = item.Products ?? new List<NhanhOrderProductDto>();
-        var firstProduct = products.FirstOrDefault();
-
+    
         var orderNhanhVn = new HoaTheoMua.Repository.Entity.OrderNhanhVn
         {
             Id = Guid.NewGuid(),
@@ -439,7 +445,7 @@ public class Service: IService
             NhanVienChamSocKhachHang = info.CustomerCare?.Name != null && info.CustomerCare.Id != 0 ? info.CustomerCare.Name : null,
             Nguon = item.Channel?.TrafficSource?.Name,
             KhoTaoDon = info.DepotId?.ToString(),
-
+    
             TenKhachHang = address?.Name,
             SoDienThoaiKhachHang = address?.Mobile,
             EmailKhachHang = address?.Email,
@@ -447,63 +453,75 @@ public class Service: IService
             ThanhPhoKhachHang = address?.CityId?.ToString(),
             QuanHuyenKhachHang = address?.DistrictId?.ToString(),
             PhuongXaKhachHang = address?.WardId?.ToString(),
-
-            TenSanPham = string.Join(", ", products.Select(p => p.Name)),
-            MaSanPham = string.Join(", ", products.Select(p => p.Code)),
-            SoLuong = (int?)products.Sum(p => p.Quantity ?? 0),
-            GiaBan = (decimal?)(firstProduct?.Price ?? 0),
-            TienVatSanPham = (decimal?)products.Sum(p => p.Vat?.Amount ?? 0),
-            ChietKhauMotSanPham = (decimal?)(firstProduct?.Discount ?? 0),
-            ChietKhauSanPham = (decimal?)products.Sum(p => p.Discount ?? 0),
-            GiaSanPhamSauChietKhau = (decimal?)products.Sum(p => (p.Price ?? 0) - (p.Discount ?? 0)),
-            GhiChuSanPham = string.Join("; ", products.Select(p => p.Description).Where(d => !string.IsNullOrEmpty(d))),
-            DonViTinh = string.Join(", ", products.Select(p => p.Unit?.Name).Where(u => !string.IsNullOrEmpty(u)).Distinct()),
-            KhoiLuongSanPham = (decimal?)(firstProduct?.Weight ?? 0),
-
-            TongKhoiLuong = (decimal?)products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0)),
-            GiaTriDonHang = (decimal?)(products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (decimal?)(payment?.Vat?.Amount ?? 0),
-            PhiVanChuyen = (decimal?)(carrier?.ShipFee ?? 0),
-            PhiShipBaoKhach = (decimal?)(carrier?.CustomerShipFee ?? 0),
-            PhiThuTienHo = (decimal?)(carrier?.CodFee ?? 0),
-            PhiKhaiGia = (decimal?)(carrier?.DeclaredFee ?? 0),
-            PhiChuyenHoan = (decimal?)(carrier?.ReturnFee ?? 0),
-
+            
+            TongKhoiLuong = products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0)),
+            GiaTriDonHang = (products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (payment?.Vat?.Amount ?? 0),
+            PhiVanChuyen = (carrier?.ShipFee ?? 0),
+            PhiShipBaoKhach = (carrier?.CustomerShipFee ?? 0),
+            PhiThuTienHo = (carrier?.CodFee ?? 0),
+            PhiKhaiGia = (carrier?.DeclaredFee ?? 0),
+            PhiChuyenHoan = (carrier?.ReturnFee ?? 0),
+    
             HangVanChuyen = carrier?.Name,
             MaVanDon = carrier?.CarrierCode,
             DichVuVanChuyen = carrier?.Service?.Name,
             CanNangHangVanChuyen = carrier?.Weight,
-
-            TienChuyenKhoan = (decimal?)(payment?.Transfer?.Amount ?? 0),
+    
+            TienChuyenKhoan = (payment?.Transfer?.Amount ?? 0),
             TaiKhoanChuyenKhoan = payment?.Transfer?.AccountId?.ToString(),
-            TienDatCoc = (decimal?)(payment?.Deposit?.Amount ?? 0),
+            TienDatCoc = (payment?.Deposit?.Amount ?? 0),
             TaiKhoanDatCoc = payment?.Deposit?.AccountId?.ToString(),
-            TienChietKhau = (decimal?)(payment?.Discount?.Amount ?? 0),
-            TienVat = (decimal?)(payment?.Vat?.Amount ?? 0),
+            TienChietKhau = (payment?.Discount?.Amount ?? 0),
+            TienVat = (payment?.Vat?.Amount ?? 0),
             TyLeVat = payment?.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment?.Vat?.Value?.ToString() : null,
-            TienQuetThe = (decimal?)(payment?.Credit?.Amount ?? 0),
+            TienQuetThe = (payment?.Credit?.Amount ?? 0),
             TaiKhoanQuetThe = payment?.Credit?.AccountId?.ToString(),
             MaGiaoDichQuetThe = payment?.Credit?.Code,
-            TienTieuDiem = (decimal?)(payment?.UsedPoints?.Amount ?? 0),
+            TienTieuDiem = (payment?.UsedPoints?.Amount ?? 0),
             TrangThaiThanhToanDoanhNghiep = payment?.BusinessPaymentStatus?.ToString(),
-
+    
             GhiChuCuaKhach = info.Description,
             GhiChuNoiBo = info.PrivateDescription,
             TrangThaiDonHang = info.Status?.ToString(),
-
+    
             NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : null,
             NgayGuiHangVanChuyen = !string.IsNullOrEmpty(carrier?.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate) ? sendDate.ToUniversalTime() : null,
             NgayThanhCong = !string.IsNullOrEmpty(carrier?.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate) ? deliveryDate.ToUniversalTime() : null,
-
+    
             MaGiamGia = payment?.CouponCode,
             IdDonGoc = item.OriginalOrder?.Id?.ToString(),
-
+    
             CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
             UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
         };
 
+        foreach (var p in products)
+        {
+            orderNhanhVn.OrderNhanhVnDetails.Add(new HoaTheoMua.Repository.Entity.OrderNhanhVnDetail
+            {
+                Id = Guid.NewGuid(),
+                OrderNhanhVnId = orderNhanhVn.Id,
+                TenSanPham = p.Name,
+                MaSanPham = p.Code,
+                SoLuong = (int?)p.Quantity,
+                GiaBan = p.Price,
+                TienVatSanPham = p.Vat?.Amount,
+                ChietKhauSanPham = p.Discount,
+                GiaSanPhamSauChietKhau = (p.Price ?? 0) - (p.Discount ?? 0),
+                GhiChuSanPham = p.Description,
+                DonViTinh = p.Unit?.Name,
+                KhoiLuongSanPham = p.Weight,
+                Imei = p.Imei?.Code,
+                LoHang = p.Batch?.Name,
+                GiaVon = p.AverageCost,
+                CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+                UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
+            });
+        }
+
         await _appDbContext.OrderNhanhVns.AddAsync(orderNhanhVn);
         await _appDbContext.SaveChangesAsync();
-
+    
         return "Thêm mới thành công 1 đơn hàng vào bảng OrderNhanhVn";
     }
 
@@ -513,26 +531,30 @@ public class Service: IService
         {
             return "Không có dữ liệu cập nhật đơn hàng";
         }
-
+    
         var item = request.Data;
+        if (item.Info == null)
+        {
+            return "Không có dữ liệu cập nhật đơn hàng";
+        }
+
         var info = item.Info;
         var address = item.ShippingAddress;
         var carrier = item.Carrier;
         var payment = item.Payment;
-
+    
         var idDonHangNhanh = info.Id.ToString();
-
+    
         var order = await _appDbContext.OrderNhanhVns
             .FirstOrDefaultAsync(x => !x.IsDeleted && x.IdDonHangNhanh == idDonHangNhanh);
-
+    
         if (order == null)
         {
             return "Đơn hàng không tồn tại trong hệ thống.";
         }
-
+    
         var products = item.Products ?? new List<NhanhOrderProductDto>();
-        var firstProduct = products.FirstOrDefault();
-
+    
         order.LoaiDon = info.Type?.ToString() ?? order.LoaiDon;
         order.ThoiGianDonHang = info.CreatedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.CreatedAt.Value) : order.ThoiGianDonHang;
         order.NguoiTaoDon = info.CreatedBy?.Name ?? order.NguoiTaoDon;
@@ -540,7 +562,7 @@ public class Service: IService
         order.NhanVienChamSocKhachHang = info.CustomerCare?.Name != null && info.CustomerCare.Id != 0 ? info.CustomerCare.Name : order.NhanVienChamSocKhachHang;
         order.Nguon = item.Channel?.TrafficSource?.Name ?? order.Nguon;
         order.KhoTaoDon = info.DepotId?.ToString() ?? order.KhoTaoDon;
-
+    
         if (address != null)
         {
             order.TenKhachHang = address.Name ?? order.TenKhachHang;
@@ -551,24 +573,47 @@ public class Service: IService
             order.QuanHuyenKhachHang = address.DistrictId?.ToString() ?? order.QuanHuyenKhachHang;
             order.PhuongXaKhachHang = address.WardId?.ToString() ?? order.PhuongXaKhachHang;
         }
-
+    
         if (products.Any())
         {
-            order.TenSanPham = string.Join(", ", products.Select(p => p.Name));
-            order.MaSanPham = string.Join(", ", products.Select(p => p.Code));
-            order.SoLuong = (int?)products.Sum(p => p.Quantity ?? 0);
-            order.GiaBan = (decimal?)(firstProduct?.Price ?? 0);
-            order.TienVatSanPham = (decimal?)products.Sum(p => p.Vat?.Amount ?? 0);
-            order.ChietKhauMotSanPham = (decimal?)(firstProduct?.Discount ?? 0);
-            order.ChietKhauSanPham = (decimal?)products.Sum(p => p.Discount ?? 0);
-            order.GiaSanPhamSauChietKhau = (decimal?)products.Sum(p => (p.Price ?? 0) - (p.Discount ?? 0));
-            order.GhiChuSanPham = string.Join("; ", products.Select(p => p.Description).Where(d => !string.IsNullOrEmpty(d)));
-            order.DonViTinh = string.Join(", ", products.Select(p => p.Unit?.Name).Where(u => !string.IsNullOrEmpty(u)).Distinct());
-            order.KhoiLuongSanPham = (decimal?)(firstProduct?.Weight ?? 0);
-            order.TongKhoiLuong = (decimal?)products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0));
-            order.GiaTriDonHang = (decimal?)(products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (decimal?)(payment?.Vat?.Amount ?? 0);
-        }
+            order.TongKhoiLuong = products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0));
+            order.GiaTriDonHang = (products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (decimal?)(payment?.Vat?.Amount ?? 0);
 
+            var existingDetails = await _appDbContext.OrderNhanhVnDetails
+                .Where(x => x.OrderNhanhVnId == order.Id && !x.IsDeleted)
+                .ToListAsync();
+
+            foreach (var detail in existingDetails)
+            {
+                detail.IsDeleted = true;
+                detail.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
+            }
+
+            foreach (var p in products)
+            {
+                _appDbContext.OrderNhanhVnDetails.Add(new HoaTheoMua.Repository.Entity.OrderNhanhVnDetail
+                {
+                    Id = Guid.NewGuid(),
+                    OrderNhanhVnId = order.Id,
+                    TenSanPham = p.Name,
+                    MaSanPham = p.Code,
+                    SoLuong = (int?)p.Quantity,
+                    GiaBan = p.Price,
+                    TienVatSanPham = p.Vat?.Amount,
+                    ChietKhauSanPham = p.Discount,
+                    GiaSanPhamSauChietKhau = (p.Price ?? 0) - (p.Discount ?? 0),
+                    GhiChuSanPham = p.Description,
+                    DonViTinh = p.Unit?.Name,
+                    KhoiLuongSanPham = p.Weight,
+                    Imei = p.Imei?.Code,
+                    LoHang = p.Batch?.Name,
+                    GiaVon = p.AverageCost,
+                    CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+                    UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
+                });
+            }
+        }
+    
         if (carrier != null)
         {
             order.PhiVanChuyen = carrier.ShipFee ?? order.PhiVanChuyen;
@@ -580,74 +625,80 @@ public class Service: IService
             order.MaVanDon = carrier.CarrierCode ?? order.MaVanDon;
             order.DichVuVanChuyen = carrier.Service?.Name ?? order.DichVuVanChuyen;
             order.CanNangHangVanChuyen = carrier.Weight ?? order.CanNangHangVanChuyen;
-
+    
             if (!string.IsNullOrEmpty(carrier.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate))
                 order.NgayGuiHangVanChuyen = sendDate.ToUniversalTime();
-
+    
             if (!string.IsNullOrEmpty(carrier.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate))
                 order.NgayThanhCong = deliveryDate.ToUniversalTime();
         }
-
+    
         if (payment != null)
         {
-            order.TienChuyenKhoan = (decimal?)(payment.Transfer?.Amount ?? (long?)order.TienChuyenKhoan);
+            order.TienChuyenKhoan = (payment.Transfer?.Amount ?? (long?)order.TienChuyenKhoan);
             order.TaiKhoanChuyenKhoan = payment.Transfer?.AccountId?.ToString() ?? order.TaiKhoanChuyenKhoan;
-            order.TienDatCoc = (decimal?)(payment.Deposit?.Amount ?? (long?)order.TienDatCoc);
+            order.TienDatCoc = (payment.Deposit?.Amount ?? (long?)order.TienDatCoc);
             order.TaiKhoanDatCoc = payment.Deposit?.AccountId?.ToString() ?? order.TaiKhoanDatCoc;
-            order.TienChietKhau = (decimal?)(payment.Discount?.Amount ?? (long?)order.TienChietKhau);
-            order.TienVat = (decimal?)(payment.Vat?.Amount ?? (long?)order.TienVat);
+            order.TienChietKhau = (payment.Discount?.Amount ?? (long?)order.TienChietKhau);
+            order.TienVat = (payment.Vat?.Amount ?? (long?)order.TienVat);
             order.TyLeVat = payment.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment.Vat.Value?.ToString() : order.TyLeVat;
-            order.TienQuetThe = (decimal?)(payment.Credit?.Amount ?? (decimal?)order.TienQuetThe);
+            order.TienQuetThe = (payment.Credit?.Amount ?? order.TienQuetThe);
             order.TaiKhoanQuetThe = payment.Credit?.AccountId?.ToString() ?? order.TaiKhoanQuetThe;
             order.MaGiaoDichQuetThe = payment.Credit?.Code ?? order.MaGiaoDichQuetThe;
-            order.TienTieuDiem = (decimal?)(payment.UsedPoints?.Amount ?? (decimal?)order.TienTieuDiem);
+            order.TienTieuDiem = (payment.UsedPoints?.Amount ?? order.TienTieuDiem);
             order.TrangThaiThanhToanDoanhNghiep = payment.BusinessPaymentStatus?.ToString() ?? order.TrangThaiThanhToanDoanhNghiep;
             order.MaGiamGia = payment.CouponCode ?? order.MaGiamGia;
         }
-
+    
         order.GhiChuCuaKhach = info.Description ?? order.GhiChuCuaKhach;
         order.GhiChuNoiBo = info.PrivateDescription ?? order.GhiChuNoiBo;
         order.TrangThaiDonHang = info.Status?.ToString() ?? order.TrangThaiDonHang;
         order.NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value).ToUniversalTime() : order.NgayXacNhan;
-
+    
         order.NguonDonHang = item.Channel?.SaleChannel?.ToString() ?? order.NguonDonHang;
         order.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
-
+    
         await _appDbContext.SaveChangesAsync();
-
+    
         return "Cập nhật thành công đơn hàng trong bảng OrderNhanhVn";
     }
-
+    
     public async Task<string> WebhookNhanhVnOrderDelete(NhanhOrderDeleteWebhookRequest request)
     {
         if (request?.Data == null || request.Data.Count == 0)
         {
             return "Không có dữ liệu xoá đơn hàng";
         }
-
+    
         var validNhanhOrderIds = request.Data
             .Select(id => id.ToString())
             .ToHashSet();
-
+    
         var orders = await _appDbContext.OrderNhanhVns
             .Where(order => !order.IsDeleted
                             && validNhanhOrderIds.Contains(order.IdDonHangNhanh!))
+            .Include(x => x.OrderNhanhVnDetails)
             .ToListAsync();
 
         foreach (var order in orders)
         {
             order.IsDeleted = true;
             order.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
-        }
 
+            foreach (var detail in order.OrderNhanhVnDetails.Where(x => !x.IsDeleted))
+            {
+                detail.IsDeleted = true;
+                detail.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
+            }
+        }
+    
         if (orders.Count > 0)
         {
             await _appDbContext.SaveChangesAsync();
         }
-
+    
         var ignoredCount = request.Data.Count - orders.Count;
-        return $"Xoá {orders.Count} đơn trong bảng OrderNhanhVn; bỏ qua {ignoredCount} đơn.";
-    }
+        return $"Xoá {orders.Count} đơn trong bảng OrderNhanhVn; bỏ qua {ignoredCount} đơn.";}
 
     public async Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest? request)
     {
@@ -803,5 +854,223 @@ public class Service: IService
         }
 
         return $"Xóa thành công {productsToDelete.Count} sản phẩm từ Nhanh.vn.";
+    }
+
+    public async Task<OrderNhanhVnDto> GetOrderNhanhVnById(Guid id)
+    {
+        var orderQuery = _appDbContext.OrderNhanhVns
+            .Include(x => x.OrderNhanhVnDetails)
+            .Where(x => !x.IsDeleted && x.Id == id);
+
+        var order = await orderQuery.FirstOrDefaultAsync();
+
+        if (order == null)
+        {
+            throw new NotFoundException($"OrderNhanhVn with ID {id} not found.");
+        }
+
+        var orderDto = MapOrderNhanhVnToDto(order);
+
+        return orderDto;
+    }
+
+    public async Task<BasePaginationResponse> GetOrderNhanhVnPagination(int pageIndex, int pageSize)
+    {
+        if (pageIndex <= 0)
+        {
+            pageIndex = 1;
+        }
+
+        if (pageSize <= 0)
+        {
+            pageSize = 10;
+        }
+        var orderQuery = _appDbContext.OrderNhanhVns
+           .Include(x => x.OrderNhanhVnDetails)
+           .Where(x => !x.IsDeleted);
+
+        var totalCount = await orderQuery.CountAsync();
+
+        orderQuery = orderQuery.OrderByDescending(x => x.CreatedAt);
+
+        var skip = (pageIndex - 1) * pageSize;
+
+        orderQuery = orderQuery.Skip(skip);
+        orderQuery = orderQuery.Take(pageSize);
+
+        var orders = await orderQuery.ToListAsync();
+
+        var orderDtos = new List<OrderNhanhVnDto>();
+
+        foreach (var order in orders)
+        {
+            var orderDto = MapOrderNhanhVnToDto(order);
+            orderDtos.Add(orderDto);
+        }
+
+        var response = ApiResponseFactory.BasePagination(orderDtos, pageIndex, pageSize, totalCount);
+
+        return response;
+    }
+
+
+    private OrderNhanhVnDto MapOrderNhanhVnToDto(Repository.Entity.OrderNhanhVn order)
+    {
+        var dto = new OrderNhanhVnDto
+        {
+            Id = order.Id,
+            IdDonHangNhanh = order.IdDonHangNhanh,
+            IdDonHangApi = order.IdDonHangApi,
+            LoaiDon = order.LoaiDon,
+            ThoiGianDonHang = order.ThoiGianDonHang,
+            NguoiTaoDon = order.NguoiTaoDon,
+            CuaHang = order.CuaHang,
+            Nguon = order.Nguon,
+            KhoTaoDon = order.KhoTaoDon,
+            ThanhPhoKhoHang = order.ThanhPhoKhoHang,
+            QuanHuyenKhoHang = order.QuanHuyenKhoHang,
+            KhoLayHang = order.KhoLayHang,
+            ThanhPhoLayHang = order.ThanhPhoLayHang,
+            QuanHuyenLayHang = order.QuanHuyenLayHang,
+            TenKhachHang = order.TenKhachHang,
+            MaKhachHang = order.MaKhachHang,
+            SoDienThoaiKhachHang = order.SoDienThoaiKhachHang,
+            EmailKhachHang = order.EmailKhachHang,
+            CapDoKhachHang = order.CapDoKhachHang,
+            NgaySinhKhachHang = order.NgaySinhKhachHang,
+            ThanhPhoKhachHang = order.ThanhPhoKhachHang,
+            QuanHuyenKhachHang = order.QuanHuyenKhachHang,
+            PhuongXaKhachHang = order.PhuongXaKhachHang,
+            DiaChiKhachHang = order.DiaChiKhachHang,
+            TongKhoiLuong = order.TongKhoiLuong,
+            GiaTriDonHang = order.GiaTriDonHang,
+            PhiVanChuyen = order.PhiVanChuyen,
+            PhiVuotCan = order.PhiVuotCan,
+            PhiKhaiGia = order.PhiKhaiGia,
+            PhiChuyenHoan = order.PhiChuyenHoan,
+            PhiThuTienHo = order.PhiThuTienHo,
+            PhiShipBaoKhach = order.PhiShipBaoKhach,
+            CongVanChuyen = order.CongVanChuyen,
+            HangVanChuyen = order.HangVanChuyen,
+            DichVuVanChuyen = order.DichVuVanChuyen,
+            SoNgayChuyenHang = order.SoNgayChuyenHang,
+            MaVanDon = order.MaVanDon,
+            BienBan = order.BienBan,
+            TienChuyenKhoan = order.TienChuyenKhoan,
+            TaiKhoanChuyenKhoan = order.TaiKhoanChuyenKhoan,
+            TienChietKhau = order.TienChietKhau,
+            TienDatCoc = order.TienDatCoc,
+            TaiKhoanDatCoc = order.TaiKhoanDatCoc,
+            TongThu = order.TongThu,
+            TaiKhoanQuetThe = order.TaiKhoanQuetThe,
+            TienQuetThe = order.TienQuetThe,
+            MaGiaoDichQuetThe = order.MaGiaoDichQuetThe,
+            GhiChuNoiBo = order.GhiChuNoiBo,
+            GhiChuCuaKhach = order.GhiChuCuaKhach,
+            TrangThaiHoaDonDienTu = order.TrangThaiHoaDonDienTu,
+            SoHoaDonDienTu = order.SoHoaDonDienTu,
+            NgayXuatHoaDonDienTu = order.NgayXuatHoaDonDienTu,
+            MaCoQuanThueHoaDonDienTu = order.MaCoQuanThueHoaDonDienTu,
+            TrangThaiDonHang = order.TrangThaiDonHang,
+            LyDoHuy = order.LyDoHuy,
+            NhanVienChamSocKhachHang = order.NhanVienChamSocKhachHang,
+            NgayXacNhan = order.NgayXacNhan,
+            NgayGuiHangVanChuyen = order.NgayGuiHangVanChuyen,
+            NgayBanGiao = order.NgayBanGiao,
+            NgayThanhCong = order.NgayThanhCong,
+            GioThanhCong = order.GioThanhCong,
+            NguonDonHang = order.NguonDonHang,
+            GhiChuHangVanChuyen = order.GhiChuHangVanChuyen,
+            CanNangHangVanChuyen = order.CanNangHangVanChuyen,
+            MaGiamGia = order.MaGiamGia,
+            IdDonTra = order.IdDonTra,
+            IdDonGoc = order.IdDonGoc,
+            SoThuTuTheoNgay = order.SoThuTuTheoNgay,
+            BienBanBanGiao = order.BienBanBanGiao,
+            MaAffiliate = order.MaAffiliate,
+            NhomKhachHang = order.NhomKhachHang,
+            TienVat = order.TienVat,
+            TyLeVat = order.TyLeVat,
+            TienTieuDiem = order.TienTieuDiem,
+            Nhan = order.Nhan,
+            NgayHenThanhToan = order.NgayHenThanhToan,
+            TrangThaiDoiSoat = order.TrangThaiDoiSoat,
+            NgayDoiSoat = order.NgayDoiSoat,
+            TrangThaiThanhToanDoanhNghiep = order.TrangThaiThanhToanDoanhNghiep,
+            NgayThanhToanDoanhNghiep = order.NgayThanhToanDoanhNghiep,
+            NhanVienBanHang = order.NhanVienBanHang,
+            LoiNhuan = order.LoiNhuan,
+            TyLeLoiNhuan = order.TyLeLoiNhuan,
+            FacebookPsid = order.FacebookPsid,
+            FacebookPageUserId = order.FacebookPageUserId,
+            SoDienThoaiFacebook = order.SoDienThoaiFacebook,
+            GiaTriFacebook = order.GiaTriFacebook,
+            IdPhapNhan = order.IdPhapNhan,
+            MaSoThue = order.MaSoThue,
+            EmailNguoiLienHe = order.EmailNguoiLienHe,
+            EmailNguoiLienHeThuHai = order.EmailNguoiLienHeThuHai,
+            SoDienThoaiNguoiLienHe = order.SoDienThoaiNguoiLienHe,
+            TenNguoiLienHe = order.TenNguoiLienHe,
+            MaThamChieu = order.MaThamChieu,
+            DiaChiKhachHangTrenHoaDonDienTu = order.DiaChiKhachHangTrenHoaDonDienTu,
+            TenKhachHangTrenHoaDonDienTu = order.TenKhachHangTrenHoaDonDienTu,
+            LoaiKhachHangHoaDon = order.LoaiKhachHangHoaDon,
+            CoLayHoaDon = order.CoLayHoaDon,
+            MaCoQuanThueHoaDon = order.MaCoQuanThueHoaDon,
+            SoHoaDon = order.SoHoaDon,
+            NgayPhatHanhHoaDon = order.NgayPhatHanhHoaDon,
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt
+        };
+        
+        var orderDetailDtos = new List<OrderNhanhVnDetailDto>();
+
+        foreach (var orderDetail in order.OrderNhanhVnDetails)
+        {
+            if (!orderDetail.IsDeleted)
+            {
+                var orderDetailDto = MapOrderNhanhVnDetailToDto(orderDetail);
+                orderDetailDtos.Add(orderDetailDto);
+            }
+        }
+
+        dto.OrderNhanhVnDetails = orderDetailDtos;
+
+        return dto;
+    }
+
+    private OrderNhanhVnDetailDto MapOrderNhanhVnDetailToDto(OrderNhanhVnDetail detail)
+    {
+        return new OrderNhanhVnDetailDto
+        {
+            Id = detail.Id,
+            OrderNhanhVnId = detail.OrderNhanhVnId,
+            TenSanPham = detail.TenSanPham,
+            QuaTangKem = detail.QuaTangKem,
+            Imei = detail.Imei,
+            LoHang = detail.LoHang,
+            MaSanPhamCha = detail.MaSanPhamCha,
+            TenSanPhamCha = detail.TenSanPhamCha,
+            MaSanPham = detail.MaSanPham,
+            MaVach = detail.MaVach,
+            DanhMucSanPham = detail.DanhMucSanPham,
+            KhoiLuongSanPham = detail.KhoiLuongSanPham,
+            GiaBan = detail.GiaBan,
+            LoaiGiaSanPham = detail.LoaiGiaSanPham,
+            GiaBanTruocVat = detail.GiaBanTruocVat,
+            TienVatSanPham = detail.TienVatSanPham,
+            SoLuong = detail.SoLuong,
+            ChietKhauMotSanPham = detail.ChietKhauMotSanPham,
+            ChietKhauSanPham = detail.ChietKhauSanPham,
+            GiaSanPhamSauChietKhau = detail.GiaSanPhamSauChietKhau,
+            GhiChuSanPham = detail.GhiChuSanPham,
+            GiaVon = detail.GiaVon,
+            GiaVonDonHang = detail.GiaVonDonHang,
+            DonViTinh = detail.DonViTinh,
+            SoLuongDonViNhoNhat = detail.SoLuongDonViNhoNhat,
+            NhanVienDongGoi = detail.NhanVienDongGoi,
+            CreatedAt = detail.CreatedAt,
+            UpdatedAt = detail.UpdatedAt
+        };
     }
 }
