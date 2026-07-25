@@ -587,8 +587,29 @@ public class NhanhOrderInfoDto
     [JsonPropertyName("privateDescription")]
     public string? PrivateDescription { get; set; }
 
+    [JsonPropertyName("orderPartDeliveries")]
+    public List<NhanhOrderPartDeliveryDto>? OrderPartDeliveries { get; set; }
+
     [JsonPropertyName("trackingUrl")]
     public string? TrackingUrl { get; set; }
+}
+
+public class NhanhOrderPartDeliveryDto
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; set; }
+
+    [JsonPropertyName("type")]
+    public int? Type { get; set; }
+
+    [JsonPropertyName("totalQuantity")]
+    public decimal? TotalQuantity { get; set; }
+
+    [JsonPropertyName("totalProductAmount")]
+    public decimal? TotalProductAmount { get; set; }
+
+    [JsonPropertyName("status")]
+    public int? Status { get; set; }
 }
 
 public class NhanhEmployeeDto
@@ -602,6 +623,9 @@ public class NhanhEmployeeDto
 
 public class NhanhOrderChannelDto
 {
+    [JsonPropertyName("ecomOrderId")]
+    public long? EcomOrderId { get; set; }
+
     [JsonPropertyName("appOrderId")]
     public string? AppOrderId { get; set; }
 
@@ -654,7 +678,7 @@ public class NhanhFacebookChannelDto
 public class NhanhShippingAddressDto
 {
     [JsonPropertyName("id")]
-    public string? Id { get; set; }
+    public long? Id { get; set; }
 
     [JsonPropertyName("name")]
     public string? Name { get; set; }
@@ -753,7 +777,7 @@ public class NhanhProductVatDto
 public class NhanhProductImeiDto
 {
     [JsonPropertyName("id")]
-    public long? Id { get; set; }
+    public string? Id { get; set; }
 
     [JsonPropertyName("code")]
     public string? Code { get; set; }
@@ -884,6 +908,9 @@ public class NhanhSendCarrierDto
 
 public class NhanhPaymentDto
 {
+    [JsonPropertyName("businessPaymentStatus")]
+    public int? BusinessPaymentStatus { get; set; }
+
     [JsonPropertyName("couponCode")]
     public string? CouponCode { get; set; }
 
