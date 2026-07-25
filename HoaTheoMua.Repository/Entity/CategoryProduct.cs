@@ -6,9 +6,9 @@ namespace HoaTheoMua.Repository.Entity;
 public class CategoryProduct : BaseEntity<Guid>, IAuditableEntity
 {
     public required string Name { get; set; }
-    public string? Name_En { get; set; }
-    public string? Description { get; set; }
-    public string? Description_En { get; set; }
+    public required string Name_En { get; set; }
+    public required string Description { get; set; }
+    public required string Description_En { get; set; }
     public int? Position { get; set; }
     public string? MetaData { get; set; }
     public DateTimeOffset? StartTime { get; set; }

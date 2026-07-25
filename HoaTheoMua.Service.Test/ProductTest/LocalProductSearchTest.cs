@@ -167,6 +167,9 @@ public class LocalProductSearchTest
         {
             Id = Guid.NewGuid(),
             Name = "Hoa Tươi",
+            Name_En = "Fresh Flowers",
+            Description = "Hoa tươi",
+            Description_En = "Fresh Flowers",
             Type = CategoryProductType.Fix,
             IsActive = true
         };
@@ -211,8 +214,8 @@ public class LocalProductSearchTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var c1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cate 1", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
-        var c2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cate 2", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
+        var c1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cate 1", Name_En = "Cate 1", Description = "Cate 1", Description_En = "Cate 1", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
+        var c2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cate 2", Name_En = "Cate 2", Description = "Cate 2", Description_En = "Cate 2", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
 
         var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", IsDeleted = false };
         var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", IsDeleted = false };
@@ -269,8 +272,8 @@ public class LocalProductSearchTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var c1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "C1", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
-        var c2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "C2", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
+        var c1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "C1", Name_En = "C1", Description = "C1", Description_En = "C1", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
+        var c2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "C2", Name_En = "C2", Description = "C2", Description_En = "C2", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
 
         var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", Price = 50, IsDeleted = false };
         var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", Price = 100, IsDeleted = false };

@@ -7,9 +7,9 @@ public class Request
     public class CreateCategoryProductRequest
     {
         public required string name { get; set; }
-        public string? name_En { get; set; }
-        public string? description { get; set; }
-        public string? description_En { get; set; }
+        public required string name_En { get; set; }
+        public required string description { get; set; }
+        public required string description_En { get; set; }
         public string? metaData { get; set; }
         public DateTimeOffset? startTime { get; set; }
         public DateTimeOffset? endTime { get; set; }
@@ -21,9 +21,9 @@ public class Request
     public class UpdateCategoryProductRequest
     {
         public required string name { get; set; }
-        public string? name_En { get; set; }
-        public string? description { get; set; }
-        public string? description_En { get; set; }
+        public required string name_En { get; set; }
+        public required string description { get; set; }
+        public required string description_En { get; set; }
         public int? position { get; set; }
         public string? metaData { get; set; }
         public DateTimeOffset? startTime { get; set; }

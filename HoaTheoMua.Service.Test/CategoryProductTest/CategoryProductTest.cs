@@ -50,6 +50,9 @@ public class CategoryProductTest
         var request = new Request.CreateCategoryProductRequest
         {
             name = "Sale Mùa Hè",
+            name_En = "Summer Sale",
+            description = "Mô tả sale mùa hè",
+            description_En = "Description summer sale",
             type = CategoryProductType.Campaign,
             startTime = DateTimeOffset.UtcNow,
             endTime = DateTimeOffset.UtcNow.AddDays(7),
@@ -81,6 +84,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Mùa Đông",
+            Name_En = "Winter",
+            Description = "Mùa đông",
+            Description_En = "Winter",
             Type = CategoryProductType.Fix,
             IsActive = true,
             IsDeleted = false
@@ -91,6 +97,9 @@ public class CategoryProductTest
         var request = new Request.CreateCategoryProductRequest
         {
             name = "Mùa Đông",
+            name_En = "Winter",
+            description = "Mùa đông",
+            description_En = "Winter",
             type = CategoryProductType.Fix
         };
 
@@ -109,6 +118,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Root Category",
+            Name_En = "Root Category",
+            Description = "Root Category",
+            Description_En = "Root Category",
             Type = CategoryProductType.Fix,
             IsActive = true
         };
@@ -116,6 +128,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Child Category",
+            Name_En = "Child Category",
+            Description = "Child Category",
+            Description_En = "Child Category",
             Type = CategoryProductType.Fix,
             ParentCategoryProductId = root.Id,
             IsActive = true
@@ -126,6 +141,9 @@ public class CategoryProductTest
         var request = new Request.CreateCategoryProductRequest
         {
             name = "Grandchild Category",
+            name_En = "Grandchild Category",
+            description = "Grandchild Category",
+            description_En = "Grandchild Category",
             type = CategoryProductType.Fix,
             parentId = child.Id
         };
@@ -150,6 +168,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Quần Áo",
+            Name_En = "Clothes",
+            Description = "Quần áo",
+            Description_En = "Clothes",
             Type = CategoryProductType.Fix,
             IsActive = true
         };
@@ -157,6 +178,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Áo Thun",
+            Name_En = "T-Shirt",
+            Description = "Áo thun",
+            Description_En = "T-Shirt",
             Type = CategoryProductType.Fix,
             ParentCategoryProductId = parent1.Id,
             IsActive = true
@@ -165,6 +189,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Giày Dép",
+            Name_En = "Shoes",
+            Description = "Giày dép",
+            Description_En = "Shoes",
             Type = CategoryProductType.Fix,
             IsActive = true
         };
@@ -195,6 +222,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Cũ",
+            Name_En = "Old",
+            Description = "Cũ",
+            Description_En = "Old",
             Type = CategoryProductType.Fix,
             IsActive = true
         };
@@ -204,6 +234,9 @@ public class CategoryProductTest
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "Mới",
+            name_En = "New",
+            description = "Mới",
+            description_En = "New",
             type = CategoryProductType.Campaign,
             isActive = false,
             startTime = DateTimeOffset.UtcNow,
@@ -234,6 +267,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Electronics",
+            Name_En = "Electronics",
+            Description = "Electronics",
+            Description_En = "Electronics",
             Type = CategoryProductType.Fix,
             IsActive = true
         };
@@ -281,6 +317,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Parent",
+            Name_En = "Parent",
+            Description = "Parent",
+            Description_En = "Parent",
             Type = CategoryProductType.Fix,
             IsActive = true
         };
@@ -288,6 +327,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Child",
+            Name_En = "Child",
+            Description = "Child",
+            Description_En = "Child",
             Type = CategoryProductType.Fix,
             ParentCategoryProductId = parent.Id,
             IsActive = true
@@ -296,6 +338,9 @@ public class CategoryProductTest
         {
             Id = Guid.NewGuid(),
             Name = "Grandchild",
+            Name_En = "Grandchild",
+            Description = "Grandchild",
+            Description_En = "Grandchild",
             Type = CategoryProductType.Fix,
             ParentCategoryProductId = child.Id,
             IsActive = true
@@ -337,9 +382,9 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var root = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Root", Type = CategoryProductType.Fix, IsActive = true };
-        var child = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Child", Type = CategoryProductType.Fix, ParentCategoryProductId = root.Id, IsActive = true };
-        var grandchild = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Grandchild", Type = CategoryProductType.Fix, ParentCategoryProductId = child.Id, IsActive = true };
+        var root = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Root", Name_En = "Root", Description = "Root", Description_En = "Root", Type = CategoryProductType.Fix, IsActive = true };
+        var child = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Child", Name_En = "Child", Description = "Child", Description_En = "Child", Type = CategoryProductType.Fix, ParentCategoryProductId = root.Id, IsActive = true };
+        var grandchild = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Grandchild", Name_En = "Grandchild", Description = "Grandchild", Description_En = "Grandchild", Type = CategoryProductType.Fix, ParentCategoryProductId = child.Id, IsActive = true };
 
         await dbContext.CategoryProducts.AddRangeAsync(root, child, grandchild);
         await dbContext.SaveChangesAsync();
@@ -371,6 +416,9 @@ public class CategoryProductTest
         var request = new Request.CreateCategoryProductRequest
         {
             name = "   ",
+            name_En = "Space",
+            description = "Space",
+            description_En = "Space",
             type = CategoryProductType.Fix
         };
 
@@ -389,6 +437,9 @@ public class CategoryProductTest
         var request = new Request.CreateCategoryProductRequest
         {
             name = "Test Category",
+            name_En = "Test Category",
+            description = "Test Category",
+            description_En = "Test Category",
             type = CategoryProductType.Fix,
             parentId = Guid.NewGuid()
         };
@@ -420,6 +471,9 @@ public class CategoryProductTest
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "Updated Name",
+            name_En = "Updated Name",
+            description = "Updated Name",
+            description_En = "Updated Name",
             type = CategoryProductType.Fix
         };
 
@@ -435,13 +489,16 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var category = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Original", Type = CategoryProductType.Fix, IsActive = true };
+        var category = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Original", Name_En = "Original", Description = "Original", Description_En = "Original", Type = CategoryProductType.Fix, IsActive = true };
         await dbContext.CategoryProducts.AddAsync(category);
         await dbContext.SaveChangesAsync();
 
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "",
+            name_En = "Empty",
+            description = "Empty",
+            description_En = "Empty",
             type = CategoryProductType.Fix
         };
 
@@ -457,13 +514,16 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var category = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Original", Type = CategoryProductType.Fix, IsActive = true };
+        var category = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Original", Name_En = "Original", Description = "Original", Description_En = "Original", Type = CategoryProductType.Fix, IsActive = true };
         await dbContext.CategoryProducts.AddAsync(category);
         await dbContext.SaveChangesAsync();
 
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "Original",
+            name_En = "Original",
+            description = "Original",
+            description_En = "Original",
             type = CategoryProductType.Fix,
             parentId = category.Id
         };
@@ -480,14 +540,17 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var cat1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 1", Type = CategoryProductType.Fix, IsActive = true };
-        var cat2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 2", Type = CategoryProductType.Fix, IsActive = true };
+        var cat1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 1", Name_En = "Cat 1", Description = "Cat 1", Description_En = "Cat 1", Type = CategoryProductType.Fix, IsActive = true };
+        var cat2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 2", Name_En = "Cat 2", Description = "Cat 2", Description_En = "Cat 2", Type = CategoryProductType.Fix, IsActive = true };
         await dbContext.CategoryProducts.AddRangeAsync(cat1, cat2);
         await dbContext.SaveChangesAsync();
 
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "Cat 2",
+            name_En = "Cat 2",
+            description = "Cat 2",
+            description_En = "Cat 2",
             type = CategoryProductType.Fix
         };
 
@@ -503,14 +566,17 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var cat1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 1", Position = 1, Type = CategoryProductType.Fix, IsActive = true };
-        var cat2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 2", Position = 2, Type = CategoryProductType.Fix, IsActive = true };
+        var cat1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 1", Name_En = "Cat 1", Description = "Cat 1", Description_En = "Cat 1", Position = 1, Type = CategoryProductType.Fix, IsActive = true };
+        var cat2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 2", Name_En = "Cat 2", Description = "Cat 2", Description_En = "Cat 2", Position = 2, Type = CategoryProductType.Fix, IsActive = true };
         await dbContext.CategoryProducts.AddRangeAsync(cat1, cat2);
         await dbContext.SaveChangesAsync();
 
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "Cat 1 Updated",
+            name_En = "Cat 1 Updated",
+            description = "Cat 1 Updated",
+            description_En = "Cat 1 Updated",
             position = 2,
             type = CategoryProductType.Fix
         };
@@ -527,13 +593,16 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var category = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Original", Type = CategoryProductType.Fix, IsActive = true };
+        var category = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Original", Name_En = "Original", Description = "Original", Description_En = "Original", Type = CategoryProductType.Fix, IsActive = true };
         await dbContext.CategoryProducts.AddAsync(category);
         await dbContext.SaveChangesAsync();
 
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "Original",
+            name_En = "Original",
+            description = "Original",
+            description_En = "Original",
             type = CategoryProductType.Fix,
             parentId = Guid.NewGuid()
         };
@@ -550,9 +619,9 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var root = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Root", Type = CategoryProductType.Fix, IsActive = true };
-        var parent = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Parent", Type = CategoryProductType.Fix, ParentCategoryProductId = root.Id, IsActive = true };
-        var category = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Category", Type = CategoryProductType.Fix, IsActive = true };
+        var root = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Root", Name_En = "Root", Description = "Root", Description_En = "Root", Type = CategoryProductType.Fix, IsActive = true };
+        var parent = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Parent", Name_En = "Parent", Description = "Parent", Description_En = "Parent", Type = CategoryProductType.Fix, ParentCategoryProductId = root.Id, IsActive = true };
+        var category = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Category", Name_En = "Category", Description = "Category", Description_En = "Category", Type = CategoryProductType.Fix, IsActive = true };
 
         await dbContext.CategoryProducts.AddRangeAsync(root, parent, category);
         await dbContext.SaveChangesAsync();
@@ -560,6 +629,9 @@ public class CategoryProductTest
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "Category Updated",
+            name_En = "Category Updated",
+            description = "Category Updated",
+            description_En = "Category Updated",
             type = CategoryProductType.Fix,
             parentId = parent.Id
         };
@@ -580,9 +652,9 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var parent = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Parent", Type = CategoryProductType.Fix, IsActive = true };
-        var child = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Child", Type = CategoryProductType.Fix, ParentCategoryProductId = parent.Id, IsActive = true };
-        var newParent = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "New Parent", Type = CategoryProductType.Fix, IsActive = true };
+        var parent = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Parent", Name_En = "Parent", Description = "Parent", Description_En = "Parent", Type = CategoryProductType.Fix, IsActive = true };
+        var child = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Child", Name_En = "Child", Description = "Child", Description_En = "Child", Type = CategoryProductType.Fix, ParentCategoryProductId = parent.Id, IsActive = true };
+        var newParent = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "New Parent", Name_En = "New Parent", Description = "New Parent", Description_En = "New Parent", Type = CategoryProductType.Fix, IsActive = true };
 
         await dbContext.CategoryProducts.AddRangeAsync(parent, child, newParent);
         await dbContext.SaveChangesAsync();
@@ -590,6 +662,9 @@ public class CategoryProductTest
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "Parent Updated",
+            name_En = "Parent Updated",
+            description = "Parent Updated",
+            description_En = "Parent Updated",
             type = CategoryProductType.Fix,
             parentId = newParent.Id
         };
@@ -610,8 +685,8 @@ public class CategoryProductTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var root = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Root", Type = CategoryProductType.Fix, IsActive = true };
-        var child = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Child", Type = CategoryProductType.Fix, ParentCategoryProductId = root.Id, IsActive = true };
+        var root = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Root", Name_En = "Root", Description = "Root", Description_En = "Root", Type = CategoryProductType.Fix, IsActive = true };
+        var child = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Child", Name_En = "Child", Description = "Child", Description_En = "Child", Type = CategoryProductType.Fix, ParentCategoryProductId = root.Id, IsActive = true };
 
         await dbContext.CategoryProducts.AddRangeAsync(root, child);
         await dbContext.SaveChangesAsync();
@@ -619,6 +694,9 @@ public class CategoryProductTest
         var request = new Request.UpdateCategoryProductRequest
         {
             name = "Root Updated",
+            name_En = "Root Updated",
+            description = "Root Updated",
+            description_En = "Root Updated",
             type = CategoryProductType.Fix,
             parentId = child.Id // This creates a cycle: Root -> Child -> Root
         };
