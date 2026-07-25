@@ -68,8 +68,8 @@ public class LocalProductSearchTest
 
         var request = new Request.LocalProductQueryRequest
         {
-            PriceFrom = 80,
-            PriceTo = 160
+            priceFrom = 80,
+            priceTo = 160
         };
 
         // Act
@@ -103,7 +103,7 @@ public class LocalProductSearchTest
 
         var request = new Request.LocalProductQueryRequest
         {
-            SortBy = new List<string> { sortOption }
+            sortBy = new List<string> { sortOption }
         };
 
         // Act
@@ -135,7 +135,7 @@ public class LocalProductSearchTest
 
         var request = new Request.LocalProductQueryRequest
         {
-            SortBy = new List<string> { "+price", "+name" }
+            sortBy = new List<string> { "+price", "+name" }
         };
 
         // Act
@@ -202,5 +202,77 @@ public class LocalProductSearchTest
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetLocalProductDetail(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetLocalProducts_CategoryIdsFilter_Success()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var c1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cate 1", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
+        var c2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cate 2", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
+
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", IsDeleted = false };
+
+        var j1 = new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c1.Id, ProductId = p1.Id, IsDeleted = false };
+        var j2 = new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c2.Id, ProductId = p2.Id, IsDeleted = false };
+
+        await dbContext.CategoryProducts.AddRangeAsync(c1, c2);
+        await dbContext.Products.AddRangeAsync(p1, p2, p3);
+        await dbContext.CategoryProductDetails.AddRangeAsync(j1, j2);
+        await dbContext.SaveChangesAsync();
+
+        var request = new Request.LocalProductQueryRequest
+        {
+            categoryIds = new List<Guid> { c1.Id }
+        };
+
+        // Act
+        var result = await service.GetLocalProducts(request);
+
+        // Assert
+        Assert.NotNull(result);
+        var items = result.Value.Items.Cast<ProductEntity>().ToList();
+        Assert.Single(items);
+        Assert.Equal("P1", items[0].ProductName);
+    }
+
+    [Fact]
+    public async Task GetMaxPrice_Success()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", Price = 50, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", Price = 100, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", Price = 80, IsDeleted = false };
+
+        await dbContext.Products.AddRangeAsync(p1, p2, p3);
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await service.GetMaxPrice();
+
+        // Assert
+        Assert.Equal(100, result);
+    }
+
+    [Fact]
+    public async Task GetMaxPrice_NoProducts_ReturnsZero()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        // Act
+        var result = await service.GetMaxPrice();
+
+        // Assert
+        Assert.Equal(0, result);
     }
 }

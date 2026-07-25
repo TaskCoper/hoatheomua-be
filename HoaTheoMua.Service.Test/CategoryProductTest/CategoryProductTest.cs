@@ -629,4 +629,58 @@ public class CategoryProductTest
         var ex = await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteCateProduct(Guid.NewGuid()));
         Assert.Equal("CATEGORY_NOT_FOUND", ex.Message);
     }
+
+    [Fact]
+    public async Task CreateAndGetCategoryProduct_MultilingualFields_Success()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var request = new Request.CreateCategoryProductRequest
+        {
+            name = "Hoa Hồng",
+            name_En = "Rose",
+            description = "Mô tả tiếng Việt",
+            description_En = "Description in English",
+            type = CategoryProductType.Fix,
+            isActive = true
+        };
+
+        // Act
+        var createResult = await service.CreateCateProduct(request);
+
+        // Assert
+        Assert.NotNull(createResult);
+        Assert.Equal("Rose", createResult.name_En);
+        Assert.Equal("Mô tả tiếng Việt", createResult.description);
+        Assert.Equal("Description in English", createResult.description_En);
+
+        // Act - Get
+        var getResult = await service.GetCateProduct(createResult.categoryId);
+
+        // Assert - Get
+        Assert.NotNull(getResult);
+        Assert.Equal("Rose", getResult.name_En);
+        Assert.Equal("Mô tả tiếng Việt", getResult.description);
+        Assert.Equal("Description in English", getResult.description_En);
+
+        // Act - Update
+        var updateRequest = new Request.UpdateCategoryProductRequest
+        {
+            name = "Hoa Cúc",
+            name_En = "Daisy",
+            description = "Mô tả cúc",
+            description_En = "Daisy description",
+            type = CategoryProductType.Fix,
+            isActive = true
+        };
+        var updateResult = await service.UpdateCateProduct(createResult.categoryId, updateRequest);
+
+        // Assert - Update
+        Assert.NotNull(updateResult);
+        Assert.Equal("Daisy", updateResult.name_En);
+        Assert.Equal("Mô tả cúc", updateResult.description);
+        Assert.Equal("Daisy description", updateResult.description_En);
+    }
 }

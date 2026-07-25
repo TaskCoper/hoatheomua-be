@@ -219,6 +219,14 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Description_En")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<DateTimeOffset?>("EndTime")
                         .HasColumnType("timestamp with time zone");
 
@@ -232,6 +240,10 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Name_En")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 

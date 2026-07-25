@@ -30,6 +30,9 @@ public class Service : IService
         {
             categoryId = category.Id,
             name = category.Name,
+            name_En = category.Name_En,
+            description = category.Description,
+            description_En = category.Description_En,
             startTime = category.StartTime,
             endTime = category.EndTime,
             type = category.Type,
@@ -61,6 +64,9 @@ public class Service : IService
         {
             Id = Guid.NewGuid(),
             Name = request.name,
+            Name_En = request.name_En,
+            Description = request.description,
+            Description_En = request.description_En,
             StartTime = request.startTime,
             EndTime = request.endTime,
             Type = request.type,
@@ -86,6 +92,9 @@ public class Service : IService
         {
             categoryId = newCate.Id,
             name = newCate.Name,
+            name_En = newCate.Name_En,
+            description = newCate.Description,
+            description_En = newCate.Description_En,
             startTime = newCate.StartTime,
             endTime = newCate.EndTime,
             type = newCate.Type,
@@ -106,6 +115,9 @@ public class Service : IService
             {
                 categoryId = x.Id,
                 name = x.Name,
+                name_En = x.Name_En,
+                description = x.Description,
+                description_En = x.Description_En,
                 startTime = x.StartTime,
                 endTime = x.EndTime,
                 type = x.Type,
@@ -170,6 +182,9 @@ public class Service : IService
                 {
                     categoryId = x.Id,
                     name = x.Name,
+                    name_En = x.Name_En,
+                    description = x.Description,
+                    description_En = x.Description_En,
                     startTime = x.StartTime,
                     endTime = x.EndTime,
                     type = x.Type,
@@ -194,6 +209,9 @@ public class Service : IService
             {
                 categoryId = c.Id,
                 name = c.Name,
+                name_En = c.Name_En,
+                description = c.Description,
+                description_En = c.Description_En,
                 startTime = c.StartTime,
                 endTime = c.EndTime,
                 type = c.Type,
@@ -272,6 +290,9 @@ public class Service : IService
         }
 
         category.Name = request.name;
+        category.Name_En = request.name_En;
+        category.Description = request.description;
+        category.Description_En = request.description_En;
         category.StartTime = request.startTime;
         category.EndTime = request.endTime;
         category.Type = request.type;
