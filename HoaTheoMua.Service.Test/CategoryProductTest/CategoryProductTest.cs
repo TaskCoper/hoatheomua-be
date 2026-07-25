@@ -497,6 +497,30 @@ public class CategoryProductTest
     }
 
     [Fact]
+    public async Task UpdateCateProduct_DuplicatePosition_ThrowsConflictException()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var cat1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 1", Position = 1, Type = CategoryProductType.Fix, IsActive = true };
+        var cat2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cat 2", Position = 2, Type = CategoryProductType.Fix, IsActive = true };
+        await dbContext.CategoryProducts.AddRangeAsync(cat1, cat2);
+        await dbContext.SaveChangesAsync();
+
+        var request = new Request.UpdateCategoryProductRequest
+        {
+            name = "Cat 1 Updated",
+            position = 2,
+            type = CategoryProductType.Fix
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => service.UpdateCateProduct(cat1.Id, request));
+        Assert.Equal("CATEGORY_POSITION_ALREADY_EXISTS_IN_THIS_LEVEL", ex.Message);
+    }
+
+    [Fact]
     public async Task UpdateCateProduct_ParentNotFound_ThrowsNotFoundException()
     {
         // Arrange
@@ -643,6 +667,7 @@ public class CategoryProductTest
             name_En = "Rose",
             description = "Mô tả tiếng Việt",
             description_En = "Description in English",
+            metaData = "{\"key\": \"val\"}",
             type = CategoryProductType.Fix,
             isActive = true
         };
@@ -655,6 +680,7 @@ public class CategoryProductTest
         Assert.Equal("Rose", createResult.name_En);
         Assert.Equal("Mô tả tiếng Việt", createResult.description);
         Assert.Equal("Description in English", createResult.description_En);
+        Assert.Equal("{\"key\": \"val\"}", createResult.metaData);
 
         // Act - Get
         var getResult = await service.GetCateProduct(createResult.categoryId);
@@ -664,6 +690,7 @@ public class CategoryProductTest
         Assert.Equal("Rose", getResult.name_En);
         Assert.Equal("Mô tả tiếng Việt", getResult.description);
         Assert.Equal("Description in English", getResult.description_En);
+        Assert.Equal("{\"key\": \"val\"}", getResult.metaData);
 
         // Act - Update
         var updateRequest = new Request.UpdateCategoryProductRequest
@@ -671,16 +698,21 @@ public class CategoryProductTest
             name = "Hoa Cúc",
             name_En = "Daisy",
             description = "Mô tả cúc",
-            description_En = "Daisy description",
+            description_En = "Desc Daisy",
+            position = -5,
+            metaData = "{\"new\": \"val\"}",
             type = CategoryProductType.Fix,
             isActive = true
         };
+
         var updateResult = await service.UpdateCateProduct(createResult.categoryId, updateRequest);
 
         // Assert - Update
         Assert.NotNull(updateResult);
         Assert.Equal("Daisy", updateResult.name_En);
         Assert.Equal("Mô tả cúc", updateResult.description);
-        Assert.Equal("Daisy description", updateResult.description_En);
+        Assert.Equal("Desc Daisy", updateResult.description_En);
+        Assert.Equal(-5, updateResult.position);
+        Assert.Equal("{\"new\": \"val\"}", updateResult.metaData);
     }
 }

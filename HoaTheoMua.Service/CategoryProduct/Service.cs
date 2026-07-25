@@ -33,6 +33,8 @@ public class Service : IService
             name_En = category.Name_En,
             description = category.Description,
             description_En = category.Description_En,
+            position = category.Position,
+            metaData = category.MetaData,
             startTime = category.StartTime,
             endTime = category.EndTime,
             type = category.Type,
@@ -67,6 +69,7 @@ public class Service : IService
             Name_En = request.name_En,
             Description = request.description,
             Description_En = request.description_En,
+            MetaData = request.metaData,
             StartTime = request.startTime,
             EndTime = request.endTime,
             Type = request.type,
@@ -95,6 +98,8 @@ public class Service : IService
             name_En = newCate.Name_En,
             description = newCate.Description,
             description_En = newCate.Description_En,
+            position = newCate.Position,
+            metaData = newCate.MetaData,
             startTime = newCate.StartTime,
             endTime = newCate.EndTime,
             type = newCate.Type,
@@ -118,6 +123,8 @@ public class Service : IService
                 name_En = x.Name_En,
                 description = x.Description,
                 description_En = x.Description_En,
+                position = x.Position,
+                metaData = x.MetaData,
                 startTime = x.StartTime,
                 endTime = x.EndTime,
                 type = x.Type,
@@ -185,6 +192,8 @@ public class Service : IService
                     name_En = x.Name_En,
                     description = x.Description,
                     description_En = x.Description_En,
+                    position = x.Position,
+                    metaData = x.MetaData,
                     startTime = x.StartTime,
                     endTime = x.EndTime,
                     type = x.Type,
@@ -212,6 +221,8 @@ public class Service : IService
                 name_En = c.Name_En,
                 description = c.Description,
                 description_En = c.Description_En,
+                position = c.Position,
+                metaData = c.MetaData,
                 startTime = c.StartTime,
                 endTime = c.EndTime,
                 type = c.Type,
@@ -269,6 +280,19 @@ public class Service : IService
             throw new ConflictException("CATEGORY_ALREADY_EXISTS");
         }
 
+        if (request.position.HasValue)
+        {
+            var isDuplicatePosition = await _dbContext.CategoryProducts.AnyAsync(x =>
+                !x.IsDeleted &&
+                x.Id != categoryId &&
+                x.ParentCategoryProductId == request.parentId &&
+                x.Position == request.position.Value);
+            if (isDuplicatePosition)
+            {
+                throw new ConflictException("CATEGORY_POSITION_ALREADY_EXISTS_IN_THIS_LEVEL");
+            }
+        }
+
         if (request.parentId != null)
         {
             var parentCategory = await GetActiveCategory(request.parentId.Value);
@@ -293,6 +317,8 @@ public class Service : IService
         category.Name_En = request.name_En;
         category.Description = request.description;
         category.Description_En = request.description_En;
+        category.Position = request.position;
+        category.MetaData = request.metaData;
         category.StartTime = request.startTime;
         category.EndTime = request.endTime;
         category.Type = request.type;

@@ -21,6 +21,9 @@ public class CategoryProductConfiguration : IEntityTypeConfiguration<CategoryPro
         builder.Property(c => c.Description_En)
             .HasMaxLength(1000);
 
+        builder.Property(c => c.MetaData)
+            .HasColumnType("jsonb");
+
         builder.Property(c => c.Type)
             .IsRequired()
             .HasConversion<string>()

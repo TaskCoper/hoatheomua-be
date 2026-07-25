@@ -9,6 +9,8 @@ public class CategoryProduct : BaseEntity<Guid>, IAuditableEntity
     public string? Name_En { get; set; }
     public string? Description { get; set; }
     public string? Description_En { get; set; }
+    public int? Position { get; set; }
+    public string? MetaData { get; set; }
     public DateTimeOffset? StartTime { get; set; }
     public DateTimeOffset? EndTime { get; set; }
     public CategoryProductType Type { get; set; }

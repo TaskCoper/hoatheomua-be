@@ -365,6 +365,8 @@ public class Service: IService
                     name_En = cpd.CategoryProduct.Name_En,
                     description = cpd.CategoryProduct.Description,
                     description_En = cpd.CategoryProduct.Description_En,
+                    position = cpd.CategoryProduct.Position,
+                    metaData = cpd.CategoryProduct.MetaData,
                     startTime = cpd.CategoryProduct.StartTime,
                     endTime = cpd.CategoryProduct.EndTime,
                     type = cpd.CategoryProduct.Type,
