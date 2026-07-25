@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260725020025_add_table_orderNhanhVn")]
-    partial class add_table_orderNhanhVn
+    [Migration("20260725025254_add_table_order_nhanhvn")]
+    partial class add_table_order_nhanhvn
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -756,7 +756,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("CuaHang")
                         .HasColumnType("text");
@@ -807,31 +809,25 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal?>("GiaBan")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal?>("GiaBanTruocVat")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal?>("GiaSanPhamSauChietKhau")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal?>("GiaTriDonHang")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<string>("GiaTriFacebook")
                         .HasColumnType("text");
 
                     b.Property<decimal?>("GiaVon")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal?>("GiaVonDonHang")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<string>("GioThanhCong")
                         .HasColumnType("text");
@@ -840,22 +836,22 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<long?>("IdDonGoc")
-                        .HasColumnType("bigint");
+                    b.Property<string>("IdDonGoc")
+                        .HasColumnType("text");
 
-                    b.Property<long?>("IdDonHangApi")
+                    b.Property<string>("IdDonHangApi")
                         .HasMaxLength(100)
-                        .HasColumnType("bigint");
+                        .HasColumnType("character varying(100)");
 
-                    b.Property<long?>("IdDonHangNhanh")
-                        .IsRequired()
-                        .HasColumnType("bigint");
+                    b.Property<string>("IdDonHangNhanh")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
-                    b.Property<long?>("IdDonTra")
-                        .HasColumnType("bigint");
+                    b.Property<string>("IdDonTra")
+                        .HasColumnType("text");
 
-                    b.Property<long?>("IdPhapNhan")
-                        .HasColumnType("bigint");
+                    b.Property<string>("IdPhapNhan")
+                        .HasColumnType("text");
 
                     b.Property<string>("Imei")
                         .HasColumnType("text");
@@ -885,8 +881,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal?>("LoiNhuan")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<string>("LyDoHuy")
                         .HasColumnType("text");
@@ -1000,8 +995,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<decimal?>("PhiVanChuyen")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal?>("PhiVuotCan")
                         .HasColumnType("numeric");
@@ -1115,8 +1109,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<decimal?>("TongThu")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<string>("TrangThaiDoiSoat")
                         .HasColumnType("text");

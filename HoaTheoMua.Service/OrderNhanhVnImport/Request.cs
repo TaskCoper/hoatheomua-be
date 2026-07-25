@@ -9,16 +9,16 @@ public class Request
         public int SourceRowNumber { get; set; }
 
         [ExcelColumnIndex(0)] // A - ID
-        public long? IdDonHangNhanh { get; set; }
+        public string? IdDonHangNhanh { get; set; }
 
         [ExcelColumnIndex(1)] // B - ID Đơn hàng API
-        public long? IdDonHangApi { get; set; }
+        public string? IdDonHangApi { get; set; }
 
         [ExcelColumnIndex(2)] // C - Loại đơn
         public string? LoaiDon { get; set; }
 
         [ExcelColumnIndex(3)] // D - Thời gian
-        public DateTimeOffset? ThoiGianDonHang { get; set; }
+        public string? ThoiGianDonHang { get; set; }
 
         [ExcelColumnIndex(4)] // E - Người tạo đơn
         public string? NguoiTaoDon { get; set; }
@@ -63,7 +63,7 @@ public class Request
         public string? CapDoKhachHang { get; set; }
 
         [ExcelColumnIndex(18)] // S - Sinh nhật
-        public DateTimeOffset? NgaySinhKhachHang { get; set; }
+        public string? NgaySinhKhachHang { get; set; }
 
         [ExcelColumnIndex(19)] // T - Thành phố
         public string? ThanhPhoKhachHang { get; set; }
@@ -105,58 +105,58 @@ public class Request
         public string? DanhMucSanPham { get; set; }
 
         [ExcelColumnIndex(32)] // AG - Khối lượng
-        public decimal? KhoiLuongSanPham { get; set; }
+        public string? KhoiLuongSanPham { get; set; }
 
         [ExcelColumnIndex(33)] // AH - Giá bán
-        public decimal? GiaBan { get; set; }
+        public string? GiaBan { get; set; }
 
         [ExcelColumnIndex(34)] // AI - Loại
         public string? LoaiGiaSanPham { get; set; }
 
         [ExcelColumnIndex(35)] // AJ - Giá bán trước VAT
-        public decimal? GiaBanTruocVat { get; set; }
+        public string? GiaBanTruocVat { get; set; }
 
         [ExcelColumnIndex(36)] // AK - VAT sản phẩm
-        public decimal? TienVatSanPham { get; set; }
+        public string? TienVatSanPham { get; set; }
 
         [ExcelColumnIndex(37)] // AL - Số lượng
-        public int? SoLuong { get; set; }
+        public string? SoLuong { get; set; }
 
         [ExcelColumnIndex(38)] // AM - Chiết khấu 1 SP
-        public decimal? ChietKhauMotSanPham { get; set; }
+        public string? ChietKhauMotSanPham { get; set; }
 
         [ExcelColumnIndex(39)] // AN - Chiết khấu sản phẩm
-        public decimal? ChietKhauSanPham { get; set; }
+        public string? ChietKhauSanPham { get; set; }
 
         [ExcelColumnIndex(40)] // AO - Giá sản phẩm sau chiết khấu
-        public decimal? GiaSanPhamSauChietKhau { get; set; }
+        public string? GiaSanPhamSauChietKhau { get; set; }
 
         [ExcelColumnIndex(41)] // AP - Ghi chú sản phẩm
         public string? GhiChuSanPham { get; set; }
 
         [ExcelColumnIndex(42)] // AQ - Tổng khối lượng
-        public decimal? TongKhoiLuong { get; set; }
+        public string? TongKhoiLuong { get; set; }
 
         [ExcelColumnIndex(43)] // AR - Giá trị đơn hàng
-        public decimal? GiaTriDonHang { get; set; }
+        public string? GiaTriDonHang { get; set; }
 
         [ExcelColumnIndex(44)] // AS - Phí vận chuyển
-        public decimal? PhiVanChuyen { get; set; }
+        public string? PhiVanChuyen { get; set; }
 
         [ExcelColumnIndex(45)] // AT - Phí vượt cân
-        public decimal? PhiVuotCan { get; set; }
+        public string? PhiVuotCan { get; set; }
 
         [ExcelColumnIndex(46)] // AU - Phí khai giá
-        public decimal? PhiKhaiGia { get; set; }
+        public string? PhiKhaiGia { get; set; }
 
         [ExcelColumnIndex(47)] // AV - Phí chuyển hoàn
-        public decimal? PhiChuyenHoan { get; set; }
+        public string? PhiChuyenHoan { get; set; }
 
         [ExcelColumnIndex(48)] // AW - Phí thu tiền hộ
-        public decimal? PhiThuTienHo { get; set; }
+        public string? PhiThuTienHo { get; set; }
 
         [ExcelColumnIndex(49)] // AX - Phí ship báo khách
-        public decimal? PhiShipBaoKhach { get; set; }
+        public string? PhiShipBaoKhach { get; set; }
 
         [ExcelColumnIndex(50)] // AY - Cổng vận chuyển
         public string? CongVanChuyen { get; set; }
@@ -168,7 +168,7 @@ public class Request
         public string? DichVuVanChuyen { get; set; }
 
         [ExcelColumnIndex(53)] // BB - Số ngày chuyển hàng
-        public int? SoNgayChuyenHang { get; set; }
+        public string? SoNgayChuyenHang { get; set; }
 
         [ExcelColumnIndex(54)] // BC - Mã vận đơn
         public string? MaVanDon { get; set; }
@@ -177,37 +177,37 @@ public class Request
         public string? BienBan { get; set; }
 
         [ExcelColumnIndex(56)] // BE - Tiền chuyển khoản
-        public decimal? TienChuyenKhoan { get; set; }
+        public string? TienChuyenKhoan { get; set; }
 
         [ExcelColumnIndex(57)] // BF - Tài khoản chuyển khoản
         public string? TaiKhoanChuyenKhoan { get; set; }
 
         [ExcelColumnIndex(58)] // BG - Tiền chiết khấu
-        public decimal? TienChietKhau { get; set; }
+        public string? TienChietKhau { get; set; }
 
         [ExcelColumnIndex(59)] // BH - Tiền đặt cọc
-        public decimal? TienDatCoc { get; set; }
+        public string? TienDatCoc { get; set; }
 
         [ExcelColumnIndex(60)] // BI - Tài khoản đặt cọc
         public string? TaiKhoanDatCoc { get; set; }
 
         [ExcelColumnIndex(61)] // BJ - Tổng thu
-        public decimal? TongThu { get; set; }
+        public string? TongThu { get; set; }
 
         [ExcelColumnIndex(62)] // BK - Tài khoản quẹt thẻ
         public string? TaiKhoanQuetThe { get; set; }
 
         [ExcelColumnIndex(63)] // BL - Tiền quẹt thẻ
-        public decimal? TienQuetThe { get; set; }
+        public string? TienQuetThe { get; set; }
 
         [ExcelColumnIndex(64)] // BM - Mã giao dịch quẹt thẻ
         public string? MaGiaoDichQuetThe { get; set; }
 
         [ExcelColumnIndex(65)] // BN - Giá vốn
-        public decimal? GiaVon { get; set; }
+        public string? GiaVon { get; set; }
 
         [ExcelColumnIndex(66)] // BO - Giá vốn đơn hàng
-        public decimal? GiaVonDonHang { get; set; }
+        public string? GiaVonDonHang { get; set; }
 
         [ExcelColumnIndex(67)] // BP - Đơn vị tính
         public string? DonViTinh { get; set; }
@@ -225,7 +225,7 @@ public class Request
         public string? SoHoaDonDienTu { get; set; }
 
         [ExcelColumnIndex(72)] // BU - Ngày xuất hóa đơn điện tử
-        public DateTimeOffset? NgayXuatHoaDonDienTu { get; set; }
+        public string? NgayXuatHoaDonDienTu { get; set; }
 
         [ExcelColumnIndex(73)] // BV - Mã cơ quan thuế
         public string? MaCoQuanThueHoaDonDienTu { get; set; }
@@ -240,16 +240,16 @@ public class Request
         public string? NhanVienChamSocKhachHang { get; set; }
 
         [ExcelColumnIndex(77)] // BZ - Ngày xác nhận
-        public DateTimeOffset? NgayXacNhan { get; set; }
+        public string? NgayXacNhan { get; set; }
 
         [ExcelColumnIndex(78)] // CA - Ngày gửi HVC
-        public DateTimeOffset? NgayGuiHangVanChuyen { get; set; }
+        public string? NgayGuiHangVanChuyen { get; set; }
 
         [ExcelColumnIndex(79)] // CB - Ngày bàn giao
-        public DateTimeOffset? NgayBanGiao { get; set; }
+        public string? NgayBanGiao { get; set; }
 
         [ExcelColumnIndex(80)] // CC - Ngày thành công
-        public DateTimeOffset? NgayThanhCong { get; set; }
+        public string? NgayThanhCong { get; set; }
 
         [ExcelColumnIndex(81)] // CD - Giờ thành công
         public string? GioThanhCong { get; set; }
@@ -261,19 +261,19 @@ public class Request
         public string? GhiChuHangVanChuyen { get; set; }
 
         [ExcelColumnIndex(84)] // CG - Cân nặng HVC
-        public decimal? CanNangHangVanChuyen { get; set; }
+        public string? CanNangHangVanChuyen { get; set; }
 
         [ExcelColumnIndex(85)] // CH - Mã giảm giá
         public string? MaGiamGia { get; set; }
 
         [ExcelColumnIndex(86)] // CI - ID đơn trả
-        public long? IdDonTra { get; set; }
+        public string? IdDonTra { get; set; }
 
         [ExcelColumnIndex(87)] // CJ - ID đơn gốc
-        public long? IdDonGoc { get; set; }
+        public string? IdDonGoc { get; set; }
 
         [ExcelColumnIndex(88)] // CK - STT theo ngày
-        public int? SoThuTuTheoNgay { get; set; }
+        public string? SoThuTuTheoNgay { get; set; }
 
         [ExcelColumnIndex(89)] // CL - Biên bản bàn giao
         public string? BienBanBanGiao { get; set; }
@@ -285,37 +285,37 @@ public class Request
         public string? NhomKhachHang { get; set; }
 
         [ExcelColumnIndex(92)] // CO - VAT
-        public decimal? TienVat { get; set; }
+        public string? TienVat { get; set; }
 
         [ExcelColumnIndex(93)] // CP - % VAT
         public string? TyLeVat { get; set; }
 
         [ExcelColumnIndex(94)] // CQ - Tiền tiêu điểm
-        public decimal? TienTieuDiem { get; set; }
+        public string? TienTieuDiem { get; set; }
 
         [ExcelColumnIndex(95)] // CR - Nhãn
         public string? Nhan { get; set; }
 
         [ExcelColumnIndex(96)] // CS - Ngày hẹn thanh toán
-        public DateTimeOffset? NgayHenThanhToan { get; set; }
+        public string? NgayHenThanhToan { get; set; }
 
         [ExcelColumnIndex(97)] // CT - Trạng thái đối soát
         public string? TrangThaiDoiSoat { get; set; }
 
         [ExcelColumnIndex(98)] // CU - Ngày đối soát
-        public DateTimeOffset? NgayDoiSoat { get; set; }
+        public string? NgayDoiSoat { get; set; }
 
         [ExcelColumnIndex(99)] // CV - Thanh toán cho doanh nghiệp
         public string? TrangThaiThanhToanDoanhNghiep { get; set; }
 
         [ExcelColumnIndex(100)] // CW - Ngày thanh toán cho doanh nghiệp
-        public DateTimeOffset? NgayThanhToanDoanhNghiep { get; set; }
+        public string? NgayThanhToanDoanhNghiep { get; set; }
 
         [ExcelColumnIndex(101)] // CX - Nhân viên bán hàng
         public string? NhanVienBanHang { get; set; }
 
         [ExcelColumnIndex(102)] // CY - Lợi nhuận
-        public decimal? LoiNhuan { get; set; }
+        public string? LoiNhuan { get; set; }
 
         [ExcelColumnIndex(103)] // CZ - Phần trăm lợi nhuận
         public string? TyLeLoiNhuan { get; set; }
@@ -333,13 +333,13 @@ public class Request
         public string? GiaTriFacebook { get; set; }
 
         [ExcelColumnIndex(108)] // DE - Số lượng đơn vị nhỏ nhất
-        public int? SoLuongDonViNhoNhat { get; set; }
+        public string? SoLuongDonViNhoNhat { get; set; }
 
         [ExcelColumnIndex(109)] // DF - Nhân viên đóng gói
         public string? NhanVienDongGoi { get; set; }
 
         [ExcelColumnIndex(110)] // DG - ID pháp nhân
-        public long? IdPhapNhan { get; set; }
+        public string? IdPhapNhan { get; set; }
 
         [ExcelColumnIndex(111)] // DH - Mã số thuế
         public string? MaSoThue { get; set; }
@@ -378,6 +378,6 @@ public class Request
         public string? SoHoaDon { get; set; }
 
         [ExcelColumnIndex(123)] // DT - Ngày phát hành
-        public DateTimeOffset? NgayPhatHanhHoaDon { get; set; }
+        public string? NgayPhatHanhHoaDon { get; set; }
     }
 }

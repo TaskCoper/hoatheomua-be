@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository;
+﻿using System.Globalization;
+using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using MiniExcelLibs;
@@ -102,9 +103,9 @@ public class Service : IService
         //lúc này ta có được một list IdDonHangNhanh từ file excel mà ta đã nhờ miniExcel đọc qua
         var existingMap = idsInFile.Count > 0
             ? await _dbContext.OrderNhanhVns
-                .Where(o => o.IdDonHangNhanh != null && idsInFile.Contains(o.IdDonHangNhanh.Value))
-                .ToDictionaryAsync(o => o.IdDonHangNhanh!.Value)
-            : new Dictionary<long, OrderEntity>();
+                .Where(o => o.IdDonHangNhanh != null && idsInFile.Contains(o.IdDonHangNhanh) && !o.IsDeleted)
+                .ToDictionaryAsync(o => o.IdDonHangNhanh!)
+            : new Dictionary<string, OrderEntity>();
         //lúc này ta có một dictionary với key là: IdDonHangNhanh và value là entity tương ứng của nó
         var batch = new ImportBatch
         {
@@ -129,10 +130,14 @@ public class Service : IService
     
     private static OrderEntity ResolveOrder(
         Request.ExcelRow row,
-        Dictionary<long, OrderEntity> existingMap,
+        Dictionary<string, OrderEntity> existingMap,
         out bool isUpdate)
     {
-        if (row.IdDonHangNhanh.HasValue && existingMap.TryGetValue(row.IdDonHangNhanh.Value, out var existing))
+        
+        var cleanId = NullIfEmpty(row.IdDonHangNhanh);
+
+        
+        if (cleanId != null && existingMap.TryGetValue(cleanId, out var existing))
         {
             isUpdate = true;
             return existing;
@@ -152,11 +157,11 @@ public class Service : IService
         OrderEntity order)
     {
         order.SourceRowNumber = row.SourceRowNumber;
-
-        order.IdDonHangNhanh = row.IdDonHangNhanh;
-        order.IdDonHangApi = row.IdDonHangApi;
+ 
+        order.IdDonHangNhanh = NullIfEmpty(row.IdDonHangNhanh);
+        order.IdDonHangApi = NullIfEmpty(row.IdDonHangApi);
         order.LoaiDon = NullIfEmpty(row.LoaiDon);
-        order.ThoiGianDonHang = row.ThoiGianDonHang;
+        order.ThoiGianDonHang = ParseDateTimeOffset(row.ThoiGianDonHang);
         order.NguoiTaoDon = NullIfEmpty(row.NguoiTaoDon);
         order.CuaHang = NullIfEmpty(row.CuaHang);
         order.Nguon = NullIfEmpty(row.Nguon);
@@ -171,7 +176,7 @@ public class Service : IService
         order.SoDienThoaiKhachHang = NullIfEmpty(row.SoDienThoaiKhachHang);
         order.EmailKhachHang = NullIfEmpty(row.EmailKhachHang);
         order.CapDoKhachHang = NullIfEmpty(row.CapDoKhachHang);
-        order.NgaySinhKhachHang = row.NgaySinhKhachHang;
+        order.NgaySinhKhachHang = ParseDateTimeOffset(row.NgaySinhKhachHang);
         order.ThanhPhoKhachHang = NullIfEmpty(row.ThanhPhoKhachHang);
         order.QuanHuyenKhachHang = NullIfEmpty(row.QuanHuyenKhachHang);
         order.PhuongXaKhachHang = NullIfEmpty(row.PhuongXaKhachHang);
@@ -185,85 +190,85 @@ public class Service : IService
         order.MaSanPham = NullIfEmpty(row.MaSanPham);
         order.MaVach = NullIfEmpty(row.MaVach);
         order.DanhMucSanPham = NullIfEmpty(row.DanhMucSanPham);
-        order.KhoiLuongSanPham = row.KhoiLuongSanPham;
-        order.GiaBan = row.GiaBan;
+        order.KhoiLuongSanPham = ParseDecimal(row.KhoiLuongSanPham);
+        order.GiaBan = ParseDecimal(row.GiaBan);
         order.LoaiGiaSanPham = NullIfEmpty(row.LoaiGiaSanPham);
-        order.GiaBanTruocVat = row.GiaBanTruocVat;
-        order.TienVatSanPham = row.TienVatSanPham;
-        order.SoLuong = row.SoLuong;
-        order.ChietKhauMotSanPham = row.ChietKhauMotSanPham;
-        order.ChietKhauSanPham = row.ChietKhauSanPham;
-        order.GiaSanPhamSauChietKhau = row.GiaSanPhamSauChietKhau;
+        order.GiaBanTruocVat = ParseDecimal(row.GiaBanTruocVat);
+        order.TienVatSanPham = ParseDecimal(row.TienVatSanPham);
+        order.SoLuong = ParseInt(row.SoLuong);
+        order.ChietKhauMotSanPham = ParseDecimal(row.ChietKhauMotSanPham);
+        order.ChietKhauSanPham = ParseDecimal(row.ChietKhauSanPham);
+        order.GiaSanPhamSauChietKhau = ParseDecimal(row.GiaSanPhamSauChietKhau);
         order.GhiChuSanPham = NullIfEmpty(row.GhiChuSanPham);
-        order.TongKhoiLuong = row.TongKhoiLuong;
-        order.GiaTriDonHang = row.GiaTriDonHang;
-        order.PhiVanChuyen = row.PhiVanChuyen;
-        order.PhiVuotCan = row.PhiVuotCan;
-        order.PhiKhaiGia = row.PhiKhaiGia;
-        order.PhiChuyenHoan = row.PhiChuyenHoan;
-        order.PhiThuTienHo = row.PhiThuTienHo;
-        order.PhiShipBaoKhach = row.PhiShipBaoKhach;
+        order.TongKhoiLuong = ParseDecimal(row.TongKhoiLuong);
+        order.GiaTriDonHang = ParseDecimal(row.GiaTriDonHang);
+        order.PhiVanChuyen = ParseDecimal(row.PhiVanChuyen);
+        order.PhiVuotCan = ParseDecimal(row.PhiVuotCan);
+        order.PhiKhaiGia = ParseDecimal(row.PhiKhaiGia);
+        order.PhiChuyenHoan = ParseDecimal(row.PhiChuyenHoan);
+        order.PhiThuTienHo = ParseDecimal(row.PhiThuTienHo);
+        order.PhiShipBaoKhach = ParseDecimal(row.PhiShipBaoKhach);
         order.CongVanChuyen = NullIfEmpty(row.CongVanChuyen);
         order.HangVanChuyen = NullIfEmpty(row.HangVanChuyen);
         order.DichVuVanChuyen = NullIfEmpty(row.DichVuVanChuyen);
-        order.SoNgayChuyenHang = row.SoNgayChuyenHang;
+        order.SoNgayChuyenHang = ParseInt(row.SoNgayChuyenHang);
         order.MaVanDon = NullIfEmpty(row.MaVanDon);
         order.BienBan = NullIfEmpty(row.BienBan);
-        order.TienChuyenKhoan = row.TienChuyenKhoan;
+        order.TienChuyenKhoan = ParseDecimal(row.TienChuyenKhoan);
         order.TaiKhoanChuyenKhoan = NullIfEmpty(row.TaiKhoanChuyenKhoan);
-        order.TienChietKhau = row.TienChietKhau;
-        order.TienDatCoc = row.TienDatCoc;
+        order.TienChietKhau = ParseDecimal(row.TienChietKhau);
+        order.TienDatCoc = ParseDecimal(row.TienDatCoc);
         order.TaiKhoanDatCoc = NullIfEmpty(row.TaiKhoanDatCoc);
-        order.TongThu = row.TongThu;
+        order.TongThu = ParseDecimal(row.TongThu);
         order.TaiKhoanQuetThe = NullIfEmpty(row.TaiKhoanQuetThe);
-        order.TienQuetThe = row.TienQuetThe;
+        order.TienQuetThe = ParseDecimal(row.TienQuetThe);
         order.MaGiaoDichQuetThe = NullIfEmpty(row.MaGiaoDichQuetThe);
-        order.GiaVon = row.GiaVon;
-        order.GiaVonDonHang = row.GiaVonDonHang;
+        order.GiaVon = ParseDecimal(row.GiaVon);
+        order.GiaVonDonHang = ParseDecimal(row.GiaVonDonHang);
         order.DonViTinh = NullIfEmpty(row.DonViTinh);
         order.GhiChuNoiBo = NullIfEmpty(row.GhiChuNoiBo);
         order.GhiChuCuaKhach = NullIfEmpty(row.GhiChuCuaKhach);
         order.TrangThaiHoaDonDienTu = NullIfEmpty(row.TrangThaiHoaDonDienTu);
         order.SoHoaDonDienTu = NullIfEmpty(row.SoHoaDonDienTu);
-        order.NgayXuatHoaDonDienTu = row.NgayXuatHoaDonDienTu;
+        order.NgayXuatHoaDonDienTu = ParseDateTimeOffset(row.NgayXuatHoaDonDienTu);
         order.MaCoQuanThueHoaDonDienTu = NullIfEmpty(row.MaCoQuanThueHoaDonDienTu);
         order.TrangThaiDonHang = NullIfEmpty(row.TrangThaiDonHang);
         order.LyDoHuy = NullIfEmpty(row.LyDoHuy);
         order.NhanVienChamSocKhachHang = NullIfEmpty(row.NhanVienChamSocKhachHang);
-        order.NgayXacNhan = row.NgayXacNhan;
-        order.NgayGuiHangVanChuyen = row.NgayGuiHangVanChuyen;
-        order.NgayBanGiao = row.NgayBanGiao;
-        order.NgayThanhCong = row.NgayThanhCong;
+        order.NgayXacNhan = ParseDateTimeOffset(row.NgayXacNhan);
+        order.NgayGuiHangVanChuyen = ParseDateTimeOffset(row.NgayGuiHangVanChuyen);
+        order.NgayBanGiao = ParseDateTimeOffset(row.NgayBanGiao);
+        order.NgayThanhCong = ParseDateTimeOffset(row.NgayThanhCong);
         order.GioThanhCong = NullIfEmpty(row.GioThanhCong);
         order.NguonDonHang = NullIfEmpty(row.NguonDonHang);
         order.GhiChuHangVanChuyen = NullIfEmpty(row.GhiChuHangVanChuyen);
-        order.CanNangHangVanChuyen = row.CanNangHangVanChuyen;
+        order.CanNangHangVanChuyen = ParseDecimal(row.CanNangHangVanChuyen);
         order.MaGiamGia = NullIfEmpty(row.MaGiamGia);
-        order.IdDonTra = row.IdDonTra;
-        order.IdDonGoc = row.IdDonGoc;
-        order.SoThuTuTheoNgay = row.SoThuTuTheoNgay;
+        order.IdDonTra = NullIfEmpty(row.IdDonTra);
+        order.IdDonGoc = NullIfEmpty(row.IdDonGoc);
+        order.SoThuTuTheoNgay = ParseInt(row.SoThuTuTheoNgay);
         order.BienBanBanGiao = NullIfEmpty(row.BienBanBanGiao);
         order.MaAffiliate = NullIfEmpty(row.MaAffiliate);
         order.NhomKhachHang = NullIfEmpty(row.NhomKhachHang);
-        order.TienVat = row.TienVat;
+        order.TienVat = ParseDecimal(row.TienVat);
         order.TyLeVat = NullIfEmpty(row.TyLeVat);
-        order.TienTieuDiem = row.TienTieuDiem;
+        order.TienTieuDiem = ParseDecimal(row.TienTieuDiem);
         order.Nhan = NullIfEmpty(row.Nhan);
-        order.NgayHenThanhToan = row.NgayHenThanhToan;
+        order.NgayHenThanhToan = ParseDateTimeOffset(row.NgayHenThanhToan);
         order.TrangThaiDoiSoat = NullIfEmpty(row.TrangThaiDoiSoat);
-        order.NgayDoiSoat = row.NgayDoiSoat;
+        order.NgayDoiSoat = ParseDateTimeOffset(row.NgayDoiSoat);
         order.TrangThaiThanhToanDoanhNghiep = NullIfEmpty(row.TrangThaiThanhToanDoanhNghiep);
-        order.NgayThanhToanDoanhNghiep = row.NgayThanhToanDoanhNghiep;
+        order.NgayThanhToanDoanhNghiep = ParseDateTimeOffset(row.NgayThanhToanDoanhNghiep);
         order.NhanVienBanHang = NullIfEmpty(row.NhanVienBanHang);
-        order.LoiNhuan = row.LoiNhuan;
+        order.LoiNhuan = ParseDecimal(row.LoiNhuan);
         order.TyLeLoiNhuan = NullIfEmpty(row.TyLeLoiNhuan);
         order.FacebookPsid = NullIfEmpty(row.FacebookPsid);
         order.FacebookPageUserId = NullIfEmpty(row.FacebookPageUserId);
         order.SoDienThoaiFacebook = NullIfEmpty(row.SoDienThoaiFacebook);
         order.GiaTriFacebook = NullIfEmpty(row.GiaTriFacebook);
-        order.SoLuongDonViNhoNhat = row.SoLuongDonViNhoNhat;
+        order.SoLuongDonViNhoNhat = ParseInt(row.SoLuongDonViNhoNhat);
         order.NhanVienDongGoi = NullIfEmpty(row.NhanVienDongGoi);
-        order.IdPhapNhan = row.IdPhapNhan;
+        order.IdPhapNhan = NullIfEmpty(row.IdPhapNhan);
         order.MaSoThue = NullIfEmpty(row.MaSoThue);
         order.EmailNguoiLienHe = NullIfEmpty(row.EmailNguoiLienHe);
         order.EmailNguoiLienHeThuHai = NullIfEmpty(row.EmailNguoiLienHeThuHai);
@@ -276,7 +281,7 @@ public class Service : IService
         order.CoLayHoaDon = NullIfEmpty(row.CoLayHoaDon);
         order.MaCoQuanThueHoaDon = NullIfEmpty(row.MaCoQuanThueHoaDon);
         order.SoHoaDon = NullIfEmpty(row.SoHoaDon);
-        order.NgayPhatHanhHoaDon = row.NgayPhatHanhHoaDon;
+        order.NgayPhatHanhHoaDon = ParseDateTimeOffset(row.NgayPhatHanhHoaDon);
     }
 
     /** Lưu batch vào DB trong 1 transaction (rollback nếu lỗi). */
@@ -306,5 +311,44 @@ public class Service : IService
         if (string.IsNullOrWhiteSpace(val)) return null;
         var trimmed = val.Trim();
         return trimmed.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : trimmed;
+    }
+
+    private static decimal? ParseDecimal(string? val)
+    {
+        if (string.IsNullOrWhiteSpace(val)) return null;
+        val = val.Trim();
+
+        if (decimal.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var dec))
+            return dec;
+
+        if (decimal.TryParse(val.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out dec))
+            return dec;
+
+        return null;
+    }
+
+    private static int? ParseInt(string? val)
+    {
+        if (string.IsNullOrWhiteSpace(val)) return null;
+        val = val.Trim();
+
+        if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var dbl))
+            return (int)Math.Round(dbl);
+
+        return null;
+    }
+
+    private static DateTimeOffset? ParseDateTimeOffset(string? val)
+    {
+        if (string.IsNullOrWhiteSpace(val)) return null;
+        val = val.Trim();
+
+        if (DateTimeOffset.TryParseExact(val, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dto))
+            return dto.ToUniversalTime();
+
+        if (DateTimeOffset.TryParse(val, CultureInfo.InvariantCulture, DateTimeStyles.None, out dto))
+            return dto.ToUniversalTime();
+
+        return null;
     }
 }

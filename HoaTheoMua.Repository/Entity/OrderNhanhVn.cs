@@ -6,10 +6,10 @@ public class OrderNhanhVn : BaseEntity<Guid>, IAuditableEntity
 {
     public int SourceRowNumber { get; set; }
     //Excel: ID
-    public long? IdDonHangNhanh { get; set; }
+    public string? IdDonHangNhanh { get; set; }
 
     //Excel: ID Đơn hàng API
-    public long? IdDonHangApi { get; set; }
+    public string? IdDonHangApi { get; set; }
 
     //Excel: Loại đơn
     public string? LoaiDon { get; set; }
@@ -264,10 +264,10 @@ public class OrderNhanhVn : BaseEntity<Guid>, IAuditableEntity
     public string? MaGiamGia { get; set; }
 
     //Excel: ID đơn trả
-    public long? IdDonTra { get; set; }
+    public string? IdDonTra { get; set; }
 
     //Excel: ID đơn gốc
-    public long? IdDonGoc { get; set; }
+    public string? IdDonGoc { get; set; }
 
     //Excel: STT theo ngày
     public int? SoThuTuTheoNgay { get; set; }
@@ -336,7 +336,7 @@ public class OrderNhanhVn : BaseEntity<Guid>, IAuditableEntity
     public string? NhanVienDongGoi { get; set; }
 
     //Excel: ID pháp nhân
-    public long? IdPhapNhan { get; set; }
+    public string? IdPhapNhan { get; set; }
 
     //Excel: Mã số thuế
     public string? MaSoThue { get; set; }
