@@ -95,6 +95,6 @@ public class Request
     
     public class MoveProductRequest
     {
-        public decimal Position { get; set; }
+        public double Position { get; set; }
     }
 }

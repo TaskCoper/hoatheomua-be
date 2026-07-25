@@ -5,7 +5,7 @@
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class AddProductIsPin : Migration
+    public partial class AddIsPinPositionProduct : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,6 +16,12 @@ namespace HoaTheoMua.Repository.Migrations
                 type: "boolean",
                 nullable: false,
                 defaultValue: false);
+
+            migrationBuilder.AddColumn<double>(
+                name: "Position",
+                table: "Products",
+                type: "double precision",
+                nullable: true);
         }
 
         /// <inheritdoc />
@@ -23,6 +29,10 @@ namespace HoaTheoMua.Repository.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "IsPin",
+                table: "Products");
+
+            migrationBuilder.DropColumn(
+                name: "Position",
                 table: "Products");
         }
     }

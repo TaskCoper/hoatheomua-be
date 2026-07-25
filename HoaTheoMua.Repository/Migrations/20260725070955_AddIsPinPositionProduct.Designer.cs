@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260724190248_AddProductPosition")]
-    partial class AddProductPosition
+    [Migration("20260725070955_AddIsPinPositionProduct")]
+    partial class AddIsPinPositionProduct
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -806,6 +806,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<decimal?>("Length")
                         .HasColumnType("numeric");
 
@@ -842,9 +847,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("PendingImportStock")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal>("Position")
-                        .HasPrecision(28, 10)
-                        .HasColumnType("numeric(28,10)");
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
 
                     b.Property<decimal?>("PreOrder")
                         .HasColumnType("numeric");

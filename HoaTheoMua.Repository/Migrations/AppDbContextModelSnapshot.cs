@@ -844,9 +844,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("PendingImportStock")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal>("Position")
-                        .HasPrecision(28, 10)
-                        .HasColumnType("numeric(28,10)");
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
 
                     b.Property<decimal?>("PreOrder")
                         .HasColumnType("numeric");
