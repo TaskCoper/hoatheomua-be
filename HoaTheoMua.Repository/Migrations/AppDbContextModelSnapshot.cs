@@ -220,12 +220,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
                     b.Property<string>("Description_En")
-                        .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 

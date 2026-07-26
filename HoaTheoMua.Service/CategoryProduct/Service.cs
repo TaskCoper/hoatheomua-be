@@ -58,14 +58,11 @@ public class Service : IService
             throw new BadRequestException("CATEGORY_NAME_EN_REQUIRED");
         }
 
-        if (string.IsNullOrWhiteSpace(request.description))
+        var hasDesc = !string.IsNullOrWhiteSpace(request.description);
+        var hasDescEn = !string.IsNullOrWhiteSpace(request.description_En);
+        if (hasDesc != hasDescEn)
         {
-            throw new BadRequestException("CATEGORY_DESCRIPTION_REQUIRED");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.description_En))
-        {
-            throw new BadRequestException("CATEGORY_DESCRIPTION_EN_REQUIRED");
+            throw new BadRequestException("CATEGORY_DESCRIPTION_MUTUALLY_REQUIRED");
         }
 
         var isDuplicateName = await _dbContext.CategoryProducts.AnyAsync(x =>
@@ -286,14 +283,11 @@ public class Service : IService
             throw new BadRequestException("CATEGORY_NAME_EN_REQUIRED");
         }
 
-        if (string.IsNullOrWhiteSpace(request.description))
+        var hasDesc = !string.IsNullOrWhiteSpace(request.description);
+        var hasDescEn = !string.IsNullOrWhiteSpace(request.description_En);
+        if (hasDesc != hasDescEn)
         {
-            throw new BadRequestException("CATEGORY_DESCRIPTION_REQUIRED");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.description_En))
-        {
-            throw new BadRequestException("CATEGORY_DESCRIPTION_EN_REQUIRED");
+            throw new BadRequestException("CATEGORY_DESCRIPTION_MUTUALLY_REQUIRED");
         }
 
         if (request.parentId == categoryId)

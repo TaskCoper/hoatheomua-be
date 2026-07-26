@@ -17,11 +17,9 @@ public class CategoryProductConfiguration : IEntityTypeConfiguration<CategoryPro
             .HasMaxLength(255);
 
         builder.Property(c => c.Description)
-            .IsRequired()
             .HasMaxLength(1000);
 
         builder.Property(c => c.Description_En)
-            .IsRequired()
             .HasMaxLength(1000);
 
         builder.Property(c => c.Position)
