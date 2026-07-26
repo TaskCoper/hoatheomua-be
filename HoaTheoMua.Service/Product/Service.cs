@@ -402,21 +402,54 @@ public class Service: IService
         {
             throw new BadRequestException("Invalid movement data.");
         }
-        
-        var product = await _dbContext.Products.FirstOrDefaultAsync(x => x.Id == id &&
-                                                                         !x.IsDeleted &&
-                                                                         x.IsPin == true);
 
-        if (product == null)
+        if (id == Guid.Empty)
         {
-            throw new BadRequestException("Only product with pin can update position");
+            throw new BadRequestException("Product ID is required.");
         }
-        
-        product.Position = request.Position;
-        product.UpdatedAt = DateTimeOffset.UtcNow;
-        
+
+        if (request.CategoryId.HasValue && request.CategoryId.Value == Guid.Empty)
+        {
+            throw new BadRequestException("Category ID cannot be empty.");
+        }
+
+        if (request.CategoryId.HasValue)
+        {
+            var categoryProductDetail = await _dbContext.CategoryProductDetails
+                .FirstOrDefaultAsync(x =>
+                    x.ProductId == id &&
+                    x.CategoryProductId == request.CategoryId.Value &&
+                    !x.IsDeleted &&
+                    x.IsPin &&
+                    !x.CategoryProduct.IsDeleted &&
+                    !x.Product.IsDeleted);
+
+            if (categoryProductDetail == null)
+            {
+                throw new BadRequestException("Only product pinned in this category can update position");
+            }
+
+            categoryProductDetail.Position = request.Position;
+            categoryProductDetail.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+        else
+        {
+            var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
+                                                                                    x.Id == id &&
+                                                                                    !x.IsDeleted &&
+                                                                                    x.IsPin);
+
+            if (product == null)
+            {
+                throw new BadRequestException("Only product with pin can update position");
+            }
+
+            product.Position = request.Position;
+            product.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
         await _dbContext.SaveChangesAsync();
-        
+
         return ApiResponseFactory.Base("Product position updated successfully.");
 
     }
@@ -427,93 +460,171 @@ public class Service: IService
         {
             throw new BadRequestException("Invalid pin data.");
         }
-        
-        var product = await _dbContext.Products.FirstOrDefaultAsync(x => x.Id == request.ProductId && !x.IsDeleted);
+
+        if (request.ProductId == Guid.Empty)
+        {
+            throw new BadRequestException("Product ID is required.");
+        }
+
+        if (request.CategoryId.HasValue && request.CategoryId.Value == Guid.Empty)
+        {
+            throw new BadRequestException("Category ID cannot be empty.");
+        }
+
+        var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
+                                                                    x.Id == request.ProductId &&
+                                                                    !x.IsDeleted);
 
         if (product == null)
         {
             throw new BadRequestException("Product not found.");
         }
-        
-        // Chỉ kiểm tra giới hạn khi chuẩn bị pin sản phẩm
-        if (!product.IsPin)
-        {
-            var pinnedProductCount = await _dbContext.Products.CountAsync(x => !x.IsDeleted && x.IsPin);
-            if (pinnedProductCount >= 32)
-            {
-                throw new BadRequestException("Only 32 products can be pinned.");
-            }
-        }
 
-        // Toggle trạng thái pin/unpin
-        if(product.IsPin)
+        if (request.CategoryId.HasValue)
         {
-            // Sản phẩm đang được pin → unpin
-            product.IsPin = false;
+            var categoryProductDetail = await _dbContext.CategoryProductDetails
+                .FirstOrDefaultAsync(x =>
+                    !x.IsDeleted &&
+                    x.CategoryProductId == request.CategoryId.Value &&
+                    x.ProductId == request.ProductId);
+
+            if (categoryProductDetail == null)
+            {
+                throw new BadRequestException("Product does not belong to this category.");
+            }
+
+            if (request.IsPin && !categoryProductDetail.IsPin)
+            {
+                var pinnedProductCount = await _dbContext.CategoryProductDetails
+                    .CountAsync(x =>
+                        !x.IsDeleted &&
+                        x.CategoryProductId == request.CategoryId.Value &&
+                        x.IsPin);
+
+                if (pinnedProductCount >= 32)
+                {
+                    throw new BadRequestException("Only 32 products can be pinned in this category.");
+                }
+            }
+
+            categoryProductDetail.IsPin = request.IsPin;
+            categoryProductDetail.UpdatedAt = DateTimeOffset.UtcNow;
         }
         else
         {
-            // Sản phẩm chưa được pin → pin
-            product.IsPin = true;
+            if (request.IsPin && !product.IsPin)
+            {
+                var pinnedProductCount = await _dbContext.Products
+                    .CountAsync(x =>
+                        !x.IsDeleted &&
+                        x.IsPin);
+
+                if (pinnedProductCount >= 32)
+                {
+                    throw new BadRequestException("Only 32 products can be pinned.");
+                }
+            }
+
+            product.IsPin = request.IsPin;
+            product.UpdatedAt = DateTimeOffset.UtcNow;
         }
-        
-        product.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _dbContext.SaveChangesAsync();
 
-        var message = product.IsPin
+        var message = request.IsPin
             ? "Product pinned successfully."
             : "Product unpinned successfully.";
 
         return ApiResponseFactory.Base(message);
     }
 
-    public async Task<List<Response.PinnedProductResponse>> GetProductPin(
-        Request.GetProductPinRequest request)
+    public async Task<List<Response.PinnedProductResponse>> GetProductPin(Request.GetProductPinRequest request)
     {
         if (request == null)
         {
             throw new BadRequestException("Invalid request data.");
         }
 
-        // if (request.CategoryId == Guid.Empty)
-        // {
-        //     throw new BadRequestException("Category ID is required.");
-        // }
+        if (request.CategoryId.HasValue && request.CategoryId.Value == Guid.Empty)
+        {
+            throw new BadRequestException("Category ID cannot be empty.");
+        }
 
-        var queryPinnedProducts = _dbContext.Products
+        if (request.CategoryId.HasValue)
+        {
+            var categoryPinnedQuery = _dbContext.CategoryProductDetails
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.IsPin &&
+                    x.CategoryProductId == request.CategoryId.Value &&
+                    !x.CategoryProduct.IsDeleted &&
+                    !x.Product.IsDeleted)
+                .OrderBy(x => x.Position)
+                .ThenBy(x => x.Product.ProductName);
+
+            var result =  await categoryPinnedQuery
+                .Select(x => new Response.PinnedProductResponse
+                {
+                    ProductId = x.Product.Id,
+                    CategoryId = x.CategoryProductId,
+                    ProductCode = x.Product.ProductCode,
+                    ProductName = x.Product.ProductName,
+                    CoverImage = x.Product.CoverImage,
+                    Price = x.Product.Price,
+                    OldPrice = x.Product.OldPrice,
+                    Position = x.Position
+                })
+                .ToListAsync();
+
+            return result;
+        }
+
+        var pinnedProductQuery = _dbContext.Products
             .Where(x =>
                 !x.IsDeleted &&
-                x.IsPin);
-
-        var queryProductCategory = _dbContext.CategoryProductDetails
-            .Where(x =>
-                !x.IsDeleted &&
-                x.CategoryProductId == request.CategoryId);
-
-        var selectedProductIdsInCategory = queryProductCategory
-            .Select(x => x.ProductId);
-
-        queryPinnedProducts = queryPinnedProducts
-            .Where(x =>
-                selectedProductIdsInCategory.Contains(x.Id));
-
-        var selectedQuery = queryPinnedProducts
+                x.IsPin)
             .OrderBy(x => x.Position)
-            .Take(32)
+            .ThenBy(x => x.ProductName);  //
+
+        var pinnedCategoryProductQuery = _dbContext.CategoryProductDetails
+            .Where(x =>
+                !x.IsDeleted &&
+                x.IsPin &&
+                !x.CategoryProduct.IsDeleted &&
+                !x.Product.IsDeleted)
+            .OrderBy(x => x.Position)
+            .ThenBy(x => x.Product.ProductName); //
+
+        var pinnedProducts = await pinnedProductQuery
             .Select(x => new Response.PinnedProductResponse
             {
                 ProductId = x.Id,
+                CategoryId = null,
                 ProductCode = x.ProductCode,
                 ProductName = x.ProductName,
                 CoverImage = x.CoverImage,
                 Price = x.Price,
                 OldPrice = x.OldPrice,
                 Position = x.Position
-            });
+            })
+            .ToListAsync();
 
-        var result = await selectedQuery.ToListAsync();
+        var pinnedCategoryProducts = await pinnedCategoryProductQuery
+            .Select(x => new Response.PinnedProductResponse
+            {
+                ProductId = x.Product.Id,
+                CategoryId = x.CategoryProductId,
+                ProductCode = x.Product.ProductCode,
+                ProductName = x.Product.ProductName,
+                CoverImage = x.Product.CoverImage,
+                Price = x.Product.Price,
+                OldPrice = x.Product.OldPrice,
+                Position = x.Position
+            })
+            .ToListAsync();
 
-        return result;
+        pinnedProducts.AddRange(pinnedCategoryProducts);
+
+        return pinnedProducts;
     }
 }

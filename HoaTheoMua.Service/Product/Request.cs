@@ -97,16 +97,18 @@ public class Request
     public class MoveProductRequest
     {
         public double Position { get; set; }
+        public Guid? CategoryId { get; set; }
     }
 
     public class PinProductRequest
     {
         public Guid ProductId { get; set; }
         public bool IsPin { get; set; }
+        public Guid? CategoryId { get; set; }
     }
 
     public class GetProductPinRequest
     {
-        public Guid CategoryId { get; set; }
+        public Guid? CategoryId { get; set; }
     } 
 }
