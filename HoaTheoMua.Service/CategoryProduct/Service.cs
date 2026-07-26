@@ -58,16 +58,6 @@ public class Service : IService
             throw new BadRequestException("CATEGORY_NAME_EN_REQUIRED");
         }
 
-        if (string.IsNullOrWhiteSpace(request.description))
-        {
-            throw new BadRequestException("CATEGORY_DESCRIPTION_REQUIRED");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.description_En))
-        {
-            throw new BadRequestException("CATEGORY_DESCRIPTION_EN_REQUIRED");
-        }
-
         var isDuplicateName = await _dbContext.CategoryProducts.AnyAsync(x =>
             !x.IsDeleted &&
             x.ParentCategoryProductId == request.parentId &&
@@ -284,16 +274,6 @@ public class Service : IService
         if (string.IsNullOrWhiteSpace(request.name_En))
         {
             throw new BadRequestException("CATEGORY_NAME_EN_REQUIRED");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.description))
-        {
-            throw new BadRequestException("CATEGORY_DESCRIPTION_REQUIRED");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.description_En))
-        {
-            throw new BadRequestException("CATEGORY_DESCRIPTION_EN_REQUIRED");
         }
 
         if (request.parentId == categoryId)
