@@ -420,4 +420,75 @@ public class Service: IService
         return ApiResponseFactory.Base("Product position updated successfully.");
 
     }
+
+    public async Task<BaseResponse> PinProduct(Request.PinProductRequest request)
+    {
+        if (request == null)
+        {
+            throw new BadRequestException("Invalid pin data.");
+        }
+        
+        var product = await _dbContext.Products.FirstOrDefaultAsync(x => x.Id == request.ProductId && !x.IsDeleted);
+
+        if (product == null)
+        {
+            throw new BadRequestException("Product not found.");
+        }
+
+        // Chỉ kiểm tra giới hạn khi chuẩn bị pin sản phẩm
+        if (!product.IsPin)
+        {
+            var pinnedProductCount = await _dbContext.Products.CountAsync(x => !x.IsDeleted && x.IsPin);
+
+            if (pinnedProductCount >= 32)
+            {
+                throw new BadRequestException("Only 32 products can be pinned.");
+            }
+        }
+
+        // Toggle trạng thái pin/unpin
+        if(product.IsPin)
+        {
+            // Sản phẩm đang được pin → unpin
+            product.IsPin = false;
+        }
+        else
+        {
+            // Sản phẩm chưa được pin → pin
+            product.IsPin = true;
+        }
+        
+        product.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        var message = product.IsPin
+            ? "Product pinned successfully."
+            : "Product unpinned successfully.";
+
+        return ApiResponseFactory.Base(message);
+    }
+
+    public async Task<List<Response.PinnedProductResponse>> GetProductPin()
+    {
+        var pinnedProducts =  _dbContext.Products
+            .Where(x => !x.IsDeleted && x.IsPin)
+            .OrderBy(x => x.Position)
+            .Take(32);
+
+        var selectedQuery = pinnedProducts
+            .Select(x => new Response.PinnedProductResponse
+            {
+                ProductId = x.Id,
+                ProductCode = x.ProductCode,
+                ProductName = x.ProductName,
+                CoverImage = x.CoverImage,
+                Price = x.Price,
+                OldPrice = x.OldPrice,
+                Position = x.Position
+            });
+        
+        var result = await selectedQuery.ToListAsync();
+        return result;
+    }
 }
