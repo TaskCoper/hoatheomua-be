@@ -458,4 +458,51 @@ public class Service : IService
             throw;
         }
     }
+
+    public async Task<List<Response.CategoryWithChildrenResponse>> GetCategoryWithChild()
+    {
+        var queryCategoryProducts = _dbContext.CategoryProducts.Where(x => !x.IsDeleted && x.IsActive);
+
+        var selectedQueryCate = queryCategoryProducts
+            .Select(x => new Response.CategoryWithChildrenResponse()
+            {
+                CategoryId = x.Id,
+                Name = x.Name,
+                NameEn = x.Name_En,
+                Description = x.Description,
+                DescriptionEn = x.Description_En,
+                Position = x.Position,
+                MetaData = x.MetaData,
+                StartTime = x.StartTime,
+                EndTime = x.EndTime,
+                Type = x.Type,
+                UserId = x.UserId,
+                ParentId = x.ParentCategoryProductId,
+                Children = new List<Response.CategoryWithChildrenResponse>()
+            });
+
+        var listCategoryProducts = await selectedQueryCate.ToListAsync();
+        
+        var parentCategories = listCategoryProducts
+            .Where(x => x.ParentId == null)
+            .OrderBy(x => x.Position)
+            .ToList();
+        
+        var childCategories = listCategoryProducts
+            .Where(x => x.ParentId != null)
+            .OrderBy(x => x.Position)
+            .ToList();
+
+        foreach (var parentCategory in parentCategories)
+        {
+            var children = childCategories
+                .Where(x => x.ParentId == parentCategory.CategoryId)
+                .OrderBy(x => x.Position)
+                .ToList();
+
+            parentCategory.Children = children;
+        }
+
+        return parentCategories;
+    }
 }

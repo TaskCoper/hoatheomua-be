@@ -62,4 +62,11 @@ public class CategoryProductController : ControllerBase
         await _categoryProductService.DeleteCateProduct(id);
         return Ok(ApiResponseFactory.Base(new { message = "Xóa danh mục sản phẩm thành công." }, true, "", HttpContext.TraceIdentifier));
     }
+
+    [HttpGet("with-children")]
+    public async Task<IActionResult> GetCategoryWithChild()
+    {
+        var result = await _categoryProductService.GetCategoryWithChild();
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
 }

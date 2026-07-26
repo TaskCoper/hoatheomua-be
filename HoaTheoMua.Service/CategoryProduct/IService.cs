@@ -10,4 +10,5 @@ public interface IService
     Task<Response.CategoryProductResponse> UpdateCateProduct(Guid categoryId, Request.UpdateCategoryProductRequest request);
     Task AssignProductsToCategory(Guid categoryId, Request.AssignProductsToCategoryRequest request);
     Task DeleteCateProduct(Guid categoryId);
+    Task<List<Response.CategoryWithChildrenResponse>> GetCategoryWithChild();
 }
