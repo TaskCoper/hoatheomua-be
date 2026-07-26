@@ -46,8 +46,22 @@ public class NhanhVnController : ControllerBase
     public async Task<IActionResult> Webhook([FromBody] JsonElement? body)
     {
         Console.WriteLine(body);
-        
+
         var result = await _nhanhVnService.HandleWebhook(body);
+        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
+    }
+
+    [HttpGet("api/v1/nhanh-vn/orders")]
+    public async Task<IActionResult> GetNhanhVnOrders([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
+    {
+        var result = await _nhanhVnService.GetOrderNhanhVnPagination(pageIndex, pageSize);
+        return Ok(result);
+    }
+
+    [HttpGet("api/v1/nhanh-vn/orders/{id}")]
+    public async Task<IActionResult> GetNhanhVnOrderById(Guid id)
+    {
+        var result = await _nhanhVnService.GetOrderNhanhVnById(id);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
     }
 }
