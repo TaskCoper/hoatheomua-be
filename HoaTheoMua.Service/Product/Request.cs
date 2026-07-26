@@ -98,4 +98,10 @@ public class Request
     {
         public double Position { get; set; }
     }
+
+    public class PinProductRequest
+    {
+        public Guid ProductId { get; set; }
+        public bool IsPin { get; set; }
+    }
 }

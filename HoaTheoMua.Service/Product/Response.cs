@@ -77,4 +77,15 @@ public class Response
 
         public List<CategoryProductResponse> Categories { get; set; } = new List<CategoryProductResponse>();
     }
+
+    public class PinnedProductResponse
+    {
+        public Guid ProductId { get; set; }
+        public string? ProductCode { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+        public decimal? Price { get; set; }
+        public decimal? OldPrice { get; set; }
+        public double? Position { get; set; }
+    }
 }
