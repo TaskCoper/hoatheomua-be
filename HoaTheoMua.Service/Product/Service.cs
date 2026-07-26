@@ -435,31 +435,10 @@ public class Service: IService
             throw new BadRequestException("Product not found.");
         }
         
-        //filter theo categoryId
-        var productInCategory = await _dbContext.CategoryProductDetails.AnyAsync(x =>
-                                                                !x.IsDeleted &&
-                                                                x.CategoryProductId == request.CategoryId &&
-                                                                x.ProductId == request.ProductId);
-
-        if (!productInCategory)
-        {
-            throw new BadRequestException("Product does not belong to this category.");
-        }
-        
         // Chỉ kiểm tra giới hạn khi chuẩn bị pin sản phẩm
         if (!product.IsPin)
         {
-            
-            var queryProductCategory = _dbContext.CategoryProductDetails.Where(x =>
-                                                                        !x.IsDeleted &&
-                                                                        x.CategoryProductId == request.CategoryId);
-            
-            var selectedProductIdsInCategory = queryProductCategory.Select(x => x.ProductId);
-
-            var pinnedProductCount = await _dbContext.Products.CountAsync(x =>
-                                                                                !x.IsDeleted &&
-                                                                                x.IsPin &&
-                                                                                selectedProductIdsInCategory.Contains(x.Id));
+            var pinnedProductCount = await _dbContext.Products.CountAsync(x => !x.IsDeleted && x.IsPin);
             if (pinnedProductCount >= 32)
             {
                 throw new BadRequestException("Only 32 products can be pinned.");
@@ -489,14 +468,39 @@ public class Service: IService
         return ApiResponseFactory.Base(message);
     }
 
-    public async Task<List<Response.PinnedProductResponse>> GetProductPin()
+    public async Task<List<Response.PinnedProductResponse>> GetProductPin(
+        Request.GetProductPinRequest request)
     {
-        var pinnedProducts =  _dbContext.Products
-            .Where(x => !x.IsDeleted && x.IsPin)
-            .OrderBy(x => x.Position)
-            .Take(32);
+        if (request == null)
+        {
+            throw new BadRequestException("Invalid request data.");
+        }
 
-        var selectedQuery = pinnedProducts
+        // if (request.CategoryId == Guid.Empty)
+        // {
+        //     throw new BadRequestException("Category ID is required.");
+        // }
+
+        var queryPinnedProducts = _dbContext.Products
+            .Where(x =>
+                !x.IsDeleted &&
+                x.IsPin);
+
+        var queryProductCategory = _dbContext.CategoryProductDetails
+            .Where(x =>
+                !x.IsDeleted &&
+                x.CategoryProductId == request.CategoryId);
+
+        var selectedProductIdsInCategory = queryProductCategory
+            .Select(x => x.ProductId);
+
+        queryPinnedProducts = queryPinnedProducts
+            .Where(x =>
+                selectedProductIdsInCategory.Contains(x.Id));
+
+        var selectedQuery = queryPinnedProducts
+            .OrderBy(x => x.Position)
+            .Take(32)
             .Select(x => new Response.PinnedProductResponse
             {
                 ProductId = x.Id,
@@ -507,8 +511,9 @@ public class Service: IService
                 OldPrice = x.OldPrice,
                 Position = x.Position
             });
-        
+
         var result = await selectedQuery.ToListAsync();
+
         return result;
     }
 }

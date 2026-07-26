@@ -11,5 +11,5 @@ public interface IService
     Task<decimal> GetMaxPrice(Guid? categoryId = null);
     Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request);
     Task<BaseResponse> PinProduct(Request.PinProductRequest request);
-    Task<List<Response.PinnedProductResponse>> GetProductPin();
+    Task<List<Response.PinnedProductResponse>> GetProductPin(Request.GetProductPinRequest request);
 }
