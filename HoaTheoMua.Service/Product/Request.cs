@@ -101,6 +101,7 @@ public class Request
 
     public class PinProductRequest
     {
+        public Guid CategoryId { get; set; }
         public Guid ProductId { get; set; }
         public bool IsPin { get; set; }
     }

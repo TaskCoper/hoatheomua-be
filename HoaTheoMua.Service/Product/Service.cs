@@ -434,12 +434,32 @@ public class Service: IService
         {
             throw new BadRequestException("Product not found.");
         }
+        
+        //filter theo categoryId
+        var productInCategory = await _dbContext.CategoryProductDetails.AnyAsync(x =>
+                                                                !x.IsDeleted &&
+                                                                x.CategoryProductId == request.CategoryId &&
+                                                                x.ProductId == request.ProductId);
 
+        if (!productInCategory)
+        {
+            throw new BadRequestException("Product does not belong to this category.");
+        }
+        
         // Chỉ kiểm tra giới hạn khi chuẩn bị pin sản phẩm
         if (!product.IsPin)
         {
-            var pinnedProductCount = await _dbContext.Products.CountAsync(x => !x.IsDeleted && x.IsPin);
+            
+            var queryProductCategory = _dbContext.CategoryProductDetails.Where(x =>
+                                                                        !x.IsDeleted &&
+                                                                        x.CategoryProductId == request.CategoryId);
+            
+            var selectedProductIdsInCategory = queryProductCategory.Select(x => x.ProductId);
 
+            var pinnedProductCount = await _dbContext.Products.CountAsync(x =>
+                                                                                !x.IsDeleted &&
+                                                                                x.IsPin &&
+                                                                                selectedProductIdsInCategory.Contains(x.Id));
             if (pinnedProductCount >= 32)
             {
                 throw new BadRequestException("Only 32 products can be pinned.");
