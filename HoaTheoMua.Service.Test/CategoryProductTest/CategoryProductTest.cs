@@ -815,4 +815,82 @@ public class CategoryProductTest
         Assert.Null(updateResult.description);
         Assert.Null(updateResult.description_En);
     }
+
+    [Fact]
+    public async Task CreateAndUpdateCategoryProduct_MutuallyRequiredDescription_ThrowsBadRequestException()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var req1 = new Request.CreateCategoryProductRequest
+        {
+            name = "Hoa Hồng",
+            name_En = "Rose",
+            description = "Vietnamese description only",
+            description_En = null,
+            type = CategoryProductType.Fix,
+            isActive = true
+        };
+
+        var req2 = new Request.CreateCategoryProductRequest
+        {
+            name = "Hoa Hồng",
+            name_En = "Rose",
+            description = null,
+            description_En = "English description only",
+            type = CategoryProductType.Fix,
+            isActive = true
+        };
+
+        // Act & Assert - Create (Only description)
+        var ex1 = await Assert.ThrowsAsync<BadRequestException>(() => service.CreateCateProduct(req1));
+        Assert.Equal("CATEGORY_DESCRIPTION_MUTUALLY_REQUIRED", ex1.Message);
+
+        // Act & Assert - Create (Only description_En)
+        var ex2 = await Assert.ThrowsAsync<BadRequestException>(() => service.CreateCateProduct(req2));
+        Assert.Equal("CATEGORY_DESCRIPTION_MUTUALLY_REQUIRED", ex2.Message);
+
+        // Set up an existing category for update tests
+        var category = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Original",
+            Name_En = "Original",
+            Description = "Original",
+            Description_En = "Original",
+            Type = CategoryProductType.Fix,
+            IsActive = true
+        };
+        await dbContext.CategoryProducts.AddAsync(category);
+        await dbContext.SaveChangesAsync();
+
+        var reqUpdate1 = new Request.UpdateCategoryProductRequest
+        {
+            name = "Original Updated",
+            name_En = "Original Updated",
+            description = "Vietnamese description only",
+            description_En = null,
+            type = CategoryProductType.Fix,
+            isActive = true
+        };
+
+        var reqUpdate2 = new Request.UpdateCategoryProductRequest
+        {
+            name = "Original Updated",
+            name_En = "Original Updated",
+            description = null,
+            description_En = "English description only",
+            type = CategoryProductType.Fix,
+            isActive = true
+        };
+
+        // Act & Assert - Update (Only description)
+        var ex3 = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCateProduct(category.Id, reqUpdate1));
+        Assert.Equal("CATEGORY_DESCRIPTION_MUTUALLY_REQUIRED", ex3.Message);
+
+        // Act & Assert - Update (Only description_En)
+        var ex4 = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCateProduct(category.Id, reqUpdate2));
+        Assert.Equal("CATEGORY_DESCRIPTION_MUTUALLY_REQUIRED", ex4.Message);
+    }
 }
