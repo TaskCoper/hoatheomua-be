@@ -9,4 +9,5 @@ public interface IService
     Task<BasePaginationResponse> GetLocalProducts(Request.LocalProductQueryRequest request);
     Task<Response.ProductDetailResponse> GetLocalProductDetail(Guid id);
     Task<decimal> GetMaxPrice(Guid? categoryId = null);
+    Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request);
 }

@@ -93,4 +93,9 @@ public class Request
         public List<string>? sortBy { get; set; }
         public List<Guid>? categoryIds { get; set; }
     }
+    
+    public class MoveProductRequest
+    {
+        public double Position { get; set; }
+    }
 }

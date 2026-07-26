@@ -1299,6 +1299,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<decimal?>("Length")
                         .HasColumnType("numeric");
 
@@ -1334,6 +1339,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<decimal?>("PendingImportStock")
                         .HasColumnType("numeric");
+
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
 
                     b.Property<decimal?>("PreOrder")
                         .HasColumnType("numeric");

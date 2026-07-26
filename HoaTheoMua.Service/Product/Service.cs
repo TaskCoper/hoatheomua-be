@@ -395,4 +395,29 @@ public class Service: IService
 
         return maxPrice ?? 0;
     }
+
+    public async Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request)
+    {
+        if (request == null)
+        {
+            throw new BadRequestException("Invalid movement data.");
+        }
+        
+        var product = await _dbContext.Products.FirstOrDefaultAsync(x => x.Id == id &&
+                                                                         !x.IsDeleted &&
+                                                                         x.IsPin == true);
+
+        if (product == null)
+        {
+            throw new BadRequestException("Only product with pin can update position");
+        }
+        
+        product.Position = request.Position;
+        product.UpdatedAt = DateTimeOffset.UtcNow;
+        
+        await _dbContext.SaveChangesAsync();
+        
+        return ApiResponseFactory.Base("Product position updated successfully.");
+
+    }
 }
