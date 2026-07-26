@@ -73,4 +73,5 @@ public class ProductController: ControllerBase
         var result = await _productService.GetProductPin();
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
+    
 }
