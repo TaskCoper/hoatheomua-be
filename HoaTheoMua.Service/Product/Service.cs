@@ -208,6 +208,7 @@ public class Service : IService
     {
         var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
         var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
+        var search = request.search?.Trim();
         var categoryIds = request.categoryIds?
             .Distinct()
             .ToList() ?? new List<Guid>();
@@ -219,6 +220,16 @@ public class Service : IService
             .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch = search.ToLower();
+
+            query = query.Where(x =>
+                (x.ProductName != null && x.ProductName.ToLower().Contains(normalizedSearch)) ||
+                (x.Barcode != null && x.Barcode.ToLower().Contains(normalizedSearch)) ||
+                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
+        }
 
         if (request.priceFrom.HasValue)
         {
@@ -315,6 +326,7 @@ public class Service : IService
         return new Response.ProductDetailResponse
         {
             Id = product.Id,
+            IsPinned =  product.IsPin,
             SourceRowNumber = product.SourceRowNumber,
             NhanhProductId = product.NhanhProductId,
             ParentProductId = product.ParentProductId,
@@ -385,6 +397,7 @@ public class Service : IService
                 .Select(cpd => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
                 {
                     categoryId = cpd.CategoryProduct.Id,
+                    isPinned = cpd.IsPin,
                     name = cpd.CategoryProduct.Name,
                     name_En = cpd.CategoryProduct.Name_En,
                     description = cpd.CategoryProduct.Description,
@@ -625,3 +638,5 @@ public class Service : IService
         return pinnedProducts;
     }
 }
+
+

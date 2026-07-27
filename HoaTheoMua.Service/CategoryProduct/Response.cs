@@ -24,6 +24,7 @@ public class Response
     public class CategoryProductResponse
     {
         public required Guid categoryId { get; set; }
+        public bool? isPinned { get; set; }
         public required string name { get; set; }
         public string? name_En { get; set; }
         public string? description { get; set; }

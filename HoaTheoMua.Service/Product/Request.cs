@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.Product;
 
@@ -88,6 +88,7 @@ public class Request
     {
         public int pageIndex { get; set; } = 1;
         public int pageSize { get; set; } = 10;
+        public string? search { get; set; }
         public decimal? priceFrom { get; set; }
         public decimal? priceTo { get; set; }
         public List<string>? sortBy { get; set; }
@@ -112,3 +113,4 @@ public class Request
         public Guid? CategoryId { get; set; }
     } 
 }
+

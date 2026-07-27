@@ -9,6 +9,7 @@ public class Response
     public class ProductDetailResponse
     {
         public Guid Id { get; set; }
+        public bool? IsPinned { get; set; }
         public int SourceRowNumber { get; set; }
         public string? NhanhProductId { get; set; }
         public string? ParentProductId { get; set; }
