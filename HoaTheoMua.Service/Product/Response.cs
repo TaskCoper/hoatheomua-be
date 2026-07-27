@@ -9,6 +9,7 @@ public class Response
     public class ProductDetailResponse
     {
         public Guid Id { get; set; }
+        public bool? IsPinned { get; set; }
         public int SourceRowNumber { get; set; }
         public string? NhanhProductId { get; set; }
         public string? ParentProductId { get; set; }
@@ -76,5 +77,17 @@ public class Response
         public DateTimeOffset? UpdatedAt { get; set; }
 
         public List<CategoryProductResponse> Categories { get; set; } = new List<CategoryProductResponse>();
+    }
+
+    public class PinnedProductResponse
+    {
+        public Guid ProductId { get; set; }
+        public Guid? CategoryId { get; set; }
+        public string? ProductCode { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+        public decimal? Price { get; set; }
+        public decimal? OldPrice { get; set; }
+        public double? Position { get; set; }
     }
 }

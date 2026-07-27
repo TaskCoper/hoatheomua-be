@@ -1,5 +1,7 @@
-﻿using HoaTheoMua.Service.Models;
+﻿using HoaTheoMua.Extentions;
+using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Product;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HoaTheoMua.Controllers;
@@ -45,6 +47,30 @@ public class ProductController: ControllerBase
     public async Task<IActionResult> GetLocalProductDetail(Guid id)
     {
         var result = await _productService.GetLocalProductDetail(id);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpPut("/api/v1/products/{id:guid}/move")]
+    [Authorize (Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> MoveProduct(Guid id, Request.MoveProductRequest request)
+    {
+        var result = await _productService.MoveProduct(id, request);
+        return Ok(result);
+    }
+    
+    [HttpPut("/api/v1/products/pin")]
+    [Authorize (Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> PinProduct(Request.PinProductRequest request)
+    {
+        var result = await _productService.PinProduct(request);
+        return Ok(result);
+    }
+
+    [HttpGet("/api/v1/products-pin")]
+    [Authorize (Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetProductPin([FromQuery] Request.GetProductPinRequest request)
+    {
+        var result = await _productService.GetProductPin(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     

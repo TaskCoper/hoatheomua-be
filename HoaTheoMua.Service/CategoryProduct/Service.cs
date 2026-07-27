@@ -452,4 +452,60 @@ public class Service : IService
             throw;
         }
     }
+
+    public async Task<List<Response.CategoryWithChildrenResponse>> GetCategoryWithChild()
+    {
+        var queryCategoryProducts = _dbContext.CategoryProducts
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.IsActive);
+
+        var selectedQueryCategory = queryCategoryProducts
+            .Select(x => new Response.CategoryWithChildrenResponse
+            {
+                CategoryId = x.Id,
+                Name = x.Name,
+                NameEn = x.Name_En,
+                Description = x.Description,
+                DescriptionEn = x.Description_En,
+                Position = x.Position,
+                MetaData = x.MetaData,
+                StartTime = x.StartTime,
+                EndTime = x.EndTime,
+                Type = x.Type,
+                UserId = x.UserId,
+                ParentId = x.ParentCategoryProductId,
+                Children = new List<Response.CategoryWithChildrenResponse>()
+            });
+
+        var categoryProducts = await selectedQueryCategory
+            .ToListAsync();
+
+        var categoryById = categoryProducts
+            .ToDictionary(category => category.CategoryId);
+
+        var result = new List<Response.CategoryWithChildrenResponse>();
+
+        foreach (var category in categoryProducts.OrderBy(x => x.Position))
+        {
+            if (category.ParentId == null)
+            {
+                result.Add(category);
+                continue;
+            }
+
+            if (categoryById.TryGetValue(category.ParentId.Value, out var parent))
+            {
+                if (parent.Children == null)
+                {
+                    parent.Children = new List<Response.CategoryWithChildrenResponse>();
+                }
+                
+                parent.Children.Add(category);
+            }
+        }
+
+        return result;
+    }
 }

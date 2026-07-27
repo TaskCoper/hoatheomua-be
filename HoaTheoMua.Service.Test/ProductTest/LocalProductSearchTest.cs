@@ -245,6 +245,106 @@ public class LocalProductSearchTest
     }
 
     [Fact]
+    public async Task GetLocalProducts_OneCategory_SortsByCategoryPinAndPositionFirst()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var category = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Category",
+            Name_En = "Category",
+            Description = "Category",
+            Description_En = "Category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false
+        };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "A", IsPin = true, Position = 1, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "B", IsPin = false, Position = 3, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "C", IsPin = false, Position = 2, IsDeleted = false };
+
+        await dbContext.CategoryProducts.AddAsync(category);
+        await dbContext.Products.AddRangeAsync(p1, p2, p3);
+        await dbContext.CategoryProductDetails.AddRangeAsync(
+            new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = category.Id, ProductId = p1.Id, IsPin = false, Position = 1, IsDeleted = false },
+            new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = category.Id, ProductId = p2.Id, IsPin = true, Position = 2, IsDeleted = false },
+            new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = category.Id, ProductId = p3.Id, IsPin = true, Position = 1, IsDeleted = false });
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.GetLocalProducts(new Request.LocalProductQueryRequest
+        {
+            categoryIds = new List<Guid> { category.Id },
+            sortBy = new List<string> { "+name" }
+        });
+
+        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
+        Assert.Equal(new[] { "C", "B", "A" }, items.Select(x => x.ProductName));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task GetLocalProducts_ZeroOrMultipleCategories_SortsByProductPinAndPositionFirst(
+        int categoryFilterMode)
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var c1 = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "C1",
+            Name_En = "C1",
+            Description = "C1",
+            Description_En = "C1",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false
+        };
+        var c2 = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "C2",
+            Name_En = "C2",
+            Description = "C2",
+            Description_En = "C2",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false
+        };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "A", IsPin = false, Position = 1, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "B", IsPin = true, Position = 2, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "C", IsPin = true, Position = 1, IsDeleted = false };
+
+        await dbContext.CategoryProducts.AddRangeAsync(c1, c2);
+        await dbContext.Products.AddRangeAsync(p1, p2, p3);
+        await dbContext.CategoryProductDetails.AddRangeAsync(
+            new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c1.Id, ProductId = p1.Id, IsDeleted = false },
+            new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c1.Id, ProductId = p2.Id, IsDeleted = false },
+            new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c2.Id, ProductId = p3.Id, IsDeleted = false });
+        await dbContext.SaveChangesAsync();
+
+        var categoryIds = categoryFilterMode switch
+        {
+            0 => null,
+            1 => new List<Guid>(),
+            _ => new List<Guid> { c1.Id, c2.Id }
+        };
+
+        var result = await service.GetLocalProducts(new Request.LocalProductQueryRequest
+        {
+            categoryIds = categoryIds,
+            sortBy = new List<string> { "+name" }
+        });
+
+        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
+        Assert.Equal(new[] { "C", "B", "A" }, items.Select(x => x.ProductName));
+    }
+
+    [Fact]
     public async Task GetMaxPrice_Success()
     {
         // Arrange

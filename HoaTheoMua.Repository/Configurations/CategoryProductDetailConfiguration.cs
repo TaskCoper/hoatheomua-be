@@ -22,5 +22,8 @@ public class CategoryProductDetailConfiguration : IEntityTypeConfiguration<Categ
             .WithMany(p => p.CategoryProductDetails)
             .HasForeignKey(cnd => cnd.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        builder.Property(x => x.IsPin)
+            .HasDefaultValue(false);
     }
 }

@@ -295,6 +295,14 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
+
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
 
@@ -758,12 +766,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("CapDoKhachHang")
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("ChietKhauMotSanPham")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("ChietKhauSanPham")
-                        .HasColumnType("numeric");
-
                     b.Property<string>("CoLayHoaDon")
                         .HasColumnType("text");
 
@@ -779,9 +781,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("CuaHang")
                         .HasColumnType("text");
 
-                    b.Property<string>("DanhMucSanPham")
-                        .HasColumnType("text");
-
                     b.Property<string>("DiaChiKhachHang")
                         .HasColumnType("text");
 
@@ -789,9 +788,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("DichVuVanChuyen")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DonViTinh")
                         .HasColumnType("text");
 
                     b.Property<string>("EmailKhachHang")
@@ -821,29 +817,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("GhiChuNoiBo")
                         .HasColumnType("text");
 
-                    b.Property<string>("GhiChuSanPham")
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("GiaBan")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("GiaBanTruocVat")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("GiaSanPhamSauChietKhau")
-                        .HasColumnType("numeric");
-
                     b.Property<decimal?>("GiaTriDonHang")
                         .HasColumnType("numeric");
 
                     b.Property<string>("GiaTriFacebook")
                         .HasColumnType("text");
-
-                    b.Property<decimal?>("GiaVon")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("GiaVonDonHang")
-                        .HasColumnType("numeric");
 
                     b.Property<string>("GioThanhCong")
                         .HasColumnType("text");
@@ -869,9 +847,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("IdPhapNhan")
                         .HasColumnType("text");
 
-                    b.Property<string>("Imei")
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -881,16 +856,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("KhoTaoDon")
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("KhoiLuongSanPham")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("LoHang")
-                        .HasColumnType("text");
-
                     b.Property<string>("LoaiDon")
-                        .HasColumnType("text");
-
-                    b.Property<string>("LoaiGiaSanPham")
                         .HasColumnType("text");
 
                     b.Property<string>("LoaiKhachHangHoaDon")
@@ -922,12 +888,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("MaSanPham")
-                        .HasColumnType("text");
-
-                    b.Property<string>("MaSanPhamCha")
-                        .HasColumnType("text");
-
                     b.Property<string>("MaSoThue")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -935,9 +895,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("MaThamChieu")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
-
-                    b.Property<string>("MaVach")
-                        .HasColumnType("text");
 
                     b.Property<string>("MaVanDon")
                         .HasMaxLength(100)
@@ -992,9 +949,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("NhanVienChamSocKhachHang")
                         .HasColumnType("text");
 
-                    b.Property<string>("NhanVienDongGoi")
-                        .HasColumnType("text");
-
                     b.Property<string>("NhomKhachHang")
                         .HasColumnType("text");
 
@@ -1017,9 +971,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<string>("PhuongXaKhachHang")
-                        .HasColumnType("text");
-
-                    b.Property<string>("QuaTangKem")
                         .HasColumnType("text");
 
                     b.Property<string>("QuanHuyenKhachHang")
@@ -1047,19 +998,10 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("SoHoaDonDienTu")
                         .HasColumnType("text");
 
-                    b.Property<int?>("SoLuong")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("SoLuongDonViNhoNhat")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("SoNgayChuyenHang")
                         .HasColumnType("integer");
 
                     b.Property<int?>("SoThuTuTheoNgay")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SourceRowNumber")
                         .HasColumnType("integer");
 
                     b.Property<string>("TaiKhoanChuyenKhoan")
@@ -1081,12 +1023,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("TenNguoiLienHe")
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
-
-                    b.Property<string>("TenSanPham")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TenSanPhamCha")
-                        .HasColumnType("text");
 
                     b.Property<string>("ThanhPhoKhachHang")
                         .HasColumnType("text");
@@ -1116,9 +1052,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<decimal?>("TienVat")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("TienVatSanPham")
                         .HasColumnType("numeric");
 
                     b.Property<decimal?>("TongKhoiLuong")
@@ -1171,6 +1104,123 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("TrangThaiDonHang");
 
                     b.ToTable("OrderNhanhVns");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderNhanhVnDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("ChietKhauMotSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ChietKhauSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("DanhMucSanPham")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("DonViTinh")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("GhiChuSanPham")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("GiaBan")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("GiaBanTruocVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("GiaSanPhamSauChietKhau")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("GiaVon")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("GiaVonDonHang")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Imei")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("KhoiLuongSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("LoHang")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("LoaiGiaSanPham")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("MaSanPham")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaSanPhamCha")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaVach")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NhanVienDongGoi")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<Guid?>("OrderNhanhVnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("QuaTangKem")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<int?>("SoLuong")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SoLuongDonViNhoNhat")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TenSanPham")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("TenSanPhamCha")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<decimal?>("TienVatSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("MaSanPham");
+
+                    b.HasIndex("OrderNhanhVnId");
+
+                    b.HasIndex("TenSanPham");
+
+                    b.ToTable("OrderNhanhVnDetails");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
@@ -1255,6 +1305,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<decimal?>("Length")
                         .HasColumnType("numeric");
 
@@ -1290,6 +1345,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<decimal?>("PendingImportStock")
                         .HasColumnType("numeric");
+
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
 
                     b.Property<decimal?>("PreOrder")
                         .HasColumnType("numeric");
@@ -1621,6 +1679,16 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderNhanhVnDetail", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.OrderNhanhVn", "OrderNhanhVn")
+                        .WithMany("OrderNhanhVnDetails")
+                        .HasForeignKey("OrderNhanhVnId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("OrderNhanhVn");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.JobDescriptions", "JobDescription")
@@ -1672,6 +1740,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("OrderDetails");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderNhanhVn", b =>
+                {
+                    b.Navigation("OrderNhanhVnDetails");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
