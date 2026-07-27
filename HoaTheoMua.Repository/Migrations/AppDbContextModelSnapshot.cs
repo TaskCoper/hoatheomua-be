@@ -208,6 +208,117 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("CategoryNewsDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProduct", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Description_En")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MetaData")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Name_En")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid?>("ParentCategoryProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTimeOffset?>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentCategoryProductId");
+
+                    b.ToTable("CategoryProducts");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProductDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoryProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("CategoryProductId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("CategoryProductDetails");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -527,6 +638,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal>("ProductFee")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("QrUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("ReceiptAddress")
                         .HasColumnType("text");
 
@@ -632,6 +746,730 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderDetails");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderNhanhVn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BienBan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BienBanBanGiao")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("CanNangHangVanChuyen")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("CapDoKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoLayHoaDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CongVanChuyen")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("CuaHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DiaChiKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DiaChiKhachHangTrenHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DichVuVanChuyen")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmailKhachHang")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("EmailNguoiLienHe")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("EmailNguoiLienHeThuHai")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("FacebookPageUserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FacebookPsid")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GhiChuCuaKhach")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GhiChuHangVanChuyen")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GhiChuNoiBo")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("GiaTriDonHang")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("GiaTriFacebook")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GioThanhCong")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HangVanChuyen")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("IdDonGoc")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IdDonHangApi")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("IdDonHangNhanh")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("IdDonTra")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IdPhapNhan")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("KhoLayHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("KhoTaoDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LoaiDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LoaiKhachHangHoaDon")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("LoiNhuan")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("LyDoHuy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaAffiliate")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaCoQuanThueHoaDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaCoQuanThueHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaGiamGia")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaGiaoDichQuetThe")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaKhachHang")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaSoThue")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("MaThamChieu")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaVanDon")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("NgayBanGiao")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayDoiSoat")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayGuiHangVanChuyen")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayHenThanhToan")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayPhatHanhHoaDon")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgaySinhKhachHang")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayThanhCong")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayThanhToanDoanhNghiep")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayXacNhan")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NgayXuatHoaDonDienTu")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NguoiTaoDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nguon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NguonDonHang")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Nhan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhanVienBanHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhanVienChamSocKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NhomKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("PhiChuyenHoan")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PhiKhaiGia")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PhiShipBaoKhach")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PhiThuTienHo")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PhiVanChuyen")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PhiVuotCan")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PhuongXaKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("QuanHuyenKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("QuanHuyenKhoHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("QuanHuyenLayHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SoDienThoaiFacebook")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SoDienThoaiKhachHang")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("SoDienThoaiNguoiLienHe")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SoHoaDon")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SoHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SoNgayChuyenHang")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SoThuTuTheoNgay")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TaiKhoanChuyenKhoan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaiKhoanDatCoc")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaiKhoanQuetThe")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TenKhachHang")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("TenKhachHangTrenHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TenNguoiLienHe")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("ThanhPhoKhachHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThanhPhoKhoHang")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThanhPhoLayHang")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ThoiGianDonHang")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("TienChietKhau")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienChuyenKhoan")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienDatCoc")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienQuetThe")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienTieuDiem")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TienVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TongKhoiLuong")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("TongThu")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("TrangThaiDoiSoat")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TrangThaiDonHang")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TrangThaiHoaDonDienTu")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TrangThaiThanhToanDoanhNghiep")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TyLeLoiNhuan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TyLeVat")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("IdDonHangApi");
+
+                    b.HasIndex("IdDonHangNhanh")
+                        .IsUnique();
+
+                    b.HasIndex("MaKhachHang");
+
+                    b.HasIndex("MaVanDon");
+
+                    b.HasIndex("NguonDonHang");
+
+                    b.HasIndex("SoDienThoaiKhachHang");
+
+                    b.HasIndex("TenKhachHang");
+
+                    b.HasIndex("TrangThaiDonHang");
+
+                    b.ToTable("OrderNhanhVns");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderNhanhVnDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("ChietKhauMotSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ChietKhauSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("DanhMucSanPham")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("DonViTinh")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("GhiChuSanPham")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("GiaBan")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("GiaBanTruocVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("GiaSanPhamSauChietKhau")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("GiaVon")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("GiaVonDonHang")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Imei")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("KhoiLuongSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("LoHang")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("LoaiGiaSanPham")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("MaSanPham")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaSanPhamCha")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MaVach")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NhanVienDongGoi")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<Guid?>("OrderNhanhVnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("QuaTangKem")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<int?>("SoLuong")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SoLuongDonViNhoNhat")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TenSanPham")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("TenSanPhamCha")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<decimal?>("TienVatSanPham")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("MaSanPham");
+
+                    b.HasIndex("OrderNhanhVnId");
+
+                    b.HasIndex("TenSanPham");
+
+                    b.ToTable("OrderNhanhVnDetails");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("AvailableForSale")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal?>("BranchPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("BranchPriceDuplicate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("BranchPriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Brand")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CategoryCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CategoryName")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("CostPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("CoverImage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<decimal?>("DeliveringStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Height")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Held")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("HeldComponents")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ImportPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ImportPriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ImportVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ImportVatMode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("InternalCategoryCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<decimal?>("Length")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTimeOffset?>("NhanhCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NhanhProductId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("OldPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Origin")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OtherName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ParentProductCode")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ParentProductId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ParentProductName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal?>("PendingImportStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
+
+                    b.Property<decimal?>("PreOrder")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PriceLabel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("PriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ProductCode")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ProductLabel")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ProductName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ProductType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("ProfitPercentage")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("SaleVatMode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Size")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("SourceRowNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("Stock")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("StockError")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("StockTransferring")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Supplier")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal?>("TotalStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("Vat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WarehouseStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("WarrantyAddress")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int?>("WarrantyMonths")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("WarrantyStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("WebOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Weight")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesaleBranchPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesaleBranchPriceDuplicate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesaleBranchPriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesalePrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("WholesalePriceWithVat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Width")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NhanhProductId")
+                        .IsUnique()
+                        .HasFilter("\"NhanhProductId\" IS NOT NULL");
+
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>
@@ -801,6 +1639,35 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("News");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProduct", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.CategoryProduct", "ParentCategoryProduct")
+                        .WithMany("ChildCategoryProducts")
+                        .HasForeignKey("ParentCategoryProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentCategoryProduct");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProductDetail", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.CategoryProduct", "CategoryProduct")
+                        .WithMany("CategoryProductDetails")
+                        .HasForeignKey("CategoryProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "Product")
+                        .WithMany("CategoryProductDetails")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CategoryProduct");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
@@ -810,6 +1677,16 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderNhanhVnDetail", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.OrderNhanhVn", "OrderNhanhVn")
+                        .WithMany("OrderNhanhVnDetails")
+                        .HasForeignKey("OrderNhanhVnId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("OrderNhanhVn");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>
@@ -841,6 +1718,13 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("ChildCategoryNews");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryProduct", b =>
+                {
+                    b.Navigation("CategoryProductDetails");
+
+                    b.Navigation("ChildCategoryProducts");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
                 {
                     b.Navigation("recruitmentRequests");
@@ -856,6 +1740,16 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("OrderDetails");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderNhanhVn", b =>
+                {
+                    b.Navigation("OrderNhanhVnDetails");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
+                {
+                    b.Navigation("CategoryProductDetails");
                 });
 #pragma warning restore 612, 618
         }

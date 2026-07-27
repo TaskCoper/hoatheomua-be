@@ -1,7 +1,14 @@
+using System.Linq.Expressions;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace HoaTheoMua.Service.NhanhVnService;
@@ -113,4 +120,938 @@ public class Service: IService
 
         return nhanhProductOrderSource;
     }
+
+    public async Task<string> HandleWebhook(JsonElement? body)
+    {
+
+        if (body == null)
+        {
+            return "Thành công";
+        }
+
+        var json = body.Value;
+        
+
+        // var businessIdWebhook = json.TryGetProperty("businessId", out var value) ? value.ToString() : null;
+        //
+        // if (businessIdWebhook == null)
+        // {
+        //     throw new BadRequestException("Không tìm thấy businessId");
+        // }
+        //
+        // var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
+        // var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        // if (businessIdWebhook != businessId.ToString())
+        // {
+        //     throw new ConflictException("Business Id không khớp");
+        // }
+        
+        try
+        {
+            var evt = json.TryGetProperty("event", out var e) ? e.GetString() : null;
+
+            switch (evt)
+            {
+                case NhanhWebhookEvents.InventoryChange:
+                {
+                    var req = TryDeserialize<NhanhInventoryChangeWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnInventory(req);
+                }
+
+                case NhanhWebhookEvents.ProductAdd:
+                {
+                    var req = TryDeserialize<NhanhProductAddWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnProductAdd(req);
+                }
+
+                case NhanhWebhookEvents.ProductUpdate:
+                {
+                    var req = TryDeserialize<NhanhProductAddWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnProductUpdate(req);
+                }
+
+                case NhanhWebhookEvents.ProductDelete:
+                {
+                    var req = TryDeserialize<NhanhProductDeleteWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnProductDelete(req);
+                }
+
+                case NhanhWebhookEvents.OrderAdd:
+                {
+                    var req = TryDeserialize<NhanhOrderAddWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnOrderAdd(req);
+                }
+                
+                case NhanhWebhookEvents.OrderUpdate:
+                {
+                    var req = TryDeserialize<NhanhOrderUpdateWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnOrderUpdate(req);
+                }
+                
+                case NhanhWebhookEvents.OrderDelete:
+                {
+                    var req = TryDeserialize<NhanhOrderDeleteWebhookRequest>(json);
+                    if (req == null) return "Thành công";
+                    return await WebhookNhanhVnOrderDelete(req);
+                }
+
+                default:
+                    return "Thành công";
+            }
+        }
+        catch (Exception ex)
+        {
+            return "Có lỗi khi parse json";
+        }
+    }
+    private static T? TryDeserialize<T>(JsonElement body) where T : class
+    {
+        try
+        {
+            return body.Deserialize<T>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                NumberHandling = JsonNumberHandling.AllowReadingFromString
+            });
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    public async Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest? request)
+    {
+        if (request == null || request.Data == null || !request.Data.Any())
+        {
+            return "Thành công";
+        }
+
+        var nhanhProductIds = request.Data
+            .Select(x => x.Id.ToString()).Distinct().ToList();
+
+        var products = await _appDbContext.Products
+            .Where(x => !x.IsDeleted && nhanhProductIds.Contains(x.NhanhProductId!))
+            .ToListAsync();
+
+        foreach (var item in request.Data)
+        {
+            var itemId = item.Id.ToString();
+
+            var product = products.FirstOrDefault(x => x.NhanhProductId == itemId);
+
+            if (product == null)
+            {
+               return $"Sản phẩm với id: {itemId} không tồn tại trong hệ thống";
+            }
+  
+            product.AvailableForSale = (decimal?)item.Available;
+            product.ProductCode = item.Code;
+            product.TotalStock = (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
+            product.Stock = (decimal?)item.Remain;
+            product.DeliveringStock = (decimal?)item.Shipping;
+            product.StockError = (decimal?)item.Damaged;
+            product.Held = (decimal?)item.Holding;//tạm giữ các kho
+            product.StockTransferring = (decimal?)item.Transfering;
+            // product.HeldComponents = item.Holding;
+            
+            // product.WarehouseStock = (decimal?)item.Warranty.Remain;
+            product.WarrantyStock = (decimal?)item.Warranty?.Remain;
+            product.HeldComponents = (decimal?)item.Warranty?.Holding;
+            product.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        await _appDbContext.SaveChangesAsync();
+
+        return "Cập nhật tồn kho thành công";
+    }
+
+    public async Task<string> WebhookNhanhVnProductAdd(NhanhProductAddWebhookRequest? request)
+    {
+        if (request == null || request.Data == null)
+        {
+            return "Thành công";
+        }
+
+        var item = request.Data;
+        var nhanhProductId = item.Id.ToString();
+
+        var existingProduct = await _appDbContext.Products
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == nhanhProductId);
+
+        if (existingProduct != null)
+        {
+           return "Có sản phẩm đã tồn tại trong hệ thống";
+        }
+
+        var product = new HoaTheoMua.Repository.Entity.Product
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = item.Id.ToString(),
+            CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
+        };
+            
+            product.ParentProductId = item.ParentId != 0 ? item.ParentId.ToString() : null;
+            product.ProductCode = item.Code;
+            product.Barcode = item.Barcode;
+            product.ProductName = item.Name;
+            product.OtherName = item.OtherName;
+            product.Status = item.Status?.ToString();
+
+            // Danh mục
+            product.CategoryCode = item.Category?.Code;
+            product.CategoryName = item.Category?.Name;
+            product.InternalCategoryCode = item.InternalCategory?.Code;
+            product.ProductType = item.Type?.Name;
+
+            // Giá
+            if (item.Prices != null)
+            {
+                product.Price = (decimal?)item.Prices.Retail;
+                product.ImportPrice = (decimal?)item.Prices.Import;
+                product.OldPrice = (decimal?)item.Prices.Old;
+                product.WholesalePrice = (decimal?)item.Prices.Wholesale;
+                product.CostPrice = (decimal?)item.Prices.AvgCost;
+            }
+            product.Vat = item.Vat;
+
+            // Ảnh
+            product.CoverImage = item.Images?.Avatar;
+
+            // Bảo hành
+            NhanhWarrantyDto? warranty = null;
+            if (item.Warranty.HasValue && item.Warranty.Value.ValueKind == JsonValueKind.Object)
+            {
+                warranty = item.Warranty.Value.Deserialize<NhanhWarrantyDto>(new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            product.WarrantyMonths = warranty?.Month;
+            product.WarrantyAddress = warranty?.Address;
+
+            // Thương hiệu & nhà cung cấp
+            product.Brand = item.Brand?.Name;
+            product.Supplier = item.Suppliers?.FirstOrDefault()?.Name;
+
+            // Kích thước & cân nặng
+            if (item.Shipping != null)
+            {
+                product.Length = (decimal?)item.Shipping.Length;
+                product.Width = (decimal?)item.Shipping.Width;
+                product.Height = (decimal?)item.Shipping.Height;
+                product.Weight = (decimal?)item.Shipping.Weight;
+            }
+
+            // Xuất xứ & đơn vị tính
+            product.Origin = item.CountryName;
+            product.Unit = item.Units?.Name;
+
+            // Tồn kho
+            if (item.Inventory != null)
+            {
+                product.TotalStock = (decimal?)item.Inventory.Remain;//tổng tồn
+                //product.Stock = (decimal)item.Inventory.Remain;// tồn
+                product.WarehouseStock = (decimal?)item.Inventory.Remain;//tồn trong kho
+                product.DeliveringStock = (decimal?)item.Inventory.Shipping;
+                product.StockError = (decimal?)item.Inventory.Damaged;
+                product.Held = (decimal?)item.Inventory.Holding;
+                product.StockTransferring = (decimal?)item.Inventory.Transfering;
+                product.AvailableForSale = (decimal?)item.Inventory.Available;
+                product.WarrantyStock = (decimal?)item.Inventory.Warranty?.Remain;
+                product.HeldComponents = (decimal?)item.Inventory.Warranty?.Holding;
+            }
+
+            // Branch Prices (Lấy chi nhánh đầu tiên nếu có)
+            if (item.BranchPrices != null && item.BranchPrices.Any())
+            {
+                var firstBranchPrice = item.BranchPrices.First();
+                product.BranchPrice = (decimal?)firstBranchPrice.Price;
+                product.WholesaleBranchPrice = (decimal?)firstBranchPrice.WholesalePrice;
+            }
+
+            // Attributes (Size, Color)
+            if (item.Attributes != null && item.Attributes.Any())
+            {
+                var sizeAttr = item.Attributes
+                    .FirstOrDefault(a => 
+                        a.Name != null && (a.Name.Equals("Kích thước", StringComparison.OrdinalIgnoreCase) 
+                                           || a.Name.Equals("Size", StringComparison.OrdinalIgnoreCase)));
+                if (sizeAttr != null) product.Size = sizeAttr.Value;
+
+                var colorAttr = item.Attributes
+                    .FirstOrDefault(a => 
+                        a.Name != null && (a.Name.Equals("Màu sắc", StringComparison.OrdinalIgnoreCase) 
+                                           || a.Name.Equals("Color", StringComparison.OrdinalIgnoreCase)));
+                if (colorAttr != null) product.Color = colorAttr.Value;
+            }
+
+            // Nhanh CreatedAt
+            if (item.CreatedAt is > 0)
+            {
+                product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
+            }
+
+        await _appDbContext.Products.AddAsync(product);
+        await _appDbContext.SaveChangesAsync();
+
+        return "Thêm mới thành công sản phẩm";
+    }
+
+    public async Task<string> WebhookNhanhVnOrderAdd(NhanhOrderAddWebhookRequest? request)
+    {
+        if (request == null || request.Data == null)
+        {
+            return "Không có dữ liệu thay đổi đơn hàng";
+        }
+    
+        var item = request.Data;
+        if (item.Info == null)
+        {
+            return "Không có dữ liệu thay đổi đơn hàng";
+        }
+
+        var info = item.Info;
+        var address = item.ShippingAddress;
+        var carrier = item.Carrier;
+        var payment = item.Payment;
+    
+        var idDonHangNhanh = info.Id.ToString();
+    
+        var existingOrder = await _appDbContext.OrderNhanhVns
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.IdDonHangNhanh == idDonHangNhanh);
+    
+        if (existingOrder != null)
+        {
+            return "Có đơn hàng đã tồn tại trong hệ thống.";
+        }
+    
+        var products = item.Products ?? new List<NhanhOrderProductDto>();
+    
+        var orderNhanhVn = new HoaTheoMua.Repository.Entity.OrderNhanhVn
+        {
+            Id = Guid.NewGuid(),
+            IdDonHangNhanh = idDonHangNhanh,
+            LoaiDon = info.Type?.ToString(),
+            ThoiGianDonHang = info.CreatedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.CreatedAt.Value) : null,
+            NguoiTaoDon = info.CreatedBy?.Name,
+            NhanVienBanHang = info.Sale?.Name,
+            NhanVienChamSocKhachHang = info.CustomerCare?.Name != null && info.CustomerCare.Id != 0 ? info.CustomerCare.Name : null,
+            Nguon = item.Channel?.TrafficSource?.Name,
+            KhoTaoDon = info.DepotId?.ToString(),
+    
+            TenKhachHang = address?.Name,
+            SoDienThoaiKhachHang = address?.Mobile,
+            EmailKhachHang = address?.Email,
+            DiaChiKhachHang = address?.Address,
+            ThanhPhoKhachHang = address?.CityId?.ToString(),
+            QuanHuyenKhachHang = address?.DistrictId?.ToString(),
+            PhuongXaKhachHang = address?.WardId?.ToString(),
+            
+            TongKhoiLuong = products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0)),
+            GiaTriDonHang = (products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (payment?.Vat?.Amount ?? 0),
+            PhiVanChuyen = (carrier?.ShipFee ?? 0),
+            PhiShipBaoKhach = (carrier?.CustomerShipFee ?? 0),
+            PhiThuTienHo = (carrier?.CodFee ?? 0),
+            PhiKhaiGia = (carrier?.DeclaredFee ?? 0),
+            PhiChuyenHoan = (carrier?.ReturnFee ?? 0),
+    
+            HangVanChuyen = carrier?.Name,
+            MaVanDon = carrier?.CarrierCode,
+            DichVuVanChuyen = carrier?.Service?.Name,
+            CanNangHangVanChuyen = carrier?.Weight,
+    
+            TienChuyenKhoan = (payment?.Transfer?.Amount ?? 0),
+            TaiKhoanChuyenKhoan = payment?.Transfer?.AccountId?.ToString(),
+            TienDatCoc = (payment?.Deposit?.Amount ?? 0),
+            TaiKhoanDatCoc = payment?.Deposit?.AccountId?.ToString(),
+            TienChietKhau = (payment?.Discount?.Amount ?? 0),
+            TienVat = (payment?.Vat?.Amount ?? 0),
+            TyLeVat = payment?.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment?.Vat?.Value?.ToString() : null,
+            TienQuetThe = (payment?.Credit?.Amount ?? 0),
+            TaiKhoanQuetThe = payment?.Credit?.AccountId?.ToString(),
+            MaGiaoDichQuetThe = payment?.Credit?.Code,
+            TienTieuDiem = (payment?.UsedPoints?.Amount ?? 0),
+            TrangThaiThanhToanDoanhNghiep = payment?.BusinessPaymentStatus?.ToString(),
+    
+            GhiChuCuaKhach = info.Description,
+            GhiChuNoiBo = info.PrivateDescription,
+            TrangThaiDonHang = info.Status?.ToString(),
+    
+            NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : null,
+            NgayGuiHangVanChuyen = !string.IsNullOrEmpty(carrier?.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate) ? sendDate.ToUniversalTime() : null,
+            NgayThanhCong = !string.IsNullOrEmpty(carrier?.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate) ? deliveryDate.ToUniversalTime() : null,
+    
+            MaGiamGia = payment?.CouponCode,
+            IdDonGoc = item.OriginalOrder?.Id?.ToString(),
+    
+            CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
+        };
+
+        foreach (var p in products)
+        {
+            orderNhanhVn.OrderNhanhVnDetails.Add(new HoaTheoMua.Repository.Entity.OrderNhanhVnDetail
+            {
+                Id = Guid.NewGuid(),
+                OrderNhanhVnId = orderNhanhVn.Id,
+                TenSanPham = p.Name,
+                MaSanPham = p.Code,
+                SoLuong = (int?)p.Quantity,
+                GiaBan = p.Price,
+                TienVatSanPham = p.Vat?.Amount,
+                ChietKhauSanPham = p.Discount,
+                GiaSanPhamSauChietKhau = (p.Price ?? 0) - (p.Discount ?? 0),
+                GhiChuSanPham = p.Description,
+                DonViTinh = p.Unit?.Name,
+                KhoiLuongSanPham = p.Weight,
+                Imei = p.Imei?.Code,
+                LoHang = p.Batch?.Name,
+                GiaVon = p.AverageCost,
+                CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+                UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
+            });
+        }
+
+        await _appDbContext.OrderNhanhVns.AddAsync(orderNhanhVn);
+        await _appDbContext.SaveChangesAsync();
+    
+        return "Thêm mới thành công 1 đơn hàng vào bảng OrderNhanhVn";
+    }
+
+    public async Task<string> WebhookNhanhVnOrderUpdate(NhanhOrderUpdateWebhookRequest request)
+    {
+        if (request == null || request.Data == null)
+        {
+            return "Không có dữ liệu cập nhật đơn hàng";
+        }
+    
+        var item = request.Data;
+        if (item.Info == null)
+        {
+            return "Không có dữ liệu cập nhật đơn hàng";
+        }
+
+        var info = item.Info;
+        var address = item.ShippingAddress;
+        var carrier = item.Carrier;
+        var payment = item.Payment;
+    
+        var idDonHangNhanh = info.Id.ToString();
+    
+        var order = await _appDbContext.OrderNhanhVns
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.IdDonHangNhanh == idDonHangNhanh);
+    
+        if (order == null)
+        {
+            return "Đơn hàng không tồn tại trong hệ thống.";
+        }
+    
+        var products = item.Products ?? new List<NhanhOrderProductDto>();
+    
+        order.LoaiDon = info.Type?.ToString() ?? order.LoaiDon;
+        order.ThoiGianDonHang = info.CreatedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.CreatedAt.Value) : order.ThoiGianDonHang;
+        order.NguoiTaoDon = info.CreatedBy?.Name ?? order.NguoiTaoDon;
+        order.NhanVienBanHang = info.Sale?.Name ?? order.NhanVienBanHang;
+        order.NhanVienChamSocKhachHang = info.CustomerCare?.Name != null && info.CustomerCare.Id != 0 ? info.CustomerCare.Name : order.NhanVienChamSocKhachHang;
+        order.Nguon = item.Channel?.TrafficSource?.Name ?? order.Nguon;
+        order.KhoTaoDon = info.DepotId?.ToString() ?? order.KhoTaoDon;
+    
+        if (address != null)
+        {
+            order.TenKhachHang = address.Name ?? order.TenKhachHang;
+            order.SoDienThoaiKhachHang = address.Mobile ?? order.SoDienThoaiKhachHang;
+            order.EmailKhachHang = address.Email ?? order.EmailKhachHang;
+            order.DiaChiKhachHang = address.Address ?? order.DiaChiKhachHang;
+            order.ThanhPhoKhachHang = address.CityId?.ToString() ?? order.ThanhPhoKhachHang;
+            order.QuanHuyenKhachHang = address.DistrictId?.ToString() ?? order.QuanHuyenKhachHang;
+            order.PhuongXaKhachHang = address.WardId?.ToString() ?? order.PhuongXaKhachHang;
+        }
+    
+        if (products.Any())
+        {
+            order.TongKhoiLuong = products.Sum(p => (p.Weight ?? 0) * (p.Quantity ?? 0));
+            order.GiaTriDonHang = (products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))) + (decimal?)(payment?.Vat?.Amount ?? 0);
+
+            var existingDetails = await _appDbContext.OrderNhanhVnDetails
+                .Where(x => x.OrderNhanhVnId == order.Id && !x.IsDeleted)
+                .ToListAsync();
+
+            foreach (var detail in existingDetails)
+            {
+                detail.IsDeleted = true;
+                detail.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
+            }
+
+            foreach (var p in products)
+            {
+                _appDbContext.OrderNhanhVnDetails.Add(new HoaTheoMua.Repository.Entity.OrderNhanhVnDetail
+                {
+                    Id = Guid.NewGuid(),
+                    OrderNhanhVnId = order.Id,
+                    TenSanPham = p.Name,
+                    MaSanPham = p.Code,
+                    SoLuong = (int?)p.Quantity,
+                    GiaBan = p.Price,
+                    TienVatSanPham = p.Vat?.Amount,
+                    ChietKhauSanPham = p.Discount,
+                    GiaSanPhamSauChietKhau = (p.Price ?? 0) - (p.Discount ?? 0),
+                    GhiChuSanPham = p.Description,
+                    DonViTinh = p.Unit?.Name,
+                    KhoiLuongSanPham = p.Weight,
+                    Imei = p.Imei?.Code,
+                    LoHang = p.Batch?.Name,
+                    GiaVon = p.AverageCost,
+                    CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+                    UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
+                });
+            }
+        }
+    
+        if (carrier != null)
+        {
+            order.PhiVanChuyen = carrier.ShipFee ?? order.PhiVanChuyen;
+            order.PhiShipBaoKhach = carrier.CustomerShipFee ?? order.PhiShipBaoKhach;
+            order.PhiThuTienHo = carrier.CodFee ?? order.PhiThuTienHo;
+            order.PhiKhaiGia = carrier.DeclaredFee ?? order.PhiKhaiGia;
+            order.PhiChuyenHoan = carrier.ReturnFee ?? order.PhiChuyenHoan;
+            order.HangVanChuyen = carrier.Name ?? order.HangVanChuyen;
+            order.MaVanDon = carrier.CarrierCode ?? order.MaVanDon;
+            order.DichVuVanChuyen = carrier.Service?.Name ?? order.DichVuVanChuyen;
+            order.CanNangHangVanChuyen = carrier.Weight ?? order.CanNangHangVanChuyen;
+    
+            if (!string.IsNullOrEmpty(carrier.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate))
+                order.NgayGuiHangVanChuyen = sendDate.ToUniversalTime();
+    
+            if (!string.IsNullOrEmpty(carrier.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate))
+                order.NgayThanhCong = deliveryDate.ToUniversalTime();
+        }
+    
+        if (payment != null)
+        {
+            order.TienChuyenKhoan = (payment.Transfer?.Amount ?? (long?)order.TienChuyenKhoan);
+            order.TaiKhoanChuyenKhoan = payment.Transfer?.AccountId?.ToString() ?? order.TaiKhoanChuyenKhoan;
+            order.TienDatCoc = (payment.Deposit?.Amount ?? (long?)order.TienDatCoc);
+            order.TaiKhoanDatCoc = payment.Deposit?.AccountId?.ToString() ?? order.TaiKhoanDatCoc;
+            order.TienChietKhau = (payment.Discount?.Amount ?? (long?)order.TienChietKhau);
+            order.TienVat = (payment.Vat?.Amount ?? (long?)order.TienVat);
+            order.TyLeVat = payment.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment.Vat.Value?.ToString() : order.TyLeVat;
+            order.TienQuetThe = (payment.Credit?.Amount ?? order.TienQuetThe);
+            order.TaiKhoanQuetThe = payment.Credit?.AccountId?.ToString() ?? order.TaiKhoanQuetThe;
+            order.MaGiaoDichQuetThe = payment.Credit?.Code ?? order.MaGiaoDichQuetThe;
+            order.TienTieuDiem = (payment.UsedPoints?.Amount ?? order.TienTieuDiem);
+            order.TrangThaiThanhToanDoanhNghiep = payment.BusinessPaymentStatus?.ToString() ?? order.TrangThaiThanhToanDoanhNghiep;
+            order.MaGiamGia = payment.CouponCode ?? order.MaGiamGia;
+        }
+    
+        order.GhiChuCuaKhach = info.Description ?? order.GhiChuCuaKhach;
+        order.GhiChuNoiBo = info.PrivateDescription ?? order.GhiChuNoiBo;
+        order.TrangThaiDonHang = info.Status?.ToString() ?? order.TrangThaiDonHang;
+        order.NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value).ToUniversalTime() : order.NgayXacNhan;
+    
+        order.NguonDonHang = item.Channel?.SaleChannel?.ToString() ?? order.NguonDonHang;
+        order.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
+    
+        await _appDbContext.SaveChangesAsync();
+    
+        return "Cập nhật thành công đơn hàng trong bảng OrderNhanhVn";
+    }
+    
+    public async Task<string> WebhookNhanhVnOrderDelete(NhanhOrderDeleteWebhookRequest request)
+    {
+        if (request?.Data == null || request.Data.Count == 0)
+        {
+            return "Không có dữ liệu xoá đơn hàng";
+        }
+    
+        var validNhanhOrderIds = request.Data
+            .Select(id => id.ToString())
+            .ToHashSet();
+    
+        var orders = await _appDbContext.OrderNhanhVns
+            .Where(order => !order.IsDeleted
+                            && validNhanhOrderIds.Contains(order.IdDonHangNhanh!))
+            .Include(x => x.OrderNhanhVnDetails)
+            .ToListAsync();
+
+        foreach (var order in orders)
+        {
+            order.IsDeleted = true;
+            order.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
+
+            foreach (var detail in order.OrderNhanhVnDetails.Where(x => !x.IsDeleted))
+            {
+                detail.IsDeleted = true;
+                detail.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
+            }
+        }
+    
+        if (orders.Count > 0)
+        {
+            await _appDbContext.SaveChangesAsync();
+        }
+    
+        var ignoredCount = request.Data.Count - orders.Count;
+        return $"Xoá {orders.Count} đơn trong bảng OrderNhanhVn; bỏ qua {ignoredCount} đơn.";}
+
+    public async Task<string> WebhookNhanhVnProductUpdate(NhanhProductAddWebhookRequest? request)
+    {
+        if (request == null || request.Data == null)
+        {
+            return "Thành công";        
+        }
+    
+        var item = request.Data;
+        var nhanhProductId = item.Id.ToString();
+    
+        var product = await _appDbContext.Products
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == nhanhProductId);
+    
+        if (product == null)
+        {
+            return $"Sản phẩm với id: {nhanhProductId} không tồn tại trong hệ thống";
+        }
+        
+        product.UpdatedAt = DateTimeOffset.UtcNow;
+        product.ParentProductId = item.ParentId != 0 ? item.ParentId.ToString() : null;
+        product.ProductCode = item.Code;
+        product.Barcode = item.Barcode;
+        product.ProductName = item.Name;
+        product.OtherName = item.OtherName;
+        product.Status = item.Status?.ToString();
+    
+        // Danh mục
+        product.CategoryCode = item.Category?.Code;
+        product.CategoryName = item.Category?.Name;
+        product.InternalCategoryCode = item.InternalCategory?.Code;
+        product.ProductType = item.Type?.Name;
+    
+        // Giá
+        if (item.Prices != null)
+        {
+            product.Price = (decimal?)item.Prices.Retail;
+            product.ImportPrice = (decimal?)item.Prices.Import;
+            product.OldPrice = (decimal?)item.Prices.Old;
+            product.WholesalePrice = (decimal?)item.Prices.Wholesale;
+            product.CostPrice = (decimal?)item.Prices.AvgCost;
+        }
+        product.Vat = item.Vat;
+    
+        // Ảnh
+        product.CoverImage = item.Images?.Avatar;
+    
+        // Bảo hành
+        NhanhWarrantyDto? warranty = null;
+        if (item.Warranty.HasValue && item.Warranty.Value.ValueKind == JsonValueKind.Object)
+        {
+            warranty = item.Warranty.Value.Deserialize<NhanhWarrantyDto>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        product.WarrantyMonths = warranty?.Month;
+        product.WarrantyAddress = warranty?.Address;
+    
+        // Thương hiệu & nhà cung cấp
+        product.Brand = item.Brand?.Name;
+        product.Supplier = item.Suppliers?.FirstOrDefault()?.Name;
+    
+        // Kích thước & cân nặng
+        if (item.Shipping != null)
+        {
+            product.Length = (decimal?)item.Shipping.Length;
+            product.Width = (decimal?)item.Shipping.Width;
+            product.Height = (decimal?)item.Shipping.Height;
+            product.Weight = (decimal?)item.Shipping.Weight;
+        }
+    
+        // Xuất xứ & đơn vị tính
+        product.Origin = item.CountryName;
+        product.Unit = item.Units?.Name;
+    
+        // Tồn kho
+        if (item.Inventory != null)
+        {
+            product.TotalStock = (decimal?)item.Inventory.Remain;//tổng tồn
+            //product.Stock = (decimal)item.Inventory.Remain;// tồn
+            product.WarehouseStock = (decimal?)item.Inventory.Remain;//tồn trong kho
+            product.DeliveringStock = (decimal?)item.Inventory.Shipping;
+            product.StockError = (decimal?)item.Inventory.Damaged;
+            product.Held = (decimal?)item.Inventory.Holding;
+            product.StockTransferring = (decimal?)item.Inventory.Transfering;
+            product.AvailableForSale = (decimal?)item.Inventory.Available;
+            product.WarrantyStock = (decimal?)item.Inventory.Warranty?.Remain;
+            product.HeldComponents = (decimal?)item.Inventory.Warranty?.Holding;
+        }
+    
+        // Branch Prices (Lấy chi nhánh đầu tiên nếu có)
+        if (item.BranchPrices != null && item.BranchPrices.Any())
+        {
+            var firstBranchPrice = item.BranchPrices.First();
+            product.BranchPrice = (decimal?)firstBranchPrice.Price;
+            product.WholesaleBranchPrice = (decimal?)firstBranchPrice.WholesalePrice;
+        }
+    
+        // Attributes (Size, Color)
+        if (item.Attributes != null && item.Attributes.Any())
+        {
+            var sizeAttr = item.Attributes
+                .FirstOrDefault(a =>
+                    a.Name != null && (a.Name.Equals("Kích thước", StringComparison.OrdinalIgnoreCase)
+                                       || a.Name.Equals("Size", StringComparison.OrdinalIgnoreCase)));
+            if (sizeAttr != null) product.Size = sizeAttr.Value;
+    
+            var colorAttr = item.Attributes
+                .FirstOrDefault(a =>
+                    a.Name != null && (a.Name.Equals("Màu sắc", StringComparison.OrdinalIgnoreCase)
+                                       || a.Name.Equals("Color", StringComparison.OrdinalIgnoreCase)));
+            if (colorAttr != null) product.Color = colorAttr.Value;
+        }
+    
+        // Nhanh CreatedAt
+        if (item.CreatedAt is > 0)
+        {
+            product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
+        }
+    
+        await _appDbContext.SaveChangesAsync();
+    
+        return "Cập nhật thành công";
+    }
+
+    public async Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest? request)
+    {
+        if (request == null || request.Data == null || !request.Data.Any())
+        {
+            return "Thành công";
+        }
+
+        var deletedIds = request.Data.Select(id => id.ToString()).ToList();
+
+        var productsToDelete = await _appDbContext.Products
+            .Where(x => !x.IsDeleted && deletedIds.Contains(x.NhanhProductId!))
+            .ToListAsync();
+
+        if (productsToDelete.Any())
+        {
+            foreach (var p in productsToDelete)
+            {
+                p.IsDeleted = true;
+                p.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+
+            await _appDbContext.SaveChangesAsync();
+        }
+        else
+        {
+            return "Sản phẩm không tồn tại";
+        }
+
+        return $"Xóa thành công {productsToDelete.Count} sản phẩm từ Nhanh.vn.";
+    }
+
+    public async Task<OrderNhanhVnDto> GetOrderNhanhVnById(Guid id)
+    {
+        var orderQuery = _appDbContext.OrderNhanhVns
+            .Where(x => !x.IsDeleted && x.Id == id)
+            .Select(MapOrderNhanhVnToDto);
+
+        var order = await orderQuery.FirstOrDefaultAsync();
+
+        if (order == null)
+        {
+            throw new NotFoundException($"OrderNhanhVn with ID {id} not found.");
+        }
+        
+        return order;
+    }
+
+    public async Task<BasePaginationResponse> GetOrderNhanhVnPagination(int pageIndex, int pageSize, string? search)
+    {
+        if (pageIndex <= 0)
+        {
+            pageIndex = 1;
+        }
+
+        if (pageSize <= 0)
+        {
+            pageSize = 10;
+        }
+        
+        var orderQuery = _appDbContext.OrderNhanhVns
+           .Where(x => !x.IsDeleted);
+
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            orderQuery = orderQuery.Where(x => x.IdDonHangNhanh.Contains(search));
+        }
+        
+        
+        var totalCount = await orderQuery.CountAsync();
+        
+        orderQuery = orderQuery
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize);
+
+        var orders = await orderQuery
+            .Select(MapOrderNhanhVnToDto)
+            .ToListAsync();
+        
+        var response = ApiResponseFactory.BasePagination(orders, pageIndex, pageSize, totalCount);
+
+        return response;
+    }
+
+    private static readonly Expression<Func<OrderNhanhVn, OrderNhanhVnDto>> MapOrderNhanhVnToDto =
+        order => new OrderNhanhVnDto()
+        {
+            Id = order.Id,
+            IdDonHangNhanh = order.IdDonHangNhanh,
+            IdDonHangApi = order.IdDonHangApi,
+            LoaiDon = order.LoaiDon,
+            ThoiGianDonHang = order.ThoiGianDonHang,
+            NguoiTaoDon = order.NguoiTaoDon,
+            CuaHang = order.CuaHang,
+            Nguon = order.Nguon,
+            KhoTaoDon = order.KhoTaoDon,
+            ThanhPhoKhoHang = order.ThanhPhoKhoHang,
+            QuanHuyenKhoHang = order.QuanHuyenKhoHang,
+            KhoLayHang = order.KhoLayHang,
+            ThanhPhoLayHang = order.ThanhPhoLayHang,
+            QuanHuyenLayHang = order.QuanHuyenLayHang,
+            TenKhachHang = order.TenKhachHang,
+            MaKhachHang = order.MaKhachHang,
+            SoDienThoaiKhachHang = order.SoDienThoaiKhachHang,
+            EmailKhachHang = order.EmailKhachHang,
+            CapDoKhachHang = order.CapDoKhachHang,
+            NgaySinhKhachHang = order.NgaySinhKhachHang,
+            ThanhPhoKhachHang = order.ThanhPhoKhachHang,
+            QuanHuyenKhachHang = order.QuanHuyenKhachHang,
+            PhuongXaKhachHang = order.PhuongXaKhachHang,
+            DiaChiKhachHang = order.DiaChiKhachHang,
+            TongKhoiLuong = order.TongKhoiLuong,
+            GiaTriDonHang = order.GiaTriDonHang,
+            PhiVanChuyen = order.PhiVanChuyen,
+            PhiVuotCan = order.PhiVuotCan,
+            PhiKhaiGia = order.PhiKhaiGia,
+            PhiChuyenHoan = order.PhiChuyenHoan,
+            PhiThuTienHo = order.PhiThuTienHo,
+            PhiShipBaoKhach = order.PhiShipBaoKhach,
+            CongVanChuyen = order.CongVanChuyen,
+            HangVanChuyen = order.HangVanChuyen,
+            DichVuVanChuyen = order.DichVuVanChuyen,
+            SoNgayChuyenHang = order.SoNgayChuyenHang,
+            MaVanDon = order.MaVanDon,
+            BienBan = order.BienBan,
+            TienChuyenKhoan = order.TienChuyenKhoan,
+            TaiKhoanChuyenKhoan = order.TaiKhoanChuyenKhoan,
+            TienChietKhau = order.TienChietKhau,
+            TienDatCoc = order.TienDatCoc,
+            TaiKhoanDatCoc = order.TaiKhoanDatCoc,
+            TongThu = order.TongThu,
+            TaiKhoanQuetThe = order.TaiKhoanQuetThe,
+            TienQuetThe = order.TienQuetThe,
+            MaGiaoDichQuetThe = order.MaGiaoDichQuetThe,
+            GhiChuNoiBo = order.GhiChuNoiBo,
+            GhiChuCuaKhach = order.GhiChuCuaKhach,
+            TrangThaiHoaDonDienTu = order.TrangThaiHoaDonDienTu,
+            SoHoaDonDienTu = order.SoHoaDonDienTu,
+            NgayXuatHoaDonDienTu = order.NgayXuatHoaDonDienTu,
+            MaCoQuanThueHoaDonDienTu = order.MaCoQuanThueHoaDonDienTu,
+            TrangThaiDonHang = order.TrangThaiDonHang,
+            LyDoHuy = order.LyDoHuy,
+            NhanVienChamSocKhachHang = order.NhanVienChamSocKhachHang,
+            NgayXacNhan = order.NgayXacNhan,
+            NgayGuiHangVanChuyen = order.NgayGuiHangVanChuyen,
+            NgayBanGiao = order.NgayBanGiao,
+            NgayThanhCong = order.NgayThanhCong,
+            GioThanhCong = order.GioThanhCong,
+            NguonDonHang = order.NguonDonHang,
+            GhiChuHangVanChuyen = order.GhiChuHangVanChuyen,
+            CanNangHangVanChuyen = order.CanNangHangVanChuyen,
+            MaGiamGia = order.MaGiamGia,
+            IdDonTra = order.IdDonTra,
+            IdDonGoc = order.IdDonGoc,
+            SoThuTuTheoNgay = order.SoThuTuTheoNgay,
+            BienBanBanGiao = order.BienBanBanGiao,
+            MaAffiliate = order.MaAffiliate,
+            NhomKhachHang = order.NhomKhachHang,
+            TienVat = order.TienVat,
+            TyLeVat = order.TyLeVat,
+            TienTieuDiem = order.TienTieuDiem,
+            Nhan = order.Nhan,
+            NgayHenThanhToan = order.NgayHenThanhToan,
+            TrangThaiDoiSoat = order.TrangThaiDoiSoat,
+            NgayDoiSoat = order.NgayDoiSoat,
+            TrangThaiThanhToanDoanhNghiep = order.TrangThaiThanhToanDoanhNghiep,
+            NgayThanhToanDoanhNghiep = order.NgayThanhToanDoanhNghiep,
+            NhanVienBanHang = order.NhanVienBanHang,
+            LoiNhuan = order.LoiNhuan,
+            TyLeLoiNhuan = order.TyLeLoiNhuan,
+            FacebookPsid = order.FacebookPsid,
+            FacebookPageUserId = order.FacebookPageUserId,
+            SoDienThoaiFacebook = order.SoDienThoaiFacebook,
+            GiaTriFacebook = order.GiaTriFacebook,
+            IdPhapNhan = order.IdPhapNhan,
+            MaSoThue = order.MaSoThue,
+            EmailNguoiLienHe = order.EmailNguoiLienHe,
+            EmailNguoiLienHeThuHai = order.EmailNguoiLienHeThuHai,
+            SoDienThoaiNguoiLienHe = order.SoDienThoaiNguoiLienHe,
+            TenNguoiLienHe = order.TenNguoiLienHe,
+            MaThamChieu = order.MaThamChieu,
+            DiaChiKhachHangTrenHoaDonDienTu = order.DiaChiKhachHangTrenHoaDonDienTu,
+            TenKhachHangTrenHoaDonDienTu = order.TenKhachHangTrenHoaDonDienTu,
+            LoaiKhachHangHoaDon = order.LoaiKhachHangHoaDon,
+            CoLayHoaDon = order.CoLayHoaDon,
+            MaCoQuanThueHoaDon = order.MaCoQuanThueHoaDon,
+            SoHoaDon = order.SoHoaDon,
+            NgayPhatHanhHoaDon = order.NgayPhatHanhHoaDon,
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt,
+            
+            OrderNhanhVnDetails = order.OrderNhanhVnDetails
+                .Where(detail => !detail.IsDeleted)
+                .Select(detail => new OrderNhanhVnDetailDto
+                {
+                    Id = detail.Id,
+                    OrderNhanhVnId = detail.OrderNhanhVnId,
+                    TenSanPham = detail.TenSanPham,
+                    QuaTangKem = detail.QuaTangKem,
+                    Imei = detail.Imei,
+                    LoHang = detail.LoHang,
+                    MaSanPhamCha = detail.MaSanPhamCha,
+                    TenSanPhamCha = detail.TenSanPhamCha,
+                    MaSanPham = detail.MaSanPham,
+                    MaVach = detail.MaVach,
+                    DanhMucSanPham = detail.DanhMucSanPham,
+                    KhoiLuongSanPham = detail.KhoiLuongSanPham,
+                    GiaBan = detail.GiaBan,
+                    LoaiGiaSanPham = detail.LoaiGiaSanPham,
+                    GiaBanTruocVat = detail.GiaBanTruocVat,
+                    TienVatSanPham = detail.TienVatSanPham,
+                    SoLuong = detail.SoLuong,
+                    ChietKhauMotSanPham = detail.ChietKhauMotSanPham,
+                    ChietKhauSanPham = detail.ChietKhauSanPham,
+                    GiaSanPhamSauChietKhau = detail.GiaSanPhamSauChietKhau,
+                    GhiChuSanPham = detail.GhiChuSanPham,
+                    GiaVon = detail.GiaVon,
+                    GiaVonDonHang = detail.GiaVonDonHang,
+                    DonViTinh = detail.DonViTinh,
+                    SoLuongDonViNhoNhat = detail.SoLuongDonViNhoNhat,
+                    NhanVienDongGoi = detail.NhanVienDongGoi,
+                    CreatedAt = detail.CreatedAt,
+                    UpdatedAt = detail.UpdatedAt
+                }).ToList()
+        };
+
+    
 }

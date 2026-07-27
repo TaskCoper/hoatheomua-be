@@ -11,7 +11,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace HoaTheoMua.Service.Product;
 
-public class Service: IService
+public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContext;
@@ -29,7 +29,7 @@ public class Service: IService
         _nhanhVnOption = new NhanhVnOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
     }
-    
+
     public async Task<NhanhVnProductListResponse.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
@@ -37,9 +37,9 @@ public class Service: IService
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
         var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
         var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/list?appId=" + appId + "&businessId=" + businessId;
-        
-        
-        
+
+
+
         var options = new JsonSerializerOptions
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -52,8 +52,8 @@ public class Service: IService
         // Console.WriteLine(
         //     $"[DEBUG NHANH.VN RAW DATA]: {JsonSerializer.Serialize(newRequest)}"
         // );
-        
-        
+
+
         // var nhanhProductListRequest = new Request.ProductListRequest()
         // {
         //     Filters = new Request.ProductFilters()
@@ -76,11 +76,11 @@ public class Service: IService
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(newRequest);
-        
+
         HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
 
         NhanhVnProductListResponse.NhanhVnProductResponse? nhanhProductList = null;
-        
+
         if (nhanhVnResponse.IsSuccessStatusCode)
         {
 
@@ -90,7 +90,7 @@ public class Service: IService
             // Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
 
 
-            nhanhProductList = await nhanhVnResponse.Content.ReadFromJsonAsync< NhanhVnProductListResponse.NhanhVnProductResponse>();
+            nhanhProductList = await nhanhVnResponse.Content.ReadFromJsonAsync<NhanhVnProductListResponse.NhanhVnProductResponse>();
         }
         else
         {
@@ -102,7 +102,7 @@ public class Service: IService
         {
             throw new BadRequestException("NhanhVnResponse returned null or empty data");
         }
-        
+
         if (nhanhProductList.Code == 0)
         {
             throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
@@ -125,31 +125,31 @@ public class Service: IService
         //     pageSize: actualPageSize, 
         //     totalCount: totalRequests
         // );
-        
+
         return nhanhProductList;
-        
+
     }
 
     public async Task<NhanhVnProductDetailsResponse.NhanhVnProductDetailResponse> GetProductDetails(Request.ProductDetailRequest request)
     {
-        
+
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
         var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
         var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
         var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/detail?appId=" + appId + "&businessId=" + businessId;
         var nhanhProductDetailsRequest = request;
-        
+
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhProductDetailsRequest);
-        
-        
-        
-        
+
+
+
+
         HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
-        
-        
+
+
         // var options = new JsonSerializerOptions
         // {
         //     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -162,16 +162,16 @@ public class Service: IService
         // Console.WriteLine(
         //     $"[DEBUG NHANH.VN RAW DATA]: {JsonSerializer.Serialize(newRequest)}"
         // );
-        
-        
-        
+
+
+
         NhanhVnProductDetailsResponse.NhanhVnProductDetailResponse? nhanhProductDetails = null;
-        
+
         if (nhanhVnResponse.IsSuccessStatusCode)
         {
             // nhanhProductDetails = await nhanhVnResponse.Content.ReadFromJsonAsync< ResponseProductDetails.NhanhVnProductDetailResponse>();
             string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();
-    
+
             // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:
             // Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");
 
@@ -180,7 +180,7 @@ public class Service: IService
             {
                 PropertyNameCaseInsensitive = true,
                 // Ép kiểu số linh hoạt nếu Nhanh.vn trả về string số
-                NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString 
+                NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString
             };
 
             // 3. Tiến hành phân rã chuỗi JSON an toàn thông qua bộ options đã có Converter
@@ -200,7 +200,445 @@ public class Service: IService
         {
             throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
         }
-        
+
         return nhanhProductDetails;
     }
+
+    public async Task<BasePaginationResponse> GetLocalProducts(Request.LocalProductQueryRequest request)
+    {
+        var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
+        var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
+        var search = request.search?.Trim();
+        var categoryIds = request.categoryIds?
+            .Distinct()
+            .ToList() ?? new List<Guid>();
+
+        var query = _dbContext.Products
+            .AsNoTracking()
+            .Include(p => p.CategoryProductDetails)
+            .ThenInclude(cpd => cpd.CategoryProduct)
+            .AsQueryable();
+
+        query = query.Where(x => !x.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch = search.ToLower();
+
+            query = query.Where(x =>
+                (x.ProductName != null && x.ProductName.ToLower().Contains(normalizedSearch)) ||
+                (x.Barcode != null && x.Barcode.ToLower().Contains(normalizedSearch)) ||
+                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
+        }
+
+        if (request.priceFrom.HasValue)
+        {
+            query = query.Where(x => x.Price >= request.priceFrom.Value);
+        }
+        if (request.priceTo.HasValue)
+        {
+            query = query.Where(x => x.Price <= request.priceTo.Value);
+        }
+
+        if (categoryIds.Count > 0)
+        {
+            query = query.Where(x => x.CategoryProductDetails.Any(cpd =>
+                !cpd.IsDeleted &&
+                categoryIds.Contains(cpd.CategoryProductId)));
+        }
+
+        IOrderedQueryable<HoaTheoMua.Repository.Entity.Product> orderedQuery;
+
+        if (categoryIds.Count == 1)
+        {
+            var categoryId = categoryIds[0];
+
+            orderedQuery = query
+                .OrderByDescending(x => x.CategoryProductDetails
+                    .Where(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId)
+                    .Select(cpd => cpd.IsPin)
+                    .FirstOrDefault())
+                .ThenBy(x => x.CategoryProductDetails
+                    .Where(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId)
+                    .Select(cpd => cpd.Position)
+                    .FirstOrDefault());
+        }
+        else
+        {
+            orderedQuery = query
+                .OrderByDescending(x => x.IsPin)
+                .ThenBy(x => x.Position);
+        }
+
+        if (request.sortBy != null && request.sortBy.Any())
+        {
+            foreach (var sortItem in request.sortBy)
+            {
+                if (string.IsNullOrWhiteSpace(sortItem)) continue;
+
+                var isAsc = !sortItem.StartsWith("-");
+                var field = sortItem.TrimStart('+', '-').Trim().ToLower();
+
+                orderedQuery = (field, isAsc) switch
+                {
+                    ("price", true) => orderedQuery.ThenBy(x => x.Price),
+                    ("price", false) => orderedQuery.ThenByDescending(x => x.Price),
+                    ("name", true) => orderedQuery.ThenBy(x => x.ProductName),
+                    ("name", false) => orderedQuery.ThenByDescending(x => x.ProductName),
+                    (_, true) => orderedQuery.ThenBy(x => x.CreatedAt),
+                    (_, false) => orderedQuery.ThenByDescending(x => x.CreatedAt)
+                };
+            }
+        }
+        else
+        {
+            orderedQuery = orderedQuery.ThenByDescending(x => x.CreatedAt);
+        }
+
+        var totalCount = await query.CountAsync();
+        var items = await orderedQuery
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var mappedItems = items.Select(MapToProductDetailResponse).ToList();
+
+        return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
+    }
+
+    public async Task<Response.ProductDetailResponse> GetLocalProductDetail(Guid id)
+    {
+        var product = await _dbContext.Products
+            .Include(p => p.CategoryProductDetails)
+            .ThenInclude(cpd => cpd.CategoryProduct)
+            .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
+
+        if (product == null)
+        {
+            throw new NotFoundException("PRODUCT_NOT_FOUND");
+        }
+
+        return MapToProductDetailResponse(product);
+    }
+
+    private static Response.ProductDetailResponse MapToProductDetailResponse(HoaTheoMua.Repository.Entity.Product product)
+    {
+        return new Response.ProductDetailResponse
+        {
+            Id = product.Id,
+            IsPinned =  product.IsPin,
+            SourceRowNumber = product.SourceRowNumber,
+            NhanhProductId = product.NhanhProductId,
+            ParentProductId = product.ParentProductId,
+            ParentProductCode = product.ParentProductCode,
+            ParentProductName = product.ParentProductName,
+            Barcode = product.Barcode,
+            ProductType = product.ProductType,
+            ProductCode = product.ProductCode,
+            ProductName = product.ProductName,
+            OtherName = product.OtherName,
+            Unit = product.Unit,
+            CoverImage = product.CoverImage,
+            WarrantyMonths = product.WarrantyMonths,
+            Weight = product.Weight,
+            ImportPrice = product.ImportPrice,
+            ImportVat = product.ImportVat,
+            ImportPriceWithVat = product.ImportPriceWithVat,
+            ImportVatMode = product.ImportVatMode,
+            Price = product.Price,
+            PriceWithVat = product.PriceWithVat,
+            BranchPrice = product.BranchPrice,
+            BranchPriceWithVat = product.BranchPriceWithVat,
+            SaleVatMode = product.SaleVatMode,
+            OldPrice = product.OldPrice,
+            Vat = product.Vat,
+            ProfitPercentage = product.ProfitPercentage,
+            CostPrice = product.CostPrice,
+            WholesalePrice = product.WholesalePrice,
+            WholesalePriceWithVat = product.WholesalePriceWithVat,
+            WholesaleBranchPrice = product.WholesaleBranchPrice,
+            WholesaleBranchPriceWithVat = product.WholesaleBranchPriceWithVat,
+            TotalStock = product.TotalStock,
+            StockTransferring = product.StockTransferring,
+            Stock = product.Stock,
+            DeliveringStock = product.DeliveringStock,
+            WarehouseStock = product.WarehouseStock,
+            StockError = product.StockError,
+            Held = product.Held,
+            AvailableForSale = product.AvailableForSale,
+            WarrantyStock = product.WarrantyStock,
+            HeldComponents = product.HeldComponents,
+            PendingImportStock = product.PendingImportStock,
+            PreOrder = product.PreOrder,
+            Status = product.Status,
+            CategoryCode = product.CategoryCode,
+            CategoryName = product.CategoryName,
+            InternalCategoryCode = product.InternalCategoryCode,
+            Brand = product.Brand,
+            Supplier = product.Supplier,
+            WarrantyAddress = product.WarrantyAddress,
+            Slug = product.Slug,
+            Length = product.Length,
+            Width = product.Width,
+            Height = product.Height,
+            WebOrder = product.WebOrder,
+            NhanhCreatedAt = product.NhanhCreatedAt,
+            ProductLabel = product.ProductLabel,
+            BranchPriceDuplicate = product.BranchPriceDuplicate,
+            WholesaleBranchPriceDuplicate = product.WholesaleBranchPriceDuplicate,
+            PriceLabel = product.PriceLabel,
+            Size = product.Size,
+            Color = product.Color,
+            Origin = product.Origin,
+            CreatedAt = product.CreatedAt,
+            UpdatedAt = product.UpdatedAt,
+            Categories = product.CategoryProductDetails?
+                .Where(cpd => !cpd.IsDeleted && cpd.CategoryProduct != null && !cpd.CategoryProduct.IsDeleted)
+                .Select(cpd => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
+                {
+                    categoryId = cpd.CategoryProduct.Id,
+                    isPinned = cpd.IsPin,
+                    name = cpd.CategoryProduct.Name,
+                    name_En = cpd.CategoryProduct.Name_En,
+                    description = cpd.CategoryProduct.Description,
+                    description_En = cpd.CategoryProduct.Description_En,
+                    position = cpd.CategoryProduct.Position,
+                    metaData = cpd.CategoryProduct.MetaData,
+                    startTime = cpd.CategoryProduct.StartTime,
+                    endTime = cpd.CategoryProduct.EndTime,
+                    type = cpd.CategoryProduct.Type,
+                    isActive = cpd.CategoryProduct.IsActive,
+                    userId = cpd.CategoryProduct.UserId,
+                    parentId = cpd.CategoryProduct.ParentCategoryProductId
+                })
+                .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
+        };
+    }
+
+    public async Task<decimal> GetMaxPrice(List<Guid>? categoryIds = null)
+    {
+        var query = _dbContext.Products
+            .AsNoTracking()
+            .AsQueryable();
+
+        query = query.Where(x => !x.IsDeleted && x.Price.HasValue);
+
+        if (categoryIds != null && categoryIds.Any())
+        {
+            query = query.Where(x => x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && categoryIds.Contains(cpd.CategoryProductId)));
+        }
+
+        var maxPrice = await query.MaxAsync(x => x.Price);
+
+        return maxPrice ?? 0;
+    }
+
+    public async Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request)
+    {
+        if (request == null)
+        {
+            throw new BadRequestException("Invalid movement data.");
+        }
+
+        if (id == Guid.Empty)
+        {
+            throw new BadRequestException("Product ID is required.");
+        }
+
+        if (request.CategoryId.HasValue && request.CategoryId.Value == Guid.Empty)
+        {
+            throw new BadRequestException("Category ID cannot be empty.");
+        }
+
+        if (request.CategoryId.HasValue)
+        {
+            var categoryProductDetail = await _dbContext.CategoryProductDetails
+                .FirstOrDefaultAsync(x =>
+                    x.ProductId == id &&
+                    x.CategoryProductId == request.CategoryId.Value &&
+                    !x.IsDeleted &&
+                    x.IsPin &&
+                    !x.CategoryProduct.IsDeleted &&
+                    !x.Product.IsDeleted);
+
+            if (categoryProductDetail == null)
+            {
+                throw new BadRequestException("Only product pinned in this category can update position");
+            }
+
+            categoryProductDetail.Position = request.Position;
+            categoryProductDetail.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+        else
+        {
+            var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
+                                                                                    x.Id == id &&
+                                                                                    !x.IsDeleted &&
+                                                                                    x.IsPin);
+
+            if (product == null)
+            {
+                throw new BadRequestException("Only product with pin can update position");
+            }
+
+            product.Position = request.Position;
+            product.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        return ApiResponseFactory.Base("Product position updated successfully.");
+
+    }
+
+    public async Task<BaseResponse> PinProduct(Request.PinProductRequest request)
+    {
+        if (request == null)
+        {
+            throw new BadRequestException("Invalid pin data.");
+        }
+
+        if (request.ProductId == Guid.Empty)
+        {
+            throw new BadRequestException("Product ID is required.");
+        }
+
+        if (request.CategoryId.HasValue && request.CategoryId.Value == Guid.Empty)
+        {
+            throw new BadRequestException("Category ID cannot be empty.");
+        }
+
+        var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
+                                                                    x.Id == request.ProductId &&
+                                                                    !x.IsDeleted);
+
+        if (product == null)
+        {
+            throw new BadRequestException("Product not found.");
+        }
+
+        if (request.CategoryId.HasValue)
+        {
+            var categoryProductDetail = await _dbContext.CategoryProductDetails
+                .FirstOrDefaultAsync(x =>
+                    !x.IsDeleted &&
+                    x.CategoryProductId == request.CategoryId.Value &&
+                    x.ProductId == request.ProductId);
+
+            if (categoryProductDetail == null)
+            {
+                throw new BadRequestException("Product does not belong to this category.");
+            }
+
+            if (request.IsPin && !categoryProductDetail.IsPin)
+            {
+                var pinnedProductCount = await _dbContext.CategoryProductDetails
+                    .CountAsync(x =>
+                        !x.IsDeleted &&
+                        x.CategoryProductId == request.CategoryId.Value &&
+                        x.IsPin);
+
+                if (pinnedProductCount >= 32)
+                {
+                    throw new BadRequestException("Only 32 products can be pinned in this category.");
+                }
+            }
+
+            categoryProductDetail.IsPin = request.IsPin;
+            categoryProductDetail.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+        else
+        {
+            if (request.IsPin && !product.IsPin)
+            {
+                var pinnedProductCount = await _dbContext.Products
+                    .CountAsync(x =>
+                        !x.IsDeleted &&
+                        x.IsPin);
+
+                if (pinnedProductCount >= 32)
+                {
+                    throw new BadRequestException("Only 32 products can be pinned.");
+                }
+            }
+
+            product.IsPin = request.IsPin;
+            product.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        var message = request.IsPin
+            ? "Product pinned successfully."
+            : "Product unpinned successfully.";
+
+        return ApiResponseFactory.Base(message);
+    }
+
+    public async Task<List<Response.PinnedProductResponse>> GetProductPin(Request.GetProductPinRequest request)
+    {
+        if (request == null)
+        {
+            throw new BadRequestException("Invalid request data.");
+        }
+
+        if (request.CategoryId.HasValue && request.CategoryId.Value == Guid.Empty)
+        {
+            throw new BadRequestException("Category ID cannot be empty.");
+        }
+
+        if (request.CategoryId.HasValue)
+        {
+            var categoryPinnedQuery = _dbContext.CategoryProductDetails
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.IsPin &&
+                    x.CategoryProductId == request.CategoryId.Value &&
+                    !x.CategoryProduct.IsDeleted &&
+                    !x.Product.IsDeleted)
+                .OrderBy(x => x.Position) //
+                .ThenBy(x => x.Product.ProductName);
+
+            var result = await categoryPinnedQuery
+                .Select(x => new Response.PinnedProductResponse
+                {
+                    ProductId = x.Product.Id,
+                    CategoryId = x.CategoryProductId,
+                    ProductCode = x.Product.ProductCode,
+                    ProductName = x.Product.ProductName,
+                    CoverImage = x.Product.CoverImage,
+                    Price = x.Product.Price,
+                    OldPrice = x.Product.OldPrice,
+                    Position = x.Position
+                })
+                .ToListAsync();
+
+            return result;
+        }
+
+        var pinnedProductQuery = _dbContext.Products
+            .Where(x =>
+                !x.IsDeleted &&
+                x.IsPin)
+            .OrderBy(x => x.Position) //
+            .ThenBy(x => x.ProductName);
+
+        var pinnedProducts = await pinnedProductQuery
+            .Select(x => new Response.PinnedProductResponse
+            {
+                ProductId = x.Id,
+                CategoryId = null,
+                ProductCode = x.ProductCode,
+                ProductName = x.ProductName,
+                CoverImage = x.CoverImage,
+                Price = x.Price,
+                OldPrice = x.OldPrice,
+                Position = x.Position
+            })
+            .ToListAsync();
+
+        return pinnedProducts;
+    }
 }
+
+

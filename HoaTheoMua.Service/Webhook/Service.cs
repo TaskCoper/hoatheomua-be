@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -20,6 +21,7 @@ public partial class Service : IService
     private readonly HoaTheoMua.Service.Order.IService _orderService;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
+    private readonly SepayOption _sepayOption;
     private readonly Config.IService _configService;
     private readonly AhamoveService.IService _ahaMoveService;
 
@@ -32,10 +34,50 @@ public partial class Service : IService
         _orderService = orderService;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
+        _sepayOption = new SepayOption();
         _configService = configService;
         _ahaMoveService = ahaMoveService;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
+        configuration.GetSection(nameof(SepayOption)).Bind(_sepayOption);
+    }
+
+    // SePay signs every webhook call with "Authorization: Apikey <ApiKey>". Fail closed: without a
+    // configured key we cannot tell a genuine callback from a forged one, and a forged one flips an
+    // order to Paid and dispatches a courier for free.
+    private const string SepayAuthorizationScheme = "Apikey";
+
+    public void VerifySepayApiKey(string? authorizationHeader)
+    {
+        if (string.IsNullOrWhiteSpace(_sepayOption.ApiKey))
+        {
+            throw new ServerException(
+                "SepayOption.ApiKey is not configured, so webhook requests cannot be verified");
+        }
+
+        if (string.IsNullOrWhiteSpace(authorizationHeader))
+        {
+            throw new UnauthorizedException("Missing Sepay Authorization header");
+        }
+
+        var parts = authorizationHeader.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2
+            || !string.Equals(parts[0], SepayAuthorizationScheme, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedException("Invalid Sepay Authorization header");
+        }
+
+        var providedKeyBytes = Encoding.UTF8.GetBytes(parts[1]);
+        var expectedKeyBytes = Encoding.UTF8.GetBytes(_sepayOption.ApiKey);
+
+        // Lengths must match before FixedTimeEquals: it throws on mismatched-length inputs rather
+        // than returning false, and comparing length first still leaks nothing an attacker can use
+        // (key length isn't the secret).
+        if (providedKeyBytes.Length != expectedKeyBytes.Length
+            || !CryptographicOperations.FixedTimeEquals(providedKeyBytes, expectedKeyBytes))
+        {
+            throw new UnauthorizedException("Invalid Sepay API key");
+        }
     }
 
     // Match "HTM" (optional separator) + a GUID. The bank/SePay strips dashes, so the GUID can
@@ -172,7 +214,7 @@ public partial class Service : IService
                 ? parsedDate.ToUniversalTime()
                 : DateTime.UtcNow,
             AccountNumber = request.AccountNumber,
-            SubAccount = request.SubAccount,
+            SubAccount = request.SubAccount ?? "",
             Code = request.Code,
             Content = request.Content,
             TransferType = request.TransferType,
@@ -397,7 +439,7 @@ public partial class Service : IService
                     {
                         Latitude = companyAddress?.Latitude ?? 0,
                         Longitude = companyAddress?.Longitude ?? 0,
-                        Address = companyAddress?.AddressLine ?? "",
+                        Address =(companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
                         ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
                         FullName = companyAddress!.FullName,
                         Phone = companyAddress.PhoneNumber,

@@ -8,13 +8,14 @@ public class Request
 {
     public class CreateOrderRequest : AhaMoveRequest.EstimateShippingFeeRequest
     {
+        public required string Gateway { get; set; }
         public string? TaxCode { get; set; }
         public List<long>? TagIds { get; set; }
 
         public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.VA;
-        
-        public string? IdentityNumber {get; set; }
-    
+
+        public string? IdentityNumber { get; set; }
+
         public string? ReceiptFullName { get; set; }
 
         public string? ReceiptPhoneNumber { get; set; }
@@ -22,17 +23,17 @@ public class Request
         public string? ReceiptAddress { get; set; }
 
         public string? ReceiptEmail { get; set; }
-    
+
         public bool? IsExportInvoice { get; set; }
-        public InvoiceType?  InvoiceType { get; set; }
-        
+        public InvoiceType? InvoiceType { get; set; }
+
         // public string? Email { get; set; }
         // public string? PhoneNumber { get; set; }
         // public string? IdentityNumber { get; set; }
         // public string FullName { get; set; }
         // public string Address { get; set; }
     }
-    
+
     public class LocationRequest
     {
         [JsonPropertyName("filters")]
@@ -50,6 +51,6 @@ public class Request
         [JsonPropertyName("parentId")]
         public int? ParentId { get; set; }
     }
-    
-    
+
+
 }

@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Service.AhamoveService;
+using System.Text.Json;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.NhanhVnService;
 using Microsoft.AspNetCore.Mvc;
@@ -32,11 +33,35 @@ public class NhanhVnController : ControllerBase
         var result = await _nhanhVnService.GetOrderSource(request);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
     }
+    
     [HttpPost("/api/v1/nhanh-vn/depot")]
     public async Task<IActionResult> GetNhanhVnDepot([FromBody] NhanhVnRequest.DepotRequest  request)
     {
         var result = await _ahamoveService.GetDepotDetails(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
         // return Ok(result);
+    }
+    
+    [HttpPost("/api/v1/nhanh-vn/webhook")]
+    public async Task<IActionResult> Webhook([FromBody] JsonElement? body)
+    {
+        Console.WriteLine(body);
+
+        var result = await _nhanhVnService.HandleWebhook(body);
+        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
+    }
+
+    [HttpGet("api/v1/nhanh-vn/orders")]
+    public async Task<IActionResult> GetNhanhVnOrders([FromQuery] int pageIndex, [FromQuery] int pageSize, [FromQuery] string? search)
+    {
+        var result = await _nhanhVnService.GetOrderNhanhVnPagination(pageIndex, pageSize, search);
+        return Ok(result);
+    }
+
+    [HttpGet("api/v1/nhanh-vn/orders/{id}")]
+    public async Task<IActionResult> GetNhanhVnOrderById(Guid id)
+    {
+        var result = await _nhanhVnService.GetOrderNhanhVnById(id);
+        return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
     }
 }

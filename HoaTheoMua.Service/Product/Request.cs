@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.Product;
 
@@ -83,4 +83,34 @@ public class Request
         [JsonPropertyName("id")]
         public string Id { get; set; } = null!;
     }
+
+    public class LocalProductQueryRequest
+    {
+        public int pageIndex { get; set; } = 1;
+        public int pageSize { get; set; } = 10;
+        public string? search { get; set; }
+        public decimal? priceFrom { get; set; }
+        public decimal? priceTo { get; set; }
+        public List<string>? sortBy { get; set; }
+        public List<Guid>? categoryIds { get; set; }
+    }
+    
+    public class MoveProductRequest
+    {
+        public double Position { get; set; }
+        public Guid? CategoryId { get; set; }
+    }
+
+    public class PinProductRequest
+    {
+        public Guid ProductId { get; set; }
+        public bool IsPin { get; set; }
+        public Guid? CategoryId { get; set; }
+    }
+
+    public class GetProductPinRequest
+    {
+        public Guid? CategoryId { get; set; }
+    } 
 }
+

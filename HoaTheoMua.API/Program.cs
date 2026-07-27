@@ -6,6 +6,7 @@ using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
 using AssemblyReference = HoaTheoMua.Service.AssemblyReference;
 using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
+using CategoryProductService = HoaTheoMua.Service.CategoryProduct;
 using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
 using NewService = HoaTheoMua.Service.New;
 using JobDescriptionService = HoaTheoMua.Service.JobDescriptions;
@@ -17,7 +18,9 @@ using ConfigService = HoaTheoMua.Service.Config;
 using AddressService = HoaTheoMua.Service.Address;
 using AhamoveService = HoaTheoMua.Service.AhamoveService;
 using NhanhVnService = HoaTheoMua.Service.NhanhVnService;
+using ProductImportService = HoaTheoMua.Service.ProductImport;
 using BaoKimService = HoaTheoMua.Service.BaoKim;
+using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,6 +54,7 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<HoaTheoMua.Service.Common.ICurrentUserService, HoaTheoMua.Service.Common.CurrentUserService>();
 builder.Services.AddScoped<CategoryNewsService.IService, CategoryNewsService.Service>();
+builder.Services.AddScoped<CategoryProductService.IService, CategoryProductService.Service>();
 builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService.Service>();
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
@@ -63,6 +67,8 @@ builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
 builder.Services.AddScoped<AddressService.IService, AddressService.Service>();
 builder.Services.AddScoped<NhanhVnService.IService, NhanhVnService.Service>();
+builder.Services.AddScoped<ProductImportService.IService, ProductImportService.Service>();
+builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
 
 
 
@@ -73,7 +79,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins(
+                "http://localhost:3000",
+                "https://hoatheomua-dev-client.bentran1vn.com",
+                "https://www.hoatheomua.com"
+                )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();

@@ -325,7 +325,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Latitude = 10.1m, Longitude = 106.1m, Ward = 1, City = 1,
                 Address = "Dia chi", ShortAddress = "Short Dia Chi",
                 FullName = "User Test", Phone = "0901234567", Remarks = "Ghi chu",
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } }
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Gateway = "BaoKim"
             };
 
             // Act
@@ -357,7 +358,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
             currentUser.Setup(x => x.IsVerified).Returns(true);
 
             var service = CreateService(dbContext, new HttpClient(), currentUser.Object, CreateMockProductService());
-            var request = new OrderRequest.CreateOrderRequest();
+            var request = new OrderRequest.CreateOrderRequest()
+            {
+                Gateway = "BaoKim"
+            };
 
             // Act
             var act = async () => await service.CreateOrder(request);
@@ -378,7 +382,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var currentUser = CreateMockCurrentUserService(TestUserId, isVerified: false);
 
             var service = CreateService(dbContext, new HttpClient(), currentUser, CreateMockProductService());
-            var request = new OrderRequest.CreateOrderRequest();
+            var request = new OrderRequest.CreateOrderRequest()
+            {
+                Gateway = "BaoKim"
+            };;
 
             // Act
             var act = async () => await service.CreateOrder(request);
@@ -410,7 +417,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } }
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Gateway = "BaoKim"
             };
 
             // Act
@@ -447,7 +455,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } }
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Gateway = "BaoKim"
             };
 
             // Act
@@ -483,7 +492,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } }
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Gateway = "BaoKim"
             };
 
             // Act
@@ -519,7 +529,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } }
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Gateway = "BaoKim"
             };
 
             // Act
@@ -558,7 +569,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } }
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
+                Gateway = "BaoKim"
             };
 
             // Act
@@ -596,7 +608,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } }
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Gateway = "BaoKim"
             };
 
             // Act
@@ -633,7 +646,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } }
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Gateway = "BaoKim"
             };
 
             // Act
@@ -674,7 +688,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Address = "Dia chi", ShortAddress = "Short Dia Chi",
                 FullName = "User Test", Phone = "0901234567", Remarks = "Ghi chu",
                 TaxCode = "123456789", // Để tính VatFee
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } }
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
+                Gateway = "BaoKim"
             };
 
             // Act
