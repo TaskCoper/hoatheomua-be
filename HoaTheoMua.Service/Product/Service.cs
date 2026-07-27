@@ -389,15 +389,17 @@ public class Service: IService
         };
     }
 
-    public async Task<decimal> GetMaxPrice(Guid? categoryId = null)
+    public async Task<decimal> GetMaxPrice(List<Guid>? categoryIds = null)
     {
-        var query = _dbContext.Products.AsQueryable();
+        var query = _dbContext.Products
+            .AsNoTracking()
+            .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted && x.Price.HasValue);
 
-        if (categoryId.HasValue)
+        if (categoryIds != null && categoryIds.Any())
         {
-            query = query.Where(x => x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId.Value));
+            query = query.Where(x => x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && categoryIds.Contains(cpd.CategoryProductId)));
         }
 
         var maxPrice = await query.MaxAsync(x => x.Price);
