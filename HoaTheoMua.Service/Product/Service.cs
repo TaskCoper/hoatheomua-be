@@ -209,7 +209,11 @@ public class Service: IService
         var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
         var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
 
-        var query = _dbContext.Products.AsQueryable();
+        var query = _dbContext.Products
+            .AsNoTracking()
+            .Include(p => p.CategoryProductDetails)
+            .ThenInclude(cpd => cpd.CategoryProduct)
+            .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted);
 
@@ -273,7 +277,9 @@ public class Service: IService
             .Take(pageSize)
             .ToListAsync();
 
-        return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+        var mappedItems = items.Select(MapToProductDetailResponse).ToList();
+
+        return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
     }
 
     public async Task<Response.ProductDetailResponse> GetLocalProductDetail(Guid id)
@@ -288,7 +294,12 @@ public class Service: IService
             throw new NotFoundException("PRODUCT_NOT_FOUND");
         }
 
-        var response = new Response.ProductDetailResponse
+        return MapToProductDetailResponse(product);
+    }
+
+    private static Response.ProductDetailResponse MapToProductDetailResponse(HoaTheoMua.Repository.Entity.Product product)
+    {
+        return new Response.ProductDetailResponse
         {
             Id = product.Id,
             SourceRowNumber = product.SourceRowNumber,
@@ -356,7 +367,7 @@ public class Service: IService
             Origin = product.Origin,
             CreatedAt = product.CreatedAt,
             UpdatedAt = product.UpdatedAt,
-            Categories = product.CategoryProductDetails
+            Categories = product.CategoryProductDetails?
                 .Where(cpd => !cpd.IsDeleted && cpd.CategoryProduct != null && !cpd.CategoryProduct.IsDeleted)
                 .Select(cpd => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
                 {
@@ -374,10 +385,8 @@ public class Service: IService
                     userId = cpd.CategoryProduct.UserId,
                     parentId = cpd.CategoryProduct.ParentCategoryProductId
                 })
-                .ToList()
+                .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
         };
-
-        return response;
     }
 
     public async Task<decimal> GetMaxPrice(Guid? categoryId = null)

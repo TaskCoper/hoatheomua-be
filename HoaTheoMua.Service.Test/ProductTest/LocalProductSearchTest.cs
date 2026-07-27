@@ -77,7 +77,7 @@ public class LocalProductSearchTest
 
         // Assert
         Assert.NotNull(result);
-        var items = result.Value.Items.Cast<ProductEntity>().ToList();
+        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
         Assert.Equal(2, items.Count);
         Assert.Contains(items, x => x.ProductName == "P2");
         Assert.Contains(items, x => x.ProductName == "P3");
@@ -110,7 +110,7 @@ public class LocalProductSearchTest
         var result = await service.GetLocalProducts(request);
 
         // Assert
-        var items = result.Value.Items.Cast<ProductEntity>().ToList();
+        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
         Assert.Equal(expectedOrder.Length, items.Count);
         for (int i = 0; i < expectedOrder.Length; i++)
         {
@@ -142,7 +142,7 @@ public class LocalProductSearchTest
         var result = await service.GetLocalProducts(request);
 
         // Assert
-        var items = result.Value.Items.Cast<ProductEntity>().ToList();
+        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
         Assert.Equal(3, items.Count);
         Assert.Equal("A_Product", items[0].ProductName); // price 100, sorted alphabetically A first
         Assert.Equal("B_Product", items[1].ProductName); // price 100, sorted alphabetically B second
@@ -239,7 +239,7 @@ public class LocalProductSearchTest
 
         // Assert
         Assert.NotNull(result);
-        var items = result.Value.Items.Cast<ProductEntity>().ToList();
+        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
         Assert.Single(items);
         Assert.Equal("P1", items[0].ProductName);
     }
