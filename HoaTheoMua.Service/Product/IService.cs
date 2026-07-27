@@ -8,7 +8,7 @@ public interface IService
     Task<NhanhVnProductDetailsResponse.NhanhVnProductDetailResponse> GetProductDetails(Request.ProductDetailRequest request);
     Task<BasePaginationResponse> GetLocalProducts(Request.LocalProductQueryRequest request);
     Task<Response.ProductDetailResponse> GetLocalProductDetail(Guid id);
-    Task<decimal> GetMaxPrice(Guid? categoryId = null);
+    Task<decimal> GetMaxPrice(List<Guid>? categoryIds);
     Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request);
     Task<BaseResponse> PinProduct(Request.PinProductRequest request);
     Task<List<Response.PinnedProductResponse>> GetProductPin(Request.GetProductPinRequest request);
