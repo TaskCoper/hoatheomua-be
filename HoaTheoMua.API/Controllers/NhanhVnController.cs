@@ -52,9 +52,9 @@ public class NhanhVnController : ControllerBase
     }
 
     [HttpGet("api/v1/nhanh-vn/orders")]
-    public async Task<IActionResult> GetNhanhVnOrders([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetNhanhVnOrders([FromQuery] int pageIndex, [FromQuery] int pageSize, [FromQuery] string? search)
     {
-        var result = await _nhanhVnService.GetOrderNhanhVnPagination(pageIndex, pageSize);
+        var result = await _nhanhVnService.GetOrderNhanhVnPagination(pageIndex, pageSize, search);
         return Ok(result);
     }
 

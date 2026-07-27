@@ -874,7 +874,7 @@ public class Service: IService
         return orderDto;
     }
 
-    public async Task<BasePaginationResponse> GetOrderNhanhVnPagination(int pageIndex, int pageSize)
+    public async Task<BasePaginationResponse> GetOrderNhanhVnPagination(int pageIndex, int pageSize, string? search)
     {
         if (pageIndex <= 0)
         {
@@ -885,10 +885,18 @@ public class Service: IService
         {
             pageSize = 10;
         }
+        
         var orderQuery = _appDbContext.OrderNhanhVns
            .Include(x => x.OrderNhanhVnDetails)
            .Where(x => !x.IsDeleted);
 
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            orderQuery = orderQuery.Where(x => x.IdDonHangNhanh.Contains(search));
+        }
+        
+        
         var totalCount = await orderQuery.CountAsync();
 
         orderQuery = orderQuery.OrderByDescending(x => x.CreatedAt);
