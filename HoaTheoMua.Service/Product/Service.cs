@@ -559,10 +559,10 @@ public class Service: IService
                     x.CategoryProductId == request.CategoryId.Value &&
                     !x.CategoryProduct.IsDeleted &&
                     !x.Product.IsDeleted)
-                .OrderBy(x => x.Position)
+                .OrderBy(x => x.Position) //
                 .ThenBy(x => x.Product.ProductName);
 
-            var result =  await categoryPinnedQuery
+            var result = await categoryPinnedQuery
                 .Select(x => new Response.PinnedProductResponse
                 {
                     ProductId = x.Product.Id,
@@ -583,17 +583,8 @@ public class Service: IService
             .Where(x =>
                 !x.IsDeleted &&
                 x.IsPin)
-            .OrderBy(x => x.Position)
-            .ThenBy(x => x.ProductName);  //
-
-        var pinnedCategoryProductQuery = _dbContext.CategoryProductDetails
-            .Where(x =>
-                !x.IsDeleted &&
-                x.IsPin &&
-                !x.CategoryProduct.IsDeleted &&
-                !x.Product.IsDeleted)
-            .OrderBy(x => x.Position)
-            .ThenBy(x => x.Product.ProductName); //
+            .OrderBy(x => x.Position) //
+            .ThenBy(x => x.ProductName);
 
         var pinnedProducts = await pinnedProductQuery
             .Select(x => new Response.PinnedProductResponse
@@ -608,22 +599,6 @@ public class Service: IService
                 Position = x.Position
             })
             .ToListAsync();
-
-        var pinnedCategoryProducts = await pinnedCategoryProductQuery
-            .Select(x => new Response.PinnedProductResponse
-            {
-                ProductId = x.Product.Id,
-                CategoryId = x.CategoryProductId,
-                ProductCode = x.Product.ProductCode,
-                ProductName = x.Product.ProductName,
-                CoverImage = x.Product.CoverImage,
-                Price = x.Product.Price,
-                OldPrice = x.Product.OldPrice,
-                Position = x.Position
-            })
-            .ToListAsync();
-
-        pinnedProducts.AddRange(pinnedCategoryProducts);
 
         return pinnedProducts;
     }
