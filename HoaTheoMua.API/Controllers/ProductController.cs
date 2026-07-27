@@ -68,9 +68,9 @@ public class ProductController: ControllerBase
 
     [HttpGet("/api/v1/products-pin")]
     [Authorize (Policy = JwtExtensions.AdminPolicy)]
-    public async Task<IActionResult> GetProductPin()
+    public async Task<IActionResult> GetProductPin([FromQuery] Request.GetProductPinRequest request)
     {
-        var result = await _productService.GetProductPin();
+        var result = await _productService.GetProductPin(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     

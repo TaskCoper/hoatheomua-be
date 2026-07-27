@@ -81,6 +81,7 @@ public class Response
     public class PinnedProductResponse
     {
         public Guid ProductId { get; set; }
+        public Guid? CategoryId { get; set; }
         public string? ProductCode { get; set; }
         public string? ProductName { get; set; }
         public string? CoverImage { get; set; }

@@ -295,6 +295,14 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<double?>("Position")
+                        .HasColumnType("double precision");
+
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
 
