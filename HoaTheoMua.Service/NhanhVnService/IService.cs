@@ -10,7 +10,7 @@ public interface IService
     Task<OrderSourceResponse>  GetOrderSource(OrderSourceRequest orderSourceRequest);
 
     Task<OrderNhanhVnDto> GetOrderNhanhVnById(Guid id);
-    Task<BasePaginationResponse> GetOrderNhanhVnPagination(int pageIndex, int pageSize);
+    Task<BasePaginationResponse> GetOrderNhanhVnPagination(int pageIndex, int pageSize, string? search);
 
     Task<string> HandleWebhook(JsonElement? body);
     Task<string> WebhookNhanhVnInventory(NhanhInventoryChangeWebhookRequest request);
