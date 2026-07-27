@@ -389,12 +389,14 @@ public class LocalProductSearchTest
         await dbContext.SaveChangesAsync();
 
         // Act
-        var resultForC1 = await service.GetMaxPrice(c1.Id);
-        var resultForC2 = await service.GetMaxPrice(c2.Id);
+        var resultForC1 = await service.GetMaxPrice(new List<Guid> { c1.Id });
+        var resultForC2 = await service.GetMaxPrice(new List<Guid> { c2.Id });
+        var resultForBoth = await service.GetMaxPrice(new List<Guid> { c1.Id, c2.Id });
 
         // Assert
         Assert.Equal(80, resultForC1);
         Assert.Equal(100, resultForC2);
+        Assert.Equal(100, resultForBoth);
     }
 
     [Fact]

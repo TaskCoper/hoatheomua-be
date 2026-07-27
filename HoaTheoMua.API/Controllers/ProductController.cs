@@ -37,9 +37,9 @@ public class ProductController: ControllerBase
     }
 
     [HttpGet("/api/v1/products/max-price")]
-    public async Task<IActionResult> GetMaxPrice([FromQuery] Guid? categoryId)
+    public async Task<IActionResult> GetMaxPrice([FromQuery] List<Guid>? categoryIds)
     {
-        var result = await _productService.GetMaxPrice(categoryId);
+        var result = await _productService.GetMaxPrice(categoryIds);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
