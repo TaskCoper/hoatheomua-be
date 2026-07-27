@@ -455,10 +455,14 @@ public class Service : IService
 
     public async Task<List<Response.CategoryWithChildrenResponse>> GetCategoryWithChild()
     {
-        var queryCategoryProducts = _dbContext.CategoryProducts.Where(x => !x.IsDeleted && x.IsActive);
+        var queryCategoryProducts = _dbContext.CategoryProducts
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.IsActive);
 
-        var selectedQueryCate = queryCategoryProducts
-            .Select(x => new Response.CategoryWithChildrenResponse()
+        var selectedQueryCategory = queryCategoryProducts
+            .Select(x => new Response.CategoryWithChildrenResponse
             {
                 CategoryId = x.Id,
                 Name = x.Name,
@@ -475,28 +479,33 @@ public class Service : IService
                 Children = new List<Response.CategoryWithChildrenResponse>()
             });
 
-        var listCategoryProducts = await selectedQueryCate.ToListAsync();
-        
-        var parentCategories = listCategoryProducts
-            .Where(x => x.ParentId == null)
-            .OrderBy(x => x.Position)
-            .ToList();
-        
-        var childCategories = listCategoryProducts
-            .Where(x => x.ParentId != null)
-            .OrderBy(x => x.Position)
-            .ToList();
+        var categoryProducts = await selectedQueryCategory
+            .ToListAsync();
 
-        foreach (var parentCategory in parentCategories)
+        var categoryById = categoryProducts
+            .ToDictionary(category => category.CategoryId);
+
+        var result = new List<Response.CategoryWithChildrenResponse>();
+
+        foreach (var category in categoryProducts.OrderBy(x => x.Position))
         {
-            var children = childCategories
-                .Where(x => x.ParentId == parentCategory.CategoryId)
-                .OrderBy(x => x.Position)
-                .ToList();
+            if (category.ParentId == null)
+            {
+                result.Add(category);
+                continue;
+            }
 
-            parentCategory.Children = children;
+            if (categoryById.TryGetValue(category.ParentId.Value, out var parent))
+            {
+                if (parent.Children == null)
+                {
+                    parent.Children = new List<Response.CategoryWithChildrenResponse>();
+                }
+                
+                parent.Children.Add(category);
+            }
         }
 
-        return parentCategories;
+        return result;
     }
 }
