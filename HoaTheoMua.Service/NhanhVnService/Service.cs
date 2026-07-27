@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -859,8 +860,8 @@ public class Service: IService
     public async Task<OrderNhanhVnDto> GetOrderNhanhVnById(Guid id)
     {
         var orderQuery = _appDbContext.OrderNhanhVns
-            .Include(x => x.OrderNhanhVnDetails)
-            .Where(x => !x.IsDeleted && x.Id == id);
+            .Where(x => !x.IsDeleted && x.Id == id)
+            .Select(MapOrderNhanhVnToDto);
 
         var order = await orderQuery.FirstOrDefaultAsync();
 
@@ -868,10 +869,8 @@ public class Service: IService
         {
             throw new NotFoundException($"OrderNhanhVn with ID {id} not found.");
         }
-
-        var orderDto = MapOrderNhanhVnToDto(order);
-
-        return orderDto;
+        
+        return order;
     }
 
     public async Task<BasePaginationResponse> GetOrderNhanhVnPagination(int pageIndex, int pageSize, string? search)
@@ -887,7 +886,6 @@ public class Service: IService
         }
         
         var orderQuery = _appDbContext.OrderNhanhVns
-           .Include(x => x.OrderNhanhVnDetails)
            .Where(x => !x.IsDeleted);
 
 
@@ -898,33 +896,23 @@ public class Service: IService
         
         
         var totalCount = await orderQuery.CountAsync();
+        
+        orderQuery = orderQuery
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize);
 
-        orderQuery = orderQuery.OrderByDescending(x => x.CreatedAt);
-
-        var skip = (pageIndex - 1) * pageSize;
-
-        orderQuery = orderQuery.Skip(skip);
-        orderQuery = orderQuery.Take(pageSize);
-
-        var orders = await orderQuery.ToListAsync();
-
-        var orderDtos = new List<OrderNhanhVnDto>();
-
-        foreach (var order in orders)
-        {
-            var orderDto = MapOrderNhanhVnToDto(order);
-            orderDtos.Add(orderDto);
-        }
-
-        var response = ApiResponseFactory.BasePagination(orderDtos, pageIndex, pageSize, totalCount);
+        var orders = await orderQuery
+            .Select(MapOrderNhanhVnToDto)
+            .ToListAsync();
+        
+        var response = ApiResponseFactory.BasePagination(orders, pageIndex, pageSize, totalCount);
 
         return response;
     }
 
-
-    private OrderNhanhVnDto MapOrderNhanhVnToDto(Repository.Entity.OrderNhanhVn order)
-    {
-        var dto = new OrderNhanhVnDto
+    private static readonly Expression<Func<OrderNhanhVn, OrderNhanhVnDto>> MapOrderNhanhVnToDto =
+        order => new OrderNhanhVnDto()
         {
             Id = order.Id,
             IdDonHangNhanh = order.IdDonHangNhanh,
@@ -1028,57 +1016,42 @@ public class Service: IService
             SoHoaDon = order.SoHoaDon,
             NgayPhatHanhHoaDon = order.NgayPhatHanhHoaDon,
             CreatedAt = order.CreatedAt,
-            UpdatedAt = order.UpdatedAt
+            UpdatedAt = order.UpdatedAt,
+            
+            OrderNhanhVnDetails = order.OrderNhanhVnDetails
+                .Where(detail => !detail.IsDeleted)
+                .Select(detail => new OrderNhanhVnDetailDto
+                {
+                    Id = detail.Id,
+                    OrderNhanhVnId = detail.OrderNhanhVnId,
+                    TenSanPham = detail.TenSanPham,
+                    QuaTangKem = detail.QuaTangKem,
+                    Imei = detail.Imei,
+                    LoHang = detail.LoHang,
+                    MaSanPhamCha = detail.MaSanPhamCha,
+                    TenSanPhamCha = detail.TenSanPhamCha,
+                    MaSanPham = detail.MaSanPham,
+                    MaVach = detail.MaVach,
+                    DanhMucSanPham = detail.DanhMucSanPham,
+                    KhoiLuongSanPham = detail.KhoiLuongSanPham,
+                    GiaBan = detail.GiaBan,
+                    LoaiGiaSanPham = detail.LoaiGiaSanPham,
+                    GiaBanTruocVat = detail.GiaBanTruocVat,
+                    TienVatSanPham = detail.TienVatSanPham,
+                    SoLuong = detail.SoLuong,
+                    ChietKhauMotSanPham = detail.ChietKhauMotSanPham,
+                    ChietKhauSanPham = detail.ChietKhauSanPham,
+                    GiaSanPhamSauChietKhau = detail.GiaSanPhamSauChietKhau,
+                    GhiChuSanPham = detail.GhiChuSanPham,
+                    GiaVon = detail.GiaVon,
+                    GiaVonDonHang = detail.GiaVonDonHang,
+                    DonViTinh = detail.DonViTinh,
+                    SoLuongDonViNhoNhat = detail.SoLuongDonViNhoNhat,
+                    NhanVienDongGoi = detail.NhanVienDongGoi,
+                    CreatedAt = detail.CreatedAt,
+                    UpdatedAt = detail.UpdatedAt
+                }).ToList()
         };
-        
-        var orderDetailDtos = new List<OrderNhanhVnDetailDto>();
 
-        foreach (var orderDetail in order.OrderNhanhVnDetails)
-        {
-            if (!orderDetail.IsDeleted)
-            {
-                var orderDetailDto = MapOrderNhanhVnDetailToDto(orderDetail);
-                orderDetailDtos.Add(orderDetailDto);
-            }
-        }
-
-        dto.OrderNhanhVnDetails = orderDetailDtos;
-
-        return dto;
-    }
-
-    private OrderNhanhVnDetailDto MapOrderNhanhVnDetailToDto(OrderNhanhVnDetail detail)
-    {
-        return new OrderNhanhVnDetailDto
-        {
-            Id = detail.Id,
-            OrderNhanhVnId = detail.OrderNhanhVnId,
-            TenSanPham = detail.TenSanPham,
-            QuaTangKem = detail.QuaTangKem,
-            Imei = detail.Imei,
-            LoHang = detail.LoHang,
-            MaSanPhamCha = detail.MaSanPhamCha,
-            TenSanPhamCha = detail.TenSanPhamCha,
-            MaSanPham = detail.MaSanPham,
-            MaVach = detail.MaVach,
-            DanhMucSanPham = detail.DanhMucSanPham,
-            KhoiLuongSanPham = detail.KhoiLuongSanPham,
-            GiaBan = detail.GiaBan,
-            LoaiGiaSanPham = detail.LoaiGiaSanPham,
-            GiaBanTruocVat = detail.GiaBanTruocVat,
-            TienVatSanPham = detail.TienVatSanPham,
-            SoLuong = detail.SoLuong,
-            ChietKhauMotSanPham = detail.ChietKhauMotSanPham,
-            ChietKhauSanPham = detail.ChietKhauSanPham,
-            GiaSanPhamSauChietKhau = detail.GiaSanPhamSauChietKhau,
-            GhiChuSanPham = detail.GhiChuSanPham,
-            GiaVon = detail.GiaVon,
-            GiaVonDonHang = detail.GiaVonDonHang,
-            DonViTinh = detail.DonViTinh,
-            SoLuongDonViNhoNhat = detail.SoLuongDonViNhoNhat,
-            NhanVienDongGoi = detail.NhanVienDongGoi,
-            CreatedAt = detail.CreatedAt,
-            UpdatedAt = detail.UpdatedAt
-        };
-    }
+    
 }
