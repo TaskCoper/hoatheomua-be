@@ -315,6 +315,7 @@ public class Service : IService
         return new Response.ProductDetailResponse
         {
             Id = product.Id,
+            IsPinned =  product.IsPin,
             SourceRowNumber = product.SourceRowNumber,
             NhanhProductId = product.NhanhProductId,
             ParentProductId = product.ParentProductId,
@@ -385,6 +386,7 @@ public class Service : IService
                 .Select(cpd => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
                 {
                     categoryId = cpd.CategoryProduct.Id,
+                    isPinned = cpd.IsPin,
                     name = cpd.CategoryProduct.Name,
                     name_En = cpd.CategoryProduct.Name_En,
                     description = cpd.CategoryProduct.Description,
@@ -625,3 +627,4 @@ public class Service : IService
         return pinnedProducts;
     }
 }
+
