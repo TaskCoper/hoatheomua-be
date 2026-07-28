@@ -251,6 +251,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<List<string>>("Page")
+                        .HasColumnType("text[]");
+
                     b.Property<Guid?>("ParentCategoryProductId")
                         .HasColumnType("uuid");
 
