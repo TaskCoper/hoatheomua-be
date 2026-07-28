@@ -93,6 +93,7 @@ public class Request
         public decimal? priceTo { get; set; }
         public List<string>? sortBy { get; set; }
         public List<Guid>? categoryIds { get; set; }
+        public bool? isPin { get; set; }
     }
     
     public class MoveProductRequest

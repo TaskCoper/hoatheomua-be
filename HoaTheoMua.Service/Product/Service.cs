@@ -254,11 +254,7 @@ public class Service : IService
             var categoryId = categoryIds[0];
 
             orderedQuery = query
-                .OrderByDescending(x => x.CategoryProductDetails
-                    .Where(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId)
-                    .Select(cpd => cpd.IsPin)
-                    .FirstOrDefault())
-                .ThenBy(x => x.CategoryProductDetails
+                .OrderBy(x => x.CategoryProductDetails
                     .Where(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId)
                     .Select(cpd => cpd.Position)
                     .FirstOrDefault());
@@ -266,8 +262,121 @@ public class Service : IService
         else
         {
             orderedQuery = query
-                .OrderByDescending(x => x.IsPin)
-                .ThenBy(x => x.Position);
+                .OrderBy(x => x.Position);
+        }
+
+        if (request.sortBy != null && request.sortBy.Any())
+        {
+            foreach (var sortItem in request.sortBy)
+            {
+                if (string.IsNullOrWhiteSpace(sortItem)) continue;
+
+                var isAsc = !sortItem.StartsWith("-");
+                var field = sortItem.TrimStart('+', '-').Trim().ToLower();
+
+                orderedQuery = (field, isAsc) switch
+                {
+                    ("price", true) => orderedQuery.ThenBy(x => x.Price),
+                    ("price", false) => orderedQuery.ThenByDescending(x => x.Price),
+                    ("name", true) => orderedQuery.ThenBy(x => x.ProductName),
+                    ("name", false) => orderedQuery.ThenByDescending(x => x.ProductName),
+                    (_, true) => orderedQuery.ThenBy(x => x.CreatedAt),
+                    (_, false) => orderedQuery.ThenByDescending(x => x.CreatedAt)
+                };
+            }
+        }
+        else
+        {
+            orderedQuery = orderedQuery.ThenByDescending(x => x.CreatedAt);
+        }
+
+        var totalCount = await query.CountAsync();
+        var items = await orderedQuery
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var mappedItems = items.Select(MapToProductDetailResponse).ToList();
+
+        return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
+    }
+
+    public async Task<BasePaginationResponse> GetLocalProductsV2(Request.LocalProductQueryRequest request)
+    {
+        var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
+        var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
+        var search = request.search?.Trim();
+        var categoryIds = request.categoryIds?
+            .Distinct()
+            .ToList() ?? new List<Guid>();
+
+        var query = _dbContext.Products
+            .AsNoTracking()
+            .Include(p => p.CategoryProductDetails)
+            .ThenInclude(cpd => cpd.CategoryProduct)
+            .AsQueryable();
+
+        query = query.Where(x => !x.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch = search.ToLower();
+
+            query = query.Where(x =>
+                (x.ProductName != null && x.ProductName.ToLower().Contains(normalizedSearch)) ||
+                (x.Barcode != null && x.Barcode.ToLower().Contains(normalizedSearch)) ||
+                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
+        }
+
+        if (request.priceFrom.HasValue)
+        {
+            query = query.Where(x => x.Price >= request.priceFrom.Value);
+        }
+        if (request.priceTo.HasValue)
+        {
+            query = query.Where(x => x.Price <= request.priceTo.Value);
+        }
+
+        if (categoryIds.Count > 0)
+        {
+            if (request.isPin.HasValue)
+            {
+                query = query.Where(x => x.CategoryProductDetails.Any(cpd =>
+                    !cpd.IsDeleted &&
+                    categoryIds.Contains(cpd.CategoryProductId) &&
+                    cpd.IsPin == request.isPin.Value));
+            }
+            else
+            {
+                query = query.Where(x => x.CategoryProductDetails.Any(cpd =>
+                    !cpd.IsDeleted &&
+                    categoryIds.Contains(cpd.CategoryProductId)));
+            }
+        }
+        else
+        {
+            if (request.isPin.HasValue)
+            {
+                query = query.Where(x => x.IsPin == request.isPin.Value);
+            }
+        }
+
+        IOrderedQueryable<HoaTheoMua.Repository.Entity.Product> orderedQuery;
+
+        if (categoryIds.Count == 1)
+        {
+            var categoryId = categoryIds[0];
+
+            orderedQuery = query
+                .OrderBy(x => x.CategoryProductDetails
+                    .Where(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId)
+                    .Select(cpd => cpd.Position)
+                    .FirstOrDefault());
+        }
+        else
+        {
+            orderedQuery = query
+                .OrderBy(x => x.Position);
         }
 
         if (request.sortBy != null && request.sortBy.Any())
