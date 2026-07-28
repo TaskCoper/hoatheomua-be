@@ -35,6 +35,7 @@ public class Service : IService
             description_En = category.Description_En,
             position = category.Position,
             metaData = category.MetaData,
+            page = category.Page ?? new List<string>(),
             startTime = category.StartTime,
             endTime = category.EndTime,
             type = category.Type,
@@ -83,6 +84,7 @@ public class Service : IService
             Description_En = request.description_En,
             Position = request.position,
             MetaData = request.metaData,
+            Page = request.page,
             StartTime = request.startTime,
             EndTime = request.endTime,
             Type = request.type,
@@ -113,6 +115,7 @@ public class Service : IService
             description_En = newCate.Description_En,
             position = newCate.Position,
             metaData = newCate.MetaData,
+            page = newCate.Page,
             startTime = newCate.StartTime,
             endTime = newCate.EndTime,
             type = newCate.Type,
@@ -138,6 +141,7 @@ public class Service : IService
                 description_En = x.Description_En,
                 position = x.Position,
                 metaData = x.MetaData,
+                page = x.Page,
                 startTime = x.StartTime,
                 endTime = x.EndTime,
                 type = x.Type,
@@ -207,6 +211,7 @@ public class Service : IService
                     description_En = x.Description_En,
                     position = x.Position,
                     metaData = x.MetaData,
+                    page = x.Page,
                     startTime = x.StartTime,
                     endTime = x.EndTime,
                     type = x.Type,
@@ -236,6 +241,7 @@ public class Service : IService
                 description_En = c.Description_En,
                 position = c.Position,
                 metaData = c.MetaData,
+                page = c.Page,
                 startTime = c.StartTime,
                 endTime = c.EndTime,
                 type = c.Type,
@@ -331,6 +337,7 @@ public class Service : IService
         category.Description_En = request.description_En;
         category.Position = request.position;
         category.MetaData = request.metaData;
+        category.Page = request.page;
         category.StartTime = request.startTime;
         category.EndTime = request.endTime;
         category.Type = request.type;
@@ -471,6 +478,7 @@ public class Service : IService
                 DescriptionEn = x.Description_En,
                 Position = x.Position,
                 MetaData = x.MetaData,
+                Page = x.Page,
                 StartTime = x.StartTime,
                 EndTime = x.EndTime,
                 Type = x.Type,
