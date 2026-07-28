@@ -245,7 +245,7 @@ public class LocalProductSearchTest
     }
 
     [Fact]
-    public async Task GetLocalProducts_OneCategory_SortsByCategoryPinAndPositionFirst()
+    public async Task GetLocalProducts_OneCategory_SortsByCategoryPositionFirst()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -280,14 +280,14 @@ public class LocalProductSearchTest
         });
 
         var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Equal(new[] { "C", "B", "A" }, items.Select(x => x.ProductName));
+        Assert.Equal(new[] { "A", "C", "B" }, items.Select(x => x.ProductName));
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
-    public async Task GetLocalProducts_ZeroOrMultipleCategories_SortsByProductPinAndPositionFirst(
+    public async Task GetLocalProducts_ZeroOrMultipleCategories_SortsByProductPositionFirst(
         int categoryFilterMode)
     {
         using var dbContext = CreateInMemoryDbContext();
@@ -341,7 +341,7 @@ public class LocalProductSearchTest
         });
 
         var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Equal(new[] { "C", "B", "A" }, items.Select(x => x.ProductName));
+        Assert.Equal(new[] { "A", "C", "B" }, items.Select(x => x.ProductName));
     }
 
     [Fact]

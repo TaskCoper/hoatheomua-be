@@ -254,11 +254,7 @@ public class Service : IService
             var categoryId = categoryIds[0];
 
             orderedQuery = query
-                .OrderByDescending(x => x.CategoryProductDetails
-                    .Where(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId)
-                    .Select(cpd => cpd.IsPin)
-                    .FirstOrDefault())
-                .ThenBy(x => x.CategoryProductDetails
+                .OrderBy(x => x.CategoryProductDetails
                     .Where(cpd => !cpd.IsDeleted && cpd.CategoryProductId == categoryId)
                     .Select(cpd => cpd.Position)
                     .FirstOrDefault());
@@ -266,8 +262,7 @@ public class Service : IService
         else
         {
             orderedQuery = query
-                .OrderByDescending(x => x.IsPin)
-                .ThenBy(x => x.Position);
+                .OrderBy(x => x.Position);
         }
 
         if (request.sortBy != null && request.sortBy.Any())
