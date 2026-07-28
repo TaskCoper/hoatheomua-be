@@ -317,7 +317,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("ProductId");
 
                     b.HasIndex("CategoryProductId", "ProductId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("CategoryProductDetails");
                 });
