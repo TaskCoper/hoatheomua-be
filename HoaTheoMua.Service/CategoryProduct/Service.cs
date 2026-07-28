@@ -232,8 +232,7 @@ public class Service : IService
         var allCategories = await _dbContext.CategoryProducts
             .AsNoTracking()
             .Where(x =>
-                !x.IsDeleted &&
-                x.IsActive)
+                !x.IsDeleted)
             .Select(x => new Response.CategoryProductResponse
             {
                 categoryId = x.Id,
@@ -528,7 +527,7 @@ public class Service : IService
             throw new BadRequestException("Invalid request data.");
         }
 
-        var pages = (request.Page ?? new List<string>())
+        var pages = (request.page ?? new List<string>())
             .SelectMany(page => page.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             .Where(page => !string.IsNullOrWhiteSpace(page))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -547,7 +546,7 @@ public class Service : IService
                 DescriptionEn = x.Description_En,
                 Position = x.Position,
                 MetaData = x.MetaData,
-                Page = x.Page,
+                Page = x.Page ?? new List<string>(),
                 StartTime = x.StartTime,
                 EndTime = x.EndTime,
                 Type = x.Type,
@@ -564,10 +563,10 @@ public class Service : IService
 
             foreach (var category in categoryProducts)
             {
-                var isPageMatched = category.Page != null &&
-                                    category.Page.Any(page =>
-                                        !string.IsNullOrWhiteSpace(page) &&
-                                        pages.Contains(page.Trim()));
+                var isPageMatched = (category.Page ?? new List<string>())
+                    .SelectMany(page => page.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    .Where(page => !string.IsNullOrWhiteSpace(page))
+                    .Any(page => pages.Contains(page));
 
                 if (!isPageMatched)
                 {

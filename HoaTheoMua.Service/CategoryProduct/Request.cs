@@ -43,7 +43,7 @@ public class Request
 
     public class GetCategoryProductWithChild
     {
-        public List<string>? Page { get; set; }
+        public List<string>? page { get; set; }
     }
 
     public class CategoryProductDetailRequest
