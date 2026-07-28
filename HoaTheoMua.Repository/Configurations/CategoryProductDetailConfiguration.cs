@@ -8,7 +8,9 @@ public class CategoryProductDetailConfiguration : IEntityTypeConfiguration<Categ
 {
     public void Configure(EntityTypeBuilder<CategoryProductDetail> builder)
     {
-        builder.HasIndex(cnd => new { cnd.CategoryProductId, cnd.ProductId }).IsUnique();
+        builder.HasIndex(cnd => new { cnd.CategoryProductId, cnd.ProductId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
 
         builder.Property(cnd => cnd.CreatedAt)
             .HasDefaultValueSql("now()");

@@ -64,9 +64,30 @@ public class CategoryProductController : ControllerBase
     }
 
     [HttpGet("with-children")]
-    public async Task<IActionResult> GetCategoryWithChild()
+    public async Task<IActionResult> GetCategoryWithChild(
+        [FromQuery(Name = "page[]")] List<string>? pageArray)
     {
-        var result = await _categoryProductService.GetCategoryWithChild();
+        var pages = new[] { pageArray }
+            .Where(values => values != null)
+            .SelectMany(values => values!)
+            .SelectMany(value => value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var request = new CategoryProductService.Request.GetCategoryProductWithChild
+        {
+            Page = pages.Count > 0 ? pages : null
+        };
+
+        var result = await _categoryProductService.GetCategoryWithChild(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
+    [HttpPut("detail")]
+    public async Task<IActionResult> UpdateCategoryProductDetail(CategoryProductService.Request.CategoryProductDetailRequest request)
+    {
+        var result = await _categoryProductService.UpdateCategoryProductDetail(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 }

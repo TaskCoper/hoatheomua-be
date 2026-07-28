@@ -40,4 +40,17 @@ public class Request
     {
         public required List<Guid> productIds { get; set; }
     }
+
+    public class GetCategoryProductWithChild
+    {
+        public List<string>? Page { get; set; }
+    }
+
+    public class CategoryProductDetailRequest
+    {
+        public Guid ProductId { get; set; }
+        public Guid CategoryProductId { get; set; }
+        public bool IsPin { get; set; }
+        public double Position { get; set; }
+    }
 }

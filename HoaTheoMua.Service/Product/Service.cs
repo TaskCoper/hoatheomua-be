@@ -616,6 +616,35 @@ public class Service : IService
         {
             throw new BadRequestException("Category ID cannot be empty.");
         }
+        
+        if (request.IsPin)
+        {
+            if (request.CategoryId.HasValue)
+            {
+                var pinnedCategoryProductCount = await _dbContext.CategoryProductDetails
+                    .CountAsync(x =>
+                        !x.IsDeleted &&
+                        x.CategoryProductId == request.CategoryId.Value &&
+                        x.IsPin);
+
+                if (pinnedCategoryProductCount >= 32)
+                {
+                    throw new BadRequestException("Only 32 products can be pinned in this category.");
+                }
+            }
+            else
+            {
+                var pinnedProductCount = await _dbContext.Products
+                    .CountAsync(x =>
+                        !x.IsDeleted &&
+                        x.IsPin);
+
+                if (pinnedProductCount >= 32)
+                {
+                    throw new BadRequestException("Only 32 products can be pinned.");
+                }
+            }
+        }
 
         var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
                                                                     x.Id == request.ProductId &&
@@ -639,38 +668,11 @@ public class Service : IService
                 throw new BadRequestException("Product does not belong to this category.");
             }
 
-            if (request.IsPin && !categoryProductDetail.IsPin)
-            {
-                var pinnedProductCount = await _dbContext.CategoryProductDetails
-                    .CountAsync(x =>
-                        !x.IsDeleted &&
-                        x.CategoryProductId == request.CategoryId.Value &&
-                        x.IsPin);
-
-                if (pinnedProductCount >= 32)
-                {
-                    throw new BadRequestException("Only 32 products can be pinned in this category.");
-                }
-            }
-
             categoryProductDetail.IsPin = request.IsPin;
             categoryProductDetail.UpdatedAt = DateTimeOffset.UtcNow;
         }
         else
         {
-            if (request.IsPin && !product.IsPin)
-            {
-                var pinnedProductCount = await _dbContext.Products
-                    .CountAsync(x =>
-                        !x.IsDeleted &&
-                        x.IsPin);
-
-                if (pinnedProductCount >= 32)
-                {
-                    throw new BadRequestException("Only 32 products can be pinned.");
-                }
-            }
-
             product.IsPin = request.IsPin;
             product.UpdatedAt = DateTimeOffset.UtcNow;
         }
