@@ -663,7 +663,10 @@ public class Service : IService
 
         order.TrackNumber = request.TrackingNumber ?? "";
         order.AhahaMoveTrackingUrl = request.TrackingNumber ?? "";
-
+        
+        _dbContext.Orders.Update(order);
+        await _dbContext.SaveChangesAsync();
+        
         return "Cập nhật thành công đơn hàng";
     }
 }
