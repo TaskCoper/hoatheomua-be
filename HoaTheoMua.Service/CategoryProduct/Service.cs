@@ -686,13 +686,13 @@ public class Service : IService
             throw new BadRequestException("Product ID is required.");
         }
 
-        if (request.CategoryProductLists == null || !request.CategoryProductLists.Any())
+        if (request.Categories == null || !request.Categories.Any())
         {
             throw new BadRequestException("Category product list is required.");
         }
 
-        var duplicateCategoryIds = request.CategoryProductLists
-            .GroupBy(x => x.CategoryProductId)
+        var duplicateCategoryIds = request.Categories
+            .GroupBy(x => x.CategoryId)
             .Where(x => x.Count() > 1)
             .Select(x => x.Key)
             .ToList();
@@ -702,40 +702,14 @@ public class Service : IService
             throw new BadRequestException("Duplicate categories are not allowed.");
         }
 
-        var categoryIds = request.CategoryProductLists
-            .Select(x => x.CategoryProductId)
+        var categoryIds = request.Categories
+            .Select(x => x.CategoryId)
             .Distinct()
             .ToList();
 
         if (categoryIds.Any(x => x == Guid.Empty))
         {
             throw new BadRequestException("Category ID is required.");
-        }
-
-        var productExists = await _dbContext.Products
-            .AnyAsync(x =>
-                x.Id == request.ProductId &&
-                !x.IsDeleted);
-
-        if (!productExists)
-        {
-            throw new NotFoundException("Product not found.");
-        }
-
-        var existingCategoryIds = await _dbContext.CategoryProducts
-            .Where(x =>
-                categoryIds.Contains(x.Id) &&
-                !x.IsDeleted)
-            .Select(x => x.Id)
-            .ToListAsync();
-
-        var hasMissingCategory = categoryIds
-            .Any(categoryId =>
-                !existingCategoryIds.Contains(categoryId));
-
-        if (hasMissingCategory)
-        {
-            throw new NotFoundException("One or more categories were not found.");
         }
 
         var oldCategoryProductDetails = await _dbContext.CategoryProductDetails
@@ -745,24 +719,17 @@ public class Service : IService
                     !x.IsDeleted)
                 .ToListAsync();
 
-        var existingCategoryDetailIds = oldCategoryProductDetails
-                .Select(x => x.CategoryProductId)
-                .ToList();
-
-        var hasMissingCategoryProductDetail = categoryIds.Any(categoryId =>
-                !existingCategoryDetailIds.Contains(categoryId));
-
-        if (hasMissingCategoryProductDetail)
+        if (oldCategoryProductDetails.Count != categoryIds.Count)
         {
             throw new NotFoundException("One or more category product details were not found.");
         }
 
-        foreach (var categoryItem in request.CategoryProductLists)
+        foreach (var categoryItem in request.Categories)
         {
             var oldDetail = oldCategoryProductDetails
                 .First(x =>
                     x.CategoryProductId ==
-                    categoryItem.CategoryProductId);
+                    categoryItem.CategoryId);
 
             if (categoryItem.IsPin && !oldDetail.IsPin)
             {
@@ -772,7 +739,7 @@ public class Service : IService
                             !x.IsDeleted &&
                             x.IsPin &&
                             x.CategoryProductId ==
-                            categoryItem.CategoryProductId);
+                            categoryItem.CategoryId);
 
                 if (pinnedProductCount >= 32)
                 {
@@ -787,12 +754,12 @@ public class Service : IService
 
         try
         {
-            foreach (var categoryItem in request.CategoryProductLists)
+            foreach (var categoryItem in request.Categories)
             {
                 var oldDetail = oldCategoryProductDetails
                     .First(x =>
                         x.CategoryProductId ==
-                        categoryItem.CategoryProductId);
+                        categoryItem.CategoryId);
 
                 oldDetail.IsPin = categoryItem.IsPin;
                 oldDetail.Position = categoryItem.Position;
