@@ -339,25 +339,20 @@ public class Service : IService
 
         if (categoryIds.Count > 0)
         {
-            if (request.isPin.HasValue)
+            query = query.Where(x => x.CategoryProductDetails.Any(cpd =>
+                !cpd.IsDeleted &&
+                categoryIds.Contains(cpd.CategoryProductId)));
+        }
+
+        if (request.isPin.HasValue)
+        {
+            if (request.isPin.Value)
             {
-                query = query.Where(x => x.CategoryProductDetails.Any(cpd =>
-                    !cpd.IsDeleted &&
-                    categoryIds.Contains(cpd.CategoryProductId) &&
-                    cpd.IsPin == request.isPin.Value));
+                query = query.Where(x => x.IsPin || x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && cpd.IsPin));
             }
             else
             {
-                query = query.Where(x => x.CategoryProductDetails.Any(cpd =>
-                    !cpd.IsDeleted &&
-                    categoryIds.Contains(cpd.CategoryProductId)));
-            }
-        }
-        else
-        {
-            if (request.isPin.HasValue)
-            {
-                query = query.Where(x => x.IsPin == request.isPin.Value);
+                query = query.Where(x => !x.IsPin && !x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && cpd.IsPin));
             }
         }
 
