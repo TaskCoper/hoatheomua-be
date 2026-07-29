@@ -1,0 +1,317 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text;
+using HoaTheoMua.Repository;
+using HoaTheoMua.Service.Geocode;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using MockQueryable.Moq;
+using Moq;
+using Moq.Protected;
+using Xunit;
+using ConfigEntity = HoaTheoMua.Repository.Entity.Config;
+using GeocodeServiceImplementation = HoaTheoMua.Service.Geocode.Service;
+
+namespace HoaTheoMua.Service.Test.GeocodeTest;
+
+public class GeocodeServiceTest
+{
+    private AppDbContext CreateMockDbContext(string apiKey = "test_api_key", string baseUrl = "https://maps.vietmap.vn/api")
+    {
+        var configs = new List<ConfigEntity>();
+
+        if (apiKey != null)
+        {
+            configs.Add(new ConfigEntity
+            {
+                Key = "vietmap.api_key",
+                Value = $"{{\"value\": \"{apiKey}\"}}",
+                Group = "vietmap",
+                IsDeleted = false
+            });
+        }
+
+        if (baseUrl != null)
+        {
+            configs.Add(new ConfigEntity
+            {
+                Key = "vietmap.base_url",
+                Value = $"{{\"value\": \"{baseUrl}\"}}",
+                Group = "vietmap",
+                IsDeleted = false
+            });
+        }
+
+        var mockConfigs = configs.BuildMockDbSet();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>().Options;
+        var mockDbContext = new Mock<AppDbContext>(options);
+        mockDbContext.Setup(x => x.Configs).Returns(mockConfigs.Object);
+
+        return mockDbContext.Object;
+    }
+
+    private IConfiguration CreateMockConfiguration()
+    {
+        var mockConfig = new Mock<IConfiguration>();
+        var mockConfigSection = new Mock<IConfigurationSection>();
+        mockConfigSection.Setup(x => x.Value).Returns("dummy_value");
+        mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockConfigSection.Object);
+        return mockConfig.Object;
+    }
+
+    private HttpClient CreateHttpClient(HttpResponseMessage response)
+    {
+        return CreateHttpClient(() => response);
+    }
+
+    private HttpClient CreateHttpClient(Func<HttpResponseMessage> responseFactory)
+    {
+        var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+        mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Returns(() => Task.FromResult(responseFactory()));
+        return new HttpClient(mockHttpMessageHandler.Object);
+    }
+
+    private GeocodeServiceImplementation CreateService(HttpResponseMessage response, string apiKey = "test_api_key")
+    {
+        return CreateService(() => response, apiKey);
+    }
+
+    private GeocodeServiceImplementation CreateService(Func<HttpResponseMessage> responseFactory, string apiKey = "test_api_key")
+    {
+        return new GeocodeServiceImplementation(CreateHttpClient(responseFactory), CreateMockDbContext(apiKey), CreateMockConfiguration());
+    }
+
+    // ================= TEST CASE 01: Autocomplete without API Key =================
+    [Fact]
+    public async Task Autocomplete_NoApiKey_ThrowsServerNotConfigured()
+    {
+        // Arrange
+        var service = CreateService(new HttpResponseMessage(), apiKey: "");
+
+        var query = new Request.AutocompleteQuery
+        {
+            Text = "197 Tran Phu"
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.Autocomplete(query));
+        Assert.Equal("server-not-configured", exception.ReasonCode);
+        Assert.Equal(503, exception.StatusCode);
+    }
+
+    // ================= TEST CASE 02: Autocomplete with invalid Text =================
+    [Theory]
+    [InlineData("")]
+    [InlineData("a")]
+    [InlineData("   ")]
+    public async Task Autocomplete_InvalidText_ThrowsInvalidQuery(string text)
+    {
+        // Arrange
+        var service = CreateService(new HttpResponseMessage());
+
+        var query = new Request.AutocompleteQuery
+        {
+            Text = text
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.Autocomplete(query));
+        Assert.Equal("invalid-query", exception.ReasonCode);
+        Assert.Equal(400, exception.StatusCode);
+    }
+
+    // ================= TEST CASE 03: Autocomplete with invalid Focus =================
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("10.7588")]
+    [InlineData("10.7588,abc")]
+    public async Task Autocomplete_InvalidFocus_ThrowsInvalidQuery(string focus)
+    {
+        // Arrange
+        var service = CreateService(new HttpResponseMessage());
+
+        var query = new Request.AutocompleteQuery
+        {
+            Text = "197 Tran Phu",
+            Focus = focus
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.Autocomplete(query));
+        Assert.Equal("invalid-query", exception.ReasonCode);
+        Assert.Equal(400, exception.StatusCode);
+    }
+
+    // ================= TEST CASE 04: Autocomplete HTTP Error from VietMap =================
+    [Fact]
+    public async Task Autocomplete_UpstreamHttpError_ThrowsAutocompleteUpstreamError()
+    {
+        // Arrange
+        var httpResponse = new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.InternalServerError
+        };
+        var service = CreateService(httpResponse);
+
+        var query = new Request.AutocompleteQuery
+        {
+            Text = "197 Tran Phu"
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.Autocomplete(query));
+        Assert.Equal("autocomplete-upstream-error", exception.ReasonCode);
+        Assert.Equal(502, exception.StatusCode);
+    }
+
+    // ================= TEST CASE 05: Autocomplete Success with mapping and filtering =================
+    [Fact]
+    public async Task Autocomplete_ValidResponse_MapsAndFiltersCorrectly()
+    {
+        // Arrange
+        var upstreamResponse = new List<Response.VietMapAutocompleteItem>
+        {
+            new Response.VietMapAutocompleteItem
+            {
+                RefId = "old_ref_1",
+                Name = "Store 1",
+                Address = "Phường Chợ Quán, Quận 5, Thành Phố Hồ Chí Minh",
+                Display = "Store 1 - Phường Chợ Quán, Quận 5, Thành Phố Hồ Chí Minh",
+                DataNew = new Response.VietMapAutocompleteItemNew
+                {
+                    RefId = "new_ref_1",
+                    Name = "Store 1",
+                    Address = "Phường Chợ Quán, Thành Phố Hồ Chí Minh",
+                    Display = "Store 1 - Phường Chợ Quán, Thành Phố Hồ Chí Minh"
+                }
+            },
+            new Response.VietMapAutocompleteItem
+            {
+                RefId = "old_ref_2",
+                Name = "Store 2",
+                Address = "Phường 4, Quận 5, Thành Phố Hồ Chí Minh",
+                Display = "Store 2 - Phường 4, Quận 5, Thành Phố Hồ Chí Minh",
+                DataNew = null
+            }
+        };
+
+        var service = CreateService(() => new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.OK,
+            Content = JsonContent.Create(upstreamResponse)
+        });
+
+        // Act 1: No filters
+        var results = await service.Autocomplete(new Request.AutocompleteQuery { Text = "197 Tran Phu" });
+
+        // Assert 1
+        Assert.Equal(2, results.Count);
+        Assert.Equal("new_ref_1", results[0].RefId); // Prefer data_new
+        Assert.Equal("Store 1", results[0].Name);
+        Assert.Equal("Phường Chợ Quán, Thành Phố Hồ Chí Minh", results[0].Address);
+        Assert.Equal("Store 1 - Phường Chợ Quán, Thành Phố Hồ Chí Minh", results[0].Display);
+
+        Assert.Equal("old_ref_2", results[1].RefId); // Fallback to root
+        Assert.Equal("Store 2", results[1].Name);
+        Assert.Equal("Phường 4, Quận 5, Thành Phố Hồ Chí Minh", results[1].Address);
+        Assert.Equal("Store 2 - Phường 4, Quận 5, Thành Phố Hồ Chí Minh", results[1].Display);
+
+        // Act 2: Filter by ward = "Phường Chợ Quán" (should normalize to "cho quan")
+        var filteredResults = await service.Autocomplete(new Request.AutocompleteQuery
+        {
+            Text = "197 Tran Phu",
+            Ward = "Phường Chợ Quán"
+        });
+
+        // Assert 2
+        var singleResult = Assert.Single(filteredResults);
+        Assert.Equal("new_ref_1", singleResult.RefId);
+
+        // Act 3: Filter by city = "Hồ Chí Minh"
+        var cityFilteredResults = await service.Autocomplete(new Request.AutocompleteQuery
+        {
+            Text = "197 Tran Phu",
+            City = "Thành Phố Hồ Chí Minh"
+        });
+
+        // Assert 3
+        Assert.Equal(2, cityFilteredResults.Count);
+    }
+
+    // ================= TEST CASE 06: Place details with empty RefId =================
+    [Fact]
+    public async Task GetPlaceDetail_EmptyRefId_ThrowsInvalidQuery()
+    {
+        // Arrange
+        var service = CreateService(new HttpResponseMessage());
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.GetPlaceDetail(""));
+        Assert.Equal("invalid-query", exception.ReasonCode);
+        Assert.Equal(400, exception.StatusCode);
+    }
+
+    // ================= TEST CASE 07: Place Success =================
+    [Fact]
+    public async Task GetPlaceDetail_ValidResponse_ReturnsPlaceResult()
+    {
+        // Arrange
+        var placeResponse = new Response.VietMapPlaceResponse
+        {
+            Display = "197 Trần Phú, Phường Chợ Quán, Thành Phố Hồ Chí Minh",
+            Lat = 10.75922,
+            Lng = 106.67590
+        };
+
+        var httpResponse = new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.OK,
+            Content = JsonContent.Create(placeResponse)
+        };
+
+        var service = CreateService(httpResponse);
+
+        // Act
+        var result = await service.GetPlaceDetail("test_ref_id");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(10.75922, result.Latitude);
+        Assert.Equal(106.67590, result.Longitude);
+        Assert.Equal("test_ref_id", result.MapId);
+        Assert.Equal("197 Trần Phú, Phường Chợ Quán, Thành Phố Hồ Chí Minh", result.Display);
+    }
+
+    // ================= TEST CASE 08: Place returns coordinates 0 -> null = ================
+    [Fact]
+    public async Task GetPlaceDetail_ZeroCoords_ReturnsNull()
+    {
+        // Arrange
+        var placeResponse = new Response.VietMapPlaceResponse
+        {
+            Display = "",
+            Lat = 0,
+            Lng = 0
+        };
+
+        var httpResponse = new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.OK,
+            Content = JsonContent.Create(placeResponse)
+        };
+
+        var service = CreateService(httpResponse);
+
+        // Act
+        var result = await service.GetPlaceDetail("test_ref_id");
+
+        // Assert
+        Assert.Null(result);
+    }
+}
