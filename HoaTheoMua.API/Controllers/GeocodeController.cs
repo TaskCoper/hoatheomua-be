@@ -7,7 +7,7 @@ using GeocodeService = HoaTheoMua.Service.Geocode;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+
 [Route("api/v1/geocode")]
 public class GeocodeController : ControllerBase
 {

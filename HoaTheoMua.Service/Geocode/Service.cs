@@ -45,7 +45,7 @@ public class Service : IService
                 return new Response.AutocompleteEnvelope { StatusCode = 400, Reason = "invalid-query" };
             }
 
-            var url = $"{baseUrl.TrimEnd('/')}/autocomplete/v4?apikey={Uri.EscapeDataString(apiKey)}&text={Uri.EscapeDataString(text)}&display_type=6";
+            var url = $"{baseUrl.TrimEnd('/')}/autocomplete/v4?apikey={Uri.EscapeDataString(apiKey)}&text={Uri.EscapeDataString(text)}&display_type=1";
             if (!string.IsNullOrWhiteSpace(query.Focus))
             {
                 url += $"&focus={Uri.EscapeDataString(query.Focus)}";
@@ -66,34 +66,15 @@ public class Service : IService
             }
 
             var results = new List<Response.AutocompleteResult>();
-            var normWard = RemoveAdministrativePrefix(query.Ward);
-            var normCity = RemoveAdministrativePrefix(query.City);
 
             foreach (var item in items)
             {
-                var refId = item.DataNew?.RefId ?? item.RefId;
-                var name = item.DataNew?.Name ?? item.Name;
-                var address = item.DataNew?.Address ?? item.Address;
-                var display = item.DataNew?.Display ?? item.Display;
-
-                if (!string.IsNullOrEmpty(normWard))
-                {
-                    var normAddr = RemoveVietnameseAccents(address);
-                    if (!normAddr.Contains(normWard)) continue;
-                }
-
-                if (!string.IsNullOrEmpty(normCity))
-                {
-                    var normAddr = RemoveVietnameseAccents(address);
-                    if (!normAddr.Contains(normCity)) continue;
-                }
-
                 results.Add(new Response.AutocompleteResult
                 {
-                    RefId = refId,
-                    Name = name,
-                    Address = address,
-                    Display = display
+                    RefId = item.RefId,
+                    Name = item.Name,
+                    Address = item.Address,
+                    Display = item.Display
                 });
 
                 if (results.Count >= 8) break;
@@ -154,56 +135,5 @@ public class Service : IService
         {
             return new Response.PlaceEnvelope { StatusCode = 502, Reason = "upstream-unreachable" };
         }
-    }
-
-    public static string RemoveVietnameseAccents(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
-
-        var normalizedString = text.ToLowerInvariant().Normalize(System.Text.NormalizationForm.FormD);
-        var stringBuilder = new System.Text.StringBuilder();
-
-        foreach (var c in normalizedString)
-        {
-            var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
-            if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
-            {
-                if (c == 'đ') stringBuilder.Append('d');
-                else if (c == 'Đ') stringBuilder.Append('d');
-                else stringBuilder.Append(c);
-            }
-        }
-
-        return stringBuilder.ToString().Normalize(System.Text.NormalizationForm.FormC).Trim();
-    }
-
-    public static string RemoveAdministrativePrefix(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return string.Empty;
-
-        string result = RemoveVietnameseAccents(name);
-
-        string[] adminPrefixes = new[]
-        {
-            "thanh pho ",
-            "thi tran ",
-            "thi xa ",
-            "phuong ",
-            "quan ",
-            "huyen ",
-            "tinh ",
-            "xa "
-        };
-
-        foreach (var prefix in adminPrefixes)
-        {
-            if (result.StartsWith(prefix))
-            {
-                result = result.Substring(prefix.Length).Trim();
-                break;
-            }
-        }
-
-        return result;
     }
 }

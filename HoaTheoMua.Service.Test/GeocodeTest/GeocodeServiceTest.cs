@@ -190,25 +190,17 @@ public class GeocodeServiceTest
         {
             new Response.VietMapAutocompleteItem
             {
-                RefId = "old_ref_1",
+                RefId = "ref_1",
                 Name = "Store 1",
-                Address = "Phường Chợ Quán, Quận 5, Thành Phố Hồ Chí Minh",
-                Display = "Store 1 - Phường Chợ Quán, Quận 5, Thành Phố Hồ Chí Minh",
-                DataNew = new Response.VietMapAutocompleteItemNew
-                {
-                    RefId = "new_ref_1",
-                    Name = "Store 1",
-                    Address = "Phường Chợ Quán, Thành Phố Hồ Chí Minh",
-                    Display = "Store 1 - Phường Chợ Quán, Thành Phố Hồ Chí Minh"
-                }
+                Address = "Phường Chợ Quán, Thành Phố Hồ Chí Minh",
+                Display = "Store 1 - Phường Chợ Quán, Thành Phố Hồ Chí Minh"
             },
             new Response.VietMapAutocompleteItem
             {
-                RefId = "old_ref_2",
+                RefId = "ref_2",
                 Name = "Store 2",
                 Address = "Phường 4, Quận 5, Thành Phố Hồ Chí Minh",
-                Display = "Store 2 - Phường 4, Quận 5, Thành Phố Hồ Chí Minh",
-                DataNew = null
+                Display = "Store 2 - Phường 4, Quận 5, Thành Phố Hồ Chí Minh"
             }
         };
 
@@ -225,38 +217,15 @@ public class GeocodeServiceTest
         Assert.Equal(200, response.StatusCode);
         var results = response.Results;
         Assert.Equal(2, results.Count);
-        Assert.Equal("new_ref_1", results[0].RefId); // Prefer data_new
+        Assert.Equal("ref_1", results[0].RefId);
         Assert.Equal("Store 1", results[0].Name);
         Assert.Equal("Phường Chợ Quán, Thành Phố Hồ Chí Minh", results[0].Address);
         Assert.Equal("Store 1 - Phường Chợ Quán, Thành Phố Hồ Chí Minh", results[0].Display);
 
-        Assert.Equal("old_ref_2", results[1].RefId); // Fallback to root
+        Assert.Equal("ref_2", results[1].RefId);
         Assert.Equal("Store 2", results[1].Name);
         Assert.Equal("Phường 4, Quận 5, Thành Phố Hồ Chí Minh", results[1].Address);
         Assert.Equal("Store 2 - Phường 4, Quận 5, Thành Phố Hồ Chí Minh", results[1].Display);
-
-        // Act 2: Filter by ward = "Phường Chợ Quán" (should normalize to "cho quan")
-        var filteredResponse = await service.Autocomplete(new Request.AutocompleteQuery
-        {
-            Text = "197 Tran Phu",
-            Ward = "Phường Chợ Quán"
-        });
-
-        // Assert 2
-        Assert.Equal(200, filteredResponse.StatusCode);
-        var singleResult = Assert.Single(filteredResponse.Results);
-        Assert.Equal("new_ref_1", singleResult.RefId);
-
-        // Act 3: Filter by city = "Hồ Chí Minh"
-        var cityFilteredResponse = await service.Autocomplete(new Request.AutocompleteQuery
-        {
-            Text = "197 Tran Phu",
-            City = "Thành Phố Hồ Chí Minh"
-        });
-
-        // Assert 3
-        Assert.Equal(200, cityFilteredResponse.StatusCode);
-        Assert.Equal(2, cityFilteredResponse.Results.Count);
     }
 
     // ================= TEST CASE 06: Place details with empty RefId =================

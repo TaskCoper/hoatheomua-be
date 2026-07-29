@@ -60,24 +60,6 @@ public class Response
 
         [JsonPropertyName("display")]
         public string Display { get; set; } = string.Empty;
-
-        [JsonPropertyName("data_new")]
-        public VietMapAutocompleteItemNew? DataNew { get; set; }
-    }
-
-    public class VietMapAutocompleteItemNew
-    {
-        [JsonPropertyName("ref_id")]
-        public string RefId { get; set; } = string.Empty;
-
-        [JsonPropertyName("name")]
-        public string Name { get; set; } = string.Empty;
-
-        [JsonPropertyName("address")]
-        public string Address { get; set; } = string.Empty;
-
-        [JsonPropertyName("display")]
-        public string Display { get; set; } = string.Empty;
     }
 
     // Upstream VietMap Place Result model
