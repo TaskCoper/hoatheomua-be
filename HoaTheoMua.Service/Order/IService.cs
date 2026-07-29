@@ -14,10 +14,10 @@ public interface IService
     Task<CreateOrderResponse> CreateOrder(Request.CreateOrderRequest request);
     Task<BaseResponse> GetOrderById (Guid id);
     Task<string> GetStatusOrder(Guid id);
-    
-    
     Task<OrderListRootResponse> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request);
     Task<Response.NhanhVnLocationResponse> GetShippingLocation(Request.LocationRequest filter);
     Task<string> GetInfoTaxCode(string taxCode);
     Task<string> CancelOrder(Guid id);
+    Task<string> UpdateAhaMoveService(Request.UpdateAhamoveRequest request);
+    
 }

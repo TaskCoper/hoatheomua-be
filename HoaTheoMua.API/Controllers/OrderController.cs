@@ -74,6 +74,16 @@ public class OrderController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
+    [HttpPost("/api/v1/orders/update-ahamove")]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    public async Task<IActionResult> UpdateAhaMoveService([FromBody] Request.UpdateAhamoveRequest request)
+    {
+        var result = await _orderService.UpdateAhaMoveService(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+    
+    
+    
     // [HttpPost("/api/v1/orders/taxcode")]
     // [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
     // public async Task<IActionResult> GetInfoTaxCode([FromQuery] string taxCode)
