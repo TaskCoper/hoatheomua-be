@@ -686,13 +686,13 @@ public class Service : IService
             throw new BadRequestException("Product ID is required.");
         }
 
-        if (request.Categories == null || !request.Categories.Any())
+        if (request.CategoryProductLists == null || !request.CategoryProductLists.Any())
         {
             throw new BadRequestException("Category product list is required.");
         }
 
-        var duplicateCategoryIds = request.Categories
-            .GroupBy(x => x.CategoryId)
+        var duplicateCategoryIds = request.CategoryProductLists
+            .GroupBy(x => x.CategoryProductId)
             .Where(x => x.Count() > 1)
             .Select(x => x.Key)
             .ToList();
@@ -702,8 +702,8 @@ public class Service : IService
             throw new BadRequestException("Duplicate categories are not allowed.");
         }
 
-        var categoryIds = request.Categories
-            .Select(x => x.CategoryId)
+        var categoryIds = request.CategoryProductLists
+            .Select(x => x.CategoryProductId)
             .Distinct()
             .ToList();
 
@@ -724,12 +724,12 @@ public class Service : IService
             throw new NotFoundException("One or more category product details were not found.");
         }
 
-        foreach (var categoryItem in request.Categories)
+        foreach (var categoryItem in request.CategoryProductLists)
         {
             var oldDetail = oldCategoryProductDetails
                 .First(x =>
                     x.CategoryProductId ==
-                    categoryItem.CategoryId);
+                    categoryItem.CategoryProductId);
 
             if (categoryItem.IsPin && !oldDetail.IsPin)
             {
@@ -739,7 +739,7 @@ public class Service : IService
                             !x.IsDeleted &&
                             x.IsPin &&
                             x.CategoryProductId ==
-                            categoryItem.CategoryId);
+                            categoryItem.CategoryProductId);
 
                 if (pinnedProductCount >= 32)
                 {
@@ -754,12 +754,12 @@ public class Service : IService
 
         try
         {
-            foreach (var categoryItem in request.Categories)
+            foreach (var categoryItem in request.CategoryProductLists)
             {
                 var oldDetail = oldCategoryProductDetails
                     .First(x =>
                         x.CategoryProductId ==
-                        categoryItem.CategoryId);
+                        categoryItem.CategoryProductId);
 
                 oldDetail.IsPin = categoryItem.IsPin;
                 oldDetail.Position = categoryItem.Position;
