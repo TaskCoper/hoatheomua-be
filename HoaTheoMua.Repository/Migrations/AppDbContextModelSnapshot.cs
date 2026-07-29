@@ -142,6 +142,42 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardOut", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("CardOuts");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>
                 {
                     b.Property<Guid>("Id")
@@ -430,6 +466,107 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("Group");
 
                     b.ToTable("Configs");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.FlowerOut", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("FlowerOuts");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.History", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CardOutId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FlowerOutId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Input")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("PostCoreBaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PostOutId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SystemPromptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TemplateCardBaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CardOutId")
+                        .IsUnique();
+
+                    b.HasIndex("FlowerOutId")
+                        .IsUnique();
+
+                    b.HasIndex("PostCoreBaseId");
+
+                    b.HasIndex("PostOutId")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SystemPromptId");
+
+                    b.HasIndex("TemplateCardBaseId");
+
+                    b.ToTable("Histories");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
@@ -1227,6 +1364,65 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("OrderNhanhVnDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostCoreBase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PictureUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PostCoreBases");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostOut", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PostOuts");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1530,6 +1726,99 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("RecruitmentRequest", (string)null);
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Standard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Standards");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.SystemPrompt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SystemPrompts");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.TemplateCardBase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LimitString")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PictureUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TemplateCardBases");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1614,6 +1903,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("Transactions");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardOut", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
+                        .WithMany("CardOuts")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.CategoryNews", "ParentCategoryNews")
@@ -1672,6 +1972,76 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.FlowerOut", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
+                        .WithMany("FlowerOuts")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.History", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.CardOut", "CardOut")
+                        .WithOne("History")
+                        .HasForeignKey("HoaTheoMua.Repository.Entity.History", "CardOutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.FlowerOut", "FlowerOut")
+                        .WithOne("History")
+                        .HasForeignKey("HoaTheoMua.Repository.Entity.History", "FlowerOutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.PostCoreBase", "PostCoreBase")
+                        .WithMany("Histories")
+                        .HasForeignKey("PostCoreBaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.PostOut", "PostOut")
+                        .WithOne("History")
+                        .HasForeignKey("HoaTheoMua.Repository.Entity.History", "PostOutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "Product")
+                        .WithMany("Histories")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.SystemPrompt", "SystemPrompt")
+                        .WithMany("Histories")
+                        .HasForeignKey("SystemPromptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.TemplateCardBase", "TemplateCardBase")
+                        .WithMany("Histories")
+                        .HasForeignKey("TemplateCardBaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CardOut");
+
+                    b.Navigation("FlowerOut");
+
+                    b.Navigation("PostCoreBase");
+
+                    b.Navigation("PostOut");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SystemPrompt");
+
+                    b.Navigation("TemplateCardBase");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
@@ -1715,6 +2085,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardOut", b =>
+                {
+                    b.Navigation("History");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>
                 {
                     b.Navigation("CategoryNewsDetail");
@@ -1729,6 +2104,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("ChildCategoryProducts");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.FlowerOut", b =>
+                {
+                    b.Navigation("History");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
                 {
                     b.Navigation("recruitmentRequests");
@@ -1741,6 +2121,10 @@ namespace HoaTheoMua.Repository.Migrations
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Order", b =>
                 {
+                    b.Navigation("CardOuts");
+
+                    b.Navigation("FlowerOuts");
+
                     b.Navigation("OrderDetails");
 
                     b.Navigation("Transactions");
@@ -1751,9 +2135,31 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("OrderNhanhVnDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostCoreBase", b =>
+                {
+                    b.Navigation("Histories");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostOut", b =>
+                {
+                    b.Navigation("History");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
                 {
                     b.Navigation("CategoryProductDetails");
+
+                    b.Navigation("Histories");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.SystemPrompt", b =>
+                {
+                    b.Navigation("Histories");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.TemplateCardBase", b =>
+                {
+                    b.Navigation("Histories");
                 });
 #pragma warning restore 612, 618
         }
