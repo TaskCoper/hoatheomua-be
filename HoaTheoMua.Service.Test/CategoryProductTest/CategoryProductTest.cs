@@ -223,6 +223,56 @@ public class CategoryProductTest
     }
 
     [Fact]
+    public async Task UpdateCateProduct_InactiveCategory_KeepsProductIdsAndCount()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var category = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Electronics",
+            Name_En = "Electronics",
+            Description = "Electronics",
+            Description_En = "Electronics",
+            Type = CategoryProductType.Fix,
+            IsActive = true
+        };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Phone" };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Laptop" };
+
+        await dbContext.CategoryProducts.AddAsync(category);
+        await dbContext.Products.AddRangeAsync(p1, p2);
+        await dbContext.SaveChangesAsync();
+
+        await service.AssignProductsToCategory(category.Id, new Request.AssignProductsToCategoryRequest
+        {
+            productIds = new List<Guid> { p1.Id, p2.Id }
+        });
+
+        var request = new Request.UpdateCategoryProductRequest
+        {
+            name = category.Name,
+            name_En = category.Name_En,
+            description = category.Description,
+            description_En = category.Description_En,
+            type = category.Type,
+            isActive = false
+        };
+
+        // Act
+        var result = await service.UpdateCateProduct(category.Id, request);
+
+        // Assert
+        Assert.False(result.isActive);
+        Assert.Equal(2, result.productCount);
+        Assert.NotNull(result.productIds);
+        Assert.Contains(p1.Id, result.productIds!);
+        Assert.Contains(p2.Id, result.productIds!);
+    }
+
+    [Fact]
     public async Task AssignProductsToCategory_AssignAndRemove_Success()
     {
         // Arrange
