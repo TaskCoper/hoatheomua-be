@@ -75,7 +75,7 @@ public class OrderController : ControllerBase
     }
     
     [HttpPost("/api/v1/orders/update-ahamove")]
-    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UpdateAhaMoveService([FromBody] Request.UpdateAhamoveRequest request)
     {
         var result = await _orderService.UpdateAhaMoveService(request);
