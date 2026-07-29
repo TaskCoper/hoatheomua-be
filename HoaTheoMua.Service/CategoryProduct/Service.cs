@@ -425,7 +425,9 @@ public class Service : IService
                 .ToListAsync();
 
             var oldProductIds = existingDetails.Select(x => x.ProductId).ToList();
-            var newProductIds = request.productIds ?? new List<Guid>();
+            var newProductIds = (request.productIds ?? new List<Guid>())
+                .Distinct()
+                .ToList();
 
             var toDelete = existingDetails.Where(x => !newProductIds.Contains(x.ProductId)).ToList();
             var toAddIds = newProductIds.Where(id => !oldProductIds.Contains(id)).ToList();
@@ -529,6 +531,11 @@ public class Service : IService
 
         var pages = (request.page ?? new List<string>())
             .SelectMany(page => page.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(page =>
+            {
+                var normalizedPage = page.Trim();
+                return int.TryParse(normalizedPage, out var pageNumber) ? pageNumber.ToString() : normalizedPage;
+            })
             .Where(page => !string.IsNullOrWhiteSpace(page))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -563,10 +570,17 @@ public class Service : IService
 
             foreach (var category in categoryProducts)
             {
-                var isPageMatched = (category.Page ?? new List<string>())
+                var normalizedCategoryPages = (category.Page ?? new List<string>())
                     .SelectMany(page => page.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    .Select(page =>
+                    {
+                        var normalizedPage = page.Trim();
+                        return int.TryParse(normalizedPage, out var pageNumber) ? pageNumber.ToString() : normalizedPage;
+                    })
                     .Where(page => !string.IsNullOrWhiteSpace(page))
-                    .Any(page => pages.Contains(page));
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var isPageMatched = normalizedCategoryPages.Any(page => pages.Contains(page));
 
                 if (!isPageMatched)
                 {
@@ -619,7 +633,28 @@ public class Service : IService
             throw new BadRequestException("Product ID is required.");
         }
 
-        if (request.CategoryProductId == Guid.Empty)
+        if (request.CategoryProductLists == null || !request.CategoryProductLists.Any())
+        {
+            throw new BadRequestException("Category product list is required.");
+        }
+
+        var duplicateCategoryIds = request.CategoryProductLists
+            .GroupBy(x => x.CategoryProductId)
+            .Where(x => x.Count() > 1)
+            .Select(x => x.Key)
+            .ToList();
+
+        if (duplicateCategoryIds.Any())
+        {
+            throw new BadRequestException("Duplicate categories are not allowed.");
+        }
+
+        var categoryIds = request.CategoryProductLists
+            .Select(x => x.CategoryProductId)
+            .Distinct()
+            .ToList();
+
+        if (categoryIds.Any(x => x == Guid.Empty))
         {
             throw new BadRequestException("Category ID is required.");
         }
@@ -634,73 +669,84 @@ public class Service : IService
             throw new NotFoundException("Product not found.");
         }
 
-        var categoryExists = await _dbContext.CategoryProducts
-            .AnyAsync(x =>
-                x.Id == request.CategoryProductId &&
-                !x.IsDeleted);
+        var existingCategoryIds = await _dbContext.CategoryProducts
+            .Where(x =>
+                categoryIds.Contains(x.Id) &&
+                !x.IsDeleted)
+            .Select(x => x.Id)
+            .ToListAsync();
 
-        if (!categoryExists)
+        var hasMissingCategory = categoryIds
+            .Any(categoryId =>
+                !existingCategoryIds.Contains(categoryId));
+
+        if (hasMissingCategory)
         {
-            throw new NotFoundException("Category not found.");
+            throw new NotFoundException("One or more categories were not found.");
         }
 
-        var oldCategoryProductDetail =
-            await _dbContext.CategoryProductDetails
-                .FirstOrDefaultAsync(x =>
+        var oldCategoryProductDetails = await _dbContext.CategoryProductDetails
+                .Where(x =>
                     x.ProductId == request.ProductId &&
-                    x.CategoryProductId == request.CategoryProductId &&
-                    !x.IsDeleted);
+                    categoryIds.Contains(x.CategoryProductId) &&
+                    !x.IsDeleted)
+                .ToListAsync();
 
-        if (oldCategoryProductDetail == null)
+        var existingCategoryDetailIds = oldCategoryProductDetails
+                .Select(x => x.CategoryProductId)
+                .ToList();
+
+        var hasMissingCategoryProductDetail = categoryIds.Any(categoryId =>
+                !existingCategoryDetailIds.Contains(categoryId));
+
+        if (hasMissingCategoryProductDetail)
         {
-            throw new NotFoundException("Category product detail not found.");
+            throw new NotFoundException("One or more category product details were not found.");
         }
 
-        if (request.IsPin && !oldCategoryProductDetail.IsPin)
+        foreach (var categoryItem in request.CategoryProductLists)
         {
-            var pinnedProductCount =
-                await _dbContext.CategoryProductDetails
-                    .CountAsync(x =>
-                        !x.IsDeleted &&
-                        x.IsPin &&
-                        x.CategoryProductId == request.CategoryProductId &&
-                        x.Id != oldCategoryProductDetail.Id);
+            var oldDetail = oldCategoryProductDetails
+                .First(x =>
+                    x.CategoryProductId ==
+                    categoryItem.CategoryProductId);
 
-            if (pinnedProductCount >= 32)
+            if (categoryItem.IsPin && !oldDetail.IsPin)
             {
-                throw new BadRequestException("Only 32 products can be pinned in this category.");
+                var pinnedProductCount =
+                    await _dbContext.CategoryProductDetails
+                        .CountAsync(x =>
+                            !x.IsDeleted &&
+                            x.IsPin &&
+                            x.CategoryProductId ==
+                            categoryItem.CategoryProductId);
+
+                if (pinnedProductCount >= 32)
+                {
+                    throw new BadRequestException("Only 32 products can be pinned in this category.");
+                }
             }
         }
 
         var currentTime = DateTimeOffset.UtcNow;
 
-        await using var transaction =
-            await _dbContext.Database.BeginTransactionAsync();
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         try
         {
-            oldCategoryProductDetail.IsDeleted = true;
-            oldCategoryProductDetail.UpdatedAt = currentTime;
+            foreach (var categoryItem in request.CategoryProductLists)
+            {
+                var oldDetail = oldCategoryProductDetails
+                    .First(x =>
+                        x.CategoryProductId ==
+                        categoryItem.CategoryProductId);
+
+                oldDetail.IsPin = categoryItem.IsPin;
+                oldDetail.Position = categoryItem.Position;
+                oldDetail.UpdatedAt = currentTime;
+            }
 
             await _dbContext.SaveChangesAsync();
-
-            var newCategoryProductDetail = new CategoryProductDetail()
-                {
-                    Id = Guid.NewGuid(),
-                    ProductId = request.ProductId,
-                    CategoryProductId = request.CategoryProductId,
-                    IsPin = request.IsPin,
-                    Position = request.Position,
-                    IsDeleted = false,
-                    CreatedAt = currentTime,
-                    UpdatedAt = currentTime
-                };
-
-            await _dbContext.CategoryProductDetails
-                .AddAsync(newCategoryProductDetail);
-
-            await _dbContext.SaveChangesAsync();
-
             await transaction.CommitAsync();
         }
         catch
