@@ -55,6 +55,11 @@ public class Order : BaseEntity<Guid>, IAuditableEntity
     public Guid UserId { get; set; }
     public ICollection<OrderDetails> OrderDetails { get; set; } = new List<OrderDetails>();
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    
+    public ICollection<CardOut> CardOuts { get; set; } = new List<CardOut>();
+    public ICollection<FlowerOut> FlowerOuts { get; set; } = new List<FlowerOut>();
+
+    
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
 }
