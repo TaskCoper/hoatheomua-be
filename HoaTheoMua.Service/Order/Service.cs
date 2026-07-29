@@ -650,4 +650,20 @@ public class Service : IService
 
         return "Hủy đơn thành công";
     }
+
+    public async Task<string> UpdateAhaMoveService(Request.UpdateAhamoveRequest request)
+    {
+        var order = await _dbContext.Orders
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.Id.ToString() == request.OrderId);
+
+        if (order == null)
+        {
+            throw new BadRequestException("Order not found");
+        }
+
+        order.TrackNumber = request.TrackingNumber ?? "";
+        order.AhahaMoveTrackingUrl = request.TrackingNumber ?? "";
+
+        return "Cập nhật thành công đơn hàng";
+    }
 }
