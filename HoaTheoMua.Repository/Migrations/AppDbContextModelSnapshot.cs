@@ -251,6 +251,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<List<string>>("Page")
+                        .HasColumnType("text[]");
+
                     b.Property<Guid?>("ParentCategoryProductId")
                         .HasColumnType("uuid");
 
@@ -314,7 +317,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("ProductId");
 
                     b.HasIndex("CategoryProductId", "ProductId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("CategoryProductDetails");
                 });

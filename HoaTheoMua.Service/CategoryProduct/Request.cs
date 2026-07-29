@@ -12,6 +12,7 @@ public class Request
         public string? description_En { get; set; }
         public double? position { get; set; }
         public string? metaData { get; set; }
+        public List<string>? page { get; set; }
         public DateTimeOffset? startTime { get; set; }
         public DateTimeOffset? endTime { get; set; }
         public required CategoryProductType type { get; set; }
@@ -27,6 +28,7 @@ public class Request
         public string? description_En { get; set; }
         public double? position { get; set; }
         public string? metaData { get; set; }
+        public List<string>? page { get; set; }
         public DateTimeOffset? startTime { get; set; }
         public DateTimeOffset? endTime { get; set; }
         public required CategoryProductType type { get; set; }
@@ -37,5 +39,18 @@ public class Request
     public class AssignProductsToCategoryRequest
     {
         public required List<Guid> productIds { get; set; }
+    }
+
+    public class GetCategoryProductWithChild
+    {
+        public List<string>? page { get; set; }
+    }
+
+    public class CategoryProductDetailRequest
+    {
+        public Guid ProductId { get; set; }
+        public Guid CategoryProductId { get; set; }
+        public bool IsPin { get; set; }
+        public double Position { get; set; }
     }
 }

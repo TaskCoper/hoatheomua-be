@@ -35,6 +35,7 @@ public class Service : IService
             description_En = category.Description_En,
             position = category.Position,
             metaData = category.MetaData,
+            page = category.Page ?? new List<string>(),
             startTime = category.StartTime,
             endTime = category.EndTime,
             type = category.Type,
@@ -83,6 +84,7 @@ public class Service : IService
             Description_En = request.description_En,
             Position = request.position,
             MetaData = request.metaData,
+            Page = request.page,
             StartTime = request.startTime,
             EndTime = request.endTime,
             Type = request.type,
@@ -113,6 +115,7 @@ public class Service : IService
             description_En = newCate.Description_En,
             position = newCate.Position,
             metaData = newCate.MetaData,
+            page = newCate.Page,
             startTime = newCate.StartTime,
             endTime = newCate.EndTime,
             type = newCate.Type,
@@ -138,6 +141,7 @@ public class Service : IService
                 description_En = x.Description_En,
                 position = x.Position,
                 metaData = x.MetaData,
+                page = x.Page,
                 startTime = x.StartTime,
                 endTime = x.EndTime,
                 type = x.Type,
@@ -183,7 +187,7 @@ public class Service : IService
             pageSize: pageSize,
             totalCount: count);
     }
-
+    
     public async Task<Response.CategoryProductResponse> GetCateProduct(Guid categoryId)
     {
         var category = await GetActiveCategory(categoryId);
@@ -193,12 +197,16 @@ public class Service : IService
         }
 
         var result = MapCategoryResponse(category);
-        if (category.ParentCategoryProductId != null)
+        if (category.ParentCategoryProductId.HasValue)
         {
-            var parentCateId = category.ParentCategoryProductId.Value;
+            var parentCategoryId = category.ParentCategoryProductId.Value;
+
             result.Parent = await _dbContext.CategoryProducts
-                .Where(x => x.Id == parentCateId && !x.IsDeleted)
-                .Select(x => new Response.CategoryProductResponse()
+                .AsNoTracking()
+                .Where(x =>
+                    x.Id == parentCategoryId &&
+                    !x.IsDeleted)
+                .Select(x => new Response.CategoryProductResponse
                 {
                     categoryId = x.Id,
                     name = x.Name,
@@ -207,6 +215,7 @@ public class Service : IService
                     description_En = x.Description_En,
                     position = x.Position,
                     metaData = x.MetaData,
+                    page = x.Page,
                     startTime = x.StartTime,
                     endTime = x.EndTime,
                     type = x.Type,
@@ -214,53 +223,110 @@ public class Service : IService
                     userId = x.UserId,
                     parentId = x.ParentCategoryProductId,
                     children = new List<Response.CategoryProductResponse>(),
-                }).FirstOrDefaultAsync();
+                    productIds = new List<Guid>(),
+                    productCount = 0
+                })
+                .FirstOrDefaultAsync();
         }
-
-        var productDetails = await _dbContext.CategoryProductDetails
-            .Where(x => x.CategoryProductId == categoryId && !x.IsDeleted)
-            .Select(x => x.ProductId)
-            .ToListAsync();
-
-        result.productCount = productDetails.Count;
-        result.productIds = productDetails;
-
-        var allActive = await _dbContext.CategoryProducts
-            .Where(x => !x.IsDeleted)
-            .Select(c => new Response.CategoryProductResponse()
+        
+        var allCategories = await _dbContext.CategoryProducts
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted)
+            .Select(x => new Response.CategoryProductResponse
             {
-                categoryId = c.Id,
-                name = c.Name,
-                name_En = c.Name_En,
-                description = c.Description,
-                description_En = c.Description_En,
-                position = c.Position,
-                metaData = c.MetaData,
-                startTime = c.StartTime,
-                endTime = c.EndTime,
-                type = c.Type,
-                isActive = c.IsActive,
-                parentId = c.ParentCategoryProductId,
-                userId = c.UserId,
-                children = new List<Response.CategoryProductResponse>()
+                categoryId = x.Id,
+                name = x.Name,
+                name_En = x.Name_En,
+                description = x.Description,
+                description_En = x.Description_En,
+                position = x.Position,
+                metaData = x.MetaData,
+                page = x.Page,
+                startTime = x.StartTime,
+                endTime = x.EndTime,
+                type = x.Type,
+                isActive = x.IsActive,
+                userId = x.UserId,
+                parentId = x.ParentCategoryProductId,
+                children = new List<Response.CategoryProductResponse>(),
+                productIds = new List<Guid>(),
+                productCount = 0
             })
             .ToListAsync();
 
-        var listCateId = allActive.ToDictionary(x => x.categoryId);
+        var categoryIds = allCategories
+            .Select(x => x.categoryId)
+            .ToList();
 
-        foreach (var item in allActive)
+        var activeProductIds = _dbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted)
+            .Select(x => x.Id);
+        
+        var categoryProductDetails =
+            await _dbContext.CategoryProductDetails
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    categoryIds.Contains(x.CategoryProductId) &&
+                    activeProductIds.Contains(x.ProductId))
+                .Select(x => new
+                {
+                    x.CategoryProductId,
+                    x.ProductId
+                })
+                .ToListAsync();
+        
+        foreach (var categoryResponse in allCategories)
         {
-            if (item.parentId != null && listCateId.TryGetValue(item.parentId.Value, out var parentItem))
+            var productIds = categoryProductDetails
+                .Where(x =>
+                    x.CategoryProductId ==
+                    categoryResponse.categoryId)
+                .Select(x => x.ProductId)
+                .Distinct()
+                .ToList();
+
+            categoryResponse.productIds = productIds;
+            categoryResponse.productCount = productIds.Count;
+        }
+        
+        List<Response.CategoryProductResponse> GetChildren(
+            Guid parentCategoryId)
+        {
+            var children = allCategories
+                .Where(x =>
+                    x.parentId == parentCategoryId)
+                .OrderBy(x => x.position)
+                .ToList();
+
+            foreach (var child in children)
             {
-                parentItem.children ??= new List<Response.CategoryProductResponse>();
-                parentItem.children.Add(item);
+                child.children = GetChildren(child.categoryId);
             }
-        }
 
-        if (listCateId.TryGetValue(categoryId, out var targetResponse))
-        {
-            result.children = targetResponse.children;
+            return children;
         }
+        
+        var currentCategoryResponse = allCategories
+            .FirstOrDefault(x => x.categoryId == categoryId);
+
+        if (currentCategoryResponse != null)
+        {
+            result.productIds =
+                currentCategoryResponse.productIds;
+
+            result.productCount =
+                currentCategoryResponse.productCount;
+        }
+        else
+        {
+            result.productIds = new List<Guid>();
+            result.productCount = 0;
+        }
+        
+        result.children = GetChildren(categoryId);
 
         return result;
     }
@@ -331,6 +397,7 @@ public class Service : IService
         category.Description_En = request.description_En;
         category.Position = request.position;
         category.MetaData = request.metaData;
+        category.Page = request.page;
         category.StartTime = request.startTime;
         category.EndTime = request.endTime;
         category.Type = request.type;
@@ -453,15 +520,23 @@ public class Service : IService
         }
     }
 
-    public async Task<List<Response.CategoryWithChildrenResponse>> GetCategoryWithChild()
+    public async Task<List<Response.CategoryWithChildrenResponse>> GetCategoryWithChild(Request.GetCategoryProductWithChild request)
     {
-        var queryCategoryProducts = _dbContext.CategoryProducts
+        if (request == null)
+        {
+            throw new BadRequestException("Invalid request data.");
+        }
+
+        var pages = (request.page ?? new List<string>())
+            .SelectMany(page => page.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(page => !string.IsNullOrWhiteSpace(page))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var categoryProducts = await _dbContext.CategoryProducts
             .AsNoTracking()
             .Where(x =>
                 !x.IsDeleted &&
-                x.IsActive);
-
-        var selectedQueryCategory = queryCategoryProducts
+                x.IsActive)
             .Select(x => new Response.CategoryWithChildrenResponse
             {
                 CategoryId = x.Id,
@@ -471,41 +546,169 @@ public class Service : IService
                 DescriptionEn = x.Description_En,
                 Position = x.Position,
                 MetaData = x.MetaData,
+                Page = x.Page ?? new List<string>(),
                 StartTime = x.StartTime,
                 EndTime = x.EndTime,
                 Type = x.Type,
                 UserId = x.UserId,
                 ParentId = x.ParentCategoryProductId,
                 Children = new List<Response.CategoryWithChildrenResponse>()
-            });
-
-        var categoryProducts = await selectedQueryCategory
+            })
             .ToListAsync();
 
-        var categoryById = categoryProducts
-            .ToDictionary(category => category.CategoryId);
-
-        var result = new List<Response.CategoryWithChildrenResponse>();
-
-        foreach (var category in categoryProducts.OrderBy(x => x.Position))
+        if (pages.Count > 0)
         {
-            if (category.ParentId == null)
+            var categoryById = categoryProducts.ToDictionary(category => category.CategoryId);
+            var includedCategoryIds = new HashSet<Guid>();
+
+            foreach (var category in categoryProducts)
             {
-                result.Add(category);
-                continue;
+                var isPageMatched = (category.Page ?? new List<string>())
+                    .SelectMany(page => page.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    .Where(page => !string.IsNullOrWhiteSpace(page))
+                    .Any(page => pages.Contains(page));
+
+                if (!isPageMatched)
+                {
+                    continue;
+                }
+
+                var currentCategory = category;
+                while (includedCategoryIds.Add(currentCategory.CategoryId) &&
+                       currentCategory.ParentId != null &&
+                       categoryById.TryGetValue(currentCategory.ParentId.Value, out var parentCategory))
+                {
+                    currentCategory = parentCategory;
+                }
             }
 
-            if (categoryById.TryGetValue(category.ParentId.Value, out var parent))
+            categoryProducts = categoryProducts
+                .Where(category => includedCategoryIds.Contains(category.CategoryId))
+                .ToList();
+        }
+
+        List<Response.CategoryWithChildrenResponse> ProductCategoryList(Guid? parentId)
+        {
+            var currentCategories = categoryProducts
+                .Where(x => x.ParentId == parentId)
+                .OrderBy(x => x.Position)
+                .ToList();
+
+            foreach (var category in currentCategories)
             {
-                if (parent.Children == null)
-                {
-                    parent.Children = new List<Response.CategoryWithChildrenResponse>();
-                }
-                
-                parent.Children.Add(category);
+                category.Children = ProductCategoryList(category.CategoryId);
+            }
+
+            return currentCategories;
+        }
+
+        var result = ProductCategoryList(null);
+
+        return result;
+    }
+
+    public async Task<BaseResponse> UpdateCategoryProductDetail(Request.CategoryProductDetailRequest request)
+    {
+        if (request == null)
+        {
+            throw new BadRequestException("Invalid category product detail data.");
+        }
+
+        if (request.ProductId == Guid.Empty)
+        {
+            throw new BadRequestException("Product ID is required.");
+        }
+
+        if (request.CategoryProductId == Guid.Empty)
+        {
+            throw new BadRequestException("Category ID is required.");
+        }
+
+        var productExists = await _dbContext.Products
+            .AnyAsync(x =>
+                x.Id == request.ProductId &&
+                !x.IsDeleted);
+
+        if (!productExists)
+        {
+            throw new NotFoundException("Product not found.");
+        }
+
+        var categoryExists = await _dbContext.CategoryProducts
+            .AnyAsync(x =>
+                x.Id == request.CategoryProductId &&
+                !x.IsDeleted);
+
+        if (!categoryExists)
+        {
+            throw new NotFoundException("Category not found.");
+        }
+
+        var oldCategoryProductDetail =
+            await _dbContext.CategoryProductDetails
+                .FirstOrDefaultAsync(x =>
+                    x.ProductId == request.ProductId &&
+                    x.CategoryProductId == request.CategoryProductId &&
+                    !x.IsDeleted);
+
+        if (oldCategoryProductDetail == null)
+        {
+            throw new NotFoundException("Category product detail not found.");
+        }
+
+        if (request.IsPin && !oldCategoryProductDetail.IsPin)
+        {
+            var pinnedProductCount =
+                await _dbContext.CategoryProductDetails
+                    .CountAsync(x =>
+                        !x.IsDeleted &&
+                        x.IsPin &&
+                        x.CategoryProductId == request.CategoryProductId &&
+                        x.Id != oldCategoryProductDetail.Id);
+
+            if (pinnedProductCount >= 32)
+            {
+                throw new BadRequestException("Only 32 products can be pinned in this category.");
             }
         }
 
-        return result;
+        var currentTime = DateTimeOffset.UtcNow;
+
+        await using var transaction =
+            await _dbContext.Database.BeginTransactionAsync();
+
+        try
+        {
+            oldCategoryProductDetail.IsDeleted = true;
+            oldCategoryProductDetail.UpdatedAt = currentTime;
+
+            await _dbContext.SaveChangesAsync();
+
+            var newCategoryProductDetail = new CategoryProductDetail()
+                {
+                    Id = Guid.NewGuid(),
+                    ProductId = request.ProductId,
+                    CategoryProductId = request.CategoryProductId,
+                    IsPin = request.IsPin,
+                    Position = request.Position,
+                    IsDeleted = false,
+                    CreatedAt = currentTime,
+                    UpdatedAt = currentTime
+                };
+
+            await _dbContext.CategoryProductDetails
+                .AddAsync(newCategoryProductDetail);
+
+            await _dbContext.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        return ApiResponseFactory.Base("Category product detail updated successfully.");
     }
 }

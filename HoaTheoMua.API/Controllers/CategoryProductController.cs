@@ -64,9 +64,16 @@ public class CategoryProductController : ControllerBase
     }
 
     [HttpGet("with-children")]
-    public async Task<IActionResult> GetCategoryWithChild()
+    public async Task<IActionResult> GetCategoryWithChild([FromQuery] CategoryProductService.Request.GetCategoryProductWithChild request)
     {
-        var result = await _categoryProductService.GetCategoryWithChild();
+        var result = await _categoryProductService.GetCategoryWithChild(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
+    [HttpPut("detail")]
+    public async Task<IActionResult> UpdateCategoryProductDetail(CategoryProductService.Request.CategoryProductDetailRequest request)
+    {
+        var result = await _categoryProductService.UpdateCategoryProductDetail(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 }

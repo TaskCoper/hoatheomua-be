@@ -36,6 +36,13 @@ public class ProductController: ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("/api/v2/products")]
+    public async Task<IActionResult> GetLocalProductsV2([FromQuery] Request.LocalProductQueryRequest request)
+    {
+        var result = await _productService.GetLocalProductsV2(request);
+        return Ok(result);
+    }
+
     [HttpGet("/api/v1/products/max-price")]
     public async Task<IActionResult> GetMaxPrice([FromQuery] List<Guid>? categoryIds)
     {

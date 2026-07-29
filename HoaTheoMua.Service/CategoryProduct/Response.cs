@@ -13,6 +13,7 @@ public class Response
         public string? description_En { get; set; }
         public double? position { get; set; }
         public string? metaData { get; set; }
+        public List<string>? page { get; set; } = new();
         public DateTimeOffset? startTime { get; set; }
         public DateTimeOffset? endTime { get; set; }
         public required CategoryProductType type { get; set; }
@@ -31,6 +32,7 @@ public class Response
         public string? description_En { get; set; }
         public double? position { get; set; }
         public string? metaData { get; set; }
+        public List<string>? page { get; set; } = new();
         public DateTimeOffset? startTime { get; set; }
         public DateTimeOffset? endTime { get; set; }
         public required CategoryProductType type { get; set; }
@@ -52,6 +54,7 @@ public class Response
         public string? DescriptionEn { get; set; }
         public double? Position { get; set; }
         public string? MetaData { get; set; }
+        public List<string>? Page { get; set; } = new();
         public DateTimeOffset? StartTime { get; set; }
         public DateTimeOffset? EndTime { get; set; }
         public required CategoryProductType Type { get; set; }
