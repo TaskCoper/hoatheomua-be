@@ -161,9 +161,22 @@ public class CategoryProductTest
             Type = CategoryProductType.Fix,
             IsActive = true
         };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Quần Jeans" };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Áo Polo" };
 
         await dbContext.CategoryProducts.AddRangeAsync(parent1, child1, parent2);
+        await dbContext.Products.AddRangeAsync(p1, p2);
         await dbContext.SaveChangesAsync();
+
+        await service.AssignProductsToCategory(parent1.Id, new Request.AssignProductsToCategoryRequest
+        {
+            productIds = new List<Guid> { p1.Id }
+        });
+
+        await service.AssignProductsToCategory(child1.Id, new Request.AssignProductsToCategoryRequest
+        {
+            productIds = new List<Guid> { p2.Id }
+        });
 
         // Act
         var result = await service.GetCateProducts(1, 10, "Quần");
@@ -173,8 +186,14 @@ public class CategoryProductTest
         var items = result.Value.Items.Cast<Response.CategoryProductResponse>().ToList();
         Assert.Single(items);
         Assert.Equal("Quần Áo", items[0].name);
+        Assert.Equal(1, items[0].productCount);
+        Assert.NotNull(items[0].productIds);
+        Assert.Contains(p1.Id, items[0].productIds!);
         Assert.Single(items[0].children);
         Assert.Equal("Áo Thun", items[0].children[0].name);
+        Assert.Equal(1, items[0].children[0].productCount);
+        Assert.NotNull(items[0].children[0].productIds);
+        Assert.Contains(p2.Id, items[0].children[0].productIds!);
     }
 
     [Fact]
