@@ -219,7 +219,7 @@ public class Service : IService
             .ThenInclude(cpd => cpd.CategoryProduct)
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted);
+        query = query.Where(x => !x.IsDeleted && x.ParentProductId == null);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -316,7 +316,7 @@ public class Service : IService
             .ThenInclude(cpd => cpd.CategoryProduct)
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted);
+        query = query.Where(x => !x.IsDeleted && x.ParentProductId == null);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -568,7 +568,8 @@ public class Service : IService
                     !x.IsDeleted &&
                     x.IsPin &&
                     !x.CategoryProduct.IsDeleted &&
-                    !x.Product.IsDeleted);
+                    !x.Product.IsDeleted &&
+                    x.Product.ParentProductId == null);
 
             if (categoryProductDetail == null)
             {
@@ -583,7 +584,8 @@ public class Service : IService
             var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
                                                                                     x.Id == id &&
                                                                                     !x.IsDeleted &&
-                                                                                    x.IsPin);
+                                                                                    x.IsPin &&
+                                                                                    x.ParentProductId == null);
 
             if (product == null)
             {
@@ -617,6 +619,16 @@ public class Service : IService
             throw new BadRequestException("Category ID cannot be empty.");
         }
         
+        var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
+                                                                    x.Id == request.ProductId &&
+                                                                    !x.IsDeleted &&
+                                                                    x.ParentProductId == null);
+
+        if (product == null)
+        {
+            throw new BadRequestException("Product not found or is not a parent product.");
+        }
+
         if (request.IsPin)
         {
             if (request.CategoryId.HasValue)
@@ -625,7 +637,8 @@ public class Service : IService
                     .CountAsync(x =>
                         !x.IsDeleted &&
                         x.CategoryProductId == request.CategoryId.Value &&
-                        x.IsPin);
+                        x.IsPin &&
+                        x.Product.ParentProductId == null);
 
                 if (pinnedCategoryProductCount >= 32)
                 {
@@ -637,22 +650,14 @@ public class Service : IService
                 var pinnedProductCount = await _dbContext.Products
                     .CountAsync(x =>
                         !x.IsDeleted &&
-                        x.IsPin);
+                        x.IsPin &&
+                        x.ParentProductId == null);
 
                 if (pinnedProductCount >= 32)
                 {
                     throw new BadRequestException("Only 32 products can be pinned.");
                 }
             }
-        }
-
-        var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
-                                                                    x.Id == request.ProductId &&
-                                                                    !x.IsDeleted);
-
-        if (product == null)
-        {
-            throw new BadRequestException("Product not found.");
         }
 
         if (request.CategoryId.HasValue)
@@ -706,7 +711,8 @@ public class Service : IService
                     x.IsPin &&
                     x.CategoryProductId == request.CategoryId.Value &&
                     !x.CategoryProduct.IsDeleted &&
-                    !x.Product.IsDeleted)
+                    !x.Product.IsDeleted &&
+                    x.Product.ParentProductId == null)
                 .OrderBy(x => x.Position) //
                 .ThenBy(x => x.Product.ProductName);
 
@@ -730,7 +736,8 @@ public class Service : IService
         var pinnedProductQuery = _dbContext.Products
             .Where(x =>
                 !x.IsDeleted &&
-                x.IsPin)
+                x.IsPin &&
+                x.ParentProductId == null)
             .OrderBy(x => x.Position) //
             .ThenBy(x => x.ProductName);
 
