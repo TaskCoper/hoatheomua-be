@@ -150,6 +150,40 @@ public class Service : IService
                 parentId = x.ParentCategoryProductId,
             }).ToListAsync();
 
+        var categoryIds = cateResponse.Select(x => x.categoryId).ToList();
+
+        var activeProductIds = _dbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted)
+            .Select(x => x.Id);
+
+        var categoryProductDetails = await _dbContext.CategoryProductDetails
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                categoryIds.Contains(x.CategoryProductId) &&
+                activeProductIds.Contains(x.ProductId))
+            .Select(x => new { x.CategoryProductId, x.ProductId })
+            .ToListAsync();
+
+        var productIdsGroup = categoryProductDetails
+            .GroupBy(x => x.CategoryProductId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ProductId).Distinct().ToList());
+
+        foreach (var cat in cateResponse)
+        {
+            if (productIdsGroup.TryGetValue(cat.categoryId, out var pIds))
+            {
+                cat.productIds = pIds;
+                cat.productCount = pIds.Count;
+            }
+            else
+            {
+                cat.productIds = new List<Guid>();
+                cat.productCount = 0;
+            }
+        }
+
         var listCateId = cateResponse.ToDictionary(x => x.categoryId);
         var parentCate = new List<Response.CategoryProductResponse>();
 
@@ -566,17 +600,33 @@ public class Service : IService
         if (pages.Count > 0)
         {
             var categoryById = categoryProducts.ToDictionary(category => category.CategoryId);
+            var categoriesByParentId = categoryProducts
+                .Where(category => category.ParentId != null)
+                .GroupBy(category => category.ParentId!.Value)
+                .ToDictionary(group => group.Key, group => group.ToList());
             var includedCategoryIds = new HashSet<Guid>();
+
+            void IncludeChildren(Guid categoryId)
+            {
+                if (!categoriesByParentId.TryGetValue(categoryId, out var children))
+                {
+                    return;
+                }
+
+                foreach (var child in children)
+                {
+                    if (includedCategoryIds.Add(child.CategoryId))
+                    {
+                        IncludeChildren(child.CategoryId);
+                    }
+                }
+            }
 
             foreach (var category in categoryProducts)
             {
                 var normalizedCategoryPages = (category.Page ?? new List<string>())
                     .SelectMany(page => page.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                    .Select(page =>
-                    {
-                        var normalizedPage = page.Trim();
-                        return int.TryParse(normalizedPage, out var pageNumber) ? pageNumber.ToString() : normalizedPage;
-                    })
+                    .Select(page => page.Trim())
                     .Where(page => !string.IsNullOrWhiteSpace(page))
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -587,11 +637,14 @@ public class Service : IService
                     continue;
                 }
 
+                includedCategoryIds.Add(category.CategoryId);
+                IncludeChildren(category.CategoryId);
+
                 var currentCategory = category;
-                while (includedCategoryIds.Add(currentCategory.CategoryId) &&
-                       currentCategory.ParentId != null &&
+                while (currentCategory.ParentId != null &&
                        categoryById.TryGetValue(currentCategory.ParentId.Value, out var parentCategory))
                 {
+                    includedCategoryIds.Add(parentCategory.CategoryId);
                     currentCategory = parentCategory;
                 }
             }
