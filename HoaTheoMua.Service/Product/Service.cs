@@ -420,6 +420,7 @@ public class Service : IService
         var product = await _dbContext.Products
             .Include(p => p.CategoryProductDetails)
             .ThenInclude(cpd => cpd.CategoryProduct)
+            .ThenInclude(cp => cp.ChildCategoryProducts)
             .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
 
         if (product == null)
@@ -518,9 +519,29 @@ public class Service : IService
                     type = cpd.CategoryProduct.Type,
                     isActive = cpd.CategoryProduct.IsActive,
                     userId = cpd.CategoryProduct.UserId,
-                    parentId = cpd.CategoryProduct.ParentCategoryProductId
+                    parentId = cpd.CategoryProduct.ParentCategoryProductId,
+                    children = cpd.CategoryProduct.ChildCategoryProducts != null
+                        ? cpd.CategoryProduct.ChildCategoryProducts
+                            .Where(child => !child.IsDeleted)
+                            .Select(child => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
+                            {
+                                categoryId = child.Id,
+                                name = child.Name,
+                                name_En = child.Name_En,
+                                description = child.Description,
+                                description_En = child.Description_En,
+                                position = child.Position,
+                                metaData = child.MetaData,
+                                startTime = child.StartTime,
+                                endTime = child.EndTime,
+                                type = child.Type,
+                                isActive = child.IsActive,
+                                userId = child.UserId,
+                                parentId = child.ParentCategoryProductId
+                            }).ToList()
+                        : new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
                 })
-                .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
+                .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>(),
         };
     }
 
