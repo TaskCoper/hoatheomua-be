@@ -12,18 +12,6 @@ public class Service : IService
     private readonly AppDbContext _appDbContext;
     private readonly VietMapOption _vietMapOption;
 
-    private static readonly string[] AdminPrefixes = new[]
-    {
-        "thanh pho ",
-        "thi tran ",
-        "thi xa ",
-        "phuong ",
-        "quan ",
-        "huyen ",
-        "tinh ",
-        "xa "
-    };
-
     private static readonly Regex FocusRegex = new(@"^-?\d+(\.\d+)?,-?\d+(\.\d+)?$", RegexOptions.Compiled);
 
     public Service(HttpClient httpClient, AppDbContext appDbContext, IConfiguration configuration)
@@ -34,7 +22,7 @@ public class Service : IService
         configuration.GetSection(nameof(VietMapOption)).Bind(_vietMapOption);
     }
 
-    private async Task<(string ApiKey, string BaseUrl)> GetVietMapConfig()
+    public async Task<List<Response.AutocompleteResult>> Autocomplete(Request.AutocompleteQuery query)
     {
         var configs = await ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "vietmap");
         var apiKey = configs.GetValue("vietmap.api_key", _vietMapOption.ApiKey) ?? string.Empty;
@@ -44,13 +32,6 @@ public class Service : IService
         {
             throw new VietMapException("server-not-configured", 503, "VietMap API Key is not configured.");
         }
-
-        return (apiKey, baseUrl);
-    }
-
-    public async Task<List<Response.AutocompleteResult>> Autocomplete(Request.AutocompleteQuery query)
-    {
-        var (apiKey, baseUrl) = await GetVietMapConfig();
 
         var text = query.Text?.Trim();
         if (string.IsNullOrWhiteSpace(text) || text.Length < 2)
@@ -72,7 +53,8 @@ public class Service : IService
         List<Response.VietMapAutocompleteItem>? items;
         try
         {
-            var response = await _httpClient.GetAsync(url);
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 throw new VietMapException("autocomplete-upstream-error", 502, $"VietMap returned {response.StatusCode}.");
@@ -96,8 +78,8 @@ public class Service : IService
 
         // Apply mapping and ward/city filtering
         var results = new List<Response.AutocompleteResult>();
-        var normWard = NormalizeAdminName(query.Ward);
-        var normCity = NormalizeAdminName(query.City);
+        var normWard = RemoveAdministrativePrefix(query.Ward);
+        var normCity = RemoveAdministrativePrefix(query.City);
 
         foreach (var item in items)
         {
@@ -110,13 +92,13 @@ public class Service : IService
             // Filter if ward/city is passed
             if (!string.IsNullOrEmpty(normWard))
             {
-                var normAddr = RemoveDiacritics(address);
+                var normAddr = RemoveVietnameseAccents(address);
                 if (!normAddr.Contains(normWard)) continue;
             }
 
             if (!string.IsNullOrEmpty(normCity))
             {
-                var normAddr = RemoveDiacritics(address);
+                var normAddr = RemoveVietnameseAccents(address);
                 if (!normAddr.Contains(normCity)) continue;
             }
 
@@ -137,7 +119,14 @@ public class Service : IService
 
     public async Task<Response.PlaceResult?> GetPlaceDetail(string refId)
     {
-        var (apiKey, baseUrl) = await GetVietMapConfig();
+        var configs = await ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "vietmap");
+        var apiKey = configs.GetValue("vietmap.api_key", _vietMapOption.ApiKey) ?? string.Empty;
+        var baseUrl = configs.GetValue("vietmap.base_url", _vietMapOption.BaseUrl) ?? _vietMapOption.BaseUrl ?? "https://maps.vietmap.vn/api";
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new VietMapException("server-not-configured", 503, "VietMap API Key is not configured.");
+        }
 
         if (string.IsNullOrWhiteSpace(refId))
         {
@@ -149,7 +138,8 @@ public class Service : IService
         Response.VietMapPlaceResponse? placeResponse;
         try
         {
-            var response = await _httpClient.GetAsync(url);
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 throw new VietMapException("place-upstream-error", 502, $"VietMap returned {response.StatusCode}.");
@@ -180,7 +170,7 @@ public class Service : IService
         };
     }
 
-    public static string RemoveDiacritics(string? text)
+    public static string RemoveVietnameseAccents(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return string.Empty;
 
@@ -201,13 +191,25 @@ public class Service : IService
         return stringBuilder.ToString().Normalize(System.Text.NormalizationForm.FormC).Trim();
     }
 
-    public static string NormalizeAdminName(string? name)
+    public static string RemoveAdministrativePrefix(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return string.Empty;
 
-        string result = RemoveDiacritics(name);
+        string result = RemoveVietnameseAccents(name);
 
-        foreach (var prefix in AdminPrefixes)
+        string[] adminPrefixes = new[]
+        {
+            "thanh pho ",
+            "thi tran ",
+            "thi xa ",
+            "phuong ",
+            "quan ",
+            "huyen ",
+            "tinh ",
+            "xa "
+        };
+
+        foreach (var prefix in adminPrefixes)
         {
             if (result.StartsWith(prefix))
             {
