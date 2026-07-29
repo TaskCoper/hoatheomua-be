@@ -51,13 +51,16 @@ public class GeocodeServiceTest
         return mockDbContext.Object;
     }
 
-    private IConfiguration CreateMockConfiguration()
+    private IConfiguration CreateMockConfiguration(string apiKey = "test_api_key", string baseUrl = "https://maps.vietmap.vn/api")
     {
-        var mockConfig = new Mock<IConfiguration>();
-        var mockConfigSection = new Mock<IConfigurationSection>();
-        mockConfigSection.Setup(x => x.Value).Returns("dummy_value");
-        mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockConfigSection.Object);
-        return mockConfig.Object;
+        var inMemorySettings = new Dictionary<string, string?> {
+            {"VietMapOption:ApiKey", apiKey},
+            {"VietMapOption:BaseUrl", baseUrl}
+        };
+
+        return new ConfigurationBuilder()
+            .AddInMemoryCollection(inMemorySettings)
+            .Build();
     }
 
     private HttpClient CreateHttpClient(HttpResponseMessage response)
@@ -84,12 +87,12 @@ public class GeocodeServiceTest
 
     private GeocodeServiceImplementation CreateService(Func<HttpResponseMessage> responseFactory, string apiKey = "test_api_key")
     {
-        return new GeocodeServiceImplementation(CreateHttpClient(responseFactory), CreateMockDbContext(apiKey), CreateMockConfiguration());
+        return new GeocodeServiceImplementation(CreateHttpClient(responseFactory), CreateMockDbContext(apiKey), CreateMockConfiguration(apiKey));
     }
 
     // ================= TEST CASE 01: Autocomplete without API Key =================
     [Fact]
-    public async Task Autocomplete_NoApiKey_ThrowsServerNotConfigured()
+    public async Task Autocomplete_NoApiKey_ReturnsServerNotConfigured()
     {
         // Arrange
         var service = CreateService(new HttpResponseMessage(), apiKey: "");
@@ -99,10 +102,12 @@ public class GeocodeServiceTest
             Text = "197 Tran Phu"
         };
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.Autocomplete(query));
-        Assert.Equal("server-not-configured", exception.ReasonCode);
-        Assert.Equal(503, exception.StatusCode);
+        // Act
+        var response = await service.Autocomplete(query);
+
+        // Assert
+        Assert.Equal("server-not-configured", response.Reason);
+        Assert.Equal(503, response.StatusCode);
     }
 
     // ================= TEST CASE 02: Autocomplete with invalid Text =================
@@ -110,7 +115,7 @@ public class GeocodeServiceTest
     [InlineData("")]
     [InlineData("a")]
     [InlineData("   ")]
-    public async Task Autocomplete_InvalidText_ThrowsInvalidQuery(string text)
+    public async Task Autocomplete_InvalidText_ReturnsInvalidQuery(string text)
     {
         // Arrange
         var service = CreateService(new HttpResponseMessage());
@@ -120,10 +125,12 @@ public class GeocodeServiceTest
             Text = text
         };
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.Autocomplete(query));
-        Assert.Equal("invalid-query", exception.ReasonCode);
-        Assert.Equal(400, exception.StatusCode);
+        // Act
+        var response = await service.Autocomplete(query);
+
+        // Assert
+        Assert.Equal("invalid-query", response.Reason);
+        Assert.Equal(400, response.StatusCode);
     }
 
     // ================= TEST CASE 03: Autocomplete with invalid Focus =================
@@ -131,7 +138,7 @@ public class GeocodeServiceTest
     [InlineData("abc")]
     [InlineData("10.7588")]
     [InlineData("10.7588,abc")]
-    public async Task Autocomplete_InvalidFocus_ThrowsInvalidQuery(string focus)
+    public async Task Autocomplete_InvalidFocus_ReturnsInvalidQuery(string focus)
     {
         // Arrange
         var service = CreateService(new HttpResponseMessage());
@@ -142,15 +149,17 @@ public class GeocodeServiceTest
             Focus = focus
         };
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.Autocomplete(query));
-        Assert.Equal("invalid-query", exception.ReasonCode);
-        Assert.Equal(400, exception.StatusCode);
+        // Act
+        var response = await service.Autocomplete(query);
+
+        // Assert
+        Assert.Equal("invalid-query", response.Reason);
+        Assert.Equal(400, response.StatusCode);
     }
 
     // ================= TEST CASE 04: Autocomplete HTTP Error from VietMap =================
     [Fact]
-    public async Task Autocomplete_UpstreamHttpError_ThrowsAutocompleteUpstreamError()
+    public async Task Autocomplete_UpstreamHttpError_ReturnsAutocompleteUpstreamError()
     {
         // Arrange
         var httpResponse = new HttpResponseMessage
@@ -164,10 +173,12 @@ public class GeocodeServiceTest
             Text = "197 Tran Phu"
         };
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.Autocomplete(query));
-        Assert.Equal("autocomplete-upstream-error", exception.ReasonCode);
-        Assert.Equal(502, exception.StatusCode);
+        // Act
+        var response = await service.Autocomplete(query);
+
+        // Assert
+        Assert.Equal("autocomplete-upstream-error", response.Reason);
+        Assert.Equal(502, response.StatusCode);
     }
 
     // ================= TEST CASE 05: Autocomplete Success with mapping and filtering =================
@@ -208,9 +219,11 @@ public class GeocodeServiceTest
         });
 
         // Act 1: No filters
-        var results = await service.Autocomplete(new Request.AutocompleteQuery { Text = "197 Tran Phu" });
+        var response = await service.Autocomplete(new Request.AutocompleteQuery { Text = "197 Tran Phu" });
 
         // Assert 1
+        Assert.Equal(200, response.StatusCode);
+        var results = response.Results;
         Assert.Equal(2, results.Count);
         Assert.Equal("new_ref_1", results[0].RefId); // Prefer data_new
         Assert.Equal("Store 1", results[0].Name);
@@ -223,38 +236,42 @@ public class GeocodeServiceTest
         Assert.Equal("Store 2 - Phường 4, Quận 5, Thành Phố Hồ Chí Minh", results[1].Display);
 
         // Act 2: Filter by ward = "Phường Chợ Quán" (should normalize to "cho quan")
-        var filteredResults = await service.Autocomplete(new Request.AutocompleteQuery
+        var filteredResponse = await service.Autocomplete(new Request.AutocompleteQuery
         {
             Text = "197 Tran Phu",
             Ward = "Phường Chợ Quán"
         });
 
         // Assert 2
-        var singleResult = Assert.Single(filteredResults);
+        Assert.Equal(200, filteredResponse.StatusCode);
+        var singleResult = Assert.Single(filteredResponse.Results);
         Assert.Equal("new_ref_1", singleResult.RefId);
 
         // Act 3: Filter by city = "Hồ Chí Minh"
-        var cityFilteredResults = await service.Autocomplete(new Request.AutocompleteQuery
+        var cityFilteredResponse = await service.Autocomplete(new Request.AutocompleteQuery
         {
             Text = "197 Tran Phu",
             City = "Thành Phố Hồ Chí Minh"
         });
 
         // Assert 3
-        Assert.Equal(2, cityFilteredResults.Count);
+        Assert.Equal(200, cityFilteredResponse.StatusCode);
+        Assert.Equal(2, cityFilteredResponse.Results.Count);
     }
 
     // ================= TEST CASE 06: Place details with empty RefId =================
     [Fact]
-    public async Task GetPlaceDetail_EmptyRefId_ThrowsInvalidQuery()
+    public async Task GetPlaceDetail_EmptyRefId_ReturnsInvalidQuery()
     {
         // Arrange
         var service = CreateService(new HttpResponseMessage());
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<VietMapException>(() => service.GetPlaceDetail(""));
-        Assert.Equal("invalid-query", exception.ReasonCode);
-        Assert.Equal(400, exception.StatusCode);
+        // Act
+        var response = await service.GetPlaceDetail("");
+
+        // Assert
+        Assert.Equal("invalid-query", response.Reason);
+        Assert.Equal(400, response.StatusCode);
     }
 
     // ================= TEST CASE 07: Place Success =================
@@ -278,9 +295,11 @@ public class GeocodeServiceTest
         var service = CreateService(httpResponse);
 
         // Act
-        var result = await service.GetPlaceDetail("test_ref_id");
+        var response = await service.GetPlaceDetail("test_ref_id");
 
         // Assert
+        Assert.Equal(200, response.StatusCode);
+        var result = response.Result;
         Assert.NotNull(result);
         Assert.Equal(10.75922, result.Latitude);
         Assert.Equal(106.67590, result.Longitude);
@@ -290,7 +309,7 @@ public class GeocodeServiceTest
 
     // ================= TEST CASE 08: Place returns coordinates 0 -> null = ================
     [Fact]
-    public async Task GetPlaceDetail_ZeroCoords_ReturnsNull()
+    public async Task GetPlaceDetail_ZeroCoords_ReturnsNullResult()
     {
         // Arrange
         var placeResponse = new Response.VietMapPlaceResponse
@@ -309,9 +328,10 @@ public class GeocodeServiceTest
         var service = CreateService(httpResponse);
 
         // Act
-        var result = await service.GetPlaceDetail("test_ref_id");
+        var response = await service.GetPlaceDetail("test_ref_id");
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(200, response.StatusCode);
+        Assert.Null(response.Result);
     }
 }

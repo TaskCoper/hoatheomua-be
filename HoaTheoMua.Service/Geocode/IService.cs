@@ -2,6 +2,6 @@ namespace HoaTheoMua.Service.Geocode;
 
 public interface IService
 {
-    Task<List<Response.AutocompleteResult>> Autocomplete(Request.AutocompleteQuery query);
-    Task<Response.PlaceResult?> GetPlaceDetail(string refId);
+    Task<Response.AutocompleteEnvelope> Autocomplete(Request.AutocompleteQuery query);
+    Task<Response.PlaceEnvelope> GetPlaceDetail(string refId);
 }

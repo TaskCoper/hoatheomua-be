@@ -22,152 +22,138 @@ public class Service : IService
         configuration.GetSection(nameof(VietMapOption)).Bind(_vietMapOption);
     }
 
-    public async Task<List<Response.AutocompleteResult>> Autocomplete(Request.AutocompleteQuery query)
+    public async Task<Response.AutocompleteEnvelope> Autocomplete(Request.AutocompleteQuery query)
     {
-        var configs = await ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "vietmap");
-        var apiKey = configs.GetValue("vietmap.api_key", _vietMapOption.ApiKey) ?? string.Empty;
-        var baseUrl = configs.GetValue("vietmap.base_url", _vietMapOption.BaseUrl) ?? _vietMapOption.BaseUrl ?? "https://maps.vietmap.vn/api";
-
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw new VietMapException("server-not-configured", 503, "VietMap API Key is not configured.");
-        }
-
-        var text = query.Text?.Trim();
-        if (string.IsNullOrWhiteSpace(text) || text.Length < 2)
-        {
-            throw new VietMapException("invalid-query", 400, "Text must be at least 2 characters.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(query.Focus) && !FocusRegex.IsMatch(query.Focus))
-        {
-            throw new VietMapException("invalid-query", 400, "Focus coordinate is invalid.");
-        }
-
-        var url = $"{baseUrl.TrimEnd('/')}/autocomplete/v4?apikey={Uri.EscapeDataString(apiKey)}&text={Uri.EscapeDataString(text)}&display_type=6";
-        if (!string.IsNullOrWhiteSpace(query.Focus))
-        {
-            url += $"&focus={Uri.EscapeDataString(query.Focus)}";
-        }
-
-        List<Response.VietMapAutocompleteItem>? items;
         try
         {
+            var apiKey = _vietMapOption.ApiKey;
+            var baseUrl = _vietMapOption.BaseUrl;
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                return new Response.AutocompleteEnvelope { StatusCode = 503, Reason = "server-not-configured" };
+            }
+
+            var text = query.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(text) || text.Length < 2)
+            {
+                return new Response.AutocompleteEnvelope { StatusCode = 400, Reason = "invalid-query" };
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.Focus) && !FocusRegex.IsMatch(query.Focus))
+            {
+                return new Response.AutocompleteEnvelope { StatusCode = 400, Reason = "invalid-query" };
+            }
+
+            var url = $"{baseUrl.TrimEnd('/')}/autocomplete/v4?apikey={Uri.EscapeDataString(apiKey)}&text={Uri.EscapeDataString(text)}&display_type=6";
+            if (!string.IsNullOrWhiteSpace(query.Focus))
+            {
+                url += $"&focus={Uri.EscapeDataString(query.Focus)}";
+            }
+
+            List<Response.VietMapAutocompleteItem>? items;
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                throw new VietMapException("autocomplete-upstream-error", 502, $"VietMap returned {response.StatusCode}.");
+                return new Response.AutocompleteEnvelope { StatusCode = 502, Reason = "autocomplete-upstream-error" };
             }
 
             items = await response.Content.ReadFromJsonAsync<List<Response.VietMapAutocompleteItem>>();
-        }
-        catch (VietMapException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new VietMapException("upstream-unreachable", 502, $"Failed to connect to VietMap: {ex.Message}");
-        }
-
-        if (items == null)
-        {
-            return new List<Response.AutocompleteResult>();
-        }
-
-        // Apply mapping and ward/city filtering
-        var results = new List<Response.AutocompleteResult>();
-        var normWard = RemoveAdministrativePrefix(query.Ward);
-        var normCity = RemoveAdministrativePrefix(query.City);
-
-        foreach (var item in items)
-        {
-            // Map values, prefer data_new (display_type=6 recommendation)
-            var refId = item.DataNew?.RefId ?? item.RefId;
-            var name = item.DataNew?.Name ?? item.Name;
-            var address = item.DataNew?.Address ?? item.Address;
-            var display = item.DataNew?.Display ?? item.Display;
-
-            // Filter if ward/city is passed
-            if (!string.IsNullOrEmpty(normWard))
+            if (items == null)
             {
-                var normAddr = RemoveVietnameseAccents(address);
-                if (!normAddr.Contains(normWard)) continue;
+                return new Response.AutocompleteEnvelope { Results = [] };
             }
 
-            if (!string.IsNullOrEmpty(normCity))
+            var results = new List<Response.AutocompleteResult>();
+            var normWard = RemoveAdministrativePrefix(query.Ward);
+            var normCity = RemoveAdministrativePrefix(query.City);
+
+            foreach (var item in items)
             {
-                var normAddr = RemoveVietnameseAccents(address);
-                if (!normAddr.Contains(normCity)) continue;
+                var refId = item.DataNew?.RefId ?? item.RefId;
+                var name = item.DataNew?.Name ?? item.Name;
+                var address = item.DataNew?.Address ?? item.Address;
+                var display = item.DataNew?.Display ?? item.Display;
+
+                if (!string.IsNullOrEmpty(normWard))
+                {
+                    var normAddr = RemoveVietnameseAccents(address);
+                    if (!normAddr.Contains(normWard)) continue;
+                }
+
+                if (!string.IsNullOrEmpty(normCity))
+                {
+                    var normAddr = RemoveVietnameseAccents(address);
+                    if (!normAddr.Contains(normCity)) continue;
+                }
+
+                results.Add(new Response.AutocompleteResult
+                {
+                    RefId = refId,
+                    Name = name,
+                    Address = address,
+                    Display = display
+                });
+
+                if (results.Count >= 8) break;
             }
 
-            results.Add(new Response.AutocompleteResult
-            {
-                RefId = refId,
-                Name = name,
-                Address = address,
-                Display = display
-            });
-
-            // Limit to 8 items max
-            if (results.Count >= 8) break;
+            return new Response.AutocompleteEnvelope { Results = results };
         }
-
-        return results;
+        catch (Exception)
+        {
+            return new Response.AutocompleteEnvelope { StatusCode = 502, Reason = "upstream-unreachable" };
+        }
     }
 
-    public async Task<Response.PlaceResult?> GetPlaceDetail(string refId)
+    public async Task<Response.PlaceEnvelope> GetPlaceDetail(string refId)
     {
-        var configs = await ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "vietmap");
-        var apiKey = configs.GetValue("vietmap.api_key", _vietMapOption.ApiKey) ?? string.Empty;
-        var baseUrl = configs.GetValue("vietmap.base_url", _vietMapOption.BaseUrl) ?? _vietMapOption.BaseUrl ?? "https://maps.vietmap.vn/api";
-
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw new VietMapException("server-not-configured", 503, "VietMap API Key is not configured.");
-        }
-
-        if (string.IsNullOrWhiteSpace(refId))
-        {
-            throw new VietMapException("invalid-query", 400, "RefId cannot be empty.");
-        }
-
-        var url = $"{baseUrl.TrimEnd('/')}/place/v4?apikey={Uri.EscapeDataString(apiKey)}&refid={Uri.EscapeDataString(refId)}";
-
-        Response.VietMapPlaceResponse? placeResponse;
         try
         {
+            var apiKey = _vietMapOption.ApiKey;
+            var baseUrl = _vietMapOption.BaseUrl ?? "https://maps.vietmap.vn/api";
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                return new Response.PlaceEnvelope { StatusCode = 503, Reason = "server-not-configured" };
+            }
+
+            if (string.IsNullOrWhiteSpace(refId))
+            {
+                return new Response.PlaceEnvelope { StatusCode = 400, Reason = "invalid-query" };
+            }
+
+            var url = $"{baseUrl.TrimEnd('/')}/place/v4?apikey={Uri.EscapeDataString(apiKey)}&refid={Uri.EscapeDataString(refId)}";
+
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                throw new VietMapException("place-upstream-error", 502, $"VietMap returned {response.StatusCode}.");
+                return new Response.PlaceEnvelope { StatusCode = 502, Reason = "place-upstream-error" };
             }
 
-            placeResponse = await response.Content.ReadFromJsonAsync<Response.VietMapPlaceResponse>();
-        }
-        catch (VietMapException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new VietMapException("upstream-unreachable", 502, $"Failed to connect to VietMap: {ex.Message}");
-        }
+            var placeResponse = await response.Content.ReadFromJsonAsync<Response.VietMapPlaceResponse>();
+            if (placeResponse == null || placeResponse.Lat == 0 || placeResponse.Lng == 0)
+            {
+                return new Response.PlaceEnvelope { Result = null };
+            }
 
-        if (placeResponse == null || placeResponse.Lat == 0 || placeResponse.Lng == 0)
-        {
-            return null;
+            return new Response.PlaceEnvelope
+            {
+                Result = new Response.PlaceResult
+                {
+                    Latitude = placeResponse.Lat,
+                    Longitude = placeResponse.Lng,
+                    MapId = refId,
+                    Display = placeResponse.Display ?? string.Empty
+                }
+            };
         }
-
-        return new Response.PlaceResult
+        catch (Exception)
         {
-            Latitude = placeResponse.Lat,
-            Longitude = placeResponse.Lng,
-            MapId = refId,
-            Display = placeResponse.Display ?? string.Empty
-        };
+            return new Response.PlaceEnvelope { StatusCode = 502, Reason = "upstream-unreachable" };
+        }
     }
 
     public static string RemoveVietnameseAccents(string? text)

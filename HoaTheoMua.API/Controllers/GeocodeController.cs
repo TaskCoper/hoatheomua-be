@@ -18,14 +18,14 @@ public class GeocodeController : ControllerBase
     [HttpGet("autocomplete")]
     public async Task<IActionResult> Autocomplete([FromQuery] Request.AutocompleteQuery query)
     {
-        var results = await _geocodeService.Autocomplete(query);
-        return Ok(new { results });
+        var res = await _geocodeService.Autocomplete(query);
+        return StatusCode(res.StatusCode, res);
     }
 
     [HttpGet("place")]
     public async Task<IActionResult> GetPlace([FromQuery] string refId)
     {
-        var result = await _geocodeService.GetPlaceDetail(refId);
-        return Ok(new { result });
+        var res = await _geocodeService.GetPlaceDetail(refId);
+        return StatusCode(res.StatusCode, res);
     }
 }
