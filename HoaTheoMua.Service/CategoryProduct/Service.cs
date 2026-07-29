@@ -559,7 +559,19 @@ public class Service : IService
         if (pages.Count > 0)
         {
             var categoryById = categoryProducts.ToDictionary(category => category.CategoryId);
+            var categoriesByParent = categoryProducts.ToLookup(category => category.ParentId);
             var includedCategoryIds = new HashSet<Guid>();
+
+            void AddDescendants(Guid parentId)
+            {
+                foreach (var child in categoriesByParent[parentId])
+                {
+                    if (includedCategoryIds.Add(child.CategoryId))
+                    {
+                        AddDescendants(child.CategoryId);
+                    }
+                }
+            }
 
             foreach (var category in categoryProducts)
             {
@@ -573,12 +585,25 @@ public class Service : IService
                     continue;
                 }
 
+                // Add self and descendants
+                if (includedCategoryIds.Add(category.CategoryId))
+                {
+                    AddDescendants(category.CategoryId);
+                }
+
+                // Add ancestors
                 var currentCategory = category;
-                while (includedCategoryIds.Add(currentCategory.CategoryId) &&
-                       currentCategory.ParentId != null &&
+                while (currentCategory.ParentId != null &&
                        categoryById.TryGetValue(currentCategory.ParentId.Value, out var parentCategory))
                 {
-                    currentCategory = parentCategory;
+                    if (includedCategoryIds.Add(parentCategory.CategoryId))
+                    {
+                        currentCategory = parentCategory;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
 

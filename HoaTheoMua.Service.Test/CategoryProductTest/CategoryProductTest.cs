@@ -943,4 +943,69 @@ public class CategoryProductTest
         var ex4 = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCateProduct(category.Id, reqUpdate2));
         Assert.Equal("CATEGORY_DESCRIPTION_MUTUALLY_REQUIRED", ex4.Message);
     }
+
+    [Fact]
+    public async Task GetCategoryWithChild_NoPageFilter_ReturnsAllCategoriesWithChildren()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var root = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Root", Name_En = "Root", Description = "Root", Description_En = "Root", Type = CategoryProductType.Fix, IsActive = true };
+        var child = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Child", Name_En = "Child", Description = "Child", Description_En = "Child", Type = CategoryProductType.Fix, ParentCategoryProductId = root.Id, IsActive = true };
+        var grandchild = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Grandchild", Name_En = "Grandchild", Description = "Grandchild", Description_En = "Grandchild", Type = CategoryProductType.Fix, ParentCategoryProductId = child.Id, IsActive = true };
+
+        await dbContext.CategoryProducts.AddRangeAsync(root, child, grandchild);
+        await dbContext.SaveChangesAsync();
+
+        var request = new Request.GetCategoryProductWithChild { page = null };
+
+        // Act
+        var result = await service.GetCategoryWithChild(request);
+
+        // Assert
+        Assert.NotNull(result);
+        var rootResponse = Assert.Single(result);
+        Assert.Equal("Root", rootResponse.Name);
+        var childResponse = Assert.Single(rootResponse.Children);
+        Assert.Equal("Child", childResponse.Name);
+        var grandchildResponse = Assert.Single(childResponse.Children);
+        Assert.Equal("Grandchild", grandchildResponse.Name);
+    }
+
+    [Fact]
+    public async Task GetCategoryWithChild_WithPageFilter_ReturnsMatchedCategoryWithAncestorsAndDescendants()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        // Cây: Root -> Child -> Grandchild.
+        // Chỉ gán page="HOME" cho Child. Root và Grandchild có page rỗng.
+        var root = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Root", Name_En = "Root", Description = "Root", Description_En = "Root", Type = CategoryProductType.Fix, IsActive = true, Page = new List<string>() };
+        var child = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Child", Name_En = "Child", Description = "Child", Description_En = "Child", Type = CategoryProductType.Fix, ParentCategoryProductId = root.Id, IsActive = true, Page = new List<string> { "HOME" } };
+        var grandchild = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Grandchild", Name_En = "Grandchild", Description = "Grandchild", Description_En = "Grandchild", Type = CategoryProductType.Fix, ParentCategoryProductId = child.Id, IsActive = true, Page = new List<string>() };
+
+        // Một category khác không liên quan, có page="OTHER"
+        var other = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Other", Name_En = "Other", Description = "Other", Description_En = "Other", Type = CategoryProductType.Fix, IsActive = true, Page = new List<string> { "OTHER" } };
+
+        await dbContext.CategoryProducts.AddRangeAsync(root, child, grandchild, other);
+        await dbContext.SaveChangesAsync();
+
+        var request = new Request.GetCategoryProductWithChild { page = new List<string> { "HOME" } };
+
+        // Act
+        var result = await service.GetCategoryWithChild(request);
+
+        // Assert
+        Assert.NotNull(result);
+        // "other" không khớp nên không xuất hiện.
+        // "child" khớp nên "root" (cha) và "grandchild" (con) cũng phải xuất hiện.
+        var rootResponse = Assert.Single(result);
+        Assert.Equal("Root", rootResponse.Name);
+        var childResponse = Assert.Single(rootResponse.Children);
+        Assert.Equal("Child", childResponse.Name);
+        var grandchildResponse = Assert.Single(childResponse.Children);
+        Assert.Equal("Grandchild", grandchildResponse.Name);
+    }
 }
