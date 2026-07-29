@@ -662,7 +662,7 @@ public class Service : IService
         }
 
         order.TrackNumber = request.TrackingNumber ?? "";
-        order.AhahaMoveTrackingUrl = request.TrackingNumber ?? "";
+        order.AhahaMoveTrackingUrl = request.AhaMoveTrackingUrl ?? "";
         
         _dbContext.Orders.Update(order);
         await _dbContext.SaveChangesAsync();
