@@ -219,7 +219,7 @@ public class Service : IService
             .ThenInclude(cpd => cpd.CategoryProduct)
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted && x.ParentProductId == null);
+        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -316,7 +316,7 @@ public class Service : IService
             .ThenInclude(cpd => cpd.CategoryProduct)
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted && x.ParentProductId == null);
+        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -590,7 +590,7 @@ public class Service : IService
                     x.IsPin &&
                     !x.CategoryProduct.IsDeleted &&
                     !x.Product.IsDeleted &&
-                    x.Product.ParentProductId == null);
+                    (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty));
 
             if (categoryProductDetail == null)
             {
@@ -606,7 +606,7 @@ public class Service : IService
                                                                                     x.Id == id &&
                                                                                     !x.IsDeleted &&
                                                                                     x.IsPin &&
-                                                                                    x.ParentProductId == null);
+                                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
             if (product == null)
             {
@@ -643,7 +643,7 @@ public class Service : IService
         var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
                                                                     x.Id == request.ProductId &&
                                                                     !x.IsDeleted &&
-                                                                    x.ParentProductId == null);
+                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
         if (product == null)
         {
@@ -659,7 +659,7 @@ public class Service : IService
                         !x.IsDeleted &&
                         x.CategoryProductId == request.CategoryId.Value &&
                         x.IsPin &&
-                        x.Product.ParentProductId == null);
+                        (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty));
 
                 if (pinnedCategoryProductCount >= 32)
                 {
@@ -672,7 +672,7 @@ public class Service : IService
                     .CountAsync(x =>
                         !x.IsDeleted &&
                         x.IsPin &&
-                        x.ParentProductId == null);
+                        (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
                 if (pinnedProductCount >= 32)
                 {
@@ -733,7 +733,7 @@ public class Service : IService
                     x.CategoryProductId == request.CategoryId.Value &&
                     !x.CategoryProduct.IsDeleted &&
                     !x.Product.IsDeleted &&
-                    x.Product.ParentProductId == null)
+                    (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty))
                 .OrderBy(x => x.Position) //
                 .ThenBy(x => x.Product.ProductName);
 
