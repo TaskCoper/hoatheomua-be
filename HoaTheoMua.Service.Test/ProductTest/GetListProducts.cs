@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using MockQueryable.Moq;
 using Moq;
 using Moq.Protected;
+using HoaTheoMua.Service.Test.TestSupport;
 using Xunit;
 using ProductServiceImpl = HoaTheoMua.Service.Product.Service;
 using ProductRequest = HoaTheoMua.Service.Product.Request;
@@ -54,7 +55,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
                 CreateMockDbContext(),
                 mockHttpContext.Object,
                 httpClient,
-                mockConfig.Object);
+                mockConfig.Object,
+                MapperFactory.Create());
         }
 
         private static HttpResponseMessage JsonResponse(string rawJson, HttpStatusCode statusCode = HttpStatusCode.OK)

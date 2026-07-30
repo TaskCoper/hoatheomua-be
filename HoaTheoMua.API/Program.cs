@@ -73,6 +73,7 @@ builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImpor
 
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
+builder.Services.AddAutoMapper(x => x.AddMaps(AssemblyReference.Assembly));
 
 builder.Services.AddCors(options =>
 {

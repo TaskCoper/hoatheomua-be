@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AutoMapper;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
@@ -17,17 +18,19 @@ public class Service : IService
     private readonly IHttpContextAccessor _httpContext;
     private readonly HttpClient _httpClient;
     private readonly NhanhVnOption _nhanhVnOption;
+    private readonly IMapper _mapper;
 
     public Service(AppDbContext dbContext,
         IHttpContextAccessor httpContext,
         HttpClient httpClient,
-        IConfiguration configuration)
+        IConfiguration configuration, IMapper  mapper)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
         _httpClient = httpClient;
         _nhanhVnOption = new NhanhVnOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
+        _mapper = mapper;
     }
 
     public async Task<NhanhVnProductListResponse.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
@@ -778,6 +781,27 @@ public class Service : IService
 
         return pinnedProducts;
     }
+
+    public async Task<string> UpdateProduct(Guid id, Request.UpdateProductRequest request)
+    {
+        var product = await _dbContext.Products
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+
+        if (product == null)
+        {
+            throw new BadRequestException("Product does not exist.");
+        }
+        
+        _mapper.Map(request, product);
+        product.UpdatedAt = DateTimeOffset.UtcNow;
+        
+        _dbContext.Products.Update(product);
+        await _dbContext.SaveChangesAsync();
+
+        return "Cập nhật thành công";
+    }
+    
+    
 }
 
 
