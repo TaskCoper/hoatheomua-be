@@ -226,6 +226,49 @@ public class Service : IService
         throw new BadRequestException("Not support other gateway");
     }
 
+    public async Task<CreateOrderResponse> CreateDefaultOrder()
+    {
+        var request = new Request.CreateOrderRequest
+        {
+            Latitude = 10.820204590328558m,
+            Longitude = 106.7731798123973m,
+            Ward = 0,
+            City = 0,
+            Address = "Khu Dân Cư Cao Cấp An Thiên Lý, Phường Phước Long, Hồ Chí Minh",
+            ShortAddress = "Khu Dân Cư Cao Cấp An Thiên Lý, Phường Phước Long, Hồ Chí Minh",
+            FullName = "Tân Trần",
+            Phone = "0979901550",
+            Remarks = "",
+            OrderTime = 0,
+            Items =
+            [
+                new AhaMoveRequest.Items
+                {
+                    ItemId = 1833667,
+                    Number = 1
+                }
+
+            ],
+            Gateway = null
+        };
+
+        request.TagIds = new List<long>();
+        request.TaxCode = null;
+        request.IdentityNumber = null;
+        request.ReceiptFullName = null;
+        request.ReceiptPhoneNumber = null;
+        request.ReceiptAddress = null;
+        request.ReceiptEmail = null;
+        request.IsExportInvoice = false;
+        request.InvoiceType = null;
+        request.PaymentMethod = Repository.Enum.PaymentMethod.VA;
+        request.Gateway = "BaoKim";
+
+        var result = await CreateOrder(request);
+
+        return result;
+    }
+
     // Fetches the catalog rows for the requested items from Nhanh.vn.
     private async Task<List<NhanhProductData>> FetchNhanhProductsAsync(
         List<AhaMoveRequest.Items> items,
@@ -689,3 +732,4 @@ public class Service : IService
         return "Cập nhật thành công đơn hàng";
     }
 }
+

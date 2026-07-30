@@ -81,4 +81,12 @@ public class ProductController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
+    [HttpPatch("/api/v1/prodcuts/update{id:guid}")]
+    [Authorize (Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetProductPin(Guid id ,[FromBody] Request.UpdateProductRequest request)
+    {
+        var result = await _productService.UpdateProduct(id, request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+    
 }

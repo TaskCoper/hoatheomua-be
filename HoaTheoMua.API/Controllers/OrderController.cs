@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Extentions;
+using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Order;
 using Microsoft.AspNetCore.Authorization;
@@ -31,6 +31,14 @@ public class OrderController : ControllerBase
     {
         var result = await _orderService.CreateOrder(request);
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
+    }
+
+    [HttpPost("/api/v1/orders/default")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> CreateDefaultOrder()
+    {
+        var result = await _orderService.CreateDefaultOrder();
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
     [HttpPatch("/api/v1/orders/{id}/cancel")]
@@ -106,3 +114,4 @@ public class OrderController : ControllerBase
     //     return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     // }
 }
+

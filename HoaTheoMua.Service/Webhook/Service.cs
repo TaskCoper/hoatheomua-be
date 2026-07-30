@@ -633,15 +633,15 @@ public partial class Service : IService
                 IsDocument = 0,
                 HandDelivery = 0
             },
-            ShippingAddress = new ShippingAddress
-            {
-                Name = order.FullName,
-                Mobile = order.Phone,
-                Address = order.Address,
-                CityId = order.City,
-                WardId = order.Ward,
-                LocationVersion = "v2"
-            },
+            // ShippingAddress = new ShippingAddress
+            // {
+            //     Name = order.FullName,
+            //     Mobile = order.Phone,
+            //     Address = order.Address,
+            //     CityId = order.City,
+            //     WardId = order.Ward,
+            //     LocationVersion = "v2"
+            // },
             Products = productNhanhVnRequest,
             Payment = new Payment
             {
