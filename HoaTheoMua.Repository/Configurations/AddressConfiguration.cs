@@ -17,6 +17,8 @@ public class AddressConfiguration : IEntityTypeConfiguration<Address>
         builder.Property(x => x.AddressLine)
             .IsRequired()
             .HasMaxLength(500);
+        builder.Property(x => x.Note)
+            .HasMaxLength(500);
         builder.Property(x => x.Ward)
             .HasMaxLength(100);
         builder.Property(x => x.City)
