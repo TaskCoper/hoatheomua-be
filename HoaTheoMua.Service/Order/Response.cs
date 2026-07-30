@@ -78,6 +78,10 @@ public class Response
     {
         public Guid OrderDetailsId { get; set; }
         public string Name { get; set; } = string.Empty;
+        
+        public Guid? ProductId { get; set; }
+        public string? CoverImage { get; set; }
+        
         public int ItemId { get; set; }
         public int Number { get; set; }
         public decimal Price { get; set; }

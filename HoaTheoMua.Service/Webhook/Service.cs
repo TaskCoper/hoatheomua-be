@@ -409,7 +409,14 @@ public partial class Service : IService
         {
             var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
             var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
-
+            
+            var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
+            
+            if (ahamoveAllowDelivery == false)
+            {
+                return;
+            }
+            
             var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
             
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
