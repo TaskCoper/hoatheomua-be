@@ -433,6 +433,18 @@ public class Service : IService
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefault();
 
+        var nhanhProductIds = _dbContext.OrderDetails
+            .Select(x => x.ItemId.ToString())
+            .Distinct()
+            .ToList();
+
+        var findProduct = await _dbContext.Products
+            .Where(x => !x.IsDeleted
+                        && x.NhanhProductId != null
+                        && nhanhProductIds.Contains(x.NhanhProductId))
+            .Select(x => new { x.Id, x.CoverImage, x.NhanhProductId})
+            .ToDictionaryAsync(x => x.NhanhProductId!);
+        
         var orderDetails = new Response.GetOrderByIdResponse
         {
             OrderId = orders.Id,
@@ -462,18 +474,26 @@ public class Service : IService
             OrderTime = orders.OrderTime,
             CreateAt = orders.CreatedAt,
 
-            Details = orders.OrderDetails.Select(x => new Response.OrderDetailsResponse()
+            Details = orders.OrderDetails.Select(x =>
             {
-                OrderDetailsId = x.Id,
-                Name = x.Name,
-                ItemId = x.ItemId,
-                Number = x.Number,
-                Price = x.Price,
-                Weight = x.Weight,
-                Length = x.Length,
-                Width = x.Width,
-                Height = x.Height,
+                findProduct.TryGetValue(x.ItemId.ToString(), out var product);
+                return new Response.OrderDetailsResponse()
+                {
+                    OrderDetailsId = x.Id,
+                    ProductId = product?.Id,
+                    CoverImage = product?.CoverImage,
+                    Name = x.Name,
+                    ItemId = x.ItemId,
+                    Number = x.Number,
+                    Price = x.Price,
+                    Weight = x.Weight,
+                    Length = x.Length,
+                    Width = x.Width,
+                    Height = x.Height,
+
+                };
             }).ToList(),
+                
 
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
