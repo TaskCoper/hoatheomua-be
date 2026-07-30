@@ -106,6 +106,18 @@ public class Service : IService
         var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
         var depotId = nhanhConfigs.GetValue("nhanhvn.default_depot", DefaultDepotId);
 
+        if (request.OrderTime == 0 && (request.TagIds?.Count ?? 0) == 0)
+        {
+            var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+            var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
+            
+            if (ahamoveAllowDelivery == false)
+            {
+                throw new BadRequestException("Hiện tại không thể giao đơn hàng");
+            }
+
+        }
+        
         var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
 
         // Requested quantity keyed by product id — reused for pricing and order details.
@@ -649,5 +661,24 @@ public class Service : IService
         await _dbContext.SaveChangesAsync();
 
         return "Hủy đơn thành công";
+    }
+
+    public async Task<string> UpdateAhaMoveService(Request.UpdateAhamoveRequest request)
+    {
+        var order = await _dbContext.Orders
+            .FirstOrDefaultAsync(x => !x.IsDeleted && x.Id.ToString() == request.OrderId);
+
+        if (order == null)
+        {
+            throw new BadRequestException("Order not found");
+        }
+
+        order.TrackNumber = request.TrackingNumber ?? "";
+        order.AhahaMoveTrackingUrl = request.AhaMoveTrackingUrl ?? "";
+        
+        _dbContext.Orders.Update(order);
+        await _dbContext.SaveChangesAsync();
+        
+        return "Cập nhật thành công đơn hàng";
     }
 }

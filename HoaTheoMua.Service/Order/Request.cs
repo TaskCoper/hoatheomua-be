@@ -52,5 +52,11 @@ public class Request
         public int? ParentId { get; set; }
     }
 
+    public class UpdateAhamoveRequest
+    {
+        public required string OrderId { get; set; }
+        public string? AhaMoveTrackingUrl { get; set; }
+        public string? TrackingNumber { get; set; }
+    }
 
 }

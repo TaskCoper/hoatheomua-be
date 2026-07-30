@@ -407,6 +407,11 @@ public partial class Service : IService
 
         if (order.OrderTime == 0 && tags.Count == 0)
         {
+            var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+            var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
+
+            var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
+            
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
             {
                 Id = x.Id.ToString(),
@@ -426,13 +431,10 @@ public partial class Service : IService
             }
             ).ToList();
 
-            var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
-            var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
-
             var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
             {
-                OrderTime = order.OrderTime,
-                IdleUntil = order.OrderTime > 0 ? order.OrderTime : 0,
+                OrderTime = delayCallAhamove,
+                IdleUntil = delayCallAhamove,
                 Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
                 {
                     new AhaMoveRequest.AhamoveLocationPoint()
