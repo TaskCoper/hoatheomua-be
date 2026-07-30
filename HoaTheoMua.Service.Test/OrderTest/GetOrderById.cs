@@ -19,6 +19,7 @@ using OrderServiceImpl = HoaTheoMua.Service.Order.Service;
 using ProductService = HoaTheoMua.Service.Product.IService;
 using OrderEntity = HoaTheoMua.Repository.Entity.Order;
 using OrderDetailEntity = HoaTheoMua.Repository.Entity.OrderDetails;
+using ProductEntity = HoaTheoMua.Repository.Entity.Product;
 using TransactionEntity = HoaTheoMua.Repository.Entity.Transaction;
 
 namespace HoaTheoMua.Service.Test.OrderTest
@@ -93,12 +94,21 @@ namespace HoaTheoMua.Service.Test.OrderTest
             };
         }
 
-        private static Mock<AppDbContext> CreateMockDbContext(List<OrderEntity> orders)
+        private static Mock<AppDbContext> CreateMockDbContext(
+            List<OrderEntity> orders,
+            List<ProductEntity>? products = null)
         {
             var mockOrders = orders.BuildMockDbSet();
+            var allOrderDetails = orders
+                .SelectMany(x => x.OrderDetails)
+                .ToList();
+            var mockOrderDetails = allOrderDetails.BuildMockDbSet();
+            var mockProducts = (products ?? new List<ProductEntity>()).BuildMockDbSet();
             var options = new DbContextOptionsBuilder<AppDbContext>().Options;
             var mockDbContext = new Mock<AppDbContext>(options);
             mockDbContext.Setup(x => x.Orders).Returns(mockOrders.Object);
+            mockDbContext.Setup(x => x.OrderDetails).Returns(mockOrderDetails.Object);
+            mockDbContext.Setup(x => x.Products).Returns(mockProducts.Object);
             return mockDbContext;
         }
 
@@ -141,12 +151,23 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 new OrderDetailEntity { Id = Guid.NewGuid(), Name = "Product A", ItemId = 101, Number = 2, Price = 50000m, Height = 10, Weight = 1, Length = 10, Width = 10 }
             };
+            var productId = Guid.NewGuid();
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity
+                {
+                    Id = productId,
+                    NhanhProductId = "101",
+                    CoverImage = "https://cdn.test/product-a.jpg",
+                    IsDeleted = false
+                }
+            };
             var transactions = new List<TransactionEntity>
             {
                 CreateTransaction(orderId, 100000m, "TX-001", "Sepay", DateTime.UtcNow, DateTime.UtcNow)
             };
             var order = CreateOrder(id: orderId, userId: TestUserId, details: details, transactions: transactions);
-            var dbContext = CreateMockDbContext(new List<OrderEntity> { order }).Object;
+            var dbContext = CreateMockDbContext(new List<OrderEntity> { order }, products).Object;
             var currentUser = CreateMockCurrentUserService(TestUserId);
             var service = CreateService(dbContext, currentUser);
 
@@ -163,6 +184,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal("Test Remark", orderResult.Remark);
             Assert.Equal(1782234000, orderResult.OrderTime);
             Assert.Single(orderResult.Details);
+            Assert.Equal(productId, orderResult.Details[0].ProductId);
+            Assert.Equal("https://cdn.test/product-a.jpg", orderResult.Details[0].CoverImage);
             Assert.Equal(101, orderResult.Details[0].ItemId);
             Assert.NotNull(orderResult.Transaction);
             Assert.Equal(100000m, orderResult.Transaction.TransferAmount);
