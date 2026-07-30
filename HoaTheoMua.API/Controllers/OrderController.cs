@@ -33,13 +33,13 @@ public class OrderController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
 
-    [HttpPost("/api/v1/orders/default")]
-    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
-    public async Task<IActionResult> CreateDefaultOrder()
-    {
-        var result = await _orderService.CreateDefaultOrder();
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
-    }
+    // [HttpPost("/api/v1/orders/default")]
+    // [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    // public async Task<IActionResult> CreateDefaultOrder()
+    // {
+    //     var result = await _orderService.CreateDefaultOrder();
+    //     return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    // }
     
     [HttpPatch("/api/v1/orders/{id}/cancel")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]

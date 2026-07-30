@@ -12,7 +12,7 @@ public interface IService
     //--------------------
     Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize);
     Task<CreateOrderResponse> CreateOrder(Request.CreateOrderRequest request);
-    Task<CreateOrderResponse> CreateDefaultOrder();
+    // Task<CreateOrderResponse> CreateDefaultOrder();
     Task<BaseResponse> GetOrderById (Guid id);
     Task<string> GetStatusOrder(Guid id);
     Task<OrderListRootResponse> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request);
