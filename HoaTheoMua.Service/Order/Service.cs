@@ -765,7 +765,8 @@ public class Service : IService
             orders = orders.Where(x =>
                 x.TrackNumber.ToLower().Contains(normalizedSearch) ||
                 (x.AhahaMoveOrderId != null && x.AhahaMoveOrderId.ToLower().Contains(normalizedSearch)) ||
-                (nhanhOrderId != null && x.NhanhOrderId == nhanhOrderId));
+                (nhanhOrderId != null && x.NhanhOrderId == nhanhOrderId) ||
+                (x.PaymentMethod != null && x.PaymentMethod.ToString().Contains(normalizedSearch)));
         }
 
         var totalCount = await orders.CountAsync();

@@ -313,6 +313,8 @@ public class Service: IService
             product.InternalCategoryCode = item.InternalCategory?.Code;
             product.NhanhTypeId = item.Type?.Id;
             product.ProductType = item.Type?.Name;
+            product.NhanhBrandId = item.BrandId;
+
 
             // Giá
             if (item.Prices != null)
@@ -726,35 +728,44 @@ public class Service: IService
         {
             return $"Sản phẩm với id: {nhanhProductId} không tồn tại trong hệ thống";
         }
+
         
         product.UpdatedAt = DateTimeOffset.UtcNow;
-        product.ParentProductId = item.ParentId != 0 ? item.ParentId.ToString() : null;
+        product.ParentProductId = item.ParentId > 0 ? item.ParentId.ToString() : null;
         product.ProductCode = item.Code;
         product.Barcode = item.Barcode;
         product.ProductName = item.Name;
         product.OtherName = item.OtherName;
         product.Status = item.Status?.ToString();
-    
+
+        
         // Danh mục
+        product.NhanhCategoryId = item.CategoryId;
         product.CategoryCode = item.Category?.Code;
         product.CategoryName = item.Category?.Name;
         product.InternalCategoryCode = item.InternalCategory?.Code;
+        product.NhanhTypeId = item.Type?.Id;
         product.ProductType = item.Type?.Name;
-    
+        product.NhanhBrandId = item.BrandId;
         // Giá
         if (item.Prices != null)
         {
             product.Price = (decimal?)item.Prices.Retail;
+            product.PriceWithVat = (decimal?)item.Prices.RetailVat;
             product.ImportPrice = (decimal?)item.Prices.Import;
+            product.ImportPriceWithVat = (decimal?)item.Prices.ImportVat;
             product.OldPrice = (decimal?)item.Prices.Old;
             product.WholesalePrice = (decimal?)item.Prices.Wholesale;
             product.CostPrice = (decimal?)item.Prices.AvgCost;
         }
         product.Vat = item.Vat;
+        product.SaleVatMode = item.PriceVatMode?.ToString();
+        product.ImportVatMode = item.ImportPriceVatMode?.ToString();
     
         // Ảnh
         product.CoverImage = item.Images?.Avatar;
-    
+        product.OtherImages = item.Images?.Others;
+        
         // Bảo hành
         NhanhWarrantyDto? warranty = null;
         if (item.Warranty.HasValue && item.Warranty.Value.ValueKind == JsonValueKind.Object)
@@ -828,7 +839,11 @@ public class Service: IService
         {
             product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
         }
-    
+        
+        if (item.UpdatedAt is > 0)
+        {
+            product.NhanhUpdatedAt = DateTimeOffset.FromUnixTimeSeconds(item.UpdatedAt.Value);
+        }
         await _appDbContext.SaveChangesAsync();
     
         return "Cập nhật thành công";
@@ -1060,6 +1075,4 @@ public class Service: IService
                     UpdatedAt = detail.UpdatedAt
                 }).ToList()
         };
-
-    
 }
