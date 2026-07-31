@@ -32,6 +32,45 @@ public class Response
         public DateTimeOffset? UpdateAt { get; set; }
     }
 
+    public class GetOrderAdminResponse
+    {
+        public decimal Latitude { get; set; }
+        public decimal Longitude { get; set; }
+        public required int Ward { get; set; }
+        public required int City { get; set; }
+        public required string Address { get; set; }
+        public required string ShortAddress { get; set; }
+        public required string FullName { get; set; }
+        public required string Phone { get; set; }
+        public required string Remarks { get; set; }
+        public required string Status { get; set; }
+        public required string TrackNumber { get; set; }
+        public int? NhanhOrderId { get; set; }
+        public string? NhanhTrackingUrl { get; set; }
+        public string? AhahaMoveOrderId { get; set; }
+        public string? AhahaMoveTrackingUrl { get; set; }
+        public string? PaymentUrl { get; set; }
+        public string? QrUrl { get; set; }
+        public decimal ShippingFee { get; set; }
+        public decimal ProductFee { get; set; }
+        public decimal TotalFee { get; set; }
+        public required long OrderTime { get; set; } = 0;
+        public List<long>? TagIds { get; set; }
+        public string? TaxCode { get; set; }
+        public string? IdentityNumber { get; set; }
+        public string? ReceiptFullName { get; set; }
+        public string? ReceiptPhoneNumber { get; set; }
+        public string? ReceiptAddress { get; set; }
+        public string? ReceiptEmail { get; set; }
+        public bool? IsExportInvoice { get; set; }
+        public decimal? Vat { get; set; } = 1.08m;
+        public InvoiceType? InvoiceType { get; set; }
+        public PaymentMethod PaymentMethod { get; set; }
+        public DateTimeOffset CreateAt { get; set; }
+        public DateTimeOffset? UpdateAt { get; set; }
+        public Guid UserId { get; set; }
+    }
+
     public class GetOrderByIdResponse
     {
         public Guid OrderId { get; set; }

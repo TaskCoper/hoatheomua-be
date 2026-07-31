@@ -82,7 +82,7 @@ public class OrderController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
-    [HttpPost("/api/v1/orders/update-ahamove")]
+    [HttpPatch("/api/v1/orders/update-ahamove")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UpdateAhaMoveService([FromBody] Request.UpdateAhamoveRequest request)
     {
@@ -90,7 +90,14 @@ public class OrderController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
-    
+    [HttpGet("/api/v1/orders/admin")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+
+    public async Task<IActionResult> GetOrderByAdmin(int pageIndex, int pageSize)
+    {
+        var result = await _orderService.GetOrderByAdmin(pageIndex, pageSize);
+        return Ok(result);
+    }
     
     // [HttpPost("/api/v1/orders/taxcode")]
     // [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]

@@ -723,13 +723,82 @@ public class Service : IService
             throw new BadRequestException("Order not found");
         }
 
-        order.TrackNumber = request.TrackingNumber ?? "";
-        order.AhahaMoveTrackingUrl = request.AhaMoveTrackingUrl ?? "";
+        if (request.TrackingNumber != null)
+        {
+            order.TrackNumber = request.TrackingNumber;
+        }
+
+        if (request.AhaMoveTrackingUrl != null)
+        {
+            order.AhahaMoveTrackingUrl = request.AhaMoveTrackingUrl;
+        }
+
+        if (request.ShippingFee != null)
+        {
+            order.ShippingFee = request.ShippingFee.Value;
+        }
         
         _dbContext.Orders.Update(order);
         await _dbContext.SaveChangesAsync();
         
         return "Cập nhật thành công đơn hàng";
+    }
+    
+    public async Task<BasePaginationResponse> GetOrderByAdmin(int pageIndex, int pageSize)
+    {
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        
+        var orders = _dbContext.Orders
+            .Where(x => !x.IsDeleted);
+        
+        var totalCount = await orders.CountAsync();
+
+        var items = orders
+            .OrderByDescending(o => o.CreatedAt)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize);
+
+        var result = items.Select(x => new Response.GetOrderAdminResponse
+        {
+            UserId = x.UserId,
+            Latitude = x.Latitude,
+            Longitude = x.Longitude,
+            Ward = x.Ward,
+            City = x.City,
+            Address = x.Address,
+            ShortAddress = x.ShortAddress,
+            FullName = x.FullName,
+            Phone = x.Phone,
+            Remarks = x.Remarks,
+            Status = x.Status,
+            TrackNumber = x.TrackNumber,
+            NhanhOrderId = x.NhanhOrderId,
+            NhanhTrackingUrl = x.NhanhTrackingUrl,
+            AhahaMoveOrderId = x.AhahaMoveOrderId,
+            AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl,
+            PaymentUrl = x.PaymentUrl,
+            QrUrl = x.QrUrl,
+            ShippingFee = x.ShippingFee,
+            ProductFee = x.ProductFee,
+            TotalFee = x.TotalFee,
+            OrderTime = x.OrderTime,
+            TagIds = x.TagIds,
+            TaxCode = x.TaxCode,
+            IdentityNumber = x.IdentityNumber,
+            ReceiptFullName = x.ReceiptFullName,
+            ReceiptPhoneNumber = x.ReceiptPhoneNumber,
+            ReceiptAddress = x.ReceiptAddress,
+            ReceiptEmail = x.ReceiptEmail,
+            IsExportInvoice = x.IsExportInvoice,
+            Vat = x.Vat,
+            InvoiceType = x.InvoiceType,
+            PaymentMethod = x.PaymentMethod,
+            CreateAt = x.CreatedAt,
+            UpdateAt = x.UpdatedAt,
+        }).ToList();
+   
+        return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
 }
 
