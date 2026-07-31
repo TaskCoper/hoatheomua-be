@@ -413,14 +413,13 @@ public partial class Service : IService
         // Mốc unix (giây) Ahamove sẽ tới lấy hàng với đơn giao ngay = hiện tại + ahamove.idle_time.
         // Khai báo ngoài nhánh vì còn dùng lại cho DeliveryTime gửi sang NhanhVn ở dưới.
         long delayTime = 0;
-
+        var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
+        delayTime = delayCallAhamove > 0
+            ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
+            : 0L;
+        
         if (order.OrderTime == 0 && tags.Count == 0 && ahamoveAllowDelivery == true)
         {
-
-            var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
-            delayTime = delayCallAhamove > 0
-                ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
-                : 0L;
             
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
             {
@@ -611,9 +610,9 @@ public partial class Service : IService
                 DeliveryHour = "",
                 DeliveryMinute = "",
                 // DeliveryTime = (order.OrderTime == 0) ? "" :  "19h",
-                DeliveryTime = delayTime > 0
-                    ? ConvertInstantTimeDelivery(delayTime)
-                    : await ConvertTimeDelivery(order),
+                DeliveryTime = tags.Count > 0
+                    ? await ConvertTimeDelivery(order)
+                    : ConvertInstantTimeDelivery(delayTime),
                 CarrierAccountId = 0,
                 CarrierShopId = "",
                 DeclaredValue = null,
