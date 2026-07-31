@@ -744,14 +744,30 @@ public class Service : IService
         return "Cập nhật thành công đơn hàng";
     }
     
-    public async Task<BasePaginationResponse> GetOrderByAdmin(int pageIndex, int pageSize)
+    public async Task<BasePaginationResponse> GetOrderByAdmin(string? search, int pageIndex, int pageSize)
     {
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
-        
+
         var orders = _dbContext.Orders
             .Where(x => !x.IsDeleted);
-        
+
+        var normalizedSearch = search?.Trim().ToLower();
+
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            // NhanhOrderId là int? nên chỉ khớp chính xác sau khi parse được số;
+            // TrackNumber và AhahaMoveOrderId là chuỗi nên cho khớp một phần.
+            var nhanhOrderId = int.TryParse(normalizedSearch, out var parsedNhanhOrderId)
+                ? parsedNhanhOrderId
+                : (int?)null;
+
+            orders = orders.Where(x =>
+                x.TrackNumber.ToLower().Contains(normalizedSearch) ||
+                (x.AhahaMoveOrderId != null && x.AhahaMoveOrderId.ToLower().Contains(normalizedSearch)) ||
+                (nhanhOrderId != null && x.NhanhOrderId == nhanhOrderId));
+        }
+
         var totalCount = await orders.CountAsync();
 
         var items = orders
