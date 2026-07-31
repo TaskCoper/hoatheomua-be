@@ -404,18 +404,14 @@ public partial class Service : IService
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
             ? tags.Append(vatTagId).ToList()
             : tags;
-
-        if (order.OrderTime == 0 && tags.Count == 0)
+        
+        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        //var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
+            
+        var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
+        
+        if (order.OrderTime == 0 && tags.Count == 0 && ahamoveAllowDelivery == true)
         {
-            var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
-            var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
-            
-            var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
-            
-            if (ahamoveAllowDelivery == false)
-            {
-                return;
-            }
             
             var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
             var delayTime = delayCallAhamove > 0
@@ -570,6 +566,8 @@ public partial class Service : IService
                 SaleName = "",
                 Description = order.Remarks,
                 PrivateDescription = privateDescription,
+                //nếu admin tắt tính năng giao hàng nhanh thì đã xác nhận : ahamoveAllowDelivery == false
+                //ngược lại tức là cho phép giao hàng nhanh thì 56: đã xác nhận là đúng rồi
                 Status = (order.OrderTime == 0 && tags.Count == 0) ? 56 : 54,
                 TagIds = tagIds,
                 TechnicalStaffId = 0,
