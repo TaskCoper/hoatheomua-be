@@ -418,6 +418,9 @@ public partial class Service : IService
             }
             
             var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
+            var delayTime = delayCallAhamove > 0
+                ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
+                : 0L;
             
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
             {
@@ -440,8 +443,8 @@ public partial class Service : IService
 
             var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
             {
-                OrderTime = delayCallAhamove,
-                IdleUntil = delayCallAhamove,
+                OrderTime = delayTime,
+                IdleUntil = delayTime,
                 Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
                 {
                     new AhaMoveRequest.AhamoveLocationPoint()
@@ -567,7 +570,7 @@ public partial class Service : IService
                 SaleName = "",
                 Description = order.Remarks,
                 PrivateDescription = privateDescription,
-                Status = 54,
+                Status = (order.OrderTime == 0 && tags.Count == 0) ? 56 : 54,
                 TagIds = tagIds,
                 TechnicalStaffId = 0,
                 PromotionId = ""
