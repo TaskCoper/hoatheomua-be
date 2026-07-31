@@ -1321,6 +1321,12 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("Length")
                         .HasColumnType("numeric");
 
+                    b.Property<int?>("NhanhBrandId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("NhanhCategoryId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset?>("NhanhCreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1328,12 +1334,21 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int?>("NhanhTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("NhanhUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<decimal?>("OldPrice")
                         .HasColumnType("numeric");
 
                     b.Property<string>("Origin")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<List<string>>("OtherImages")
+                        .HasColumnType("text[]");
 
                     b.Property<string>("OtherName")
                         .HasMaxLength(500)
