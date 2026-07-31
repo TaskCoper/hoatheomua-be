@@ -93,9 +93,9 @@ public class OrderController : ControllerBase
     [HttpGet("/api/v1/orders/admin")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
 
-    public async Task<IActionResult> GetOrderByAdmin(int pageIndex, int pageSize)
+    public async Task<IActionResult> GetOrderByAdmin([FromQuery] string? search, int pageIndex, int pageSize)
     {
-        var result = await _orderService.GetOrderByAdmin(pageIndex, pageSize);
+        var result = await _orderService.GetOrderByAdmin(search, pageIndex, pageSize);
         return Ok(result);
     }
     
