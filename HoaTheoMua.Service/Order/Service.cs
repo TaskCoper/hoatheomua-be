@@ -777,6 +777,7 @@ public class Service : IService
 
         var result = items.Select(x => new Response.GetOrderAdminResponse
         {
+            OrderId = x.Id,
             UserId = x.UserId,
             Latitude = x.Latitude,
             Longitude = x.Longitude,

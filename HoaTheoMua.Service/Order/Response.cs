@@ -34,6 +34,7 @@ public class Response
 
     public class GetOrderAdminResponse
     {
+        public  Guid OrderId { get; set; }
         public decimal Latitude { get; set; }
         public decimal Longitude { get; set; }
         public required int Ward { get; set; }
