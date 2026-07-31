@@ -605,7 +605,7 @@ public partial class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m, // Hậu tố 'm' biểu thị kiểu decimal
-                DeliveryDate = (order.OrderTime > 0) ? vnDt.ToString("yyyy-MM-dd") : "",
+                DeliveryDate = (order.OrderTime > 0) ? vnDt.ToString("yyyy-MM-dd") : ConvertInstantDateDelivery(delayTime) ,
                 // DeliveryDate =  "2026-07-05",
                 DeliveryHour = "",
                 DeliveryMinute = "",
@@ -783,6 +783,19 @@ public partial class Service : IService
             .FromUnixTimeSeconds(scheduledUnixSeconds)
             .ToOffset(TimeSpan.FromHours(7))
             .ToString("HH:mm:ss");
+    }
+    
+    private static string ConvertInstantDateDelivery(long scheduledUnixSeconds)
+    {
+        if (scheduledUnixSeconds <= 0)
+        {
+            return string.Empty;
+        }
+
+        return DateTimeOffset
+            .FromUnixTimeSeconds(scheduledUnixSeconds)
+            .ToOffset(TimeSpan.FromHours(7))
+            .ToString("yyyy-MM-dd");
     }
 
 }
