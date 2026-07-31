@@ -404,21 +404,21 @@ public partial class Service : IService
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
             ? tags.Append(vatTagId).ToList()
             : tags;
+        
+        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        //var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
+            
+        var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
+        
+        // Mốc unix (giây) Ahamove sẽ tới lấy hàng với đơn giao ngay = hiện tại + ahamove.idle_time.
+        // Khai báo ngoài nhánh vì còn dùng lại cho DeliveryTime gửi sang NhanhVn ở dưới.
+        long delayTime = 0;
 
-        if (order.OrderTime == 0 && tags.Count == 0)
+        if (order.OrderTime == 0 && tags.Count == 0 && ahamoveAllowDelivery == true)
         {
-            var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
-            var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
-            
-            var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
-            
-            if (ahamoveAllowDelivery == false)
-            {
-                return;
-            }
-            
+
             var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
-            var delayTime = delayCallAhamove > 0
+            delayTime = delayCallAhamove > 0
                 ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
                 : 0L;
             
@@ -570,6 +570,8 @@ public partial class Service : IService
                 SaleName = "",
                 Description = order.Remarks,
                 PrivateDescription = privateDescription,
+                //nếu admin tắt tính năng giao hàng nhanh thì đã xác nhận : ahamoveAllowDelivery == false
+                //ngược lại tức là cho phép giao hàng nhanh thì 56: đã xác nhận là đúng rồi
                 Status = (order.OrderTime == 0 && tags.Count == 0) ? 56 : 54,
                 TagIds = tagIds,
                 TechnicalStaffId = 0,
@@ -609,7 +611,9 @@ public partial class Service : IService
                 DeliveryHour = "",
                 DeliveryMinute = "",
                 // DeliveryTime = (order.OrderTime == 0) ? "" :  "19h",
-                DeliveryTime = await ConvertTimeDelivery(order),
+                DeliveryTime = delayTime > 0
+                    ? ConvertInstantTimeDelivery(delayTime)
+                    : await ConvertTimeDelivery(order),
                 CarrierAccountId = 0,
                 CarrierShopId = "",
                 DeclaredValue = null,
@@ -764,6 +768,22 @@ public partial class Service : IService
         }
 
         return $"{time:D2}:00:00";
+    }
+
+    // Đơn giao ngay không có tag nên ConvertTimeDelivery luôn trả rỗng. Với các đơn này, giờ giao
+    // hiển thị trên NhanhVn là mốc Ahamove tới lấy hàng (hiện tại + ahamove.idle_time), quy về giờ
+    // VN (UTC+7) và render theo định dạng H:i:s mà NhanhVn hỗ trợ.
+    private static string ConvertInstantTimeDelivery(long scheduledUnixSeconds)
+    {
+        if (scheduledUnixSeconds <= 0)
+        {
+            return string.Empty;
+        }
+
+        return DateTimeOffset
+            .FromUnixTimeSeconds(scheduledUnixSeconds)
+            .ToOffset(TimeSpan.FromHours(7))
+            .ToString("HH:mm:ss");
     }
 
 }
