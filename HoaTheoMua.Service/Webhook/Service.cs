@@ -644,10 +644,10 @@ public partial class Service : IService
             {
                 Name = order.FullName,
                 Mobile = order.Phone,
-                // Address = order.Address,
-                // CityId = order.City,
-                // WardId = order.Ward,
-                // LocationVersion = "v2"
+                Address = order.Address,
+                CityId = order.City,
+                WardId = order.Ward,
+                LocationVersion = "v2"
             },
             Products = productNhanhVnRequest,
             Payment = new Payment
