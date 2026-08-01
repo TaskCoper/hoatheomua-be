@@ -423,7 +423,8 @@ public class Service : IService
         var product = await _dbContext.Products
             .Include(p => p.CategoryProductDetails)
             .ThenInclude(cpd => cpd.CategoryProduct)
-            .ThenInclude(cp => cp.ChildCategoryProducts)
+            .ThenInclude(x => x.ParentCategoryProduct)
+            .ThenInclude(x => x!.ChildCategoryProducts)
             .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
 
         if (product == null)
@@ -507,42 +508,53 @@ public class Service : IService
             UpdatedAt = product.UpdatedAt,
             Categories = product.CategoryProductDetails?
                 .Where(cpd => !cpd.IsDeleted && cpd.CategoryProduct != null && !cpd.CategoryProduct.IsDeleted)
-                .Select(cpd => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
+                .Select(cpd =>
                 {
-                    categoryId = cpd.CategoryProduct.Id,
-                    isPinned = cpd.IsPin,
-                    name = cpd.CategoryProduct.Name,
-                    name_En = cpd.CategoryProduct.Name_En,
-                    description = cpd.CategoryProduct.Description,
-                    description_En = cpd.CategoryProduct.Description_En,
-                    position = cpd.CategoryProduct.Position,
-                    metaData = cpd.CategoryProduct.MetaData,
-                    startTime = cpd.CategoryProduct.StartTime,
-                    endTime = cpd.CategoryProduct.EndTime,
-                    type = cpd.CategoryProduct.Type,
-                    isActive = cpd.CategoryProduct.IsActive,
-                    userId = cpd.CategoryProduct.UserId,
-                    parentId = cpd.CategoryProduct.ParentCategoryProductId,
-                    children = cpd.CategoryProduct.ChildCategoryProducts != null
-                        ? cpd.CategoryProduct.ChildCategoryProducts
+                    var linkedCategory = cpd.CategoryProduct;
+                    var category = linkedCategory.ParentCategoryProduct ?? linkedCategory;
+
+                    return new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
+                    {
+                        categoryId = category.Id,
+                        isPinned = category.Id == linkedCategory.Id ? cpd.IsPin : null,
+                        name = category.Name,
+                        name_En = category.Name_En,
+                        description = category.Description,
+                        description_En = category.Description_En,
+                        position = category.Position,
+                        metaData = category.MetaData,
+                        page = category.Page,
+                        startTime = category.StartTime,
+                        endTime = category.EndTime,
+                        type = category.Type,
+                        isActive = category.IsActive,
+                        userId = category.UserId,
+                        parentId = category.ParentCategoryProductId,
+                        children = category.ChildCategoryProducts != null
+                            ? category.ChildCategoryProducts
                             .Where(child => !child.IsDeleted)
+                            .OrderBy(child => child.Position)
                             .Select(child => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
                             {
                                 categoryId = child.Id,
+                                isPinned = child.Id == linkedCategory.Id ? cpd.IsPin : null,
                                 name = child.Name,
                                 name_En = child.Name_En,
                                 description = child.Description,
                                 description_En = child.Description_En,
                                 position = child.Position,
                                 metaData = child.MetaData,
+                                page = child.Page,
                                 startTime = child.StartTime,
                                 endTime = child.EndTime,
                                 type = child.Type,
                                 isActive = child.IsActive,
                                 userId = child.UserId,
-                                parentId = child.ParentCategoryProductId
+                                parentId = child.ParentCategoryProductId,
+                                children = new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
                             }).ToList()
-                        : new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
+                            : new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
+                    };
                 })
                 .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>(),
         };
