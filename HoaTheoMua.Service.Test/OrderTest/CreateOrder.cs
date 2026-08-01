@@ -121,7 +121,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
         private static Mock<AppDbContext> CreateMockDbContext(
             List<OrderEntity>? orders = null,
             List<CompanyAddressEntity>? companyAddresses = null,
-            List<OrderDetailEntity>? capturedOrderDetails = null)
+            List<OrderDetailEntity>? capturedOrderDetails = null,
+            double? freeShipDistance = null)
         {
             var mockOrders = (orders ?? new List<OrderEntity>()).BuildMockDbSet();
             var orderDetailsList = capturedOrderDetails ?? new List<OrderDetailEntity>();
@@ -146,6 +147,16 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 new ConfigEntity { Key = "ahamove.api_key", Value = "{\"value\": \"test_api_key\"}", Group = "ahamove", IsDeleted = false },
                 new ConfigEntity { Key = "ahamove.base_url", Value = "{\"value\": \"http://ahamove.test\"}", Group = "ahamove", IsDeleted = false }
             };
+            if (freeShipDistance.HasValue)
+            {
+                configs.Add(new ConfigEntity
+                {
+                    Key = "ahamove.free_ship",
+                    Value = "{\"value\": " + freeShipDistance.Value + "}",
+                    Group = "ahamove",
+                    IsDeleted = false
+                });
+            }
             var mockConfigs = configs.BuildMockDbSet();
 
             var options = new DbContextOptionsBuilder<AppDbContext>().Options;
@@ -267,7 +278,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return mock.Object;
         }
 
-        private static HttpResponseMessage AhamoveSuccess(decimal totalFee = 50000m)
+        private static HttpResponseMessage AhamoveSuccess(decimal totalFee = 50000m, double distance = 10000)
         {
             return new HttpResponseMessage
             {
@@ -277,7 +288,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                     new ServiceResponse
                     {
                         ServiceId = "SGN-BIKE",
-                        Data = new ServiceData { TotalFee = totalFee }
+                        Data = new ServiceData { TotalFee = totalFee, Distance = distance }
                     }
                 })
             };
