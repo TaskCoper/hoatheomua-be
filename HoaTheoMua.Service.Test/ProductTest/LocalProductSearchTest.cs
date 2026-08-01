@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using HoaTheoMua.Service.Test.TestSupport;
 using Xunit;
 using ProductService = HoaTheoMua.Service.Product.Service;
 
@@ -49,7 +50,7 @@ public class LocalProductSearchTest
             .AddInMemoryCollection(myConfiguration)
             .Build();
 
-        return new ProductService(dbContext, httpContextMock.Object, httpClient, configuration);
+        return new ProductService(dbContext, httpContextMock.Object, httpClient, configuration, MapperFactory.Create());
     }
 
     [Fact]

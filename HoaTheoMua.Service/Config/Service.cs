@@ -349,7 +349,10 @@ public class Service : IService
     public async Task<List<Response.ConfigResponse>?> GetConfigIsPublic(string? groupName, string? key)
     {
         var query = _dbContext.Configs
-            .Where(x => x.IsPublic == true && !x.IsDeleted && x.Kind!.ToLower().Trim() == nameof(KindConfig.Content).ToLower().Trim());
+            .Where(x => x.IsPublic == true && 
+                        !x.IsDeleted && 
+                        (x.Kind!.ToLower().Trim() == nameof(KindConfig.Content).ToLower().Trim() 
+                         || x.Kind!.ToLower().Trim() == nameof(KindConfig.Setting).ToLower().Trim()  ));
         
         if (!string.IsNullOrEmpty(groupName))
         {

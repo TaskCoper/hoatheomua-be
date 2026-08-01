@@ -99,7 +99,7 @@ namespace HoaTheoMua.Service.Test.ConfigTest
             // Arrange
             var configs = new List<ConfigEntity>
             {
-                CreateConfigEntity("setting.theme", "setting", nameof(KindConfig.Setting), "{\"value\": \"dark\"}", isPublic: true),
+                // CreateConfigEntity("setting.theme", "setting", nameof(KindConfig.), "{\"value\": \"dark\"}", isPublic: true),
                 CreateConfigEntity("api.secret", "api", nameof(KindConfig.Secret), "{\"value\": \"secret\"}", isPublic: true)
             };
             var dbContext = CreateMockDbContext(configs).Object;

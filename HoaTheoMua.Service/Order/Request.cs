@@ -57,6 +57,7 @@ public class Request
         public required string OrderId { get; set; }
         public string? AhaMoveTrackingUrl { get; set; }
         public string? TrackingNumber { get; set; }
+        public decimal? ShippingFee  { get; set; }
     }
 
 }

@@ -13,6 +13,7 @@ using HoaTheoMua.Service.AhamoveService;
 using AhaMoveRequest = HoaTheoMua.Service.AhamoveService.AhaMoveRequest;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Webhook;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using MockQueryable.Moq;
@@ -121,7 +122,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
         private static Mock<AppDbContext> CreateMockDbContext(
             List<OrderEntity>? orders = null,
             List<CompanyAddressEntity>? companyAddresses = null,
-            List<OrderDetailEntity>? capturedOrderDetails = null)
+            List<OrderDetailEntity>? capturedOrderDetails = null,
+            double? freeShipDistance = null)
         {
             var mockOrders = (orders ?? new List<OrderEntity>()).BuildMockDbSet();
             var orderDetailsList = capturedOrderDetails ?? new List<OrderDetailEntity>();
@@ -146,6 +148,16 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 new ConfigEntity { Key = "ahamove.api_key", Value = "{\"value\": \"test_api_key\"}", Group = "ahamove", IsDeleted = false },
                 new ConfigEntity { Key = "ahamove.base_url", Value = "{\"value\": \"http://ahamove.test\"}", Group = "ahamove", IsDeleted = false }
             };
+            if (freeShipDistance.HasValue)
+            {
+                configs.Add(new ConfigEntity
+                {
+                    Key = "ahamove.free_ship",
+                    Value = "{\"value\": " + freeShipDistance.Value + "}",
+                    Group = "ahamove",
+                    IsDeleted = false
+                });
+            }
             var mockConfigs = configs.BuildMockDbSet();
 
             var options = new DbContextOptionsBuilder<AppDbContext>().Options;
@@ -267,7 +279,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return mock.Object;
         }
 
-        private static HttpResponseMessage AhamoveSuccess(decimal totalFee = 50000m)
+        private static HttpResponseMessage AhamoveSuccess(decimal totalFee = 50000m, double distance = 10000)
         {
             return new HttpResponseMessage
             {
@@ -277,7 +289,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                     new ServiceResponse
                     {
                         ServiceId = "SGN-BIKE",
-                        Data = new ServiceData { TotalFee = totalFee }
+                        Data = new ServiceData { TotalFee = totalFee, Distance = distance }
                     }
                 })
             };
@@ -701,6 +713,135 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(30000m, createdOrder.ShippingFee);
             Assert.Equal(100000m * 0.08m, createdOrder.Vat);
             Assert.Equal(100000m + 30000m + (100000m * 0.08m), createdOrder.TotalFee);
+        }
+        
+        //Test case 13: Tạo đơn order được free shipping
+        [Fact]
+        public async Task CreateOrder_DistanceWithinFreeShipConfig_ShippingFreeIsZero()
+        {
+            //Setup
+            //List rỗng đóng vai trò như bảng Orders.
+            var orders = new List<OrderEntity>();
+            
+            var dbContextMock = CreateMockDbContext(
+                orders: orders,
+                companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
+                freeShipDistance: 5000
+                );
+            var currentUser = CreateMockCurrentUserService(TestUserId);
+            var productService = CreateMockProductService();
+            
+            var handler = new Mock<HttpMessageHandler>();
+            handler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", 
+                    ItExpr.Is<HttpRequestMessage>(r => r.RequestUri.ToString().Contains("nhanhvn")), 
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                { 
+                    StatusCode = HttpStatusCode.OK, 
+                    Content = JsonContent.Create(new NhanhProductListResponse 
+                    {
+                        Code = 1, 
+                        Data = new List<NhanhProductData>
+                        { 
+                            new NhanhProductData
+                            {
+                                Id = 101, 
+                                Prices =  new NhanhPrices { Retail = 50000 }, 
+                                Shipping =  new NhanhShipping() ,
+                            } 
+                        } 
+                    }) 
+                });
+            
+            handler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", 
+                    ItExpr.Is<HttpRequestMessage>(r => r.RequestUri.ToString().Contains("ahamove")), 
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(AhamoveSuccess(30000m, distance: 4000));
+            
+            var httpClient = new HttpClient(handler.Object);
+            var service = CreateService(dbContextMock.Object, httpClient, currentUser, productService);
+
+            var request = new OrderRequest.CreateOrderRequest()
+            {
+                Latitude = 10.1m, Longitude = 106.1m, Ward = 1, City = 1,
+                Address = "Dia chi", ShortAddress = "Short Dia Chi",
+                FullName = "User Test", Phone = "0901234567", Remarks = "Ghi chu",
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Gateway = "BaoKim"
+            };
+            
+            //
+            await service.CreateOrder(request);
+            
+            //
+            var createdOrder = Assert.Single(orders);
+            Assert.Equal(0m, createdOrder.ShippingFee);
+            Assert.Equal(50000m, createdOrder.TotalFee);
+        }
+        
+        //Test case 14: Tạo đơn order ngoài bán kính thì vẫn tính phí bình thường
+        [Fact]
+        public async Task CreateOrder_DistanceOutOfFreeShipConfig_HaveShippingFee()
+        {
+            var orders = new List<OrderEntity>();
+            var dbContextMock = CreateMockDbContext(
+                orders: orders,
+                companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
+                freeShipDistance: 5000);
+            var currentUser = CreateMockCurrentUserService(TestUserId);
+            var productService = CreateMockProductService();
+            
+            var handler = new Mock<HttpMessageHandler>();
+            handler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(r => r.RequestUri.ToString().Contains("nhanhvn")),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content =  JsonContent.Create(new NhanhProductListResponse
+                    {
+                        Code = 1,
+                        Data = new List<NhanhProductData>
+                        {
+                            new NhanhProductData
+                            {
+                                Id = 101,
+                                Prices =  new NhanhPrices { Retail = 50000 },
+                                Shipping =  new NhanhShipping() ,
+                            }
+                        }
+                    })
+                });
+
+            handler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(r => r.RequestUri.ToString().Contains("ahamove")),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(AhamoveSuccess(30000m, distance: 9000));
+            
+            var httpClient = new HttpClient(handler.Object);
+            var service = CreateService(dbContextMock.Object, httpClient, currentUser, productService);
+
+            var request = new OrderRequest.CreateOrderRequest
+            {
+                Latitude = 10.1m, Longitude = 106.1m, Ward = 1, City = 1,
+                Address = "Dia chi", ShortAddress = "Short Dia Chi",
+                FullName = "User Test", Phone = "0901234567", Remarks = "Ghi chu",
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Gateway = "BaoKim"
+            };
+            
+            //
+            await service.CreateOrder(request);
+            
+            //
+            var createdOrder = Assert.Single(orders);
+            Assert.Equal(30000m, createdOrder.ShippingFee);
+            Assert.Equal(80000m, createdOrder.TotalFee);
+            
         }
     }
 }

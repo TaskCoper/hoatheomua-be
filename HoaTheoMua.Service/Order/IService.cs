@@ -12,6 +12,7 @@ public interface IService
     //--------------------
     Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize);
     Task<CreateOrderResponse> CreateOrder(Request.CreateOrderRequest request);
+    // Task<CreateOrderResponse> CreateDefaultOrder();
     Task<BaseResponse> GetOrderById (Guid id);
     Task<string> GetStatusOrder(Guid id);
     Task<OrderListRootResponse> GetOrderNhanhVn(NhanhVnOrderListRequest.OrderListRequest request);
@@ -19,5 +20,6 @@ public interface IService
     Task<string> GetInfoTaxCode(string taxCode);
     Task<string> CancelOrder(Guid id);
     Task<string> UpdateAhaMoveService(Request.UpdateAhamoveRequest request);
-    
+    Task<BasePaginationResponse> GetOrderByAdmin(string? search, int  pageIndex, int pageSize);
 }
+

@@ -105,19 +105,6 @@ public class Service : IService
 
         var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
         var depotId = nhanhConfigs.GetValue("nhanhvn.default_depot", DefaultDepotId);
-
-        if (request.OrderTime == 0 && (request.TagIds?.Count ?? 0) == 0)
-        {
-            var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
-            var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
-            
-            if (ahamoveAllowDelivery == false)
-            {
-                throw new BadRequestException("Hiện tại không thể giao đơn hàng");
-            }
-
-        }
-        
         var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
 
         // Requested quantity keyed by product id — reused for pricing and order details.
@@ -238,6 +225,49 @@ public class Service : IService
 
         throw new BadRequestException("Not support other gateway");
     }
+
+    // public async Task<CreateOrderResponse> CreateDefaultOrder()
+    // {
+    //     var request = new Request.CreateOrderRequest
+    //     {
+    //         Latitude = 10.820204590328558m,
+    //         Longitude = 106.7731798123973m,
+    //         Ward = 0,
+    //         City = 0,
+    //         Address = "Khu Dân Cư Cao Cấp An Thiên Lý, Phường Phước Long, Hồ Chí Minh",
+    //         ShortAddress = "Khu Dân Cư Cao Cấp An Thiên Lý, Phường Phước Long, Hồ Chí Minh",
+    //         FullName = "Tân Trần",
+    //         Phone = "0979901550",
+    //         Remarks = "",
+    //         OrderTime = 0,
+    //         Items =
+    //         [
+    //             new AhaMoveRequest.Items
+    //             {
+    //                 ItemId = 1833667,
+    //                 Number = 1
+    //             }
+    //
+    //         ],
+    //         Gateway = null
+    //     };
+    //
+    //     request.TagIds = new List<long>();
+    //     request.TaxCode = null;
+    //     request.IdentityNumber = null;
+    //     request.ReceiptFullName = null;
+    //     request.ReceiptPhoneNumber = null;
+    //     request.ReceiptAddress = null;
+    //     request.ReceiptEmail = null;
+    //     request.IsExportInvoice = false;
+    //     request.InvoiceType = null;
+    //     request.PaymentMethod = Repository.Enum.PaymentMethod.VA;
+    //     request.Gateway = "BaoKim";
+    //
+    //     var result = await CreateOrder(request);
+    //
+    //     return result;
+    // }
 
     // Fetches the catalog rows for the requested items from Nhanh.vn.
     private async Task<List<NhanhProductData>> FetchNhanhProductsAsync(
@@ -392,6 +422,8 @@ public class Service : IService
         var ahamoveConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders/estimates";
         var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
+        var freeShipping = ahamoveConfigs.GetValue("ahamove.free_ship", 0);
+
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         httpRequest.Headers.Add("Authorization", ahamoveToken);
@@ -407,6 +439,11 @@ public class Service : IService
         if (result == null || result.Count == 0)
         {
             throw new BadRequestException("Ahamove returned null or empty data");
+        }
+
+        if (freeShipping > 0 && result[0].Data.Distance <= freeShipping)
+        {
+            return 0;
         }
 
         return result[0].Data.TotalFee;
@@ -433,6 +470,18 @@ public class Service : IService
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefault();
 
+        var nhanhProductIds = _dbContext.OrderDetails
+            .Select(x => x.ItemId.ToString())
+            .Distinct()
+            .ToList();
+
+        var findProduct = await _dbContext.Products
+            .Where(x => !x.IsDeleted
+                        && x.NhanhProductId != null
+                        && nhanhProductIds.Contains(x.NhanhProductId))
+            .Select(x => new { x.Id, x.CoverImage, x.NhanhProductId})
+            .ToDictionaryAsync(x => x.NhanhProductId!);
+        
         var orderDetails = new Response.GetOrderByIdResponse
         {
             OrderId = orders.Id,
@@ -462,18 +511,26 @@ public class Service : IService
             OrderTime = orders.OrderTime,
             CreateAt = orders.CreatedAt,
 
-            Details = orders.OrderDetails.Select(x => new Response.OrderDetailsResponse()
+            Details = orders.OrderDetails.Select(x =>
             {
-                OrderDetailsId = x.Id,
-                Name = x.Name,
-                ItemId = x.ItemId,
-                Number = x.Number,
-                Price = x.Price,
-                Weight = x.Weight,
-                Length = x.Length,
-                Width = x.Width,
-                Height = x.Height,
+                findProduct.TryGetValue(x.ItemId.ToString(), out var product);
+                return new Response.OrderDetailsResponse()
+                {
+                    OrderDetailsId = x.Id,
+                    ProductId = product?.Id,
+                    CoverImage = product?.CoverImage,
+                    Name = x.Name,
+                    ItemId = x.ItemId,
+                    Number = x.Number,
+                    Price = x.Price,
+                    Weight = x.Weight,
+                    Length = x.Length,
+                    Width = x.Width,
+                    Height = x.Height,
+
+                };
             }).ToList(),
+                
 
             Transaction = lastTransaction == null ? null : new Response.OrderTransactionResponse
             {
@@ -673,12 +730,100 @@ public class Service : IService
             throw new BadRequestException("Order not found");
         }
 
-        order.TrackNumber = request.TrackingNumber ?? "";
-        order.AhahaMoveTrackingUrl = request.AhaMoveTrackingUrl ?? "";
+        if (request.TrackingNumber != null)
+        {
+            order.TrackNumber = request.TrackingNumber;
+        }
+
+        if (request.AhaMoveTrackingUrl != null)
+        {
+            order.AhahaMoveTrackingUrl = request.AhaMoveTrackingUrl;
+        }
+
+        if (request.ShippingFee != null)
+        {
+            order.ShippingFee = request.ShippingFee.Value;
+        }
         
         _dbContext.Orders.Update(order);
         await _dbContext.SaveChangesAsync();
         
         return "Cập nhật thành công đơn hàng";
     }
+    
+    public async Task<BasePaginationResponse> GetOrderByAdmin(string? search, int pageIndex, int pageSize)
+    {
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+
+        var orders = _dbContext.Orders
+            .Where(x => !x.IsDeleted);
+
+        var normalizedSearch = search?.Trim().ToLower();
+
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            // NhanhOrderId là int? nên chỉ khớp chính xác sau khi parse được số;
+            // TrackNumber và AhahaMoveOrderId là chuỗi nên cho khớp một phần.
+            var nhanhOrderId = int.TryParse(normalizedSearch, out var parsedNhanhOrderId)
+                ? parsedNhanhOrderId
+                : (int?)null;
+
+            orders = orders.Where(x =>
+                x.TrackNumber.ToLower().Contains(normalizedSearch) ||
+                (x.AhahaMoveOrderId != null && x.AhahaMoveOrderId.ToLower().Contains(normalizedSearch)) ||
+                (nhanhOrderId != null && x.NhanhOrderId == nhanhOrderId) ||
+                (x.PaymentMethod != null && x.PaymentMethod.ToString().Contains(normalizedSearch)));
+        }
+
+        var totalCount = await orders.CountAsync();
+
+        var items = orders
+            .OrderByDescending(o => o.CreatedAt)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize);
+
+        var result = items.Select(x => new Response.GetOrderAdminResponse
+        {
+            OrderId = x.Id,
+            UserId = x.UserId,
+            Latitude = x.Latitude,
+            Longitude = x.Longitude,
+            Ward = x.Ward,
+            City = x.City,
+            Address = x.Address,
+            ShortAddress = x.ShortAddress,
+            FullName = x.FullName,
+            Phone = x.Phone,
+            Remarks = x.Remarks,
+            Status = x.Status,
+            TrackNumber = x.TrackNumber,
+            NhanhOrderId = x.NhanhOrderId,
+            NhanhTrackingUrl = x.NhanhTrackingUrl,
+            AhahaMoveOrderId = x.AhahaMoveOrderId,
+            AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl,
+            PaymentUrl = x.PaymentUrl,
+            QrUrl = x.QrUrl,
+            ShippingFee = x.ShippingFee,
+            ProductFee = x.ProductFee,
+            TotalFee = x.TotalFee,
+            OrderTime = x.OrderTime,
+            TagIds = x.TagIds,
+            TaxCode = x.TaxCode,
+            IdentityNumber = x.IdentityNumber,
+            ReceiptFullName = x.ReceiptFullName,
+            ReceiptPhoneNumber = x.ReceiptPhoneNumber,
+            ReceiptAddress = x.ReceiptAddress,
+            ReceiptEmail = x.ReceiptEmail,
+            IsExportInvoice = x.IsExportInvoice,
+            Vat = x.Vat,
+            InvoiceType = x.InvoiceType,
+            PaymentMethod = x.PaymentMethod,
+            CreateAt = x.CreatedAt,
+            UpdateAt = x.UpdatedAt,
+        }).ToList();
+   
+        return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
+    }
 }
+
