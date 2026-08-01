@@ -713,5 +713,12 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(100000m * 0.08m, createdOrder.Vat);
             Assert.Equal(100000m + 30000m + (100000m * 0.08m), createdOrder.TotalFee);
         }
+
+        [Fact]
+        public async Task CreateOrder_DistanceWithinFreeShipConfig_ShippingFreeIsZero()
+        {
+            //Setup
+            
+        }
     }
 }
