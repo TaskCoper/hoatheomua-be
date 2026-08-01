@@ -423,7 +423,8 @@ public class Service : IService
         var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders/estimates";
         var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
         var freeShipping = ahamoveConfigs.GetValue("ahamove.free_ship", 0);
-        
+
+
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
         httpRequest.Headers.Add("Authorization", ahamoveToken);
         httpRequest.Content = JsonContent.Create(estimateRequest);
@@ -440,11 +441,11 @@ public class Service : IService
             throw new BadRequestException("Ahamove returned null or empty data");
         }
 
-        if (result[0].Data.Distance <= freeShipping)
+        if (freeShipping > 0 && result[0].Data.Distance <= freeShipping)
         {
             return 0;
         }
-        
+
         return result[0].Data.TotalFee;
     }
 
