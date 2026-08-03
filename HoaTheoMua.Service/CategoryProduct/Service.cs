@@ -712,32 +712,6 @@ public class Service : IService
             throw new BadRequestException("Category ID is required.");
         }
 
-        var productExists = await _dbContext.Products
-            .AnyAsync(x =>
-                x.Id == request.ProductId &&
-                !x.IsDeleted);
-
-        if (!productExists)
-        {
-            throw new NotFoundException("Product not found.");
-        }
-
-        var existingCategoryIds = await _dbContext.CategoryProducts
-            .Where(x =>
-                categoryIds.Contains(x.Id) &&
-                !x.IsDeleted)
-            .Select(x => x.Id)
-            .ToListAsync();
-
-        var hasMissingCategory = categoryIds
-            .Any(categoryId =>
-                !existingCategoryIds.Contains(categoryId));
-
-        if (hasMissingCategory)
-        {
-            throw new NotFoundException("One or more categories were not found.");
-        }
-
         var oldCategoryProductDetails = await _dbContext.CategoryProductDetails
                 .Where(x =>
                     x.ProductId == request.ProductId &&
@@ -745,14 +719,7 @@ public class Service : IService
                     !x.IsDeleted)
                 .ToListAsync();
 
-        var existingCategoryDetailIds = oldCategoryProductDetails
-                .Select(x => x.CategoryProductId)
-                .ToList();
-
-        var hasMissingCategoryProductDetail = categoryIds.Any(categoryId =>
-                !existingCategoryDetailIds.Contains(categoryId));
-
-        if (hasMissingCategoryProductDetail)
+        if (oldCategoryProductDetails.Count != categoryIds.Count)
         {
             throw new NotFoundException("One or more category product details were not found.");
         }

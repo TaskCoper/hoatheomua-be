@@ -49,10 +49,10 @@ public class Request
     public class CategoryProductDetailRequest
     {
         public Guid ProductId { get; set; }
-        public List<CategoryProductList> CategoryProductLists { get; set; } = new();
+        public List<CategoryList> CategoryProductLists { get; set; } = new();
     }
 
-    public class CategoryProductList
+    public class CategoryList
     {
         public Guid CategoryProductId { get; set; }
         public bool IsPin { get; set; }
