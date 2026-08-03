@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -418,21 +419,126 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
     }
 
-    public async Task<Response.ProductDetailResponse> GetLocalProductDetail(Guid id)
+    public async Task<Response.LocalProductDetailResponse> GetLocalProductDetail(Guid id)
     {
-        var product = await _dbContext.Products
-            .Include(p => p.CategoryProductDetails)
-            .ThenInclude(cpd => cpd.CategoryProduct)
-            .ThenInclude(cp => cp.ChildCategoryProducts)
-            .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
+        var response = await _dbContext.Products
+            .AsNoTracking()
+            .Where(p => p.Id == id && !p.IsDeleted)
+            .Select(LocalProductDetailSelector)
+            .FirstOrDefaultAsync();
 
-        if (product == null)
+        if (response == null)
         {
             throw new NotFoundException("PRODUCT_NOT_FOUND");
         }
 
-        return MapToProductDetailResponse(product);
+        if (string.IsNullOrWhiteSpace(response.NhanhProductId))
+        {
+            return response;
+        }
+
+        response.Children = await _dbContext.Products
+            .AsNoTracking()
+            .Where(p => !p.IsDeleted && p.ParentProductId == response.NhanhProductId)
+            .Select(LocalProductDetailSelector)
+            .ToListAsync();
+
+        return response;
     }
+
+    private static readonly Expression<
+        Func<HoaTheoMua.Repository.Entity.Product, Response.LocalProductDetailResponse>> LocalProductDetailSelector =
+        product => new Response.LocalProductDetailResponse
+        {
+            Id = product.Id,
+            IsPinned = product.IsPin,
+            SourceRowNumber = product.SourceRowNumber,
+            NhanhProductId = product.NhanhProductId,
+            ParentProductId = product.ParentProductId,
+            ParentProductCode = product.ParentProductCode,
+            ParentProductName = product.ParentProductName,
+            Barcode = product.Barcode,
+            ProductType = product.ProductType,
+            ProductCode = product.ProductCode,
+            ProductName = product.ProductName,
+            OtherName = product.OtherName,
+            Unit = product.Unit,
+            CoverImage = product.CoverImage,
+            OtherImages = product.OtherImages,
+            WarrantyMonths = product.WarrantyMonths,
+            Weight = product.Weight,
+            ImportPrice = product.ImportPrice,
+            ImportVat = product.ImportVat,
+            ImportPriceWithVat = product.ImportPriceWithVat,
+            ImportVatMode = product.ImportVatMode,
+            Price = product.Price,
+            PriceWithVat = product.PriceWithVat,
+            BranchPrice = product.BranchPrice,
+            BranchPriceWithVat = product.BranchPriceWithVat,
+            SaleVatMode = product.SaleVatMode,
+            OldPrice = product.OldPrice,
+            Vat = product.Vat,
+            ProfitPercentage = product.ProfitPercentage,
+            CostPrice = product.CostPrice,
+            WholesalePrice = product.WholesalePrice,
+            WholesalePriceWithVat = product.WholesalePriceWithVat,
+            WholesaleBranchPrice = product.WholesaleBranchPrice,
+            WholesaleBranchPriceWithVat = product.WholesaleBranchPriceWithVat,
+            TotalStock = product.TotalStock,
+            StockTransferring = product.StockTransferring,
+            Stock = product.Stock,
+            DeliveringStock = product.DeliveringStock,
+            WarehouseStock = product.WarehouseStock,
+            StockError = product.StockError,
+            Held = product.Held,
+            AvailableForSale = product.AvailableForSale,
+            WarrantyStock = product.WarrantyStock,
+            HeldComponents = product.HeldComponents,
+            PendingImportStock = product.PendingImportStock,
+            PreOrder = product.PreOrder,
+            Status = product.Status,
+            CategoryCode = product.CategoryCode,
+            CategoryName = product.CategoryName,
+            InternalCategoryCode = product.InternalCategoryCode,
+            Brand = product.Brand,
+            NhanhCategoryId = product.NhanhCategoryId,
+            NhanhBrandId = product.NhanhBrandId,
+            NhanhTypeId = product.NhanhTypeId,
+            Supplier = product.Supplier,
+            WarrantyAddress = product.WarrantyAddress,
+            Slug = product.Slug,
+            Length = product.Length,
+            Width = product.Width,
+            Height = product.Height,
+            WebOrder = product.WebOrder,
+            NhanhCreatedAt = product.NhanhCreatedAt,
+            NhanhUpdatedAt = product.NhanhUpdatedAt,
+            ProductLabel = product.ProductLabel,
+            BranchPriceDuplicate = product.BranchPriceDuplicate,
+            WholesaleBranchPriceDuplicate = product.WholesaleBranchPriceDuplicate,
+            PriceLabel = product.PriceLabel,
+            Size = product.Size,
+            Color = product.Color,
+            Origin = product.Origin,
+            CreatedAt = product.CreatedAt,
+            UpdatedAt = product.UpdatedAt
+        };
+
+    // public async Task<Response.ProductDetailResponse> GetLocalProductDetail(Guid id)
+    // {
+    //     var product = await _dbContext.Products
+    //         .Include(p => p.CategoryProductDetails)
+    //         .ThenInclude(cpd => cpd.CategoryProduct)
+    //         .ThenInclude(cp => cp.ChildCategoryProducts)
+    //         .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
+    //
+    //     if (product == null)
+    //     {
+    //         throw new NotFoundException("PRODUCT_NOT_FOUND");
+    //     }
+    //
+    //     return MapToProductDetailResponse(product);
+    // }
 
     private static Response.ProductDetailResponse MapToProductDetailResponse(HoaTheoMua.Repository.Entity.Product product)
     {

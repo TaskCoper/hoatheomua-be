@@ -151,7 +151,7 @@ public class LocalProductSearchTest
     }
 
     [Fact]
-    public async Task GetLocalProductDetail_WithCategories_Success()
+    public async Task GetLocalProductDetail_ReturnsProductFields_Success()
     {
         // Arrange
         using var dbContext = CreateInMemoryDbContext();
@@ -203,8 +203,7 @@ public class LocalProductSearchTest
         Assert.Equal(202, result.NhanhBrandId);
         Assert.Equal(303, result.NhanhTypeId);
         Assert.Equal(product.NhanhUpdatedAt, result.NhanhUpdatedAt);
-        Assert.Single(result.Categories);
-        Assert.Equal("Hoa Tươi", result.Categories[0].name);
+        Assert.Empty(result.Children);
     }
 
     [Fact]
@@ -216,6 +215,74 @@ public class LocalProductSearchTest
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetLocalProductDetail(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetLocalProductDetail_WithChildren_ReturnsAllActiveChildren()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var parent = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "1000",
+            ProductName = "Parent",
+            IsDeleted = false
+        };
+        var firstChild = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "1001",
+            ParentProductId = "1000",
+            ProductName = "First child",
+            Position = 1,
+            IsDeleted = false
+        };
+        var secondChild = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "1002",
+            ParentProductId = "1000",
+            ProductName = "Second child",
+            Position = 2,
+            IsDeleted = false
+        };
+        var deletedChild = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "1003",
+            ParentProductId = "1000",
+            ProductName = "Deleted child",
+            Position = 3,
+            IsDeleted = true
+        };
+        var unrelatedProduct = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "2000",
+            ParentProductId = "9999",
+            ProductName = "Unrelated product",
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(
+            parent,
+            secondChild,
+            deletedChild,
+            unrelatedProduct,
+            firstChild);
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await service.GetLocalProductDetail(parent.Id);
+
+        // Assert
+        Assert.Equal(parent.Id, result.Id);
+        Assert.Equal(2, result.Children.Count);
+        Assert.Contains(result.Children, child => child.Id == firstChild.Id);
+        Assert.Contains(result.Children, child => child.Id == secondChild.Id);
     }
 
     [Fact]
