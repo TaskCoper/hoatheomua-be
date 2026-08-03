@@ -161,6 +161,11 @@ public class LocalProductSearchTest
         {
             Id = Guid.NewGuid(),
             ProductName = "Bông Hồng",
+            OtherImages = new List<string> { "rose-1.jpg", "rose-2.jpg" },
+            NhanhCategoryId = 101,
+            NhanhBrandId = 202,
+            NhanhTypeId = 303,
+            NhanhUpdatedAt = new DateTimeOffset(2026, 8, 3, 10, 30, 0, TimeSpan.Zero),
             IsDeleted = false
         };
 
@@ -193,6 +198,11 @@ public class LocalProductSearchTest
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Bông Hồng", result.ProductName);
+        Assert.Equal(new[] { "rose-1.jpg", "rose-2.jpg" }, result.OtherImages);
+        Assert.Equal(101, result.NhanhCategoryId);
+        Assert.Equal(202, result.NhanhBrandId);
+        Assert.Equal(303, result.NhanhTypeId);
+        Assert.Equal(product.NhanhUpdatedAt, result.NhanhUpdatedAt);
         Assert.Single(result.Categories);
         Assert.Equal("Hoa Tươi", result.Categories[0].name);
     }

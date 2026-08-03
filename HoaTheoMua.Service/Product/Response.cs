@@ -22,6 +22,7 @@ public class Response
         public string? OtherName { get; set; }
         public string? Unit { get; set; }
         public string? CoverImage { get; set; }
+        public List<string>? OtherImages { get; set; }
         public int? WarrantyMonths { get; set; }
         public decimal? Weight { get; set; }
         public decimal? ImportPrice { get; set; }
@@ -58,6 +59,9 @@ public class Response
         public string? CategoryName { get; set; }
         public string? InternalCategoryCode { get; set; }
         public string? Brand { get; set; }
+        public int? NhanhCategoryId { get; set; }
+        public int? NhanhBrandId { get; set; }
+        public int? NhanhTypeId { get; set; }
         public string? Supplier { get; set; }
         public string? WarrantyAddress { get; set; }
         public string? Slug { get; set; }
@@ -66,6 +70,7 @@ public class Response
         public decimal? Height { get; set; }
         public int? WebOrder { get; set; }
         public DateTimeOffset? NhanhCreatedAt { get; set; }
+        public DateTimeOffset? NhanhUpdatedAt { get; set; }
         public string? ProductLabel { get; set; }
         public decimal? BranchPriceDuplicate { get; set; }
         public decimal? WholesaleBranchPriceDuplicate { get; set; }
