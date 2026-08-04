@@ -218,6 +218,74 @@ public class LocalProductSearchTest
     }
 
     [Fact]
+    public async Task GetLocalProductDetail_ReturnsCategoriesWithParentAndChildren()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductName = "Product",
+            IsDeleted = false
+        };
+        var parentCategory = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Parent category",
+            Name_En = "Parent category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false
+        };
+        var linkedCategory = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Linked category",
+            Name_En = "Linked category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false,
+            ParentCategoryProductId = parentCategory.Id
+        };
+        var childCategory = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Child category",
+            Name_En = "Child category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false,
+            ParentCategoryProductId = linkedCategory.Id
+        };
+
+        await dbContext.Products.AddAsync(product);
+        await dbContext.CategoryProducts.AddRangeAsync(parentCategory, linkedCategory, childCategory);
+        await dbContext.CategoryProductDetails.AddAsync(new CategoryProductDetail
+        {
+            Id = Guid.NewGuid(),
+            ProductId = product.Id,
+            CategoryProductId = linkedCategory.Id,
+            IsPin = true,
+            IsDeleted = false
+        });
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await service.GetLocalProductDetail(product.Id);
+
+        // Assert
+        var category = Assert.Single(result.Categories);
+        Assert.Equal(linkedCategory.Id, category.categoryId);
+        Assert.True(category.isPinned);
+        Assert.Equal(parentCategory.Id, category.Parent?.categoryId);
+        Assert.Empty(category.Parent!.children!);
+        var child = Assert.Single(category.children!);
+        Assert.Equal(childCategory.Id, child.categoryId);
+    }
+
+    [Fact]
     public async Task GetLocalProductDetail_WithChildren_ReturnsAllActiveChildren()
     {
         // Arrange
