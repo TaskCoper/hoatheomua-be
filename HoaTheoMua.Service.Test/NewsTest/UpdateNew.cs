@@ -276,7 +276,7 @@ public class UpdateNewTest
 
     // TC01
     [Fact]
-    public async Task UpdateNew_Success()
+    public async Task UpdateNew_BySlug_Success()
     {
         var category1 = CreateCategory(CategoryId1, "Technology");
         var category2 = CreateCategory(CategoryId2, "Business");
@@ -318,7 +318,7 @@ public class UpdateNewTest
 
         var request = CreateValidRequest();
 
-        var result = await service.UpdateNewAsync(NewsId, request);
+        var result = await service.UpdateNewAsync("cong-nghe-moi", request);
 
         Assert.NotNull(result);
         Assert.Equal(NewsId, result!.Id);
@@ -387,7 +387,7 @@ public class UpdateNewTest
             categoryIds: new List<Guid>());
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.UpdateNewAsync(NewsId, request));
+            () => service.UpdateNewAsync(NewsId.ToString(), request));
 
         Assert.Equal("CATEGORY_IDS_REQUIRED", ex.Message);
         Assert.Single(categoryNewsDetails);
@@ -439,7 +439,7 @@ public class UpdateNewTest
             });
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.UpdateNewAsync(NewsId, request));
+            () => service.UpdateNewAsync(NewsId.ToString(), request));
 
         Assert.Equal("CATEGORY_NEWS_INVALID", ex.Message);
         Assert.Single(categoryNewsDetails);
@@ -477,7 +477,7 @@ public class UpdateNewTest
             });
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.UpdateNewAsync(NotFoundNewsId, request));
+            () => service.UpdateNewAsync(NotFoundNewsId.ToString(), request));
 
         Assert.Equal("NEW_NOT_FOUND", ex.Message);
 
@@ -530,7 +530,7 @@ public class UpdateNewTest
                 CategoryId1
             });
 
-        var result = await service.UpdateNewAsync(NewsId, request);
+        var result = await service.UpdateNewAsync(NewsId.ToString(), request);
 
         Assert.NotNull(result);
         Assert.Equal("Title Mới", result!.Title);
@@ -588,7 +588,7 @@ public class UpdateNewTest
                 CategoryId3
             });
 
-        var result = await service.UpdateNewAsync(NewsId, request);
+        var result = await service.UpdateNewAsync(NewsId.ToString(), request);
 
         Assert.NotNull(result);
 
@@ -650,7 +650,7 @@ public class UpdateNewTest
                 CategoryId2
             });
 
-        var result = await service.UpdateNewAsync(NewsId, request);
+        var result = await service.UpdateNewAsync(NewsId.ToString(), request);
 
         Assert.NotNull(result);
         Assert.Equal(2, categoryNewsDetails.Count);
@@ -711,7 +711,7 @@ public class UpdateNewTest
                 CategoryId1
             });
 
-        var result = await service.UpdateNewAsync(NewsId, request);
+        var result = await service.UpdateNewAsync(NewsId.ToString(), request);
 
         Assert.NotNull(result);
         Assert.Equal("Published", result!.Status);
@@ -764,7 +764,7 @@ public class UpdateNewTest
             });
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.UpdateNewAsync(NewsId, request));
+            () => service.UpdateNewAsync(NewsId.ToString(), request));
 
         Assert.Equal("NEW_NOT_FOUND", ex.Message);
         Assert.True(deletedNews.IsDeleted);
@@ -816,7 +816,7 @@ public class UpdateNewTest
                 CategoryId1
             });
 
-        var result = await service.UpdateNewAsync(NewsId, request);
+        var result = await service.UpdateNewAsync(NewsId.ToString(), request);
 
         Assert.NotNull(result);
         Assert.Single(result!.CategoryIds);

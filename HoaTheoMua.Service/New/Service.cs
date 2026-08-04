@@ -224,16 +224,21 @@ public class Service : IService
         };
     }
 
-    public async Task<NewResponseV2?> UpdateNewAsync(Guid id, UpdateNewRequest request)
+    public async Task<NewResponseV2?> UpdateNewAsync(string identifier, UpdateNewRequest request)
     {
         var categoryIds = NormalizeCategoryIds(request.CategoryIds);
         await EnsureCategoriesExistAsync(categoryIds);
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
-        var news = await _dbContext.NewsList
+        var normalizedIdentifier = NormalizeLookupKey(identifier);
+        var query = _dbContext.NewsList
             .Include(news => news.CategoryNewsDetail)
-            .FirstOrDefaultAsync(news => news.Id == id && !news.IsDeleted);
+            .Where(news => !news.IsDeleted);
+
+        var news = Guid.TryParse(normalizedIdentifier, out var id)
+            ? await query.FirstOrDefaultAsync(news => news.Id == id)
+            : await query.FirstOrDefaultAsync(news => news.slug == normalizedIdentifier);
 
         if (news is null)
         {
@@ -287,10 +292,14 @@ public class Service : IService
         };
     }
 
-    public async Task<ClassDeleteResponse> DeleteNewAsync(Guid id)
+    public async Task<ClassDeleteResponse> DeleteNewAsync(string identifier)
     {
-        var news = await _dbContext.NewsList
-            .FirstOrDefaultAsync(news => news.Id == id && !news.IsDeleted);
+        var normalizedIdentifier = NormalizeLookupKey(identifier);
+        var query = _dbContext.NewsList.Where(news => !news.IsDeleted);
+
+        var news = Guid.TryParse(normalizedIdentifier, out var id)
+            ? await query.FirstOrDefaultAsync(news => news.Id == id)
+            : await query.FirstOrDefaultAsync(news => news.slug == normalizedIdentifier);
 
         if (news is null)
         {
