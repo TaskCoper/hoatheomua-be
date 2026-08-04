@@ -11,7 +11,7 @@ public interface IService
     Task<BaseResponse> GetJobByIdOrSlugAsync(string idOrSlug);
     Task<BaseResponse> GetPublicJobByIdOrSlugAsync(string idOrSlug);
     Task<BaseResponse> GetHighestSalaryAsync();
-    Task<BaseResponse> UpdateJobAsync(Guid id, Request.UpdateRequest request);
-    Task DeleteJobAsync(Guid id);
+    Task<BaseResponse> UpdateJobAsync(string identifier, Request.UpdateRequest request);
+    Task DeleteJobAsync(string identifier);
     Task<List<string>> GetAllLocation();
 }

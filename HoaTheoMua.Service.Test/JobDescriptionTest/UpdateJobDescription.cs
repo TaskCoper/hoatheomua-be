@@ -131,7 +131,7 @@ public class UpdateJobDescriptionTest
         var service = CreateService(dbContext);
         var request = CreateValidRequest();
 
-        var result = await service.UpdateJobAsync(JobId, request);
+        var result = await service.UpdateJobAsync(JobId.ToString(), request);
 
         var value = GetValue(result);
         var jobInDb = await dbContext.JobDescriptions.FirstAsync(x => x.Id == JobId);
@@ -147,17 +147,23 @@ public class UpdateJobDescriptionTest
     }
 
     [Fact]
-    public async Task UpdateJob_EmptyId_ThrowBadRequest()
+    public async Task UpdateJob_BySlug_Success()
     {
         await using var dbContext = CreateDbContext();
 
+        dbContext.JobDescriptions.Add(CreateJob());
+        await dbContext.SaveChangesAsync();
+
         var service = CreateService(dbContext);
-        var request = CreateValidRequest();
+        var request = CreateValidRequest(title: "Backend Developer");
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.UpdateJobAsync(Guid.Empty, request));
+        var result = await service.UpdateJobAsync("senior-software-engineer", request);
+        var value = GetValue(result);
+        var jobInDb = await dbContext.JobDescriptions.FirstAsync(x => x.Id == JobId);
 
-        Assert.Contains("INVALID_JOB_ID", ex.Message);
+        Assert.Equal("Backend Developer", jobInDb.title);
+        Assert.Equal("backend-developer", jobInDb.slug);
+        Assert.Equal("Backend Developer", GetString(value, "title"));
     }
 
     [Fact]
@@ -192,7 +198,7 @@ public class UpdateJobDescriptionTest
         var request = CreateValidRequest();
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.UpdateJobAsync(NotFoundId, request));
+            () => service.UpdateJobAsync(NotFoundId.ToString(), request));
 
         Assert.Contains("JOB_DESCRIPTION_NOT_FOUND", ex.Message);
     }
@@ -225,7 +231,7 @@ public class UpdateJobDescriptionTest
         var request = CreateValidRequest(
             title: "Junior Software Engineer");
 
-        var result = await service.UpdateJobAsync(JobId, request);
+        var result = await service.UpdateJobAsync(JobId.ToString(), request);
 
         var value = GetValue(result);
         var jobInDb = await dbContext.JobDescriptions.FirstAsync(x => x.Id == JobId);
@@ -253,7 +259,7 @@ public class UpdateJobDescriptionTest
         var request = CreateValidRequest(
             title: "Senior Software Engineer");
 
-        var result = await service.UpdateJobAsync(JobId, request);
+        var result = await service.UpdateJobAsync(JobId.ToString(), request);
 
         var value = GetValue(result);
         var jobInDb = await dbContext.JobDescriptions.FirstAsync(x => x.Id == JobId);
@@ -279,7 +285,7 @@ public class UpdateJobDescriptionTest
         var request = CreateValidRequest(
             status: "Closed");
 
-        var result = await service.UpdateJobAsync(JobId, request);
+        var result = await service.UpdateJobAsync(JobId.ToString(), request);
 
         var value = GetValue(result);
         var jobInDb = await dbContext.JobDescriptions.FirstAsync(x => x.Id == JobId);
@@ -317,7 +323,7 @@ public class UpdateJobDescriptionTest
         var request = CreateValidRequest();
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.UpdateJobAsync(JobId, request));
+            () => service.UpdateJobAsync(JobId.ToString(), request));
 
         Assert.Contains("JOB_DESCRIPTION_NOT_FOUND", ex.Message);
     }

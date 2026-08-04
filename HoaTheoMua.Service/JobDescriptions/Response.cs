@@ -11,7 +11,7 @@ public class Response
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
     }
-
+    
     public class JobListItem
     {
         public Guid Id { get; set; }
