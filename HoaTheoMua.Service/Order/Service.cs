@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.BaoKim;
 using HoaTheoMua.Service.Common;
@@ -759,7 +760,7 @@ public class Service : IService
         var orders = _dbContext.Orders
             .Where(x => !x.IsDeleted);
 
-        var normalizedSearch = search?.Trim().ToLower();
+        var normalizedSearch = search?.Trim().ToLowerInvariant();
 
         if (!string.IsNullOrWhiteSpace(normalizedSearch))
         {
@@ -768,12 +769,16 @@ public class Service : IService
             var nhanhOrderId = int.TryParse(normalizedSearch, out var parsedNhanhOrderId)
                 ? parsedNhanhOrderId
                 : (int?)null;
-
+            //? ! ??
+            var isPaymentMethod = Enum.TryParse<PaymentMethod>(
+                normalizedSearch, ignoreCase: true, out var paymentMethod);
+                
             orders = orders.Where(x =>
                 x.TrackNumber.ToLower().Contains(normalizedSearch) ||
                 (x.AhahaMoveOrderId != null && x.AhahaMoveOrderId.ToLower().Contains(normalizedSearch)) ||
                 (nhanhOrderId != null && x.NhanhOrderId == nhanhOrderId) ||
-                (x.PaymentMethod != null && x.PaymentMethod.ToString().Contains(normalizedSearch)));
+                (isPaymentMethod && x.PaymentMethod == paymentMethod ) ||
+                ( x.Phone.Contains(normalizedSearch)));
         }
 
         var totalCount = await orders.CountAsync();
