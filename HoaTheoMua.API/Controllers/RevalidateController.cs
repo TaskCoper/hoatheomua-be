@@ -18,7 +18,7 @@ public class RevalidateController: ControllerBase
     
     
     [HttpPost("/api/v1/revalidate")]
-    public async Task<IActionResult> EstimateShippingFee([FromBody] JsonElement request)
+    public async Task<IActionResult> Revalidate([FromBody] JsonElement request)
     {
         var result = await _service.RevalidateApi(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
