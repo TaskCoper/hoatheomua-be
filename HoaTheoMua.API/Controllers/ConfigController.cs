@@ -72,6 +72,14 @@ public class ConfigController : ControllerBase
     public async Task<IActionResult> CreateConfig([FromBody] Request.CreateConfigRequest request)
     {
         var result = await _configService.CreateConfig(request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "config",
+            group = request.Group,
+            key = request.Key
+        });
+
+        await _service.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
     }
 
@@ -99,6 +107,14 @@ public class ConfigController : ControllerBase
     public async Task<IActionResult> DeleteConfig([FromRoute] Guid id)
     {
         var result = await _configService.DeleteConfig(id);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "config",
+            group = result.Group,
+            key = result.Key
+        });
+
+        await _service.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
     }
 

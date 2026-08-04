@@ -175,16 +175,14 @@ public class Service : IService
         });
     }
 
-    public async Task<BaseResponse> UpdateJobAsync(Guid id, Request.UpdateRequest request)
+    public async Task<BaseResponse> UpdateJobAsync(string identifier, Request.UpdateRequest request)
     {
-        if (id == Guid.Empty)
-        {
-            throw new BadRequestException("INVALID_JOB_ID");
-        }
+        var normalizedIdentifier = NormalizeLookupKey(identifier);
+        var query = _context.JobDescriptions.Where(job => !job.IsDeleted);
 
-        var job = await _context.JobDescriptions
-            .Where(j => !j.IsDeleted)
-            .FirstOrDefaultAsync(j => j.Id == id);
+        var job = Guid.TryParse(normalizedIdentifier, out var id)
+            ? await query.FirstOrDefaultAsync(job => job.Id == id)
+            : await query.FirstOrDefaultAsync(job => job.slug == normalizedIdentifier);
 
         if (job is null)
         {
@@ -236,17 +234,16 @@ public class Service : IService
         };
         return ApiResponseFactory.Base(responseData);
     }
+    
 
-    public async Task DeleteJobAsync(Guid id)
+    public async Task DeleteJobAsync(string identifier)
     {
-        if (id == Guid.Empty)
-        {
-            throw new BadRequestException("INVALID_JOB_ID");
-        }
+        var normalizedIdentifier = NormalizeLookupKey(identifier);
+        var query = _context.JobDescriptions.Where(job => !job.IsDeleted);
 
-        var job = await _context.JobDescriptions
-            .Where(j => !j.IsDeleted)
-            .FirstOrDefaultAsync(j => j.Id == id);
+        var job = Guid.TryParse(normalizedIdentifier, out var id)
+            ? await query.FirstOrDefaultAsync(job => job.Id == id)
+            : await query.FirstOrDefaultAsync(job => job.slug == normalizedIdentifier);
 
         if (job is null)
         {
@@ -254,7 +251,7 @@ public class Service : IService
         }
 
         bool hasCandidates = await _context.RecruitmentRequests
-            .AnyAsync(r => r.JobDescriptionId == id);
+            .AnyAsync(r => r.JobDescriptionId == job.Id);
 
         if (hasCandidates)
         {
@@ -266,6 +263,7 @@ public class Service : IService
         _context.JobDescriptions.Update(job);
         await _context.SaveChangesAsync();
     }
+    
 
     public async Task<List<string>> GetAllLocation()
     {
