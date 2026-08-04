@@ -451,16 +451,27 @@ public class Service : IService
             throw new NotFoundException("PRODUCT_NOT_FOUND");
         }
 
-        if (string.IsNullOrWhiteSpace(response.NhanhProductId))
+        if (!string.IsNullOrWhiteSpace(response.ParentProductId))
         {
-            return response;
+            response.Parent = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p =>
+                    !p.IsDeleted &&
+                    p.NhanhProductId == response.ParentProductId)
+                .Select(LocalProductDetailSelector)
+                .FirstOrDefaultAsync();
         }
 
-        response.Children = await _dbContext.Products
-            .AsNoTracking()
-            .Where(p => !p.IsDeleted && p.ParentProductId == response.NhanhProductId)
-            .Select(LocalProductDetailSelector)
-            .ToListAsync();
+        if (!string.IsNullOrWhiteSpace(response.NhanhProductId))
+        {
+            response.Children = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p =>
+                    !p.IsDeleted &&
+                    p.ParentProductId == response.NhanhProductId)
+                .Select(LocalProductDetailSelector)
+                .ToListAsync();
+        }
 
         return response;
     }
