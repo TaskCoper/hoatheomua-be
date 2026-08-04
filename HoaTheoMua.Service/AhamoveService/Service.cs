@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using HoaTheoMua.Repository;
@@ -300,5 +302,32 @@ public class Service: IService
         }
 
         return nhanhProductDepot;
+    }
+
+    public async Task<List<AhaMoveGetListResponse>> GetServiceList()
+    {
+        var url = "https://partner-apistg.ahamove.com/v3/services?city_id=SGN";
+        var token = _ahaMoveOption.Token;
+        
+        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Get, url);
+        nhanhHttpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        // dòng trên dùng thư viện ngoài
+        // nếu token là: easohDAIasdjc...
+        // thì sẽ gửi đi cái req là Authorization: easohDAIasdjc...
+        // trong khi API yêu cầu là Authorization: Bearer easohDAIasdjc...
+        // nên là dùng API của .NET luonn
+        
+        HttpResponseMessage response = await _httpClient.SendAsync(nhanhHttpRequest);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new BadRequestException($"Ahamove API HTTP Error ({response.StatusCode})");
+        }
+        
+        var jsonString = await response.Content.ReadAsStringAsync();
+        
+        var services = JsonSerializer.Deserialize<List<AhaMoveGetListResponse>>(jsonString);
+        
+        return services ?? new List<AhaMoveGetListResponse>();
     }
 }

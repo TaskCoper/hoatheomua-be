@@ -28,6 +28,13 @@ public class AhamoveService: ControllerBase
         //return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
         return Ok(result);
     }
+
+    [HttpGet("/api/v1/ahamove/service-list")]
+    public async Task<IActionResult> GetServiceList()
+    {
+        var result = await _ahamoveService.GetServiceList();
+        return Ok(result);
+    }
     
     // [HttpPost("/api/v1/ahamove/orders")]
     // public async Task<IActionResult> CreateOrder([FromBody] Request.CreateOrderRequestAhamove request)
