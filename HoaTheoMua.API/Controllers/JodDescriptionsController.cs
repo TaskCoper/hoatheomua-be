@@ -86,11 +86,11 @@ public class JodDescriptionsController: ControllerBase
     [Authorize (Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> DeleteJobDescription(string identifier)
     {
-        await _jobDescriptionService.DeleteJobAsync(identifier);
+        var result = await _jobDescriptionService.DeleteJobAsync(identifier);
         JsonElement json = JsonSerializer.SerializeToElement(new
         {
             entity = "recruitment",
-            slug = identifier,
+            slug = result.Slug ??  result.Id.ToString(),
         });
         await _revalidateService.RevalidateApi(json);
         return NoContent();

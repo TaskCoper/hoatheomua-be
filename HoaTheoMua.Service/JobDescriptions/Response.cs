@@ -11,6 +11,12 @@ public class Response
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
     }
+
+    public class DeleteResponse
+    {
+        public Guid? Id { get; set; }
+        public string? Slug { get; set; }
+    }
     
     public class JobListItem
     {

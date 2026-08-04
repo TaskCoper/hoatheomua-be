@@ -49,6 +49,6 @@ public class NewResponseV2
 
 public class ClassDeleteResponse
 {
-    public Guid Id { get; set; }
-    public String? Slug { get; set; } = string.Empty;
+    public Guid? Id { get; set; }
+    public string? Slug { get; set; } = string.Empty;
 }

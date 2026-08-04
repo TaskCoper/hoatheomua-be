@@ -236,7 +236,7 @@ public class Service : IService
     }
     
 
-    public async Task DeleteJobAsync(string identifier)
+    public async Task<Response.DeleteResponse> DeleteJobAsync(string identifier)
     {
         var normalizedIdentifier = NormalizeLookupKey(identifier);
         var query = _context.JobDescriptions.Where(job => !job.IsDeleted);
@@ -262,6 +262,12 @@ public class Service : IService
         job.UpdatedAt = DateTimeOffset.UtcNow;
         _context.JobDescriptions.Update(job);
         await _context.SaveChangesAsync();
+
+        return new Response.DeleteResponse()
+        {
+            Id = job.Id,
+            Slug = job.slug,
+        };
     }
     
 
