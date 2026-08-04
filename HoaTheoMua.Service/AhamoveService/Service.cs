@@ -203,56 +203,30 @@ public class Service: IService
     
     public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()
     {
-        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "ahamove");
-        var ahamoveApi = configs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/services/SGN-BIKE";
-        var ahamoveToken = configs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
-        var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Get, ahamoveApi);
-        ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
+        var url = "https://partner-apistg.ahamove.com/v3/services/SGN-BIKE";
+        var token = _ahaMoveOption.Token;
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Authorization", token);
+        HttpResponseMessage response = await _httpClient.SendAsync(request);
         
-        //ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
+        string message = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($@"{message}");
         
-        HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
-
-        
-        // string rawJson = await ahamoveResponse.Content.ReadAsStringAsync();
-        // Console.WriteLine("AhaMove JSON: " + rawJson);
-        
-        ServiceDetailsResponse? getServiceDetailsAhaMove = null;
-
-        if (ahamoveResponse.IsSuccessStatusCode)
+        ServiceDetailsResponse? ahamoveResult = null;
+        if (response.IsSuccessStatusCode)
         {
-            getServiceDetailsAhaMove =
-                await ahamoveResponse.Content.ReadFromJsonAsync<ServiceDetailsResponse>();
+            ahamoveResult = await response.Content.ReadFromJsonAsync<ServiceDetailsResponse>();
         }
         else
         {
-            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-            throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+            throw new BadRequestException($"Ahamove API HTTP Error ({response.StatusCode})");
         }
 
-        if (getServiceDetailsAhaMove == null)
+        if (ahamoveResult == null)
         {
             throw new BadRequestException("Ahamove returned null or empty data");
         }
-        
-        // int totalRequests = getServiceDetailsAhaMove.Requests.Count();
-        //
-        // int actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
-        // int actualPageSize = pageSize < 1 ? 10 : pageSize;
-        //
-        // var result = getServiceDetailsAhaMove.Requests
-        //     .Skip((actualPageIndex - 1) * actualPageSize)
-        //     .Take(actualPageSize)
-        //     .ToList();
-        //
-        // var paginationResult = ApiResponseFactory.BasePagination(
-        //     items: result, 
-        //     pageIndex: actualPageIndex, 
-        //     pageSize: actualPageSize, 
-        //     totalCount: totalRequests
-        // );
-        
-        return getServiceDetailsAhaMove;
+        return ahamoveResult;
     }
 
     public async Task<DepotResponse> GetDepotDetails(NhanhVnRequest.DepotRequest request)
