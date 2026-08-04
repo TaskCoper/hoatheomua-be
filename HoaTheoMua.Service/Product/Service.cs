@@ -221,10 +221,6 @@ public class Service : IService
             .AsNoTracking()
             .Include(p => p.CategoryProductDetails)
             .ThenInclude(cpd => cpd.CategoryProduct)
-            .ThenInclude(category => category.ParentCategoryProduct)
-            .Include(p => p.CategoryProductDetails)
-            .ThenInclude(cpd => cpd.CategoryProduct)
-            .ThenInclude(category => category.ChildCategoryProducts)
             .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
@@ -322,10 +318,6 @@ public class Service : IService
             .AsNoTracking()
             .Include(p => p.CategoryProductDetails)
             .ThenInclude(cpd => cpd.CategoryProduct)
-            .ThenInclude(category => category.ParentCategoryProduct)
-            .Include(p => p.CategoryProductDetails)
-            .ThenInclude(cpd => cpd.CategoryProduct)
-            .ThenInclude(category => category.ChildCategoryProducts)
             .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
