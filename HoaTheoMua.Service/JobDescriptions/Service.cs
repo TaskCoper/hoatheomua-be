@@ -189,10 +189,10 @@ public class Service : IService
             throw new NotFoundException("JOB_DESCRIPTION_NOT_FOUND");
         }
 
-        if (!string.Equals(request.title, job.title, StringComparison.Ordinal))
-        {
-            job.slug = await GenerateUniqueSlugAsync(request.title, id);
-        }
+        // if (!string.Equals(request.title, job.title, StringComparison.Ordinal))
+        // {
+        //     job.slug = await GenerateUniqueSlugAsync(request.title, id);
+        // }
 
         job.title = request.title;
         job.location = request.location;
