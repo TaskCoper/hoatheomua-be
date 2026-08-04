@@ -139,11 +139,11 @@ public class UpdateJobDescriptionTest
         Assert.NotNull(value);
         Assert.Equal("Senior Software Engineer Updated", jobInDb.title);
         Assert.Equal("Hà Nội", jobInDb.location);
-        Assert.Equal("senior-software-engineer-updated", jobInDb.slug);
+        Assert.Equal("senior-software-engineer", jobInDb.slug);
         Assert.Equal(3, jobInDb.openings);
 
         Assert.Equal("Senior Software Engineer Updated", GetString(value, "title"));
-        Assert.Equal("senior-software-engineer-updated", GetString(value, "slug"));
+        Assert.Equal("senior-software-engineer", GetString(value, "slug"));
     }
 
     [Fact]
@@ -162,8 +162,9 @@ public class UpdateJobDescriptionTest
         var jobInDb = await dbContext.JobDescriptions.FirstAsync(x => x.Id == JobId);
 
         Assert.Equal("Backend Developer", jobInDb.title);
-        Assert.Equal("backend-developer", jobInDb.slug);
+        Assert.Equal("senior-software-engineer", jobInDb.slug);
         Assert.Equal("Backend Developer", GetString(value, "title"));
+        Assert.Equal("senior-software-engineer", GetString(value, "slug"));
     }
 
     [Fact]
@@ -219,7 +220,7 @@ public class UpdateJobDescriptionTest
     }
 
     [Fact]
-    public async Task UpdateJob_TitleChanged_RegenerateSlug()
+    public async Task UpdateJob_TitleChanged_KeepOldSlug()
     {
         await using var dbContext = CreateDbContext();
 
@@ -238,8 +239,8 @@ public class UpdateJobDescriptionTest
 
         Assert.NotNull(value);
         Assert.Equal("Junior Software Engineer", jobInDb.title);
-        Assert.Equal("junior-software-engineer", jobInDb.slug);
-        Assert.Equal("junior-software-engineer", GetString(value, "slug"));
+        Assert.Equal("senior-software-engineer", jobInDb.slug);
+        Assert.Equal("senior-software-engineer", GetString(value, "slug"));
     }
 
     [Fact]
