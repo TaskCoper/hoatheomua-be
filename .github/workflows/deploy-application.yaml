@@ -77,6 +77,11 @@ jobs:
       # Sepay (verifies the "Authorization: Apikey <ApiKey>" header on inbound webhooks)
       SEPAY_API_KEY: ${{ secrets.SEPAY_API_KEY }}
 
+      # Revalidate (outbound cache purge to the storefront:
+      # POST SECRET_BASE_URL with header "x-revalidate-secret: <SECRET_KEY>")
+      SECRET_BASE_URL: ${{ secrets.SECRET_BASE_URL }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+
       # Cloudflare
       CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
 

@@ -54,6 +54,10 @@ x-api-env: &api-env
 
   SepayOption__ApiKey: ${SEPAY_API_KEY}
 
+  # Revalidate (outbound cache purge to the storefront: POST BaseUrl with "x-revalidate-secret: <SecretKey>")
+  SecretOptions__BaseUrl: ${SECRET_BASE_URL}
+  SecretOptions__SecretKey: ${SECRET_KEY}
+
   AllowedHosts: "*"
 
 x-api-base: &api-base
