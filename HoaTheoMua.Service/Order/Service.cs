@@ -768,6 +768,7 @@ public class Service : IService
             var nhanhOrderId = int.TryParse(normalizedSearch, out var parsedNhanhOrderId)
                 ? parsedNhanhOrderId
                 : (int?)null;
+            
 
             orders = orders.Where(x =>
                 x.TrackNumber.ToLower().Contains(normalizedSearch) ||
