@@ -134,8 +134,10 @@ public class DeleteNewTest
         var service = CreateService(newsList, out var dbContextMock);
 
         var result = await service.DeleteNewAsync(NewsId);
-
-        Assert.True(result);
+        
+        //Config response
+        Assert.Equal(NewsId, result.Id);
+        Assert.Equal(news.slug, result.Slug);
         Assert.True(news.IsDeleted);
         Assert.NotNull(news.UpdatedAt);
 

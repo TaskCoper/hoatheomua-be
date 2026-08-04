@@ -18,13 +18,16 @@ public class Service: IService
     private readonly HttpClient _httpClient;
     private readonly AppDbContext _appDbContext;
     private readonly NhanhVnOption _nhanhVnOption;
+    private readonly Revalidate.IService _revalidateService;
 
-    public Service(HttpClient httpClient, AppDbContext appDbContext, IConfiguration configuration)
+    public Service(HttpClient httpClient, AppDbContext appDbContext, 
+        IConfiguration configuration, Revalidate.IService revalidateService)
     {
         _httpClient = httpClient;
         _appDbContext = appDbContext;
         _nhanhVnOption = new NhanhVnOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
+        _revalidateService = revalidateService;
     }
     
     public async Task<OrderLabelResponse> GetOrderLabel(OrderLabelRequest orderLabelRequest)
@@ -163,6 +166,11 @@ public class Service: IService
                 {
                     var req = TryDeserialize<NhanhProductAddWebhookRequest>(json);
                     if (req == null) return "Thành công";
+                    JsonElement jsonData = JsonSerializer.SerializeToElement(new
+                    {
+                        entity = "productList"
+                    });
+                    await _revalidateService.RevalidateApi(jsonData);
                     return await WebhookNhanhVnProductAdd(req);
                 }
 
@@ -170,6 +178,11 @@ public class Service: IService
                 {
                     var req = TryDeserialize<NhanhProductAddWebhookRequest>(json);
                     if (req == null) return "Thành công";
+                    JsonElement jsonData = JsonSerializer.SerializeToElement(new
+                    {
+                        entity = "productList"
+                    });
+                    await _revalidateService.RevalidateApi(jsonData);
                     return await WebhookNhanhVnProductUpdate(req);
                 }
 
@@ -177,6 +190,11 @@ public class Service: IService
                 {
                     var req = TryDeserialize<NhanhProductDeleteWebhookRequest>(json);
                     if (req == null) return "Thành công";
+                    JsonElement jsonData = JsonSerializer.SerializeToElement(new
+                    {
+                        entity = "productList"
+                    });
+                    await _revalidateService.RevalidateApi(jsonData);
                     return await WebhookNhanhVnProductDelete(req);
                 }
 

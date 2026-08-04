@@ -9,5 +9,5 @@ public interface IService
     Task<NewResponse?> GetNewByIdAsync(string key);
     Task<NewResponseV2> CreateNewAsync(CreateNewRequest request);
     Task<NewResponseV2?> UpdateNewAsync(Guid id, UpdateNewRequest request);
-    Task<bool> DeleteNewAsync(Guid id);
+    Task<ClassDeleteResponse> DeleteNewAsync(Guid id);
 }
