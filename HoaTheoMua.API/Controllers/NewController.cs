@@ -1,8 +1,11 @@
+using System.Text.Json;
 using HoaTheoMua.Extentions;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Models;
+using HoaTheoMua.Service.Revalidate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using IService = HoaTheoMua.Service.Revalidate.IService;
 using NewService = HoaTheoMua.Service.New;
 
 namespace HoaTheoMua.Controllers;
@@ -12,10 +15,12 @@ namespace HoaTheoMua.Controllers;
 public class NewController : ControllerBase
 {
     private readonly NewService.IService _newService;
+    private readonly IService _revalidateService;
 
-    public NewController(NewService.IService newService)
+    public NewController(NewService.IService newService, IService revalidateService)
     {
         _newService = newService;
+        _revalidateService = revalidateService;
     }
 
     [HttpGet]
@@ -43,6 +48,12 @@ public class NewController : ControllerBase
     public async Task<IActionResult> CreateNew([FromBody] NewService.CreateNewRequest request)
     {
         var result = await _newService.CreateNewAsync(request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "news",
+            slug = result.slug ?? result.Id.ToString(),
+        });
+        await _revalidateService.RevalidateApi(json);
         return CreatedAtAction(nameof(GetNewById), new { key = result.slug ?? result.Id.ToString() }, ApiResponseFactory.Base(result, true, "Tạo bài viết tin tức mới thành công.", HttpContext.TraceIdentifier));
     }
 
@@ -51,7 +62,14 @@ public class NewController : ControllerBase
     
     public async Task<IActionResult> UpDateNew(Guid id, [FromBody] NewService.UpdateNewRequest request)
     {
-        await _newService.UpdateNewAsync(id, request);
+        var result =  await _newService.UpdateNewAsync(id, request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "news",
+            slug = result?.slug ?? result?.Id.ToString(),
+        });
+        await _revalidateService.RevalidateApi(json);
+
         return Ok(ApiResponseFactory.Base("Cập nhật thông tin bài viết tin tức thành công.", true, "", HttpContext.TraceIdentifier));
     }
 
@@ -60,7 +78,15 @@ public class NewController : ControllerBase
     
     public async Task<IActionResult> DeleteNew(Guid id)
     {
-        await _newService.DeleteNewAsync(id);
+        var result = await _newService.DeleteNewAsync(id);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "news",
+            slug = result.Slug ?? result.Id.ToString(),
+        });
+        await _revalidateService.RevalidateApi(json);
+
+        
         return Ok(ApiResponseFactory.Base("Xóa bài viết thành công.", true, "", HttpContext.TraceIdentifier));
     }
 }

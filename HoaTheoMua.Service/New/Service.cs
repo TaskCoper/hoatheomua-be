@@ -287,7 +287,7 @@ public class Service : IService
         };
     }
 
-    public async Task<bool> DeleteNewAsync(Guid id)
+    public async Task<ClassDeleteResponse> DeleteNewAsync(Guid id)
     {
         var news = await _dbContext.NewsList
             .FirstOrDefaultAsync(news => news.Id == id && !news.IsDeleted);
@@ -301,7 +301,11 @@ public class Service : IService
         news.UpdatedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync();
 
-        return true;
+        return new ClassDeleteResponse
+        {
+            Id = news.Id,
+            Slug = news.slug,
+        };
     }
 
     private async Task EnsureCategoriesExistAsync(List<Guid> categoryIds)
