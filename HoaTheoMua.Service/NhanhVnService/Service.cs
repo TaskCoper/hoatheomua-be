@@ -181,7 +181,7 @@ public class Service: IService
                     var result =  await WebhookNhanhVnProductUpdate(req);
                     JsonElement jsonData = JsonSerializer.SerializeToElement(new
                     {
-                        entity = "productList",
+                        entity = "product",
                         id = result
                     });
                      await _revalidateService.RevalidateApi(jsonData);
