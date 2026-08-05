@@ -207,6 +207,21 @@ public class NhanhProductDetailDto
     [JsonPropertyName("status")]
     public int? Status { get; set; }
 
+    // Webhook productAdd/productUpdate chỉ gửi id phẳng (categoryId/brandId), KHÔNG gửi object
+    // `category`/`brand` như response của /api/product/search. Giữ cả hai dạng để không phá code cũ.
+    [JsonPropertyName("categoryId")]
+    public int? CategoryId { get; set; }
+
+    [JsonPropertyName("brandId")]
+    public int? BrandId { get; set; }
+
+    // Nhanh gửi dạng số (payload thật đang là 2); lưu nguyên vào Product.SaleVatMode/ImportVatMode.
+    [JsonPropertyName("priceVatMode")]
+    public int? PriceVatMode { get; set; }
+
+    [JsonPropertyName("importPriceVatMode")]
+    public int? ImportPriceVatMode { get; set; }
+
     [JsonPropertyName("category")]
     public NhanhCategoryDto? Category { get; set; }
 
@@ -288,8 +303,13 @@ public class NhanhPricesDto
 {
     [JsonPropertyName("retail")]
     public double? Retail { get; set; }
+    // Giá đã gồm VAT tương ứng với retail/import — có trong payload webhook thật.
+    [JsonPropertyName("retailVat")]
+    public double? RetailVat { get; set; }
     [JsonPropertyName("import")]
     public double? Import { get; set; }
+    [JsonPropertyName("importVat")]
+    public double? ImportVat { get; set; }
     [JsonPropertyName("old")]
     public double? Old { get; set; }
     [JsonPropertyName("wholesale")]

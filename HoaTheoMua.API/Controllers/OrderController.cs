@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Extentions;
+using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Order;
 using Microsoft.AspNetCore.Authorization;
@@ -32,6 +32,14 @@ public class OrderController : ControllerBase
         var result = await _orderService.CreateOrder(request);
         return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     }
+
+    // [HttpPost("/api/v1/orders/default")]
+    // [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    // public async Task<IActionResult> CreateDefaultOrder()
+    // {
+    //     var result = await _orderService.CreateDefaultOrder();
+    //     return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    // }
     
     [HttpPatch("/api/v1/orders/{id}/cancel")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
@@ -74,6 +82,23 @@ public class OrderController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
+    [HttpPatch("/api/v1/orders/update-ahamove")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> UpdateAhaMoveService([FromBody] Request.UpdateAhamoveRequest request)
+    {
+        var result = await _orderService.UpdateAhaMoveService(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpGet("/api/v1/orders/admin")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+
+    public async Task<IActionResult> GetOrderByAdmin([FromQuery] string? search, int pageIndex, int pageSize)
+    {
+        var result = await _orderService.GetOrderByAdmin(search, pageIndex, pageSize);
+        return Ok(result);
+    }
+    
     // [HttpPost("/api/v1/orders/taxcode")]
     // [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
     // public async Task<IActionResult> GetInfoTaxCode([FromQuery] string taxCode)
@@ -96,3 +121,4 @@ public class OrderController : ControllerBase
     //     return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     // }
 }
+

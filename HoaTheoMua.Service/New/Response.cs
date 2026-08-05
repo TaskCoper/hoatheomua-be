@@ -46,3 +46,9 @@ public class NewResponseV2
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
 }
+
+public class ClassDeleteResponse
+{
+    public Guid? Id { get; set; }
+    public string? Slug { get; set; } = string.Empty;
+}

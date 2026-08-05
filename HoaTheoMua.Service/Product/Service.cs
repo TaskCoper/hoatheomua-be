@@ -1,6 +1,8 @@
+using System.Linq.Expressions;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AutoMapper;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
@@ -17,17 +19,19 @@ public class Service : IService
     private readonly IHttpContextAccessor _httpContext;
     private readonly HttpClient _httpClient;
     private readonly NhanhVnOption _nhanhVnOption;
+    private readonly IMapper _mapper;
 
     public Service(AppDbContext dbContext,
         IHttpContextAccessor httpContext,
         HttpClient httpClient,
-        IConfiguration configuration)
+        IConfiguration configuration, IMapper  mapper)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
         _httpClient = httpClient;
         _nhanhVnOption = new NhanhVnOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
+        _mapper = mapper;
     }
 
     public async Task<NhanhVnProductListResponse.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request)
@@ -219,7 +223,7 @@ public class Service : IService
             .ThenInclude(cpd => cpd.CategoryProduct)
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted);
+        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -316,7 +320,7 @@ public class Service : IService
             .ThenInclude(cpd => cpd.CategoryProduct)
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted);
+        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -415,22 +419,208 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
     }
 
-    public async Task<Response.ProductDetailResponse> GetLocalProductDetail(Guid id)
+    // public async Task<Response.ProductDetailResponse> GetLocalProductDetail(Guid id)
+    // {
+    //     var product = await _dbContext.Products
+    //         .Include(p => p.CategoryProductDetails)
+    //         .ThenInclude(cpd => cpd.CategoryProduct)
+    //         .ThenInclude(x => x.ParentCategoryProduct)
+    //         .ThenInclude(x => x!.ChildCategoryProducts)
+    //         .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
+    //
+    //     if (product == null)
+    //     {
+    //         throw new NotFoundException("PRODUCT_NOT_FOUND");
+    //     }
+    //
+    //     return MapToProductDetailResponse(product);
+    // }
+    
+    public async Task<Response.LocalProductDetailResponse> GetLocalProductDetail(Guid id)
     {
-        var product = await _dbContext.Products
-            .Include(p => p.CategoryProductDetails)
-            .ThenInclude(cpd => cpd.CategoryProduct)
-            .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
+        var response = await _dbContext.Products
+            .AsNoTracking()
+            .Include(x => x.CategoryProductDetails)
+                .ThenInclude(x => x.CategoryProduct)
+            .Where(p => p.Id == id && !p.IsDeleted)
+            .Select(LocalProductDetailSelector)
+            .FirstOrDefaultAsync();
 
-        if (product == null)
+        if (response == null)
         {
             throw new NotFoundException("PRODUCT_NOT_FOUND");
         }
 
-        return MapToProductDetailResponse(product);
-    }
+        if (!string.IsNullOrWhiteSpace(response.ParentProductId))
+        {
+            response.Parent = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p =>
+                    !p.IsDeleted &&
+                    p.NhanhProductId == response.ParentProductId)
+                .Select(LocalProductDetailSelector)
+                .FirstOrDefaultAsync();
+        }
 
-    private static Response.ProductDetailResponse MapToProductDetailResponse(HoaTheoMua.Repository.Entity.Product product)
+        if (!string.IsNullOrWhiteSpace(response.NhanhProductId))
+        {
+            response.Children = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p =>
+                    !p.IsDeleted &&
+                    p.ParentProductId == response.NhanhProductId)
+                .Select(LocalProductDetailSelector)
+                .ToListAsync();
+        }
+
+        return response;
+    }
+    
+    private static readonly Expression<Func<HoaTheoMua.Repository.Entity.Product, Response.LocalProductDetailResponse>> 
+        LocalProductDetailSelector = product => new Response.LocalProductDetailResponse
+    {
+        Id = product.Id,
+        IsPinned = product.IsPin,
+        SourceRowNumber = product.SourceRowNumber,
+        NhanhProductId = product.NhanhProductId,
+        ParentProductId = product.ParentProductId,
+        ParentProductCode = product.ParentProductCode,
+        ParentProductName = product.ParentProductName,
+        Barcode = product.Barcode,
+        ProductType = product.ProductType,
+        ProductCode = product.ProductCode,
+        ProductName = product.ProductName,
+        OtherName = product.OtherName,
+        Unit = product.Unit,
+        CoverImage = product.CoverImage,
+        OtherImages = product.OtherImages,
+        WarrantyMonths = product.WarrantyMonths,
+        Weight = product.Weight,
+        ImportPrice = product.ImportPrice,
+        ImportVat = product.ImportVat,
+        ImportPriceWithVat = product.ImportPriceWithVat,
+        ImportVatMode = product.ImportVatMode,
+        Price = product.Price,
+        PriceWithVat = product.PriceWithVat,
+        BranchPrice = product.BranchPrice,
+        BranchPriceWithVat = product.BranchPriceWithVat,
+        SaleVatMode = product.SaleVatMode,
+        OldPrice = product.OldPrice,
+        Vat = product.Vat,
+        ProfitPercentage = product.ProfitPercentage,
+        CostPrice = product.CostPrice,
+        WholesalePrice = product.WholesalePrice,
+        WholesalePriceWithVat = product.WholesalePriceWithVat,
+        WholesaleBranchPrice = product.WholesaleBranchPrice,
+        WholesaleBranchPriceWithVat = product.WholesaleBranchPriceWithVat,
+        TotalStock = product.TotalStock,
+        StockTransferring = product.StockTransferring,
+        Stock = product.Stock,
+        DeliveringStock = product.DeliveringStock,
+        WarehouseStock = product.WarehouseStock,
+        StockError = product.StockError,
+        Held = product.Held,
+        AvailableForSale = product.AvailableForSale,
+        WarrantyStock = product.WarrantyStock,
+        HeldComponents = product.HeldComponents,
+        PendingImportStock = product.PendingImportStock,
+        PreOrder = product.PreOrder,
+        Status = product.Status,
+        CategoryCode = product.CategoryCode,
+        CategoryName = product.CategoryName,
+        InternalCategoryCode = product.InternalCategoryCode,
+        Brand = product.Brand,
+        NhanhCategoryId = product.NhanhCategoryId,
+        NhanhBrandId = product.NhanhBrandId,
+        NhanhTypeId = product.NhanhTypeId,
+        Supplier = product.Supplier,
+        WarrantyAddress = product.WarrantyAddress,
+        Slug = product.Slug,
+        Length = product.Length,
+        Width = product.Width,
+        Height = product.Height,
+        WebOrder = product.WebOrder,
+        NhanhCreatedAt = product.NhanhCreatedAt,
+        NhanhUpdatedAt = product.NhanhUpdatedAt,
+        ProductLabel = product.ProductLabel,
+        BranchPriceDuplicate = product.BranchPriceDuplicate,
+        WholesaleBranchPriceDuplicate = product.WholesaleBranchPriceDuplicate,
+        PriceLabel = product.PriceLabel,
+        Size = product.Size,
+        Color = product.Color,
+        Origin = product.Origin,
+        CreatedAt = product.CreatedAt,
+        UpdatedAt = product.UpdatedAt,
+        Categories = product.CategoryProductDetails
+            .Where(cpd =>
+                !cpd.IsDeleted &&
+                !cpd.CategoryProduct.IsDeleted)
+            .Select(cpd => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
+            {
+                categoryId = cpd.CategoryProduct.Id,
+                isPinned = cpd.IsPin,
+                name = cpd.CategoryProduct.Name,
+                name_En = cpd.CategoryProduct.Name_En,
+                description = cpd.CategoryProduct.Description,
+                description_En = cpd.CategoryProduct.Description_En,
+                position = cpd.CategoryProduct.Position,
+                metaData = cpd.CategoryProduct.MetaData,
+                page = cpd.CategoryProduct.Page,
+                startTime = cpd.CategoryProduct.StartTime,
+                endTime = cpd.CategoryProduct.EndTime,
+                type = cpd.CategoryProduct.Type,
+                isActive = cpd.CategoryProduct.IsActive,
+                userId = cpd.CategoryProduct.UserId,
+                parentId = cpd.CategoryProduct.ParentCategoryProductId,
+                Parent = cpd.CategoryProduct.ParentCategoryProduct == null ||
+                         cpd.CategoryProduct.ParentCategoryProduct.IsDeleted
+                    ? null
+                    : new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
+                    {
+                        categoryId = cpd.CategoryProduct.ParentCategoryProduct.Id,
+                        name = cpd.CategoryProduct.ParentCategoryProduct.Name,
+                        name_En = cpd.CategoryProduct.ParentCategoryProduct.Name_En,
+                        description = cpd.CategoryProduct.ParentCategoryProduct.Description,
+                        description_En = cpd.CategoryProduct.ParentCategoryProduct.Description_En,
+                        position = cpd.CategoryProduct.ParentCategoryProduct.Position,
+                        metaData = cpd.CategoryProduct.ParentCategoryProduct.MetaData,
+                        page = cpd.CategoryProduct.ParentCategoryProduct.Page,
+                        startTime = cpd.CategoryProduct.ParentCategoryProduct.StartTime,
+                        endTime = cpd.CategoryProduct.ParentCategoryProduct.EndTime,
+                        type = cpd.CategoryProduct.ParentCategoryProduct.Type,
+                        isActive = cpd.CategoryProduct.ParentCategoryProduct.IsActive,
+                        userId = cpd.CategoryProduct.ParentCategoryProduct.UserId,
+                        parentId = cpd.CategoryProduct.ParentCategoryProduct.ParentCategoryProductId,
+                        children = new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
+                    },
+                children = cpd.CategoryProduct.ChildCategoryProducts!
+                    .Where(child => !child.IsDeleted)
+                    .OrderBy(child => child.Position)
+                    .Select(child => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
+                    {
+                        categoryId = child.Id,
+                        name = child.Name,
+                        name_En = child.Name_En,
+                        description = child.Description,
+                        description_En = child.Description_En,
+                        position = child.Position,
+                        metaData = child.MetaData,
+                        page = child.Page,
+                        startTime = child.StartTime,
+                        endTime = child.EndTime,
+                        type = child.Type,
+                        isActive = child.IsActive,
+                        userId = child.UserId,
+                        parentId = child.ParentCategoryProductId,
+                        children = new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
+                    })
+                    .ToList()
+            })
+            .ToList()
+    };
+    
+
+     private static Response.ProductDetailResponse MapToProductDetailResponse(HoaTheoMua.Repository.Entity.Product product)
     {
         return new Response.ProductDetailResponse
         {
@@ -448,6 +638,7 @@ public class Service : IService
             OtherName = product.OtherName,
             Unit = product.Unit,
             CoverImage = product.CoverImage,
+            OtherImages = product.OtherImages,
             WarrantyMonths = product.WarrantyMonths,
             Weight = product.Weight,
             ImportPrice = product.ImportPrice,
@@ -484,6 +675,9 @@ public class Service : IService
             CategoryName = product.CategoryName,
             InternalCategoryCode = product.InternalCategoryCode,
             Brand = product.Brand,
+            NhanhCategoryId = product.NhanhCategoryId,
+            NhanhBrandId = product.NhanhBrandId,
+            NhanhTypeId = product.NhanhTypeId,
             Supplier = product.Supplier,
             WarrantyAddress = product.WarrantyAddress,
             Slug = product.Slug,
@@ -492,6 +686,7 @@ public class Service : IService
             Height = product.Height,
             WebOrder = product.WebOrder,
             NhanhCreatedAt = product.NhanhCreatedAt,
+            NhanhUpdatedAt = product.NhanhUpdatedAt,
             ProductLabel = product.ProductLabel,
             BranchPriceDuplicate = product.BranchPriceDuplicate,
             WholesaleBranchPriceDuplicate = product.WholesaleBranchPriceDuplicate,
@@ -513,14 +708,59 @@ public class Service : IService
                     description_En = cpd.CategoryProduct.Description_En,
                     position = cpd.CategoryProduct.Position,
                     metaData = cpd.CategoryProduct.MetaData,
+                    page = cpd.CategoryProduct.Page,
                     startTime = cpd.CategoryProduct.StartTime,
                     endTime = cpd.CategoryProduct.EndTime,
                     type = cpd.CategoryProduct.Type,
                     isActive = cpd.CategoryProduct.IsActive,
                     userId = cpd.CategoryProduct.UserId,
-                    parentId = cpd.CategoryProduct.ParentCategoryProductId
+                    parentId = cpd.CategoryProduct.ParentCategoryProductId,
+                    Parent = cpd.CategoryProduct.ParentCategoryProduct == null ||
+                             cpd.CategoryProduct.ParentCategoryProduct.IsDeleted
+                        ? null
+                        : new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
+                        {
+                            categoryId = cpd.CategoryProduct.ParentCategoryProduct.Id,
+                            name = cpd.CategoryProduct.ParentCategoryProduct.Name,
+                            name_En = cpd.CategoryProduct.ParentCategoryProduct.Name_En,
+                            description = cpd.CategoryProduct.ParentCategoryProduct.Description,
+                            description_En = cpd.CategoryProduct.ParentCategoryProduct.Description_En,
+                            position = cpd.CategoryProduct.ParentCategoryProduct.Position,
+                            metaData = cpd.CategoryProduct.ParentCategoryProduct.MetaData,
+                            page = cpd.CategoryProduct.ParentCategoryProduct.Page,
+                            startTime = cpd.CategoryProduct.ParentCategoryProduct.StartTime,
+                            endTime = cpd.CategoryProduct.ParentCategoryProduct.EndTime,
+                            type = cpd.CategoryProduct.ParentCategoryProduct.Type,
+                            isActive = cpd.CategoryProduct.ParentCategoryProduct.IsActive,
+                            userId = cpd.CategoryProduct.ParentCategoryProduct.UserId,
+                            parentId = cpd.CategoryProduct.ParentCategoryProduct.ParentCategoryProductId,
+                            children = new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
+                        },
+                    children = cpd.CategoryProduct.ChildCategoryProducts != null
+                        ? cpd.CategoryProduct.ChildCategoryProducts
+                            .Where(child => !child.IsDeleted)
+                            .OrderBy(child => child.Position)
+                            .Select(child => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse
+                            {
+                                categoryId = child.Id,
+                                name = child.Name,
+                                name_En = child.Name_En,
+                                description = child.Description,
+                                description_En = child.Description_En,
+                                position = child.Position,
+                                metaData = child.MetaData,
+                                page = child.Page,
+                                startTime = child.StartTime,
+                                endTime = child.EndTime,
+                                type = child.Type,
+                                isActive = child.IsActive,
+                                userId = child.UserId,
+                                parentId = child.ParentCategoryProductId,
+                                children = new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
+                            }).ToList()
+                        : new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
                 })
-                .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
+                .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>(),
         };
     }
 
@@ -568,7 +808,8 @@ public class Service : IService
                     !x.IsDeleted &&
                     x.IsPin &&
                     !x.CategoryProduct.IsDeleted &&
-                    !x.Product.IsDeleted);
+                    !x.Product.IsDeleted &&
+                    (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty));
 
             if (categoryProductDetail == null)
             {
@@ -583,7 +824,8 @@ public class Service : IService
             var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
                                                                                     x.Id == id &&
                                                                                     !x.IsDeleted &&
-                                                                                    x.IsPin);
+                                                                                    x.IsPin &&
+                                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
             if (product == null)
             {
@@ -617,6 +859,16 @@ public class Service : IService
             throw new BadRequestException("Category ID cannot be empty.");
         }
         
+        var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
+                                                                    x.Id == request.ProductId &&
+                                                                    !x.IsDeleted &&
+                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty));
+
+        if (product == null)
+        {
+            throw new BadRequestException("Product not found or is not a parent product.");
+        }
+
         if (request.IsPin)
         {
             if (request.CategoryId.HasValue)
@@ -625,7 +877,8 @@ public class Service : IService
                     .CountAsync(x =>
                         !x.IsDeleted &&
                         x.CategoryProductId == request.CategoryId.Value &&
-                        x.IsPin);
+                        x.IsPin &&
+                        (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty));
 
                 if (pinnedCategoryProductCount >= 32)
                 {
@@ -637,22 +890,14 @@ public class Service : IService
                 var pinnedProductCount = await _dbContext.Products
                     .CountAsync(x =>
                         !x.IsDeleted &&
-                        x.IsPin);
+                        x.IsPin &&
+                        (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
                 if (pinnedProductCount >= 32)
                 {
                     throw new BadRequestException("Only 32 products can be pinned.");
                 }
             }
-        }
-
-        var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
-                                                                    x.Id == request.ProductId &&
-                                                                    !x.IsDeleted);
-
-        if (product == null)
-        {
-            throw new BadRequestException("Product not found.");
         }
 
         if (request.CategoryId.HasValue)
@@ -706,7 +951,8 @@ public class Service : IService
                     x.IsPin &&
                     x.CategoryProductId == request.CategoryId.Value &&
                     !x.CategoryProduct.IsDeleted &&
-                    !x.Product.IsDeleted)
+                    !x.Product.IsDeleted &&
+                    (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty))
                 .OrderBy(x => x.Position) //
                 .ThenBy(x => x.Product.ProductName);
 
@@ -730,7 +976,8 @@ public class Service : IService
         var pinnedProductQuery = _dbContext.Products
             .Where(x =>
                 !x.IsDeleted &&
-                x.IsPin)
+                x.IsPin &&
+                x.ParentProductId == null)
             .OrderBy(x => x.Position) //
             .ThenBy(x => x.ProductName);
 
@@ -750,6 +997,27 @@ public class Service : IService
 
         return pinnedProducts;
     }
+
+    public async Task<string> UpdateProduct(Guid id, Request.UpdateProductRequest request)
+    {
+        var product = await _dbContext.Products
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+
+        if (product == null)
+        {
+            throw new BadRequestException("Product does not exist.");
+        }
+        
+        _mapper.Map(request, product);
+        product.UpdatedAt = DateTimeOffset.UtcNow;
+        
+        _dbContext.Products.Update(product);
+        await _dbContext.SaveChangesAsync();
+
+        return "Cập nhật thành công";
+    }
+    
+    
 }
 
 

@@ -329,7 +329,7 @@ public class Service : IService
         return ("Cập nhật thành công");
     }
 
-    public async Task<string> DeleteConfig(Guid id)
+    public async Task<Response.ResponseDeleteConfig> DeleteConfig(Guid id)
     {
         var query = await _dbContext.Configs.Where(x => x.Id == id && !x.IsDeleted).FirstOrDefaultAsync();
 
@@ -343,13 +343,20 @@ public class Service : IService
         _dbContext.Configs.Update(query);
         await _dbContext.SaveChangesAsync();
 
-        return "Xóa thành công.";
+        return new Response.ResponseDeleteConfig()
+        {
+            Group = query.Group,
+            Key = query.Key,
+        };
     }
 
     public async Task<List<Response.ConfigResponse>?> GetConfigIsPublic(string? groupName, string? key)
     {
         var query = _dbContext.Configs
-            .Where(x => x.IsPublic == true && !x.IsDeleted && x.Kind!.ToLower().Trim() == nameof(KindConfig.Content).ToLower().Trim());
+            .Where(x => x.IsPublic == true && 
+                        !x.IsDeleted && 
+                        (x.Kind!.ToLower().Trim() == nameof(KindConfig.Content).ToLower().Trim() 
+                         || x.Kind!.ToLower().Trim() == nameof(KindConfig.Setting).ToLower().Trim()  ));
         
         if (!string.IsNullOrEmpty(groupName))
         {

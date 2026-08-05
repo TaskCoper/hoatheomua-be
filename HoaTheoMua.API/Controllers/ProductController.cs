@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Extentions;
+﻿using System.Text.Json;
+using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Product;
 using Microsoft.AspNetCore.Authorization;
@@ -10,10 +11,12 @@ namespace HoaTheoMua.Controllers;
 public class ProductController: ControllerBase
 {
     private readonly IService _productService;
+    private readonly Service.Revalidate.IService _revalidateService;
     
-    public ProductController(IService productService)
+    public ProductController(IService productService, Service.Revalidate.IService revalidateService)
     {
         _productService = productService;
+        _revalidateService = revalidateService;
     }
     
     [HttpPost("/api/v1/products/nhanh-vn/list")]
@@ -62,6 +65,12 @@ public class ProductController: ControllerBase
     public async Task<IActionResult> MoveProduct(Guid id, Request.MoveProductRequest request)
     {
         var result = await _productService.MoveProduct(id, request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "product",
+            id = id,
+        });
+        await _revalidateService.RevalidateApi(json);
         return Ok(result);
     }
     
@@ -70,6 +79,12 @@ public class ProductController: ControllerBase
     public async Task<IActionResult> PinProduct(Request.PinProductRequest request)
     {
         var result = await _productService.PinProduct(request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "product",
+            id = request.ProductId,
+        });
+        await _revalidateService.RevalidateApi(json);
         return Ok(result);
     }
 
@@ -78,6 +93,14 @@ public class ProductController: ControllerBase
     public async Task<IActionResult> GetProductPin([FromQuery] Request.GetProductPinRequest request)
     {
         var result = await _productService.GetProductPin(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpPatch("/api/v1/products/{id:guid}/update")]
+    [Authorize (Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> UpdateProduct(Guid id ,[FromBody] Request.UpdateProductRequest request)
+    {
+        var result = await _productService.UpdateProduct(id, request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     

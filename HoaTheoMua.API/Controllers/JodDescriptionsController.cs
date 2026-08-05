@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HoaTheoMua.Extentions;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.JobDescriptions;
@@ -13,10 +14,12 @@ public class JodDescriptionsController: ControllerBase
 {
     
     private readonly IService _jobDescriptionService;
+    private readonly Service.Revalidate.IService _revalidateService;
 
-    public JodDescriptionsController(IService jobDescriptionService)
+    public JodDescriptionsController(IService jobDescriptionService,  Service.Revalidate.IService revalidateService)
     {
         _jobDescriptionService = jobDescriptionService;
+        _revalidateService = revalidateService;
     }
 
 
@@ -25,6 +28,13 @@ public class JodDescriptionsController: ControllerBase
     public async Task<IActionResult> CreateJobDescription(Request.CreateRequest request)
     {
         var result = await _jobDescriptionService.CreateJobAsync(request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "recruitment",
+            slug = result.Slug,
+        });
+        await _revalidateService.RevalidateApi(json);
+        
         return CreatedAtAction(nameof(GetJobDescriptionByIdOrSlug), new { key = result.id }, ApiResponseFactory.Base("Success", true, "", HttpContext.TraceIdentifier));
     }
 
@@ -54,20 +64,35 @@ public class JodDescriptionsController: ControllerBase
         return Ok(result);
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{identifier}")]
     [Authorize (Policy = JwtExtensions.AdminPolicy)]
-    public async Task<IActionResult> UpdateJobDescription(Guid id, [FromBody] Request.UpdateRequest request)
+    public async Task<IActionResult> UpdateJobDescription(string identifier, [FromBody] Request.UpdateRequest request)
     {
-        var result = await _jobDescriptionService.UpdateJobAsync(id, request);
+        var result = await _jobDescriptionService.UpdateJobAsync(identifier, request);
+
+        var data = (Response.JobDetailResponse)result.Value!;
+        
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "recruitment",
+            slug = data.Slug ?? data.Id.ToString(),
+        });
+        await _revalidateService.RevalidateApi(json);
         result.TraceId = HttpContext.TraceIdentifier;
         return Ok(result);
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete("{identifier}")]
     [Authorize (Policy = JwtExtensions.AdminPolicy)]
-    public async Task<IActionResult> DeleteJobDescription(Guid id)
+    public async Task<IActionResult> DeleteJobDescription(string identifier)
     {
-        await _jobDescriptionService.DeleteJobAsync(id);
+        var result = await _jobDescriptionService.DeleteJobAsync(identifier);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "recruitment",
+            slug = result.Slug ??  result.Id.ToString(),
+        });
+        await _revalidateService.RevalidateApi(json);
         return NoContent();
     }
     [HttpGet("locations")]

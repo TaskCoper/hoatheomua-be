@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using HoaTheoMua.Service.Test.TestSupport;
 using Xunit;
 using ProductService = HoaTheoMua.Service.Product.Service;
 
@@ -49,7 +50,7 @@ public class LocalProductSearchTest
             .AddInMemoryCollection(myConfiguration)
             .Build();
 
-        return new ProductService(dbContext, httpContextMock.Object, httpClient, configuration);
+        return new ProductService(dbContext, httpContextMock.Object, httpClient, configuration, MapperFactory.Create());
     }
 
     [Fact]
@@ -150,7 +151,7 @@ public class LocalProductSearchTest
     }
 
     [Fact]
-    public async Task GetLocalProductDetail_WithCategories_Success()
+    public async Task GetLocalProductDetail_ReturnsProductFields_Success()
     {
         // Arrange
         using var dbContext = CreateInMemoryDbContext();
@@ -160,6 +161,11 @@ public class LocalProductSearchTest
         {
             Id = Guid.NewGuid(),
             ProductName = "Bông Hồng",
+            OtherImages = new List<string> { "rose-1.jpg", "rose-2.jpg" },
+            NhanhCategoryId = 101,
+            NhanhBrandId = 202,
+            NhanhTypeId = 303,
+            NhanhUpdatedAt = new DateTimeOffset(2026, 8, 3, 10, 30, 0, TimeSpan.Zero),
             IsDeleted = false
         };
 
@@ -192,8 +198,12 @@ public class LocalProductSearchTest
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Bông Hồng", result.ProductName);
-        Assert.Single(result.Categories);
-        Assert.Equal("Hoa Tươi", result.Categories[0].name);
+        Assert.Equal(new[] { "rose-1.jpg", "rose-2.jpg" }, result.OtherImages);
+        Assert.Equal(101, result.NhanhCategoryId);
+        Assert.Equal(202, result.NhanhBrandId);
+        Assert.Equal(303, result.NhanhTypeId);
+        Assert.Equal(product.NhanhUpdatedAt, result.NhanhUpdatedAt);
+        Assert.Empty(result.Children);
     }
 
     [Fact]
@@ -205,6 +215,149 @@ public class LocalProductSearchTest
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetLocalProductDetail(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetLocalProductDetail_ReturnsCategoriesWithParentAndChildren()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductName = "Product",
+            IsDeleted = false
+        };
+        var parentCategory = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Parent category",
+            Name_En = "Parent category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false
+        };
+        var linkedCategory = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Linked category",
+            Name_En = "Linked category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false,
+            ParentCategoryProductId = parentCategory.Id
+        };
+        var childCategory = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Child category",
+            Name_En = "Child category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false,
+            ParentCategoryProductId = linkedCategory.Id
+        };
+
+        await dbContext.Products.AddAsync(product);
+        await dbContext.CategoryProducts.AddRangeAsync(parentCategory, linkedCategory, childCategory);
+        await dbContext.CategoryProductDetails.AddAsync(new CategoryProductDetail
+        {
+            Id = Guid.NewGuid(),
+            ProductId = product.Id,
+            CategoryProductId = linkedCategory.Id,
+            IsPin = true,
+            IsDeleted = false
+        });
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await service.GetLocalProductDetail(product.Id);
+
+        // Assert
+        var category = Assert.Single(result.Categories);
+        Assert.Equal(linkedCategory.Id, category.categoryId);
+        Assert.True(category.isPinned);
+        Assert.Equal(parentCategory.Id, category.Parent?.categoryId);
+        Assert.Empty(category.Parent!.children!);
+        var child = Assert.Single(category.children!);
+        Assert.Equal(childCategory.Id, child.categoryId);
+    }
+
+    [Fact]
+    public async Task GetLocalProductDetail_WithChildren_ReturnsAllActiveChildren()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var parent = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "1000",
+            ProductName = "Parent",
+            IsDeleted = false
+        };
+        var firstChild = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "1001",
+            ParentProductId = "1000",
+            ProductName = "First child",
+            Position = 1,
+            IsDeleted = false
+        };
+        var secondChild = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "1002",
+            ParentProductId = "1000",
+            ProductName = "Second child",
+            Position = 2,
+            IsDeleted = false
+        };
+        var deletedChild = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "1003",
+            ParentProductId = "1000",
+            ProductName = "Deleted child",
+            Position = 3,
+            IsDeleted = true
+        };
+        var unrelatedProduct = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "2000",
+            ParentProductId = "9999",
+            ProductName = "Unrelated product",
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(
+            parent,
+            secondChild,
+            deletedChild,
+            unrelatedProduct,
+            firstChild);
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await service.GetLocalProductDetail(parent.Id);
+
+        // Assert
+        Assert.Equal(parent.Id, result.Id);
+        Assert.Equal(2, result.Children.Count);
+        Assert.Contains(result.Children, child => child.Id == firstChild.Id);
+        Assert.Contains(result.Children, child => child.Id == secondChild.Id);
+        Assert.Null(result.Parent);
+
+        var childResult = await service.GetLocalProductDetail(firstChild.Id);
+
+        Assert.NotNull(childResult.Parent);
+        Assert.Equal(parent.Id, childResult.Parent.Id);
+        Assert.Equal(parent.NhanhProductId, childResult.Parent.NhanhProductId);
     }
 
     [Fact]

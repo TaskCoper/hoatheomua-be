@@ -404,9 +404,23 @@ public partial class Service : IService
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
             ? tags.Append(vatTagId).ToList()
             : tags;
-
-        if (order.OrderTime == 0 && tags.Count == 0)
+        
+        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        //var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
+            
+        var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
+        
+        // Mốc unix (giây) Ahamove sẽ tới lấy hàng với đơn giao ngay = hiện tại + ahamove.idle_time.
+        // Khai báo ngoài nhánh vì còn dùng lại cho DeliveryTime gửi sang NhanhVn ở dưới.
+        long delayTime = 0;
+        var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
+        delayTime = delayCallAhamove > 0
+            ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
+            : 0L;
+        
+        if (order.OrderTime == 0 && tags.Count == 0 && ahamoveAllowDelivery == true)
         {
+            
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
             {
                 Id = x.Id.ToString(),
@@ -426,13 +440,10 @@ public partial class Service : IService
             }
             ).ToList();
 
-            var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
-            var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
-
             var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
             {
-                OrderTime = order.OrderTime,
-                IdleUntil = order.OrderTime > 0 ? order.OrderTime : 0,
+                OrderTime = delayTime,
+                IdleUntil = delayTime,
                 Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
                 {
                     new AhaMoveRequest.AhamoveLocationPoint()
@@ -558,7 +569,9 @@ public partial class Service : IService
                 SaleName = "",
                 Description = order.Remarks,
                 PrivateDescription = privateDescription,
-                Status = 54,
+                //nếu admin tắt tính năng giao hàng nhanh thì đã xác nhận : ahamoveAllowDelivery == false
+                //ngược lại tức là cho phép giao hàng nhanh thì 56: đã xác nhận là đúng rồi
+                Status = (order.OrderTime == 0 && tags.Count == 0) ? 56 : 54,
                 TagIds = tagIds,
                 TechnicalStaffId = 0,
                 PromotionId = ""
@@ -592,12 +605,14 @@ public partial class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m, // Hậu tố 'm' biểu thị kiểu decimal
-                DeliveryDate = (order.OrderTime > 0) ? vnDt.ToString("yyyy-MM-dd") : "",
+                DeliveryDate = (order.OrderTime > 0) ? vnDt.ToString("yyyy-MM-dd") : ConvertInstantDateDelivery(delayTime) ,
                 // DeliveryDate =  "2026-07-05",
                 DeliveryHour = "",
                 DeliveryMinute = "",
                 // DeliveryTime = (order.OrderTime == 0) ? "" :  "19h",
-                DeliveryTime = await ConvertTimeDelivery(order),
+                DeliveryTime = tags.Count > 0
+                    ? await ConvertTimeDelivery(order)
+                    : ConvertInstantTimeDelivery(delayTime),
                 CarrierAccountId = 0,
                 CarrierShopId = "",
                 DeclaredValue = null,
@@ -752,6 +767,35 @@ public partial class Service : IService
         }
 
         return $"{time:D2}:00:00";
+    }
+
+    // Đơn giao ngay không có tag nên ConvertTimeDelivery luôn trả rỗng. Với các đơn này, giờ giao
+    // hiển thị trên NhanhVn là mốc Ahamove tới lấy hàng (hiện tại + ahamove.idle_time), quy về giờ
+    // VN (UTC+7) và render theo định dạng H:i:s mà NhanhVn hỗ trợ.
+    private static string ConvertInstantTimeDelivery(long scheduledUnixSeconds)
+    {
+        if (scheduledUnixSeconds <= 0)
+        {
+            return string.Empty;
+        }
+
+        return DateTimeOffset
+            .FromUnixTimeSeconds(scheduledUnixSeconds)
+            .ToOffset(TimeSpan.FromHours(7))
+            .ToString("HH:mm:ss");
+    }
+    
+    private static string ConvertInstantDateDelivery(long scheduledUnixSeconds)
+    {
+        if (scheduledUnixSeconds <= 0)
+        {
+            return string.Empty;
+        }
+
+        return DateTimeOffset
+            .FromUnixTimeSeconds(scheduledUnixSeconds)
+            .ToOffset(TimeSpan.FromHours(7))
+            .ToString("yyyy-MM-dd");
     }
 
 }
