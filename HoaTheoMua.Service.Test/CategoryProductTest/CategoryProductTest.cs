@@ -962,4 +962,162 @@ public class CategoryProductTest
         var ex4 = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCateProduct(category.Id, reqUpdate2));
         Assert.Equal("CATEGORY_DESCRIPTION_MUTUALLY_REQUIRED", ex4.Message);
     }
+
+    [Fact]
+    public async Task UpdateCategoryProductDetail_WhenProductBelongsToAllCategories_UpdatesAllRequestedDetails()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var category1 = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Category 1",
+            Name_En = "Category 1",
+            Description = "Category 1",
+            Description_En = "Category 1",
+            Type = CategoryProductType.Fix,
+            IsActive = true
+        };
+        var category2 = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Category 2",
+            Name_En = "Category 2",
+            Description = "Category 2",
+            Description_En = "Category 2",
+            Type = CategoryProductType.Fix,
+            IsActive = true
+        };
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductName = "Pinned Product"
+        };
+
+        await dbContext.CategoryProducts.AddRangeAsync(category1, category2);
+        await dbContext.Products.AddAsync(product);
+        await dbContext.CategoryProductDetails.AddRangeAsync(
+            new CategoryProductDetail
+            {
+                Id = Guid.NewGuid(),
+                CategoryProductId = category1.Id,
+                ProductId = product.Id,
+                IsPin = false,
+                Position = null
+            },
+            new CategoryProductDetail
+            {
+                Id = Guid.NewGuid(),
+                CategoryProductId = category2.Id,
+                ProductId = product.Id,
+                IsPin = false,
+                Position = null
+            });
+        await dbContext.SaveChangesAsync();
+
+        var request = new Request.CategoryProductDetailRequest
+        {
+            ProductId = product.Id,
+            CategoryProductLists = new List<Request.CategoryList>
+            {
+                new()
+                {
+                    CategoryProductId = category1.Id,
+                    IsPin = true,
+                    Position = 0
+                },
+                new()
+                {
+                    CategoryProductId = category2.Id,
+                    IsPin = true,
+                    Position = 1
+                }
+            }
+        };
+
+        // Act
+        await service.UpdateCategoryProductDetail(request);
+
+        // Assert
+        var updatedDetails = await dbContext.CategoryProductDetails
+            .Where(x => x.ProductId == product.Id)
+            .ToListAsync();
+
+        Assert.Equal(2, updatedDetails.Count);
+        Assert.Contains(updatedDetails, x => x.CategoryProductId == category1.Id && x.IsPin && x.Position == 0);
+        Assert.Contains(updatedDetails, x => x.CategoryProductId == category2.Id && x.IsPin && x.Position == 1);
+    }
+
+    [Fact]
+    public async Task UpdateCategoryProductDetail_WhenProductDoesNotBelongToOneCategory_ThrowsBadRequestException()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var category1 = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Category 1",
+            Name_En = "Category 1",
+            Description = "Category 1",
+            Description_En = "Category 1",
+            Type = CategoryProductType.Fix,
+            IsActive = true
+        };
+        var category2 = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Category 2",
+            Name_En = "Category 2",
+            Description = "Category 2",
+            Description_En = "Category 2",
+            Type = CategoryProductType.Fix,
+            IsActive = true
+        };
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductName = "Pinned Product"
+        };
+
+        await dbContext.CategoryProducts.AddRangeAsync(category1, category2);
+        await dbContext.Products.AddAsync(product);
+        await dbContext.CategoryProductDetails.AddAsync(new CategoryProductDetail
+        {
+            Id = Guid.NewGuid(),
+            CategoryProductId = category1.Id,
+            ProductId = product.Id,
+            IsPin = false
+        });
+        await dbContext.SaveChangesAsync();
+
+        var request = new Request.CategoryProductDetailRequest
+        {
+            ProductId = product.Id,
+            CategoryProductLists = new List<Request.CategoryList>
+            {
+                new()
+                {
+                    CategoryProductId = category1.Id,
+                    IsPin = true,
+                    Position = 0
+                },
+                new()
+                {
+                    CategoryProductId = category2.Id,
+                    IsPin = true,
+                    Position = 0
+                }
+            }
+        };
+
+        // Act
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCategoryProductDetail(request));
+
+        // Assert
+        Assert.Equal($"Product does not belong to categories: {category2.Id}", ex.Message);
+    }
 }

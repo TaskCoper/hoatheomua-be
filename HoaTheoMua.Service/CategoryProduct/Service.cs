@@ -685,26 +685,27 @@ public class Service : IService
                                                                                         x.ProductId == request.ProductId &&
                                                                                         !x.IsDeleted);
 
-        var categoryExists = await query.AnyAsync();
-        
-        if (!categoryExists)
+        var existingDetails = await query
+            .ToListAsync();
+
+        var existingCategoryIds = existingDetails
+            .Select(x => x.CategoryProductId)
+            .ToHashSet();
+
+        var missingCategoryIds = categoryIds
+            .Where(categoryId => !existingCategoryIds.Contains(categoryId))
+            .ToList();
+
+        if (missingCategoryIds.Count != 0)
         {
-            throw new BadRequestException("Category product not found.");
+            throw new BadRequestException($"Product does not belong to categories: {string.Join(", ", missingCategoryIds)}");
         }
-        
+
         foreach (var categoryItem in request.CategoryProductLists)
         {
-            var cate = await _dbContext.CategoryProductDetails.Where(x =>
-                    x.CategoryProductId == categoryItem.CategoryProductId &&
-                    x.ProductId == request.ProductId &&
-                    !x.IsDeleted)
-                .FirstOrDefaultAsync();
+            var cate = existingDetails
+                .First(x => x.CategoryProductId == categoryItem.CategoryProductId);
 
-            if (cate == null)
-            {
-                throw new BadRequestException("Category product not found.");
-            }
-            
             if (categoryItem.IsPin && !cate.IsPin)
             {
                 var pinQuery = _dbContext.CategoryProductDetails
