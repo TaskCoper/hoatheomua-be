@@ -178,12 +178,14 @@ public class Service: IService
                 {
                     var req = TryDeserialize<NhanhProductAddWebhookRequest>(json);
                     if (req == null) return "Thành công";
+                    var result =  await WebhookNhanhVnProductUpdate(req);
                     JsonElement jsonData = JsonSerializer.SerializeToElement(new
                     {
-                        entity = "productList"
+                        entity = "productList",
+                        id = result
                     });
-                    await _revalidateService.RevalidateApi(jsonData);
-                    return await WebhookNhanhVnProductUpdate(req);
+                     await _revalidateService.RevalidateApi(jsonData);
+                     return result;
                 }
 
                 case NhanhWebhookEvents.ProductDelete:
@@ -864,7 +866,7 @@ public class Service: IService
         }
         await _appDbContext.SaveChangesAsync();
     
-        return "Cập nhật thành công";
+        return product.Id.ToString();
     }
 
     public async Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest? request)
