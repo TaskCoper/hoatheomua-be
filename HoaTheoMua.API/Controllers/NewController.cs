@@ -50,8 +50,8 @@ public class NewController : ControllerBase
         var result = await _newService.CreateNewAsync(request);
         JsonElement json = JsonSerializer.SerializeToElement(new
         {
-            entity = "newsList",
-            // slug = result.slug ?? result.Id.ToString(),
+            entity = "news",
+            slug = result.slug ?? result.Id.ToString(),
         });
         await _revalidateService.RevalidateApi(json);
         return CreatedAtAction(nameof(GetNewById), new { key = result.slug ?? result.Id.ToString() }, ApiResponseFactory.Base(result, true, "Tạo bài viết tin tức mới thành công.", HttpContext.TraceIdentifier));
@@ -65,8 +65,8 @@ public class NewController : ControllerBase
         var result =  await _newService.UpdateNewAsync(identifier, request);
         JsonElement json = JsonSerializer.SerializeToElement(new
         {
-            entity = "newsList",
-            // slug = result?.slug ?? result?.Id.ToString(),
+            entity = "news",
+            slug = result?.slug ?? result?.Id.ToString(),
         });
         await _revalidateService.RevalidateApi(json);
 
@@ -81,8 +81,8 @@ public class NewController : ControllerBase
         var result = await _newService.DeleteNewAsync(identifier);
         JsonElement json = JsonSerializer.SerializeToElement(new
         {
-            entity = "newsList",
-            // slug = result.Slug ?? result.Id.ToString(),
+            entity = "news",
+            slug = result.Slug ?? result.Id.ToString(),
         });
         await _revalidateService.RevalidateApi(json);
 
