@@ -284,10 +284,10 @@ public class Service: IService
             }
             
             // Lấy toàn bộ child của parent
-            var queryChildren = _appDbContext.Products.Where(x => !x.IsDeleted &&
-                                                                  x.ParentProductId == parentProduct.NhanhProductId);
-            
-            var children = await queryChildren.ToListAsync();
+            // var queryChildren = _appDbContext.Products.Where(x => !x.IsDeleted &&
+            //                                                       x.ParentProductId == parentProduct.NhanhProductId);
+            //
+            // var children = await queryChildren.ToListAsync(); 
   
             product.AvailableForSale = (decimal?)item.Available;
             product.ProductCode = item.Code;
@@ -342,16 +342,29 @@ public class Service: IService
             // parentProduct.UpdatedAt = DateTimeOffset.UtcNow;
 
             
-            parentProduct.AvailableForSale = children.Sum(x => x.AvailableForSale);
-            parentProduct.TotalStock = children.Sum(x => x.TotalStock);
-            parentProduct.Stock = children.Sum(x => x.Stock);
-            parentProduct.DeliveringStock = children.Sum(x => x.DeliveringStock);
-            parentProduct.StockError = children.Sum(x => x.StockError);
-            parentProduct.Held = children.Sum(x => x.Held);
-            parentProduct.StockTransferring = children.Sum(x => x.StockTransferring);
-            parentProduct.WarrantyStock = children.Sum(x => x.WarrantyStock);
-            parentProduct.HeldComponents = children.Sum(x => x.HeldComponents);
+            // parentProduct.AvailableForSale = children.Sum(x => x.AvailableForSale);
+            // parentProduct.TotalStock = children.Sum(x => x.TotalStock);
+            // parentProduct.Stock = children.Sum(x => x.Stock);
+            // parentProduct.DeliveringStock = children.Sum(x => x.DeliveringStock);
+            // parentProduct.StockError = children.Sum(x => x.StockError);
+            // parentProduct.Held = children.Sum(x => x.Held);
+            // parentProduct.StockTransferring = children.Sum(x => x.StockTransferring);
+            // parentProduct.WarrantyStock = children.Sum(x => x.WarrantyStock);
+            // parentProduct.HeldComponents = children.Sum(x => x.HeldComponents);
             
+            parentProduct.AvailableForSale += (decimal?)item.Available;
+            parentProduct.TotalStock += (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
+            parentProduct.Stock += (decimal?)item.Remain;
+            parentProduct.DeliveringStock += (decimal?)item.Shipping;
+            parentProduct.StockError += (decimal?)item.Damaged;
+            parentProduct.Held += (decimal?)item.Holding;//tạm giữ các kho
+            parentProduct.StockTransferring += (decimal?)item.Transfering;
+            // product.HeldComponents = item.Holding;
+            
+            // product.WarehouseStock += (decimal?)item.Warranty.Remain;
+            parentProduct.WarrantyStock += (decimal?)item.Warranty?.Remain;
+            parentProduct.HeldComponents += (decimal?)item.Warranty?.Holding;
+            parentProduct.UpdatedAt = DateTimeOffset.UtcNow;
             
         }
 
