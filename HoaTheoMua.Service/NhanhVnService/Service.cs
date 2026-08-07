@@ -283,12 +283,6 @@ public class Service: IService
                 return $"Không tồn tại parent product với id: {product.ParentProductId}";
             }
             
-            // Lấy toàn bộ child của parent
-            // var queryChildren = _appDbContext.Products.Where(x => !x.IsDeleted &&
-            //                                                       x.ParentProductId == parentProduct.NhanhProductId);
-            //
-            // var children = await queryChildren.ToListAsync(); 
-  
             product.AvailableForSale = (decimal?)item.Available;
             product.ProductCode = item.Code;
             product.TotalStock = (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
@@ -304,54 +298,7 @@ public class Service: IService
             product.HeldComponents = (decimal?)item.Warranty?.Holding;
             product.UpdatedAt = DateTimeOffset.UtcNow;
             
-            // Tính lại tồn kho parent từ toàn bộ child
-            
-            //full ko che
-            // decimal tmpAvailableForSale = 0;
-            // decimal tmpTotalStock = 0;
-            // decimal tmpStock = 0;
-            // decimal deliveringStock = 0;
-            // decimal tmpStockError = 0;
-            // decimal tmpHeld = 0;
-            // decimal tmpStockTransferring = 0;
-            // decimal tmpWarrantyStock = 0;
-            // decimal tmpHeldComponents = 0;
-            //
-            // foreach (var child in children)
-            // {
-            //     tmpAvailableForSale += child.AvailableForSale ?? 0;
-            //     tmpTotalStock += child.TotalStock ?? 0;
-            //     tmpStock += child.Stock ?? 0;
-            //     deliveringStock += child.DeliveringStock ?? 0;
-            //     tmpStockError += child.StockError ?? 0;
-            //     tmpHeld += child.Held ?? 0;
-            //     tmpStockTransferring += child.StockTransferring ?? 0;
-            //     tmpWarrantyStock += child.WarrantyStock ?? 0;
-            //     tmpHeldComponents += child.HeldComponents ?? 0;
-            // }
-            //
-            // parentProduct.AvailableForSale = tmpAvailableForSale;
-            // parentProduct.TotalStock = tmpTotalStock;
-            // parentProduct.Stock = tmpStock;
-            // parentProduct.DeliveringStock = deliveringStock;
-            // parentProduct.StockError = tmpStockError;
-            // parentProduct.Held = tmpHeld;
-            // parentProduct.StockTransferring = tmpStockTransferring;
-            // parentProduct.WarrantyStock = tmpWarrantyStock;
-            // parentProduct.HeldComponents = tmpHeldComponents;
-            // parentProduct.UpdatedAt = DateTimeOffset.UtcNow;
-
-            
-            // parentProduct.AvailableForSale = children.Sum(x => x.AvailableForSale);
-            // parentProduct.TotalStock = children.Sum(x => x.TotalStock);
-            // parentProduct.Stock = children.Sum(x => x.Stock);
-            // parentProduct.DeliveringStock = children.Sum(x => x.DeliveringStock);
-            // parentProduct.StockError = children.Sum(x => x.StockError);
-            // parentProduct.Held = children.Sum(x => x.Held);
-            // parentProduct.StockTransferring = children.Sum(x => x.StockTransferring);
-            // parentProduct.WarrantyStock = children.Sum(x => x.WarrantyStock);
-            // parentProduct.HeldComponents = children.Sum(x => x.HeldComponents);
-            
+            //update parent
             parentProduct.AvailableForSale += (decimal?)item.Available;
             parentProduct.TotalStock += (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
             parentProduct.Stock += (decimal?)item.Remain;
@@ -365,7 +312,6 @@ public class Service: IService
             parentProduct.WarrantyStock += (decimal?)item.Warranty?.Remain;
             parentProduct.HeldComponents += (decimal?)item.Warranty?.Holding;
             parentProduct.UpdatedAt = DateTimeOffset.UtcNow;
-            
         }
 
         await _appDbContext.SaveChangesAsync();
