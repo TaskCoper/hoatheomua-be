@@ -32,8 +32,7 @@ public class ComboSpecificationConfiguration: IEntityTypeConfiguration<ComboSpec
         
         builder.HasIndex(x => new { x.SubId, x.MatId })
             .IsUnique();
-
-        builder.ToTable("Specifications");
+        
     }
 
 }
