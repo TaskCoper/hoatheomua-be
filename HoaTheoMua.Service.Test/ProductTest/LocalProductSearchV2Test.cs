@@ -198,4 +198,116 @@ public class LocalProductSearchV2Test
         Assert.Single(items);
         Assert.Equal("A", items[0].ProductName);
     }
+
+    #region TDD - US002: Lọc sản phẩm là Vật Liệu (isMaterial)
+
+    [Fact]
+    public async Task GetLocalProductsV2_FilterByIsMaterialTrue_ReturnsOnlyMaterials()
+    {
+        // 1. Arrange: Chuẩn bị DB giả lập
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa hồng", ProductLabel = "thành phần, hoa tươi", Position = 1, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy gói", ProductLabel = "phụ kiện, Thành PHẦN", Position = 2, IsDeleted = false }; // Test case-insensitive
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo 1", ProductLabel = "combo", Position = 3, IsDeleted = false };
+        var p4 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Không label", ProductLabel = null, Position = 4, IsDeleted = false };
+
+        await dbContext.Products.AddRangeAsync(p1, p2, p3, p4);
+        await dbContext.SaveChangesAsync();
+
+        // 2. Act: Gọi hàm lấy danh sách với cờ isMaterial = true
+        var result = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest
+        {
+            isMaterial = true
+        });
+
+        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
+
+        // 3. Assert: Kiểm tra chỉ 2 vật liệu được trả về và không phân biệt chữ hoa/thường
+        Assert.Equal(2, items.Count);
+        Assert.Contains("Hoa hồng", items.Select(x => x.ProductName));
+        Assert.Contains("Giấy gói", items.Select(x => x.ProductName));
+        Assert.DoesNotContain("Combo 1", items.Select(x => x.ProductName));
+        Assert.DoesNotContain("Không label", items.Select(x => x.ProductName));
+        
+        // Assert phân trang
+        Assert.Equal(2, result.Value.TotalItem);
+    }
+
+    [Fact]
+    public async Task GetLocalProductsV2_FilterByIsMaterialFalseOrNull_ReturnsAllProducts()
+    {
+        // 1. Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa hồng", ProductLabel = "thành phần, hoa tươi", Position = 1, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo 1", ProductLabel = "combo", Position = 2, IsDeleted = false };
+
+        await dbContext.Products.AddRangeAsync(p1, p2);
+        await dbContext.SaveChangesAsync();
+
+        // 2. Act: Gọi hàm với isMaterial = false
+        var resultFalse = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest
+        {
+            isMaterial = false
+        });
+        
+        // 3. Act: Gọi hàm với isMaterial = null
+        var resultNull = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest
+        {
+            isMaterial = null
+        });
+
+        // 4. Assert: Phải trả về đủ 2 sản phẩm
+        Assert.Equal(2, resultFalse.Value.Items.Count);
+        Assert.Equal(2, resultNull.Value.Items.Count);
+    }
+
+    [Fact]
+    public async Task GetLocalProductsV2_FilterByIsMaterialTrue_WithCategory()
+    {
+        // 1. Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var category = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Vật liệu",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false
+        };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Lá bạch đàn", ProductLabel = "thành phần", Position = 1, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy báo", ProductLabel = "thành phần", Position = 2, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Băng keo", ProductLabel = "phụ liệu", Position = 3, IsDeleted = false };
+
+        await dbContext.CategoryProducts.AddAsync(category);
+        await dbContext.Products.AddRangeAsync(p1, p2, p3);
+        
+        // Chỉ Lá bạch đàn và Băng keo nằm trong category này
+        await dbContext.CategoryProductDetails.AddRangeAsync(
+            new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = category.Id, ProductId = p1.Id, IsPin = false, Position = 10, IsDeleted = false },
+            new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = category.Id, ProductId = p3.Id, IsPin = false, Position = 20, IsDeleted = false });
+            
+        await dbContext.SaveChangesAsync();
+
+        // 2. Act: Truy vấn category "Vật liệu" VÀ isMaterial = true
+        var result = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest
+        {
+            categoryIds = new List<Guid> { category.Id },
+            isMaterial = true
+        });
+
+        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
+        
+        // 3. Assert: Phải chỉ trả về p1 (Lá bạch đàn), vì nó vừa thuộc category vừa là thành phần.
+        // p2 là thành phần nhưng KHÔNG thuộc category -> Loại
+        // p3 thuộc category nhưng KHÔNG là thành phần -> Loại
+        Assert.Single(items);
+        Assert.Equal("Lá bạch đàn", items[0].ProductName);
+    }
+    #endregion
 }
