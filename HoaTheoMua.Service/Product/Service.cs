@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AutoMapper;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -320,8 +321,19 @@ public class Service : IService
             .ThenInclude(cpd => cpd.CategoryProduct)
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
+        query = query.Where(x => !x.IsDeleted && 
+                                 (x.ParentProductId == null ||
+                                  x.ParentProductId == string.Empty));
 
+        if (request.productType.HasValue)
+        {
+            switch (request.productType.Value)
+            {
+                case ProductTypeSearch.Components:
+                    query = query.Where(x => x.ProductLabel != null && x.ProductLabel.ToLower().Contains(search));
+            }
+        }
+        
         if (!string.IsNullOrWhiteSpace(search))
         {
             var normalizedSearch = search.ToLower();
