@@ -327,6 +327,48 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("CategoryProductDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ComboSpecification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsCore")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("MatId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SubId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MatId");
+
+                    b.HasIndex("SubId", "MatId")
+                        .IsUnique();
+
+                    b.ToTable("ComboSpecification");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1691,6 +1733,25 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ComboSpecification", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "Mat")
+                        .WithMany("MatIds")
+                        .HasForeignKey("MatId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "Sub")
+                        .WithMany("SubIds")
+                        .HasForeignKey("SubId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Mat");
+
+                    b.Navigation("Sub");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
@@ -1773,6 +1834,10 @@ namespace HoaTheoMua.Repository.Migrations
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
                 {
                     b.Navigation("CategoryProductDetails");
+
+                    b.Navigation("MatIds");
+
+                    b.Navigation("SubIds");
                 });
 #pragma warning restore 612, 618
         }
