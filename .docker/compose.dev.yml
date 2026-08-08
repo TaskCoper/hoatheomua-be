@@ -74,6 +74,11 @@ services:
       # Sepay Configuration (verifies the "Authorization: Apikey <ApiKey>" header on inbound webhooks)
       SepayOption__ApiKey: ${SEPAY_API_KEY}
 
+      # Revalidate Configuration (outbound cache purge to the storefront:
+      # POST BaseUrl with header "x-revalidate-secret: <SecretKey>")
+      SecretOptions__BaseUrl: ${SECRET_BASE_URL}
+      SecretOptions__SecretKey: ${SECRET_KEY}
+
       # Allowed Hosts
       AllowedHosts: "*"
     volumes:

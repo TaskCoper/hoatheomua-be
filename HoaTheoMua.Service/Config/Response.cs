@@ -17,6 +17,12 @@ public class Response
         public  Guid UserId { get; set; }
     }
 
+    public class ResponseDeleteConfig
+    {
+        public string? Group { get; set; }
+        public string? Key { get; set; }
+    }
+        
     public class ConfigGroupResponse
     {
         public required string Key { get; set; }

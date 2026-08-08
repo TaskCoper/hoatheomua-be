@@ -676,105 +676,58 @@ public class Service : IService
 
     public async Task<BaseResponse> UpdateCategoryProductDetail(Request.CategoryProductDetailRequest request)
     {
-        if (request == null)
-        {
-            throw new BadRequestException("Invalid category product detail data.");
-        }
-
-        if (request.ProductId == Guid.Empty)
-        {
-            throw new BadRequestException("Product ID is required.");
-        }
-
-        if (request.CategoryProductLists == null || !request.CategoryProductLists.Any())
-        {
-            throw new BadRequestException("Category product list is required.");
-        }
-
-        var duplicateCategoryIds = request.CategoryProductLists
-            .GroupBy(x => x.CategoryProductId)
-            .Where(x => x.Count() > 1)
-            .Select(x => x.Key)
-            .ToList();
-
-        if (duplicateCategoryIds.Any())
-        {
-            throw new BadRequestException("Duplicate categories are not allowed.");
-        }
-
         var categoryIds = request.CategoryProductLists
             .Select(x => x.CategoryProductId)
-            .Distinct()
-            .ToList();
+            .ToHashSet();
 
-        if (categoryIds.Any(x => x == Guid.Empty))
+        var query = _dbContext.CategoryProductDetails.Where(x =>
+                                                                                        categoryIds.Contains(x.CategoryProductId) &&
+                                                                                        x.ProductId == request.ProductId &&
+                                                                                        !x.IsDeleted);
+
+        var categoryExists = await query.AnyAsync();
+        
+        if (!categoryExists)
         {
-            throw new BadRequestException("Category ID is required.");
+            throw new BadRequestException("Category product not found.");
         }
-
-        var oldCategoryProductDetails = await _dbContext.CategoryProductDetails
-                .Where(x =>
-                    x.ProductId == request.ProductId &&
-                    categoryIds.Contains(x.CategoryProductId) &&
-                    !x.IsDeleted)
-                .ToListAsync();
-
-        if (oldCategoryProductDetails.Count != categoryIds.Count)
-        {
-            throw new NotFoundException("One or more category product details were not found.");
-        }
-
+        
         foreach (var categoryItem in request.CategoryProductLists)
         {
-            var oldDetail = oldCategoryProductDetails
-                .First(x =>
-                    x.CategoryProductId ==
-                    categoryItem.CategoryProductId);
+            var cate = await _dbContext.CategoryProductDetails.Where(x =>
+                    x.CategoryProductId == categoryItem.CategoryProductId &&
+                    x.ProductId == request.ProductId &&
+                    !x.IsDeleted)
+                .FirstOrDefaultAsync();
 
-            if (categoryItem.IsPin && !oldDetail.IsPin)
+            if (cate == null)
             {
-                var pinnedProductCount =
-                    await _dbContext.CategoryProductDetails
-                        .CountAsync(x =>
-                            !x.IsDeleted &&
-                            x.IsPin &&
-                            x.CategoryProductId ==
-                            categoryItem.CategoryProductId);
+                throw new BadRequestException("Category product not found.");
+            }
+            
+            if (categoryItem.IsPin && !cate.IsPin)
+            {
+                var pinQuery = _dbContext.CategoryProductDetails
+                    .Where(x => !x.IsDeleted
+                                && x.CategoryProductId == categoryItem.CategoryProductId
+                                && x.IsPin
+                                && x.ProductId != request.ProductId);
+
+                var pinnedProductCount = await pinQuery.CountAsync();
 
                 if (pinnedProductCount >= 32)
                 {
                     throw new BadRequestException("Only 32 products can be pinned in this category.");
                 }
             }
+            
+            cate.IsPin = categoryItem.IsPin;
+            cate.Position = categoryItem.Position;
+            cate.UpdatedAt = DateTimeOffset.UtcNow;
         }
-
-        var currentTime = DateTimeOffset.UtcNow;
-
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
-
-        try
-        {
-            foreach (var categoryItem in request.CategoryProductLists)
-            {
-                var oldDetail = oldCategoryProductDetails
-                    .First(x =>
-                        x.CategoryProductId ==
-                        categoryItem.CategoryProductId);
-
-                oldDetail.IsPin = categoryItem.IsPin;
-                oldDetail.Position = categoryItem.Position;
-                oldDetail.UpdatedAt = currentTime;
-            }
-
-            await _dbContext.SaveChangesAsync();
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-
+        
+        await _dbContext.SaveChangesAsync();
+        
         return ApiResponseFactory.Base("Category product detail updated successfully.");
     }
 }
