@@ -123,7 +123,17 @@ public class Service : IService
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
+        
+        var addressExist = await _dbContext.Addresses
+            .AnyAsync(x => 
+                x.Id == request.AddressId &&
+                !x.IsDeleted && x.UserId == userId);
 
+        if (!addressExist)
+        {
+            throw new BadRequestException("Địa chỉ người nhận không tồn tại");
+        }
+        
         var totalShippingFee = await EstimateShippingFeeAsync(request, products, quantityByItemId, companyAddress);
 
         var totalProductFee = products.Sum(x => x.Prices.Retail * quantityByItemId[x.Id]);
@@ -151,6 +161,7 @@ public class Service : IService
             TotalFee = totalProductFee + totalShippingFee + vatFee,
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
+            AddressId = request.AddressId,
 
             TagIds = request.TagIds,
             TaxCode = request.TaxCode,

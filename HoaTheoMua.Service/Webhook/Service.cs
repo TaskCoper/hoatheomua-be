@@ -355,7 +355,13 @@ public partial class Service : IService
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
 
+        var address = await _dbContext.Addresses
+            .FirstOrDefaultAsync(x => x.Id == order.AddressId);
+
+        var phoneReceiver = address?.PhoneNumber;
+        
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
+        privateDescription += $"\n-------------------------\nNN: {phoneReceiver}";
 
         var vnDt = new DateTimeOffset();
         if (order.OrderTime > 0)
@@ -400,6 +406,7 @@ public partial class Service : IService
         }
 
         const long vatTagId = 253L;
+        const long fastTagId = 111L;
         var tags = order.TagIds ?? new List<long>();
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
             ? tags.Append(vatTagId).ToList()
@@ -420,6 +427,7 @@ public partial class Service : IService
         
         if (order.OrderTime == 0 && tags.Count == 0 && ahamoveAllowDelivery == true)
         {
+            tagIds = tagIds.Append(fastTagId).ToList();
             
             var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
             {
@@ -569,10 +577,12 @@ public partial class Service : IService
                 SaleName = "",
                 Description = order.Remarks,
                 PrivateDescription = privateDescription,
-                //nếu admin tắt tính năng giao hàng nhanh thì đã xác nhận : ahamoveAllowDelivery == false
+                //nếu admin tắt tính năng giao hàng nhanh thì đã xác nhận : ahamoveAllowDelivery == false | delay 1 tiếng | chị đào tự gọi ahamove bằng tay
                 //ngược lại tức là cho phép giao hàng nhanh thì 56: đã xác nhận là đúng rồi
                 Status = (order.OrderTime == 0 && tags.Count == 0) ? 56 : 54,
                 TagIds = tagIds,
+                //chỗ này phải tách tags ra riêng: vì dòng tag đó để đọc ngày giờ giao liền
+                //và tagIds ra riêng | còn thằng này chứa tags mà bên nhanhvn có giờ, với chị đào config(giờ | thuế | giao liền)
                 TechnicalStaffId = 0,
                 PromotionId = ""
             },

@@ -32,6 +32,7 @@ using ConfigEntity = HoaTheoMua.Repository.Entity.Config;
 using OrderEntity = HoaTheoMua.Repository.Entity.Order;
 using OrderDetailEntity = HoaTheoMua.Repository.Entity.OrderDetails;
 using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
+using AddressEntity = HoaTheoMua.Repository.Entity.Address;
 using TransactionEntity = HoaTheoMua.Repository.Entity.Transaction;
 
 namespace HoaTheoMua.Service.Test.OrderTest
@@ -42,6 +43,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
     public class CreateOrderTests
     {
         private static readonly Guid TestUserId = Guid.Parse("cba7c21c-d6f2-4b30-9b4e-8c7c10b4f0b2");
+        private static readonly Guid TestAddressId = Guid.Parse("a32c276b-74f0-48fe-97b8-f3c66b42f103");
 
         // ---------------------------------------------------------------------
         // Helpers
@@ -118,17 +120,37 @@ namespace HoaTheoMua.Service.Test.OrderTest
             };
         }
 
+        private static AddressEntity CreateAddress(
+            Guid? id = null,
+            Guid? userId = null)
+        {
+            return new AddressEntity
+            {
+                Id = id ?? TestAddressId,
+                UserId = userId ?? TestUserId,
+                ReceiverName = "User Test",
+                PhoneNumber = "0901234567",
+                AddressLine = "Dia chi",
+                City = "Ho Chi Minh",
+                Country = "Vietnam",
+                IsDeleted = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+        }
+
         // Mock AppDbContext với DbSet cần thiết và Configs.
         private static Mock<AppDbContext> CreateMockDbContext(
             List<OrderEntity>? orders = null,
             List<CompanyAddressEntity>? companyAddresses = null,
             List<OrderDetailEntity>? capturedOrderDetails = null,
-            double? freeShipDistance = null)
+            double? freeShipDistance = null,
+            List<AddressEntity>? addresses = null)
         {
             var mockOrders = (orders ?? new List<OrderEntity>()).BuildMockDbSet();
             var orderDetailsList = capturedOrderDetails ?? new List<OrderDetailEntity>();
             var mockOrderDetails = orderDetailsList.BuildMockDbSet();
             var mockCompany = (companyAddresses ?? new List<CompanyAddressEntity>()).BuildMockDbSet();
+            var mockAddresses = (addresses ?? new List<AddressEntity> { CreateAddress() }).BuildMockDbSet();
 
             mockOrderDetails.Setup(x => x.AddRangeAsync(It.IsAny<IEnumerable<OrderDetailEntity>>(), It.IsAny<CancellationToken>()))
                 .Callback<IEnumerable<OrderDetailEntity>, CancellationToken>((items, ct) => orderDetailsList.AddRange(items))
@@ -166,6 +188,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             mockDbContext.Setup(x => x.Orders).Returns(mockOrders.Object);
             mockDbContext.Setup(x => x.OrderDetails).Returns(mockOrderDetails.Object);
             mockDbContext.Setup(x => x.CompanyAddresses).Returns(mockCompany.Object);
+            mockDbContext.Setup(x => x.Addresses).Returns(mockAddresses.Object);
             mockDbContext.Setup(x => x.Configs).Returns(mockConfigs.Object);
             mockDbContext
                 .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -338,7 +361,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Address = "Dia chi", ShortAddress = "Short Dia Chi",
                 FullName = "User Test", Phone = "0901234567", Remarks = "Ghi chu",
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -353,6 +377,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(100000m, orders[0].TotalFee); // product 50k + ship 50k
             Assert.Equal(50000m, orders[0].ProductFee);
             Assert.Equal(50000m, orders[0].ShippingFee);
+            Assert.Equal(TestAddressId, orders[0].AddressId);
             Assert.Single(details);
             Assert.Equal(101, details[0].ItemId);
         }
@@ -372,7 +397,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var service = CreateService(dbContext, new HttpClient(), currentUser.Object, CreateMockProductService());
             var request = new OrderRequest.CreateOrderRequest()
             {
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -396,7 +422,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var service = CreateService(dbContext, new HttpClient(), currentUser, CreateMockProductService());
             var request = new OrderRequest.CreateOrderRequest()
             {
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };;
 
             // Act
@@ -430,7 +457,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -468,7 +496,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -505,7 +534,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -542,7 +572,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -582,7 +613,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -621,7 +653,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -659,7 +692,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -701,7 +735,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullName = "User Test", Phone = "0901234567", Remarks = "Ghi chu",
                 TaxCode = "123456789", // Để tính VatFee
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
 
             // Act
@@ -769,7 +804,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Address = "Dia chi", ShortAddress = "Short Dia Chi",
                 FullName = "User Test", Phone = "0901234567", Remarks = "Ghi chu",
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
             
             //
@@ -831,7 +867,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Address = "Dia chi", ShortAddress = "Short Dia Chi",
                 FullName = "User Test", Phone = "0901234567", Remarks = "Ghi chu",
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
-                Gateway = "BaoKim"
+                Gateway = "BaoKim",
+                AddressId = TestAddressId
             };
             
             //
