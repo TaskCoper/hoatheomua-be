@@ -630,6 +630,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("AddressId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("AhahaMoveOrderId")
                         .HasColumnType("text");
 

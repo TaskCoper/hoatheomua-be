@@ -16,6 +16,7 @@ using WebhookServiceImpl = HoaTheoMua.Service.Webhook.Service;
 using OrderEntity = HoaTheoMua.Repository.Entity.Order;
 using OrderDetailEntity = HoaTheoMua.Repository.Entity.OrderDetails;
 using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
+using AddressEntity = HoaTheoMua.Repository.Entity.Address;
 using TransactionEntity = HoaTheoMua.Repository.Entity.Transaction;
 using ConfigEntity = HoaTheoMua.Repository.Entity.Config;
 
@@ -23,6 +24,8 @@ namespace HoaTheoMua.Service.Test.WebhookTest
 {
     public class BaoKimWebHookHandlerTests
     {
+        private static readonly Guid TestAddressId = Guid.Parse("53f2e692-d4d6-4172-9840-690499688ef3");
+
         // Helpers
 
         private static OrderDetailEntity CreateOrderDetail(
@@ -53,6 +56,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             return new OrderEntity
             {
                 Id = id ?? Guid.NewGuid(),
+                AddressId = TestAddressId,
                 Ward = 1,
                 City = 1,
                 Address = "123 Duong Test",
@@ -89,6 +93,22 @@ namespace HoaTheoMua.Service.Test.WebhookTest
                 Remarks = "Den noi lay hang doc ma don",
                 Latitude = 10.762622m,
                 Longitude = 106.660172m,
+                IsDeleted = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+        }
+
+        private static AddressEntity CreateAddress()
+        {
+            return new AddressEntity
+            {
+                Id = TestAddressId,
+                UserId = Guid.NewGuid(),
+                ReceiverName = "Nguyen Van A",
+                PhoneNumber = "0987654321",
+                AddressLine = "123 Duong Test",
+                City = "Ho Chi Minh",
+                Country = "Vietnam",
                 IsDeleted = false,
                 CreatedAt = DateTimeOffset.UtcNow
             };
@@ -173,6 +193,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
         {
             var mockOrders = orders.BuildMockDbSet();
             var mockCompany = companyAddresses.BuildMockDbSet();
+            var mockAddresses = new List<AddressEntity> { CreateAddress() }.BuildMockDbSet();
 
             var configs = new List<ConfigEntity>
             {
@@ -198,6 +219,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
 
             mockDbContext.Setup(x => x.Orders).Returns(mockOrders.Object);
             mockDbContext.Setup(x => x.CompanyAddresses).Returns(mockCompany.Object);
+            mockDbContext.Setup(x => x.Addresses).Returns(mockAddresses.Object);
             mockDbContext.Setup(x => x.Configs).Returns(mockConfigs.Object);
             mockDbContext.Setup(x => x.Transactions).Returns(mockTransactions.Object);
             mockDbContext
