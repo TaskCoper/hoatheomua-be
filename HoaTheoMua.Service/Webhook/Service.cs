@@ -407,7 +407,7 @@ public partial class Service : IService
         }
 
         const long vatTagId = 253L;
-        const long fastTagId = 111L;
+        const long fastTagId = 294L;
         var tags = order.TagIds ?? new List<long>();
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
             ? tags.Append(vatTagId).ToList()
