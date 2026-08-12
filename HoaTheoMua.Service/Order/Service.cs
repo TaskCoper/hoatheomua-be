@@ -531,7 +531,17 @@ public class Service : IService
             VatFee = orders.Vat,
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
+            PhoneReceiver = orders.PhoneReceiver,
             CreateAt = orders.CreatedAt,
+            Address = orders.Address,
+            ShortAddress = orders.ShortAddress,
+            Latitude =  orders.Latitude,
+            Longitude = orders.Longitude,
+            Ward =  orders.Ward,
+            City =  orders.City,
+            FullName =  orders.FullName,
+            Phone = orders.Phone,
+            UserId = orders.UserId,
 
             Details = orders.OrderDetails.Select(x =>
             {
