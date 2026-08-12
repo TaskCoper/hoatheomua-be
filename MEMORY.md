@@ -1,0 +1,1 @@
+- [Product list with combo qty](.claude/memory/product-list-with-combo-qty.md) — ProductService.GetListV2 + ComboAvailableQtyService flow

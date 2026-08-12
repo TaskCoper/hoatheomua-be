@@ -10,6 +10,7 @@ public interface IService
     Task<BasePaginationResponse> GetLocalProductsV2(Request.LocalProductQueryRequest request);
     Task<Response.LocalProductDetailResponse> GetLocalProductDetail(Guid id);
     Task<decimal> GetMaxPrice(List<Guid>? categoryIds);
+    Task<Dictionary<Guid, (int SellableQuantity, string StockStatus)>> CalculateAvailableQty(List<Guid> productIds);
     Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request);
     Task<BaseResponse> PinProduct(Request.PinProductRequest request);
     Task<List<Response.PinnedProductResponse>> GetProductPin(Request.GetProductPinRequest request);

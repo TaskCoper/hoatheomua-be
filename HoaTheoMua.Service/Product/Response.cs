@@ -80,6 +80,8 @@ public class Response
         public string? Origin { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
+        public int? SellableQuantity { get; set; }
+        public string? StockStatus { get; set; }
 
         public List<CategoryProductResponse> Categories { get; set; } = new List<CategoryProductResponse>();
     }
@@ -169,8 +171,10 @@ public class Response
     public string? Color { get; set; }  
     public string? Origin { get; set; }  
     public DateTimeOffset CreatedAt { get; set; }  
-    public DateTimeOffset? UpdatedAt { get; set; }  
-  
+    public DateTimeOffset? UpdatedAt { get; set; }
+    public int? SellableQuantity { get; set; }
+    public string? StockStatus { get; set; }
+
     public List<CategoryProductResponse> Categories { get; set; } = new();
     public LocalProductDetailResponse? Parent { get; set; }
     public List<LocalProductDetailResponse> Children { get; set; } = new();  

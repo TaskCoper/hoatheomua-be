@@ -414,7 +414,23 @@ public class Service : IService
             .Take(pageSize)
             .ToListAsync();
 
-        var mappedItems = items.Select(MapToProductDetailResponse).ToList();
+        var mappedItems = new List<Response.ProductDetailResponse>();
+        if (items.Any())
+        {
+            var productIds = items.Select(p => p.Id).ToList();
+            var comboQuantities = await CalculateAvailableQty(productIds);
+
+            foreach (var product in items)
+            {
+                var response = MapToProductDetailResponse(product);
+                if (comboQuantities.TryGetValue(product.Id, out var comboInfo))
+                {
+                    response.SellableQuantity = comboInfo.SellableQuantity;
+                    response.StockStatus = comboInfo.StockStatus;
+                }
+                mappedItems.Add(response);
+            }
+        }
 
         return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
     }
@@ -471,6 +487,51 @@ public class Service : IService
                     p.ParentProductId == response.NhanhProductId)
                 .Select(LocalProductDetailSelector)
                 .ToListAsync();
+        }
+
+        var isMainComboOrParentCombo = response.ProductType == "Combo" ||
+                                      (response.ProductType == "Sản Phẩm" &&
+                                       string.IsNullOrEmpty(response.ParentProductId) &&
+                                       response.Children != null &&
+                                       response.Children.Any(c => c.ProductType == "Combo"));
+
+        if (isMainComboOrParentCombo)
+        {
+            var idsToCalculate = new List<Guid> { response.Id };
+            if (response.Parent != null)
+            {
+                idsToCalculate.Add(response.Parent.Id);
+            }
+            if (response.Children != null && response.Children.Any())
+            {
+                idsToCalculate.AddRange(response.Children.Select(c => c.Id));
+            }
+
+            var comboQuantities = await CalculateAvailableQty(idsToCalculate);
+
+            if (comboQuantities.TryGetValue(response.Id, out var mainInfo))
+            {
+                response.SellableQuantity = mainInfo.SellableQuantity;
+                response.StockStatus = mainInfo.StockStatus;
+            }
+
+            if (response.Parent != null && comboQuantities.TryGetValue(response.Parent.Id, out var parentInfo))
+            {
+                response.Parent.SellableQuantity = parentInfo.SellableQuantity;
+                response.Parent.StockStatus = parentInfo.StockStatus;
+            }
+
+            if (response.Children != null)
+            {
+                foreach (var child in response.Children)
+                {
+                    if (comboQuantities.TryGetValue(child.Id, out var childInfo))
+                    {
+                        child.SellableQuantity = childInfo.SellableQuantity;
+                        child.StockStatus = childInfo.StockStatus;
+                    }
+                }
+            }
         }
 
         return response;
@@ -618,7 +679,116 @@ public class Service : IService
             })
             .ToList()
     };
-    
+
+    public async Task<Dictionary<Guid, (int SellableQuantity, string StockStatus)>> CalculateAvailableQty(List<Guid> productIds)
+    {
+        if (productIds == null || !productIds.Any())
+            return new Dictionary<Guid, (int, string)>();
+
+        var products = await _dbContext.Products
+            .AsNoTracking()
+            .Where(p => productIds.Contains(p.Id))
+            .ToListAsync();
+
+        var inputCombos = products
+            .Where(p => p.ProductType == "Combo")
+            .Select(p => p.Id)
+            .ToList();
+
+        var parentProductNhanhIds = products
+            .Where(p => p.ProductType == "Sản Phẩm" && string.IsNullOrEmpty(p.ParentProductId) && !string.IsNullOrEmpty(p.NhanhProductId))
+            .Select(p => p.NhanhProductId)
+            .ToList();
+
+        List<HoaTheoMua.Repository.Entity.Product> comboVariants = new();
+        if (parentProductNhanhIds.Any())
+        {
+            comboVariants = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => p.ProductType == "Combo" && !p.IsDeleted && parentProductNhanhIds.Contains(p.ParentProductId))
+                .ToListAsync();
+        }
+
+        var comboIdsToCalculate = inputCombos.Concat(comboVariants.Select(v => v.Id)).Distinct().ToList();
+
+        var comboQuantities = new Dictionary<Guid, int>();
+        if (comboIdsToCalculate.Any())
+        {
+            var specifications = await _dbContext.ComboSpecifications
+                .AsNoTracking()
+                .Where(cs => !cs.IsDeleted &&
+                             cs.IsActive &&
+                             comboIdsToCalculate.Contains(cs.SubId))
+                .ToListAsync();
+
+            var materialIds = specifications.Select(s => s.MatId).Distinct().ToList();
+            var inventories = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => materialIds.Contains(p.Id) && !p.IsDeleted)
+                .Select(p => new { p.Id, p.Stock })
+                .ToDictionaryAsync(p => p.Id, p => (int)(p.Stock ?? 0));
+
+            foreach (var comboId in comboIdsToCalculate)
+            {
+                var comboSpecs = specifications.Where(cs => cs.SubId == comboId).ToList();
+                var coreSpecs = comboSpecs.Where(cs => cs.IsCore).ToList();
+
+                if (!coreSpecs.Any())
+                {
+                    comboQuantities[comboId] = 0;
+                    continue;
+                }
+
+                int minQty = int.MaxValue;
+                bool hasValidCore = false;
+
+                foreach (var spec in coreSpecs)
+                {
+                    if (spec.Quantity <= 0)
+                        continue;
+
+                    var stock = inventories.TryGetValue(spec.MatId, out var s) ? s : 0;
+                    int availableCombos = stock / spec.Quantity;
+                    minQty = Math.Min(minQty, availableCombos);
+                    hasValidCore = true;
+                }
+
+                comboQuantities[comboId] = hasValidCore ? minQty : 0;
+            }
+        }
+
+        var result = new Dictionary<Guid, (int SellableQuantity, string StockStatus)>();
+
+        foreach (var product in products)
+        {
+            if (product.ProductType == "Combo")
+            {
+                var qty = comboQuantities.TryGetValue(product.Id, out var q) ? q : 0;
+                result[product.Id] = (qty, qty > 0 ? "Còn hàng" : "Hết hàng");
+            }
+            else if (product.ProductType == "Sản Phẩm" && string.IsNullOrEmpty(product.ParentProductId) && !string.IsNullOrEmpty(product.NhanhProductId))
+            {
+                var variants = comboVariants.Where(v => v.ParentProductId == product.NhanhProductId).ToList();
+                if (variants.Any())
+                {
+                    var minQty = variants.Min(v => comboQuantities.TryGetValue(v.Id, out var q) ? q : 0);
+                    result[product.Id] = (minQty, minQty > 0 ? "Còn hàng" : "Hết hàng");
+                }
+                else
+                {
+                    var qty = (int)(product.Stock ?? 0);
+                    result[product.Id] = (qty, qty > 0 ? "Còn hàng" : "Hết hàng");
+                }
+            }
+            else
+            {
+                var qty = (int)(product.Stock ?? 0);
+                result[product.Id] = (qty, qty > 0 ? "Còn hàng" : "Hết hàng");
+            }
+        }
+
+        return result;
+    }
 
      private static Response.ProductDetailResponse MapToProductDetailResponse(HoaTheoMua.Repository.Entity.Product product)
     {
