@@ -87,6 +87,7 @@ public class Product : BaseEntity<Guid>, IAuditableEntity
     public bool IsPin { get; set; }
 
     public ICollection<CategoryProductDetail> CategoryProductDetails { get; set; } = new List<CategoryProductDetail>();
+    public ICollection<Specification> Specifications { get; set; } = new List<Specification>();
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }

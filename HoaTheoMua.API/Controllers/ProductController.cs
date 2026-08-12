@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Extentions;
+using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Product;
 using Microsoft.AspNetCore.Authorization;
@@ -88,5 +88,11 @@ public class ProductController: ControllerBase
         var result = await _productService.UpdateProduct(id, request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
-    
+
+    [HttpGet("/api/v1/products/{nhanhProductId}/combo-specification")]
+    public async Task<IActionResult> GetComboSpecification(string nhanhProductId)
+    {
+        var result = await _productService.GetComboSpecificationAsync(nhanhProductId);
+        return Ok(ApiResponseFactory.Base(result, true, "Tải công thức combo hoa thành công", HttpContext.TraceIdentifier));
+    }
 }

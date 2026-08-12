@@ -1,4 +1,4 @@
-﻿using HoaTheoMua.Service.Models;
+using HoaTheoMua.Service.Models;
 
 namespace HoaTheoMua.Service.Product;
 
@@ -14,4 +14,5 @@ public interface IService
     Task<BaseResponse> PinProduct(Request.PinProductRequest request);
     Task<List<Response.PinnedProductResponse>> GetProductPin(Request.GetProductPinRequest request);
     Task<string> UpdateProduct(Guid id, Request.UpdateProductRequest request);
+    Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(string nhanhProductId);
 }

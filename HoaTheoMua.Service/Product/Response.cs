@@ -172,5 +172,25 @@ public class Response
     public DateTimeOffset? UpdatedAt { get; set; }  
   
     public List<LocalProductDetailResponse> Children { get; set; } = new();  
-}
+    }
+    
+    public class ComboSpecificationResponse 
+    {
+        public string? SubId { get; set; }
+        public string? ProductCode { get; set; }
+        public string? ProductName { get; set; }
+        public List<MaterialItemResponse> Materials { get; set; } = new();
+    }
+
+    public class MaterialItemResponse
+    {
+        public string? MaterialId { get; set; }
+        public string? MaterialName { get; set; }
+        public string? Role { get; set; }
+        public string? RoleName { get; set; }
+        public int QuantityPerCombo { get; set; }
+        public string? Unit { get; set; }
+        public decimal AvailableForSale { get; set; }
+        public int MaxComboPossible { get; set; }
+    }
 }

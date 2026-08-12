@@ -1549,6 +1549,46 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("RecruitmentRequest", (string)null);
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Specification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MatId")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("MaterialProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SubId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialProductId");
+
+                    b.ToTable("Specification");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1723,6 +1763,15 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("JobDescription");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Specification", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "MaterialProduct")
+                        .WithMany("Specifications")
+                        .HasForeignKey("MaterialProductId");
+
+                    b.Navigation("MaterialProduct");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
@@ -1773,6 +1822,8 @@ namespace HoaTheoMua.Repository.Migrations
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
                 {
                     b.Navigation("CategoryProductDetails");
+
+                    b.Navigation("Specifications");
                 });
 #pragma warning restore 612, 618
         }

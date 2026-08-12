@@ -957,8 +957,50 @@ public class Service : IService
 
         return "Cập nhật thành công";
     }
-    
-    
+
+    public async Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(string nhanhProductId)
+    {
+        var combo = await _dbContext.Products
+            .FirstOrDefaultAsync(p => p.NhanhProductId == nhanhProductId && !p.IsDeleted);
+
+        if (combo == null)
+            throw new NotFoundException($"Không tìm thấy combo với NhanhProductId: {nhanhProductId}");
+
+        var specs = await _dbContext.Specifications
+            .Include(s => s.MaterialProduct)
+            .Where(s => s.SubId == nhanhProductId && s.IsActive)
+            .ToListAsync();
+
+        var response = new Response.ComboSpecificationResponse
+        {
+            SubId = combo.NhanhProductId,
+            ProductCode = combo.ProductCode,
+            ProductName = combo.ProductName,
+            Materials = new List<Response.MaterialItemResponse>()
+        };
+
+        foreach (var spec in specs)
+        {
+            var mat = spec.MaterialProduct;
+            decimal availableForSale = mat?.AvailableForSale ?? 0;
+            int maxComboPossible = spec.Quantity > 0 ? (int)(availableForSale / spec.Quantity) : 0;
+            
+            response.Materials.Add(new Response.MaterialItemResponse
+            {
+                MaterialId = spec.MatId,
+                MaterialName = mat?.ProductName ?? "Unknown",
+                Role = spec.Role.ToString(),
+                RoleName = spec.Role == 1 ? "Hoa chính" : "Phụ kiện",
+                QuantityPerCombo = spec.Quantity,
+                Unit = mat?.Unit ?? "Cành",
+                AvailableForSale = availableForSale,
+                MaxComboPossible = maxComboPossible
+            });
+        }
+
+        // Ưu tiên Core (Role = 1) lên trước
+        response.Materials = response.Materials.OrderBy(m => m.Role).ToList();
+
+        return response;
+    }
 }
-
-
