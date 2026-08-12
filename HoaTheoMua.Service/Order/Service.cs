@@ -124,14 +124,24 @@ public class Service : IService
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
         
-        var addressExist = await _dbContext.Addresses
+        // var addressExist = await _dbContext.Addresses
+        //     .AnyAsync(x => 
+        //         x.Id == request.AddressId &&
+        //         !x.IsDeleted && x.UserId == userId);
+        //
+        // if (!addressExist)
+        // {
+        //     throw new BadRequestException("Địa chỉ người nhận không tồn tại");
+        // }
+        
+        var phoneExist = await _dbContext.Addresses
             .AnyAsync(x => 
-                x.Id == request.AddressId &&
+                x.PhoneNumber == request.PhoneReceiver &&
                 !x.IsDeleted && x.UserId == userId);
 
-        if (!addressExist)
+        if (!phoneExist)
         {
-            throw new BadRequestException("Địa chỉ người nhận không tồn tại");
+            throw new BadRequestException("SĐT người nhận không tồn tại");
         }
         
         var totalShippingFee = await EstimateShippingFeeAsync(request, products, quantityByItemId, companyAddress);
@@ -161,7 +171,7 @@ public class Service : IService
             TotalFee = totalProductFee + totalShippingFee + vatFee,
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
-            AddressId = request.AddressId,
+            PhoneReceiver = request.PhoneReceiver,
 
             TagIds = request.TagIds,
             TaxCode = request.TaxCode,

@@ -355,10 +355,11 @@ public partial class Service : IService
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync();
 
-        var address = await _dbContext.Addresses
-            .FirstOrDefaultAsync(x => x.Id == order.AddressId);
+        // var address = await _dbContext.Addresses
+        //     .FirstOrDefaultAsync(x => x.Id == order.AddressId);
 
-        var phoneReceiver = address?.PhoneNumber;
+        // var phoneReceiver = address?.PhoneNumber; //cột này required
+        var phoneReceiver = order.Phone; //cột này required
         
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
         privateDescription += $"\n-------------------------\nNN: {phoneReceiver}";

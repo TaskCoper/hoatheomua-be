@@ -28,7 +28,8 @@ public class Order : BaseEntity<Guid>, IAuditableEntity
     public decimal ProductFee { get; set; }
     public decimal TotalFee { get; set; }
     public required long OrderTime { get; set; } = 0;
-    public Guid? AddressId { get; set; }
+    // public Guid? AddressId { get; set; }
+    public required string PhoneReceiver { get; set; }
     // public string? Email { get; set; }
     // public string? PhoneNumber { get; set; }
 
