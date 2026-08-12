@@ -77,6 +77,7 @@ public class Response
         public Guid OrderId { get; set; }
         public string Status { get; set; } = null!;
         public string TrackNumber { get; set; } = null!;
+        public required string PhoneReceiver { get; set; }
         // public int? NhanhOrderId { get; set; } 
         // public string? NhanhTrackingUrl { get; set; } = string.Empty;
         public string? AhahaMoveOrderId { get; set; } = string.Empty;
@@ -100,7 +101,18 @@ public class Response
         public string? PaymentUrl { get; set; }
         public string? SepayUrl { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
-
+        
+        public string? Address { get; set; } = string.Empty;
+        public string? ShortAddress { get; set; } = string.Empty;
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+        public int? Ward { get; set; }
+        public int? City { get; set; }
+        public string? FullName { get; set; } = string.Empty;
+        public string? Phone { get; set; } = string.Empty;
+        public Guid? UserId { get; set; }
+        
+        
         public OrderTransactionResponse? Transaction { get; set; }
         public List<OrderDetailsResponse> Details { get; set; } = new List<OrderDetailsResponse>();
     }

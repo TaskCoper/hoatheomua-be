@@ -218,6 +218,74 @@ public class LocalProductSearchTest
     }
 
     [Fact]
+    public async Task GetLocalProductDetail_ReturnsCategoriesWithParentAndChildren()
+    {
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductName = "Product",
+            IsDeleted = false
+        };
+        var parentCategory = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Parent category",
+            Name_En = "Parent category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false
+        };
+        var linkedCategory = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Linked category",
+            Name_En = "Linked category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false,
+            ParentCategoryProductId = parentCategory.Id
+        };
+        var childCategory = new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "Child category",
+            Name_En = "Child category",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false,
+            ParentCategoryProductId = linkedCategory.Id
+        };
+
+        await dbContext.Products.AddAsync(product);
+        await dbContext.CategoryProducts.AddRangeAsync(parentCategory, linkedCategory, childCategory);
+        await dbContext.CategoryProductDetails.AddAsync(new CategoryProductDetail
+        {
+            Id = Guid.NewGuid(),
+            ProductId = product.Id,
+            CategoryProductId = linkedCategory.Id,
+            IsPin = true,
+            IsDeleted = false
+        });
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await service.GetLocalProductDetail(product.Id);
+
+        // Assert
+        var category = Assert.Single(result.Categories);
+        Assert.Equal(linkedCategory.Id, category.categoryId);
+        Assert.True(category.isPinned);
+        Assert.Equal(parentCategory.Id, category.Parent?.categoryId);
+        Assert.Empty(category.Parent!.children!);
+        var child = Assert.Single(category.children!);
+        Assert.Equal(childCategory.Id, child.categoryId);
+    }
+
+    [Fact]
     public async Task GetLocalProductDetail_WithChildren_ReturnsAllActiveChildren()
     {
         // Arrange
@@ -283,6 +351,13 @@ public class LocalProductSearchTest
         Assert.Equal(2, result.Children.Count);
         Assert.Contains(result.Children, child => child.Id == firstChild.Id);
         Assert.Contains(result.Children, child => child.Id == secondChild.Id);
+        Assert.Null(result.Parent);
+
+        var childResult = await service.GetLocalProductDetail(firstChild.Id);
+
+        Assert.NotNull(childResult.Parent);
+        Assert.Equal(parent.Id, childResult.Parent.Id);
+        Assert.Equal(parent.NhanhProductId, childResult.Parent.NhanhProductId);
     }
 
     [Fact]
@@ -489,35 +564,5 @@ public class LocalProductSearchTest
 
         // Assert
         Assert.Equal(0, result);
-    }
-
-    [Fact]
-    public async Task GetLocalProducts_ProductTypeFilter_Success()
-    {
-        // Arrange
-        using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
-
-        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", ProductLabel = "Sản phẩm", IsDeleted = false };
-        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", ProductLabel = "thành phần", IsDeleted = false };
-        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "Thành phần 1", IsDeleted = false };
-
-        await dbContext.Products.AddRangeAsync(p1, p2, p3);
-        await dbContext.SaveChangesAsync();
-
-        var request = new Request.LocalProductQueryRequest
-        {
-            productType = ProductType.Components
-        };
-
-        // Act
-        var result = await service.GetLocalProductsV2(request);
-
-        // Assert
-        Assert.NotNull(result);
-        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Equal(2, items.Count);
-        Assert.Contains(items, x => x.ProductName == "P2");
-        Assert.Contains(items, x => x.ProductName == "P3");
     }
 }

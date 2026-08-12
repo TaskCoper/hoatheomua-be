@@ -171,6 +171,8 @@ public class Response
     public DateTimeOffset CreatedAt { get; set; }  
     public DateTimeOffset? UpdatedAt { get; set; }  
   
+    public List<CategoryProductResponse> Categories { get; set; } = new();
+    public LocalProductDetailResponse? Parent { get; set; }
     public List<LocalProductDetailResponse> Children { get; set; } = new();  
     }
     

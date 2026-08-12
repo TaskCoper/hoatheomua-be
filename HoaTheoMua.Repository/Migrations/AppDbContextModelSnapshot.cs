@@ -327,6 +327,48 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("CategoryProductDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ComboSpecification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsCore")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("MatId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SubId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MatId");
+
+                    b.HasIndex("SubId", "MatId")
+                        .IsUnique();
+
+                    b.ToTable("ComboSpecification");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -640,6 +682,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PhoneReceiver")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -1549,46 +1595,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("RecruitmentRequest", (string)null);
                 });
 
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Specification", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("MatId")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("MaterialProductId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("SubId")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MaterialProductId");
-
-                    b.ToTable("Specification");
-                });
-
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1731,6 +1737,25 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ComboSpecification", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "Mat")
+                        .WithMany("MatIds")
+                        .HasForeignKey("MatId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "Sub")
+                        .WithMany("SubIds")
+                        .HasForeignKey("SubId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Mat");
+
+                    b.Navigation("Sub");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
@@ -1761,15 +1786,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("JobDescription");
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Specification", b =>
-                {
-                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "MaterialProduct")
-                        .WithMany("Specifications")
-                        .HasForeignKey("MaterialProductId");
-
-                    b.Navigation("MaterialProduct");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
@@ -1823,7 +1839,9 @@ namespace HoaTheoMua.Repository.Migrations
                 {
                     b.Navigation("CategoryProductDetails");
 
-                    b.Navigation("Specifications");
+                    b.Navigation("MatIds");
+
+                    b.Navigation("SubIds");
                 });
 #pragma warning restore 612, 618
         }

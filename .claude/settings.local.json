@@ -19,7 +19,9 @@
       "Bash(openssl dgst *)",
       "Bash(xxd -p -c32)",
       "Bash(python3 -c ' *)",
-      "Bash(python3 - __TRACKED_VAR__/baokim_public.pem)"
+      "Bash(python3 - __TRACKED_VAR__/baokim_public.pem)",
+      "Bash(docker compose *)",
+      "Bash(python3 *)"
     ]
   }
 }

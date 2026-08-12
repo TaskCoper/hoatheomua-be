@@ -26,7 +26,8 @@ public class Request
 
         public bool? IsExportInvoice { get; set; }
         public InvoiceType? InvoiceType { get; set; }
-
+        // public required Guid AddressId { get; set; }
+        public required string PhoneReceiver { get; set; }
         // public string? Email { get; set; }
         // public string? PhoneNumber { get; set; }
         // public string? IdentityNumber { get; set; }

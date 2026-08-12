@@ -18,13 +18,16 @@ public class Service: IService
     private readonly HttpClient _httpClient;
     private readonly AppDbContext _appDbContext;
     private readonly NhanhVnOption _nhanhVnOption;
+    private readonly Revalidate.IService _revalidateService;
 
-    public Service(HttpClient httpClient, AppDbContext appDbContext, IConfiguration configuration)
+    public Service(HttpClient httpClient, AppDbContext appDbContext, 
+        IConfiguration configuration, Revalidate.IService revalidateService)
     {
         _httpClient = httpClient;
         _appDbContext = appDbContext;
         _nhanhVnOption = new NhanhVnOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
+        _revalidateService = revalidateService;
     }
     
     public async Task<OrderLabelResponse> GetOrderLabel(OrderLabelRequest orderLabelRequest)
@@ -163,6 +166,11 @@ public class Service: IService
                 {
                     var req = TryDeserialize<NhanhProductAddWebhookRequest>(json);
                     if (req == null) return "Thành công";
+                    JsonElement jsonData = JsonSerializer.SerializeToElement(new
+                    {
+                        entity = "productList"
+                    });
+                    await _revalidateService.RevalidateApi(jsonData);
                     return await WebhookNhanhVnProductAdd(req);
                 }
 
@@ -170,13 +178,25 @@ public class Service: IService
                 {
                     var req = TryDeserialize<NhanhProductAddWebhookRequest>(json);
                     if (req == null) return "Thành công";
-                    return await WebhookNhanhVnProductUpdate(req);
+                    var result =  await WebhookNhanhVnProductUpdate(req);
+                    JsonElement jsonData = JsonSerializer.SerializeToElement(new
+                    {
+                        entity = "product",
+                        id = result
+                    });
+                     await _revalidateService.RevalidateApi(jsonData);
+                     return result;
                 }
 
                 case NhanhWebhookEvents.ProductDelete:
                 {
                     var req = TryDeserialize<NhanhProductDeleteWebhookRequest>(json);
                     if (req == null) return "Thành công";
+                    JsonElement jsonData = JsonSerializer.SerializeToElement(new
+                    {
+                        entity = "productList"
+                    });
+                    await _revalidateService.RevalidateApi(jsonData);
                     return await WebhookNhanhVnProductDelete(req);
                 }
 
@@ -250,7 +270,31 @@ public class Service: IService
             {
                return $"Sản phẩm với id: {itemId} không tồn tại trong hệ thống";
             }
-  
+            
+            // Parent.NhanhProductId == Child.ParentProductId.
+            var existParent = await _appDbContext.Products
+                .FirstOrDefaultAsync(x => x.NhanhProductId == product.ParentProductId);
+            //hỏi thử rằng là: product đó, nếu nó đã tồn tại rồi, thì hỏi thử có tồn tại 
+            //parent của nó hay không
+            if (existParent != null)
+            {
+                //update parent
+                existParent.AvailableForSale += (decimal?)item.Available;
+                existParent.TotalStock += (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
+                existParent.Stock += (decimal?)item.Remain;
+                existParent.DeliveringStock += (decimal?)item.Shipping;
+                existParent.StockError += (decimal?)item.Damaged;
+                existParent.Held += (decimal?)item.Holding;//tạm giữ các kho
+                existParent.StockTransferring += (decimal?)item.Transfering;
+                // product.HeldComponents = item.Holding;
+            
+                // product.WarehouseStock += (decimal?)item.Warranty.Remain;
+                existParent.WarrantyStock += (decimal?)item.Warranty?.Remain;
+                existParent.HeldComponents += (decimal?)item.Warranty?.Holding;
+                existParent.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+            
+            
             product.AvailableForSale = (decimal?)item.Available;
             product.ProductCode = item.Code;
             product.TotalStock = (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
@@ -265,6 +309,7 @@ public class Service: IService
             product.WarrantyStock = (decimal?)item.Warranty?.Remain;
             product.HeldComponents = (decimal?)item.Warranty?.Holding;
             product.UpdatedAt = DateTimeOffset.UtcNow;
+            
         }
 
         await _appDbContext.SaveChangesAsync();
@@ -846,7 +891,7 @@ public class Service: IService
         }
         await _appDbContext.SaveChangesAsync();
     
-        return "Cập nhật thành công";
+        return product.Id.ToString();
     }
 
     public async Task<string> WebhookNhanhVnProductDelete(NhanhProductDeleteWebhookRequest? request)

@@ -133,9 +133,35 @@ public class DeleteNewTest
 
         var service = CreateService(newsList, out var dbContextMock);
 
-        var result = await service.DeleteNewAsync(NewsId);
+        var result = await service.DeleteNewAsync(NewsId.ToString());
+        
+        //Config response
+        Assert.Equal(NewsId, result.Id);
+        Assert.Equal(news.slug, result.Slug);
+        Assert.True(news.IsDeleted);
+        Assert.NotNull(news.UpdatedAt);
 
-        Assert.True(result);
+        dbContextMock.Verify(
+            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteNew_BySlug_Success()
+    {
+        var news = CreateNews(
+            id: NewsId,
+            slug: "cong-nghe-moi",
+            isDeleted: false);
+
+        var service = CreateService(
+            new List<NewsEntity> { news },
+            out var dbContextMock);
+
+        var result = await service.DeleteNewAsync("cong-nghe-moi");
+
+        Assert.Equal(NewsId, result.Id);
+        Assert.Equal("cong-nghe-moi", result.Slug);
         Assert.True(news.IsDeleted);
         Assert.NotNull(news.UpdatedAt);
 
@@ -153,7 +179,7 @@ public class DeleteNewTest
         var service = CreateService(newsList, out var dbContextMock);
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.DeleteNewAsync(NotFoundNewsId));
+            () => service.DeleteNewAsync(NotFoundNewsId.ToString()));
 
         Assert.Equal("NEW_NOT_FOUND", ex.Message);
 
@@ -178,7 +204,7 @@ public class DeleteNewTest
         var service = CreateService(newsList, out var dbContextMock);
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.DeleteNewAsync(NewsId));
+            () => service.DeleteNewAsync(NewsId.ToString()));
 
         Assert.Equal("NEW_NOT_FOUND", ex.Message);
         Assert.True(deletedNews.IsDeleted);
@@ -205,7 +231,7 @@ public class DeleteNewTest
         var service = CreateService(newsList, out var dbContextMock);
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.DeleteNewAsync(Guid.Empty));
+            () => service.DeleteNewAsync(Guid.Empty.ToString()));
 
         Assert.Equal("NEW_NOT_FOUND", ex.Message);
         Assert.False(news.IsDeleted);
@@ -234,7 +260,7 @@ public class DeleteNewTest
         var service = CreateService(newsList, out var dbContextMock);
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.DeleteNewAsync(NewsId));
+            () => service.DeleteNewAsync(NewsId.ToString()));
 
         Assert.Equal("NEW_NOT_FOUND", ex.Message);
         Assert.True(softDeletedNews.IsDeleted);
