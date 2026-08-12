@@ -20,7 +20,8 @@ public class CreateOrderRequestValidator: AbstractValidator<Request.CreateOrderR
         RuleFor(x => x.ReceiptAddress).MaximumLength(255).WithMessage("RECEIPT_ADDRESS_LENGTH_INVALID");
         RuleFor(x => x.ReceiptPhoneNumber).OptionalPhoneNumberVn();
         RuleFor(x => x.ReceiptEmail).OptionalEmail();
-        RuleFor(x => x.AddressId).NotEmpty().WithMessage("ADDRESS_ID_REQUIRED");
+        // RuleFor(x => x.AddressId).NotEmpty().WithMessage("ADDRESS_ID_REQUIRED");
+        RuleFor(x => x.PhoneReceiver).NotEmpty().WithMessage("PHONE_RECEIVER_REQUIRED");
         
         RuleFor(x => x.IsExportInvoice).NotEmpty().WithMessage("IS_EXPORT_FORCE");
         
