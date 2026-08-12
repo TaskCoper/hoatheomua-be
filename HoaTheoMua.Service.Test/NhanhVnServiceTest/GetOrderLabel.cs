@@ -13,6 +13,7 @@ using Xunit;
 using ConfigEntity = HoaTheoMua.Repository.Entity.Config;
 using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
 using NhanhVnServiceImplementation = HoaTheoMua.Service.NhanhVnService.Service;
+using RevalidateService = HoaTheoMua.Service.Revalidate.IService;
 
 namespace HoaTheoMua.Service.Test.NhanhVnServiceTest
 {
@@ -68,7 +69,11 @@ namespace HoaTheoMua.Service.Test.NhanhVnServiceTest
 
         private NhanhVnServiceImplementation CreateService(HttpResponseMessage response)
         {
-            return new NhanhVnServiceImplementation(CreateHttpClient(response), CreateMockDbContext(), CreateMockConfiguration());
+            return new NhanhVnServiceImplementation(
+                CreateHttpClient(response),
+                CreateMockDbContext(),
+                CreateMockConfiguration(),
+                Mock.Of<RevalidateService>());
         }
 
         private OrderLabelRequest CreateRequest()
@@ -212,7 +217,8 @@ namespace HoaTheoMua.Service.Test.NhanhVnServiceTest
             var service = new NhanhVnServiceImplementation(
                 new HttpClient(mockHandler.Object),
                 CreateMockDbContext(),
-                CreateMockConfiguration());
+                CreateMockConfiguration(),
+                Mock.Of<RevalidateService>());
 
             // Act
             await service.GetOrderLabel(CreateRequest());

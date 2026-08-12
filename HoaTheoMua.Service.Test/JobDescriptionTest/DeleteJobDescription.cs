@@ -132,7 +132,7 @@ public class DeleteJobDescriptionTest
         var service = CreateService(dbContext);
 
         // Act
-        await service.DeleteJobAsync(jobId);
+        await service.DeleteJobAsync(jobId.ToString());
 
         // Assert
         var job = jobs.First(x => x.Id == jobId);
@@ -163,7 +163,7 @@ public class DeleteJobDescriptionTest
 
         // Act
         var exception = await Assert.ThrowsAsync<ConflictException>(
-            () => service.DeleteJobAsync(jobId)
+            () => service.DeleteJobAsync(jobId.ToString())
         );
 
         // Assert
@@ -175,24 +175,28 @@ public class DeleteJobDescriptionTest
         Assert.Null(job.UpdatedAt);
     }
 
-    // TC03: ID không hợp lệ
+    // TC03: Xóa job bằng slug thành công
     [Fact]
-    public async Task Delete_EmptyId_ThrowBadRequest()
+    public async Task Delete_BySlug_Success()
     {
         // Arrange
-        var jobs = new List<JobDescriptionEntity>();
+        var jobId = Guid.NewGuid();
+        var jobs = new List<JobDescriptionEntity>
+        {
+            CreateJob(jobId, isDeleted: false)
+        };
         var recruitmentRequests = new List<RecruitmentRequestEntity>();
 
         var dbContext = CreateMockDbContext(jobs, recruitmentRequests);
         var service = CreateService(dbContext);
 
         // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.DeleteJobAsync(Guid.Empty)
-        );
+        await service.DeleteJobAsync("senior-software-engineer");
 
         // Assert
-        Assert.Equal("INVALID_JOB_ID", exception.Message);
+        var job = jobs.First(x => x.Id == jobId);
+        Assert.True(job.IsDeleted);
+        Assert.NotNull(job.UpdatedAt);
     }
 
     // TC04: Không tìm thấy job
@@ -212,7 +216,7 @@ public class DeleteJobDescriptionTest
 
         // Act
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.DeleteJobAsync(Guid.NewGuid())
+            () => service.DeleteJobAsync(Guid.NewGuid().ToString())
         );
 
         // Assert
@@ -238,7 +242,7 @@ public class DeleteJobDescriptionTest
 
         // Act
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.DeleteJobAsync(jobId)
+            () => service.DeleteJobAsync(jobId.ToString())
         );
 
         // Assert
@@ -268,7 +272,7 @@ public class DeleteJobDescriptionTest
 
         // Act
         var exception = await Assert.ThrowsAsync<ConflictException>(
-            () => service.DeleteJobAsync(jobId)
+            () => service.DeleteJobAsync(jobId.ToString())
         );
 
         // Assert

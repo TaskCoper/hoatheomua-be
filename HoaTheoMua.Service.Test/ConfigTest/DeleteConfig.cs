@@ -68,7 +68,8 @@ namespace HoaTheoMua.Service.Test.ConfigTest
             var result = await service.DeleteConfig(configId);
 
             // Assert
-            Assert.Equal("Xóa thành công.", result);
+            Assert.Equal("web", result.Group);
+            Assert.Equal("web.title", result.Key);
             Assert.True(configs[0].IsDeleted); // soft-delete flag must actually be set
             dbContextMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
         }

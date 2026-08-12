@@ -1,5 +1,7 @@
+using System.Text.Json;
 using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
+using HoaTheoMua.Service.Revalidate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ConfigService = HoaTheoMua.Service.Config;
@@ -12,10 +14,12 @@ namespace HoaTheoMua.Controllers;
 public class ConfigController : ControllerBase
 {
     private readonly ConfigService.IService _configService;
+    private readonly IService _service;
 
-    public ConfigController(ConfigService.IService configService)
+    public ConfigController(ConfigService.IService configService,  IService service)
     {
         _configService = configService;
+        _service = service;
     }
 
     [HttpGet("")]
@@ -68,6 +72,14 @@ public class ConfigController : ControllerBase
     public async Task<IActionResult> CreateConfig([FromBody] Request.CreateConfigRequest request)
     {
         var result = await _configService.CreateConfig(request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "config",
+            group = request.Group,
+            key = request.Key
+        });
+
+        await _service.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
     }
 
@@ -78,6 +90,15 @@ public class ConfigController : ControllerBase
         [FromBody] Request.UpdateConfigRequest request)
     {
         var result = await _configService.UpdateConfig (id, request);
+        
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "config",
+            group = request.Group,
+            key = request.Key
+        });
+
+        await _service.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 
@@ -86,6 +107,14 @@ public class ConfigController : ControllerBase
     public async Task<IActionResult> DeleteConfig([FromRoute] Guid id)
     {
         var result = await _configService.DeleteConfig(id);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "config",
+            group = result.Group,
+            key = result.Key
+        });
+
+        await _service.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result,  true,"", HttpContext.TraceIdentifier));
     }
 

@@ -21,6 +21,7 @@ using NhanhVnService = HoaTheoMua.Service.NhanhVnService;
 using ProductImportService = HoaTheoMua.Service.ProductImport;
 using BaoKimService = HoaTheoMua.Service.BaoKim;
 using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
+using RevalidateService = HoaTheoMua.Service.Revalidate;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -69,7 +70,7 @@ builder.Services.AddScoped<AddressService.IService, AddressService.Service>();
 builder.Services.AddScoped<NhanhVnService.IService, NhanhVnService.Service>();
 builder.Services.AddScoped<ProductImportService.IService, ProductImportService.Service>();
 builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
-
+builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);

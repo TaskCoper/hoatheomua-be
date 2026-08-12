@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Extentions;
+﻿using System.Text.Json;
+using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.CategoryNew;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -12,9 +13,11 @@ namespace HoaTheoMua.Controllers;
 public class CategoryNewController:ControllerBase
 {
     private readonly IService _categoryService;
-    public CategoryNewController(IService categoryService)
+    private readonly Service.Revalidate.IService _revalidateService;
+    public CategoryNewController(IService categoryService,  Service.Revalidate.IService revalidateService)
     {
         _categoryService = categoryService;
+        _revalidateService = revalidateService;
     }
     
     [HttpPost]
@@ -22,6 +25,12 @@ public class CategoryNewController:ControllerBase
     public async Task<IActionResult> CreateCate([FromBody]Request.CreateCategoriesRequest request) 
     {
         var result = await _categoryService.CreateCate(request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "newsList"
+        });
+        await _revalidateService.RevalidateApi(json);
+
         return CreatedAtAction(nameof(GetCategory), new { id = result.categoryId }, ApiResponseFactory.Base("Success", true, "Tạo bài viết tin tức mới thành công.", HttpContext.TraceIdentifier));
     }
 
@@ -44,6 +53,11 @@ public class CategoryNewController:ControllerBase
     public async Task<IActionResult> UpdateCate(Guid id, [FromBody] Request.UpdateCategoriesRequest request)
     {
         var result = await _categoryService.UpdateCate(id, request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "newsList"
+        });
+        await _revalidateService.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
@@ -52,6 +66,11 @@ public class CategoryNewController:ControllerBase
     public async Task<IActionResult> DeleteCate(Guid id)
     {
         await _categoryService.DeleteCate(id);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "newsList"
+        });
+        await _revalidateService.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(new { message = "Xóa danh mục thành công." }, true, "", HttpContext.TraceIdentifier));
     }
 }

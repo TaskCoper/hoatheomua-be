@@ -1,5 +1,7 @@
+using System.Text.Json;
 using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
+using HoaTheoMua.Service.Revalidate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using CompanyAddressService = HoaTheoMua.Service.CompanyAddress;
@@ -12,10 +14,12 @@ namespace HoaTheoMua.Controllers;
 public class CompanyAddressController : ControllerBase
 {
     private readonly CompanyAddressService.IService _companyAddressService;
+    private readonly IService _revalidateService;
 
-    public CompanyAddressController(CompanyAddressService.IService companyAddressService)
+    public CompanyAddressController(CompanyAddressService.IService companyAddressService,  IService revalidateService)
     {
         _companyAddressService = companyAddressService;
+        _revalidateService = revalidateService;
     }
     [HttpGet]
     public async Task<IActionResult> GetCompanyAddress()
@@ -49,7 +53,13 @@ public class CompanyAddressController : ControllerBase
         [FromBody] Request.CreateCompanyAddressRequest request)
     {
         var result = await _companyAddressService.CreateCompanyAddress(request);
-
+        
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "companyAddress"
+        });
+        await _revalidateService.RevalidateApi(json);
+        
         return StatusCode(201, ApiResponseFactory.Base(
             result,
             true,
@@ -65,7 +75,11 @@ public class CompanyAddressController : ControllerBase
         [FromBody] Request.UpdateCompanyAddressRequest request)
     {
         var result = await _companyAddressService.UpdateCompanyAddress(id, request);
-
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "companyAddress"
+        });
+        await _revalidateService.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(
             result,
             true,
