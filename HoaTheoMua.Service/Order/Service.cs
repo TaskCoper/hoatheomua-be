@@ -134,15 +134,15 @@ public class Service : IService
         //     throw new BadRequestException("Địa chỉ người nhận không tồn tại");
         // }
         
-        var phoneExist = await _dbContext.Addresses
-            .AnyAsync(x => 
-                x.PhoneNumber == request.PhoneReceiver &&
-                !x.IsDeleted && x.UserId == userId);
-
-        if (!phoneExist)
-        {
-            throw new BadRequestException("SĐT người nhận không tồn tại");
-        }
+        // var phoneExist = await _dbContext.Addresses
+        //     .AnyAsync(x => 
+        //         x.PhoneNumber == request.PhoneReceiver &&
+        //         !x.IsDeleted && x.UserId == userId);
+        //
+        // if (!phoneExist)
+        // {
+        //     throw new BadRequestException("SĐT người nhận không tồn tại");
+        // } //ko cần kiểm tra SDT
         
         var totalShippingFee = await EstimateShippingFeeAsync(request, products, quantityByItemId, companyAddress);
 
