@@ -8,6 +8,7 @@ public class ComboSpecificationConfiguration: IEntityTypeConfiguration<ComboSpec
 {
     public void Configure(EntityTypeBuilder<ComboSpecification> builder)
     {
+        builder.ToTable("ComboSpecification");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Quantity)
