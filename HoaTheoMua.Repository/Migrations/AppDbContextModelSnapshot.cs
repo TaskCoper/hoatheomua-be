@@ -685,6 +685,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PhoneReceiver")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<decimal>("ProductFee")
                         .HasColumnType("numeric");
 
