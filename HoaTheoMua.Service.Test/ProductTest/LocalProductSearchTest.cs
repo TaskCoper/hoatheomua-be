@@ -582,7 +582,7 @@ public class LocalProductSearchTest
 
         var request = new Request.LocalProductQueryRequest
         {
-            productType = ProductType.Components
+            productType = "Thành phần"
         };
 
         // Act

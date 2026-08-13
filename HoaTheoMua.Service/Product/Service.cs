@@ -332,39 +332,59 @@ public class Service : IService
                 (x.Barcode != null && x.Barcode.ToLower().Contains(normalizedSearch)) ||
                 (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
         }
+
+        var productLabel = "Thành phần";
+        var productTypeCombo = "Combo";
+        var productTypeProduct = "Sản phẩm";
         
-        if (request.productType.HasValue)
+        if (request.productType != null)
         {
-            switch (request.productType.Value)
+            if (request.productType == productLabel)
             {
-                case ProductType.Components:
-                    query = query.Where(x => x.ProductLabel != null && x.ProductLabel.ToLower()
-                        .Contains("thành phần"));
-                    break;
-                
-                case ProductType.Combo: // Enum = 1 (Combo)
-                    query = query.Where(x => 
-                        // th1: la san pham doc lap (ko co con) va ProductType la combo
-                        (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Combo")
-                        ||
-                        // th2: la san pham cha (co con) va tat ca con la combo
-                        (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
-                         _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Combo"))
-                    );
-                    break;
-                
-                case ProductType.Product: 
-                    query = query.Where(x => 
-                        // th1: la san pham doc lap va product type la san pham
-                        (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Sản phẩm")
-                        ||
-                        // th2: la san pham cha va co it nhat 1 con ko phai combo
-                        (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
-                         _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Sản phẩm"))
-                    );
-                    break;
+                query = query.Where(x => x.ProductLabel == productLabel);
+            }
+            if(request.productType == productTypeCombo)
+            {
+                query = query.Where(x => x.ProductType == productTypeCombo);
+            }
+            if(request.productType ==  productTypeProduct)
+            {
+                query = query.Where(x => x.ProductType == productTypeProduct);    
             }
         }
+        
+        // if (request.productType.HasValue)
+        // {
+        //     switch (request.productType.Value)
+        //     {
+        //         case ProductType.Components:
+        //             query = query.Where(x => x.ProductLabel != null && x.ProductLabel.ToLower()
+        //                 .Contains("thành phần"));
+        //             break;
+        //         
+        //         case ProductType.Combo: // Enum = 1 (Combo)
+        //             query = query.Where(x => 
+        //                 // th1: la san pham doc lap (ko co con) va ProductType la combo
+        //                 (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Combo")
+        //                 ||
+        //                 // th2: la san pham cha (co con) va tat ca con la combo
+        //                 (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
+        //                  _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Combo"))
+        //             );
+        //             break;
+        //         
+        //         case ProductType.Product: 
+        //             query = query.Where(x => 
+        //                 // th1: la san pham doc lap va product type la san pham
+        //                 (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Sản phẩm")
+        //                 ||
+        //                 // th2: la san pham cha va co it nhat 1 con ko phai combo
+        //                 (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
+        //                  _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Sản phẩm"))
+        //             );
+        //             break;
+        //     }
+        // }
 
         if (request.priceFrom.HasValue)
         {
