@@ -366,7 +366,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("SubId", "MatId")
                         .IsUnique();
 
-                    b.ToTable("ComboSpecification");
+                    b.ToTable("ComboSpecifications");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
@@ -1328,6 +1328,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.Property<decimal?>("DeliveringStock")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("Factor")
                         .HasColumnType("numeric");
 
                     b.Property<decimal?>("Height")
