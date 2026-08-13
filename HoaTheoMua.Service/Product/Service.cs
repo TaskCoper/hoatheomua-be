@@ -426,6 +426,13 @@ public class Service : IService
                     response.SellableQuantity = comboInfo.SellableQuantity;
                     response.StockStatus = comboInfo.StockStatus;
                 }
+                else
+                {
+                    // Sản phẩm thường: lấy từ Stock
+                    var stock = (int)(response.Stock ?? 0);
+                    response.SellableQuantity = stock;
+                    response.StockStatus = stock > 0 ? "Còn hàng" : "Hết hàng";
+                }
             }
         }
 

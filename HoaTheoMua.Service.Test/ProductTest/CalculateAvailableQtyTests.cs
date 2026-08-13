@@ -103,7 +103,7 @@ public class CalculateAvailableQtyTests
     }
 
     [Fact]
-    public async Task UT_005_03_NormalProduct_RetrievesStockDirectly()
+    public async Task UT_005_03_NormalProduct_ReturnsStockDirectly()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -114,6 +114,7 @@ public class CalculateAvailableQtyTests
 
         var result = await service.CalculateAvailableQty(new List<Guid> { product.Id });
 
+        // CalculateAvailableQty xử lý sản phẩm thường bằng cách lấy trực tiếp từ Stock
         Assert.True(result.ContainsKey(product.Id));
         Assert.Equal(15, result[product.Id].SellableQuantity);
         Assert.Equal("Còn hàng", result[product.Id].StockStatus);
@@ -326,7 +327,7 @@ public class CalculateAvailableQtyTests
     }
 
     [Fact]
-    public async Task UT_004_03_GetLocalProductsV2_NormalProduct_HasSellableQuantityAsStock()
+    public async Task UT_004_03_GetLocalProductsV2_NormalProduct_HasSellableQuantityFromStock()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
