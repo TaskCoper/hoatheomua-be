@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Product;
@@ -103,5 +103,18 @@ public class ProductController: ControllerBase
         var result = await _productService.UpdateProduct(id, request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
-    
+
+    [HttpGet("/api/v1/products/nhanh-vn/{nhanhProductId}/combo-specification")]
+    public async Task<IActionResult> GetComboSpecification(string nhanhProductId)
+    {
+        var result = await _productService.GetComboSpecificationAsync(nhanhProductId);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
+    [HttpGet("/api/v1/materials")]
+    public async Task<IActionResult> GetMaterials([FromQuery] Request.GetMaterialsRequest request)
+    {
+        var result = await _productService.GetMaterialsAsync(request);
+        return Ok(ApiResponseFactory.Base(result, true, "Tải danh sách sản phẩm thành phần thành công", HttpContext.TraceIdentifier));
+    }
 }

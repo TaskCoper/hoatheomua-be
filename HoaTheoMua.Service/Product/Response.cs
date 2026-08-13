@@ -175,4 +175,43 @@ public class Response
     public LocalProductDetailResponse? Parent { get; set; }
     public List<LocalProductDetailResponse> Children { get; set; } = new();  
 }
+    public class ComboSpecificationResponse 
+    {
+        public string? SubId { get; set; }
+        public string? ProductCode { get; set; }
+        public string? ProductName { get; set; }
+        public List<MaterialItemResponse> Materials { get; set; } = new();
+    }
+
+    public class MaterialItemResponse
+    {
+        public string? MaterialId { get; set; }
+        public string? MaterialName { get; set; }
+        public string? Role { get; set; }
+        public string? RoleName { get; set; }
+        public int QuantityPerCombo { get; set; }
+        public string? Unit { get; set; }
+        public decimal AvailableForSale { get; set; }
+        public int MaxComboPossible { get; set; }
+    }
+
+    public class MaterialResponse
+    {
+        public string? MaterialId { get; set; }
+        public string? MaterialCode { get; set; }
+        public string? MaterialName { get; set; }
+        public string? Unit { get; set; }
+        public decimal AvailableStock { get; set; }
+        public string? CoverImage { get; set; }
+        public List<string> Tags { get; set; } = new List<string>();
+    }
+
+    public class MaterialPaginationResponse
+    {
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalItems { get; set; }
+        public int TotalPages { get; set; }
+        public List<MaterialResponse> Items { get; set; } = new();
+    }
 }
