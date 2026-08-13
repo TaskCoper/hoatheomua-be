@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Service.Product;
 
@@ -93,6 +94,7 @@ public class Request
         public decimal? priceTo { get; set; }
         public List<string>? sortBy { get; set; }
         public List<Guid>? categoryIds { get; set; }
+        public ProductType? productType { get; set; }
         public bool? isPin { get; set; }
     }
     
