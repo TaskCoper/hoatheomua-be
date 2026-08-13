@@ -1017,15 +1017,14 @@ public class Service : IService
         return "Cập nhật thành công";
     }
     
-    
-    public async Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(string nhanhProductId)
+    public async Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(Guid id)
     {
         var product = await _dbContext.Products
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.NhanhProductId == nhanhProductId && !p.IsDeleted);
+            .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
 
         if (product == null)
-            throw new NotFoundException($"Không tìm thấy combo với NhanhProductId: {nhanhProductId}");
+            throw new NotFoundException($"Không tìm thấy combo với ID: {id}");
 
         var comboSpecs = await _dbContext.ComboSpecification
             .Include(c => c.Mat)
@@ -1034,79 +1033,56 @@ public class Service : IService
 
         var response = new Response.ComboSpecificationResponse
         {
-            SubId = nhanhProductId,
+            SubId = product.Id.ToString(),
             ProductCode = product.ProductCode,
             ProductName = product.ProductName,
             Materials = comboSpecs.Select(c => new Response.MaterialItemResponse
             {
-                MaterialId = c.Mat?.NhanhProductId ?? c.Mat?.Id.ToString(),
+                MaterialId = c.Mat?.Id.ToString(),
                 MaterialName = c.Mat?.ProductName,
-                Role = c.IsCore ? "1" : "2",
-                RoleName = c.IsCore ? "Core" : "Phụ",
+                Role = c.IsCore,
                 QuantityPerCombo = c.Quantity,
-                Unit = c.Mat?.Unit ?? "Cành",
+                Unit = c.Mat?.Unit ?? null,
                 AvailableForSale = c.Mat?.AvailableForSale ?? 0,
                 MaxComboPossible = (c.Mat?.AvailableForSale ?? 0) > 0 && c.Quantity > 0 
                     ? (int)Math.Floor((c.Mat?.AvailableForSale ?? 0) / c.Quantity) 
                     : 0
-            }).ToList()
+            })
+                .OrderBy(x => x.Role)
+                .ToList()
         };
-
-        response.Materials = response.Materials.OrderBy(m => m.Role).ToList();
-
+        
         return response;
     }
 
-    public async Task<Response.MaterialPaginationResponse> GetMaterialsAsync(Request.GetMaterialsRequest request)
+    public async Task<BasePaginationResponse> GetMaterialsAsync(Request.GetMaterialsRequest request)
     {
-        if (request.Page < 1 || request.PageSize < -1)
-        {
-            throw new BadRequestException("Tham số phân trang page hoặc pageSize không hợp lệ");
-        }
+        request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
+        request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
+        var searchPattern = "Thành phần";
+        
         var query = _dbContext.Products.AsNoTracking()
-            .Where(p => !p.IsDeleted && p.ProductType == "Thành phần");
-
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var search = request.Search.ToLower();
-            query = query.Where(p => 
-                (p.ProductName != null && p.ProductName.ToLower().Contains(search)) || 
-                (p.ProductCode != null && p.ProductCode.ToLower().Contains(search)));
-        }
-
+            .Where(p => !p.IsDeleted &&
+                        EF.Functions.ILike(p.ProductLabel!, searchPattern));
+        
         int totalItems = await query.CountAsync();
-        int totalPages = 1;
-
-        if (request.PageSize > 0)
+                
+        var page = query
+            .Skip((request.PageIndex - 1) * request.PageSize)
+            .Take(request.PageSize);  
+        
+        var items = await page.Select(p => new Response.MaterialResponse
         {
-            totalPages = (int)Math.Ceiling(totalItems / (double)request.PageSize);
-            query = query.OrderBy(p => p.CreatedAt)
-                         .Skip((request.Page - 1) * request.PageSize)
-                         .Take(request.PageSize);
-        }
-
-        var products = await query.ToListAsync();
-
-        var items = products.Select(p => new Response.MaterialResponse
-        {
-            MaterialId = p.NhanhProductId ?? p.Id.ToString(),
+            MaterialId = p.Id.ToString(),
             MaterialCode = p.ProductCode,
             MaterialName = p.ProductName,
-            Unit = p.Unit ?? "Cành",
-            AvailableStock = p.AvailableForSale ?? 0,
+            Unit = p.Unit ?? null,
+            AvailableForSale = p.AvailableForSale ?? 0,
             CoverImage = p.CoverImage,
-            Tags = new List<string> { "Thành phần" }
-        }).ToList();
+        }).ToListAsync();
 
-        return new Response.MaterialPaginationResponse
-        {
-            Page = request.Page,
-            PageSize = request.PageSize,
-            TotalItems = totalItems,
-            TotalPages = totalPages,
-            Items = items
-        };
+        return ApiResponseFactory.BasePagination(items, request.PageIndex, request.PageSize, totalItems);
     }
 }
 

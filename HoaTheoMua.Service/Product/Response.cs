@@ -188,8 +188,7 @@ public class Response
     {
         public string? MaterialId { get; set; }
         public string? MaterialName { get; set; }
-        public string? Role { get; set; }
-        public string? RoleName { get; set; }
+        public bool? Role { get; set; }
         public int QuantityPerCombo { get; set; }
         public string? Unit { get; set; }
         public decimal AvailableForSale { get; set; }
@@ -202,17 +201,9 @@ public class Response
         public string? MaterialCode { get; set; }
         public string? MaterialName { get; set; }
         public string? Unit { get; set; }
-        public decimal AvailableStock { get; set; }
+        public decimal? AvailableForSale { get; set; }
         public string? CoverImage { get; set; }
-        public List<string> Tags { get; set; } = new List<string>();
+       
     }
-
-    public class MaterialPaginationResponse
-    {
-        public int Page { get; set; }
-        public int PageSize { get; set; }
-        public int TotalItems { get; set; }
-        public int TotalPages { get; set; }
-        public List<MaterialResponse> Items { get; set; } = new();
-    }
+    
 }
