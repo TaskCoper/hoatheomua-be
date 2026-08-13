@@ -60,7 +60,7 @@ public class ProductController: ControllerBase
         var result = await _productService.GetLocalProductDetail(id);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
-    
+
     [HttpPut("/api/v1/products/{id:guid}/move")]
     [Authorize (Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> MoveProduct(Guid id, Request.MoveProductRequest request)
