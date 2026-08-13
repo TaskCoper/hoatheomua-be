@@ -1018,6 +1018,95 @@ public class Service : IService
     }
     
     
-}
+    public async Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(string nhanhProductId)
+    {
+        var product = await _dbContext.Products
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.NhanhProductId == nhanhProductId && !p.IsDeleted);
 
+        if (product == null)
+            throw new NotFoundException($"Không tìm thấy combo với NhanhProductId: {nhanhProductId}");
+
+        var comboSpecs = await _dbContext.ComboSpecification
+            .Include(c => c.Mat)
+            .Where(c => c.SubId == product.Id && !c.Mat.IsDeleted)
+            .ToListAsync();
+
+        var response = new Response.ComboSpecificationResponse
+        {
+            SubId = nhanhProductId,
+            ProductCode = product.ProductCode,
+            ProductName = product.ProductName,
+            Materials = comboSpecs.Select(c => new Response.MaterialItemResponse
+            {
+                MaterialId = c.Mat?.NhanhProductId ?? c.Mat?.Id.ToString(),
+                MaterialName = c.Mat?.ProductName,
+                Role = c.IsCore ? "1" : "2",
+                RoleName = c.IsCore ? "Core" : "Phụ",
+                QuantityPerCombo = c.Quantity,
+                Unit = c.Mat?.Unit ?? "Cành",
+                AvailableForSale = c.Mat?.AvailableForSale ?? 0,
+                MaxComboPossible = (c.Mat?.AvailableForSale ?? 0) > 0 && c.Quantity > 0 
+                    ? (int)Math.Floor((c.Mat?.AvailableForSale ?? 0) / c.Quantity) 
+                    : 0
+            }).ToList()
+        };
+
+        response.Materials = response.Materials.OrderBy(m => m.Role).ToList();
+
+        return response;
+    }
+
+    public async Task<Response.MaterialPaginationResponse> GetMaterialsAsync(Request.GetMaterialsRequest request)
+    {
+        if (request.Page < 1 || request.PageSize < -1)
+        {
+            throw new BadRequestException("Tham số phân trang page hoặc pageSize không hợp lệ");
+        }
+
+        var query = _dbContext.Products.AsNoTracking()
+            .Where(p => !p.IsDeleted && p.ProductType == "Thành phần");
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.ToLower();
+            query = query.Where(p => 
+                (p.ProductName != null && p.ProductName.ToLower().Contains(search)) || 
+                (p.ProductCode != null && p.ProductCode.ToLower().Contains(search)));
+        }
+
+        int totalItems = await query.CountAsync();
+        int totalPages = 1;
+
+        if (request.PageSize > 0)
+        {
+            totalPages = (int)Math.Ceiling(totalItems / (double)request.PageSize);
+            query = query.OrderBy(p => p.CreatedAt)
+                         .Skip((request.Page - 1) * request.PageSize)
+                         .Take(request.PageSize);
+        }
+
+        var products = await query.ToListAsync();
+
+        var items = products.Select(p => new Response.MaterialResponse
+        {
+            MaterialId = p.NhanhProductId ?? p.Id.ToString(),
+            MaterialCode = p.ProductCode,
+            MaterialName = p.ProductName,
+            Unit = p.Unit ?? "Cành",
+            AvailableStock = p.AvailableForSale ?? 0,
+            CoverImage = p.CoverImage,
+            Tags = new List<string> { "Thành phần" }
+        }).ToList();
+
+        return new Response.MaterialPaginationResponse
+        {
+            Page = request.Page,
+            PageSize = request.PageSize,
+            TotalItems = totalItems,
+            TotalPages = totalPages,
+            Items = items
+        };
+    }
+}
 
