@@ -1,13 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
 using AutoMapper;
 using HoaTheoMua.Repository;
-using HoaTheoMua.Repository.Entity;
-using HoaTheoMua.Service.Models;
-using Request = HoaTheoMua.Service.Product.Request;
+using HoaTheoMua.Service.Product;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -79,7 +72,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
 
-            var request = new GetMaterialsRequest { PageIndex = 1, PageSize = 10 };
+            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10 };
 
             // Act
             var result = await service.GetMaterialsAsync(request);
@@ -109,7 +102,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
 
-            var request = new GetMaterialsRequest { PageIndex = 2, PageSize = 5 };
+            var request = new Request.GetMaterialsRequest { PageIndex = 2, PageSize = 5 };
 
             // Act
             var result = await service.GetMaterialsAsync(request);

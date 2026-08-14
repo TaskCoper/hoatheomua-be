@@ -341,7 +341,7 @@ public class Service : IService
         {
             if (request.productType == productLabel)
             {
-                query = query.Where(x => x.ProductLabel == productLabel);
+                query = query.Where(x => x.ProductLabel != null && x.ProductLabel.ToLower().Contains("thành phần"));
             }
             if(request.productType == productTypeCombo)
             {
@@ -1114,11 +1114,11 @@ public class Service : IService
         request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
-        var searchPattern = "Thành phần";
+        var searchPattern = "thành phần";
         
         var query = _dbContext.Products.AsNoTracking()
-            .Where(p => !p.IsDeleted &&
-                        EF.Functions.ILike(p.ProductLabel!, searchPattern));
+            .Where(p => !p.IsDeleted && p.ProductLabel != null &&
+                        p.ProductLabel.ToLower() == searchPattern);
         
         int totalItems = await query.CountAsync();
                 
