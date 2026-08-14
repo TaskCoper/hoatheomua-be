@@ -27,7 +27,7 @@ public class AppDbContext : DbContext
     public virtual DbSet<OrderNhanhVn>  OrderNhanhVns { get; set; }
     public virtual DbSet<OrderNhanhVnDetail>  OrderNhanhVnDetails { get; set; }
 
-    
+    public virtual DbSet<ComboSpecification> ComboSpecifications { get; set; }
     public virtual DbSet<CategoryProduct> CategoryProducts { get; set; }
     public virtual DbSet<CategoryProductDetail> CategoryProductDetails { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)

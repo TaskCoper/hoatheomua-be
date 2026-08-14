@@ -339,7 +339,76 @@ public class Service : IService
     // Verifies every requested item has enough stock in the target depot.
     private async Task EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
     {
+
+        var stockItems = new List<AhaMoveRequest.Items>();
+
         foreach (var item in items)
+        {
+            var productId = await _dbContext.Products
+                .AsNoTracking()
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.NhanhProductId == item.ItemId.ToString())
+                .Select(x => x.Id)
+                .SingleOrDefaultAsync();
+            
+            var isCombo = await _dbContext.ComboSpecifications
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.SubId == productId &&
+                    x.IsActive &&
+                    !x.IsDeleted &&
+                    !x.Mat.IsDeleted);
+            
+            if (!isCombo)
+            {
+                stockItems.Add(new AhaMoveRequest.Items()
+                {
+                    ItemId = item.ItemId,
+                    Number = item.Number,
+                });
+
+                continue;
+            }
+            
+            var comboResult = await GetLimitCoreProduct(productId);
+
+            if (item.Number > comboResult.SellableQuantityCombo)
+            {
+                throw new BadRequestException(
+                    $"Combo Id={item.ItemId} chỉ có thể đặt tối đa " +
+                    $"{comboResult.SellableQuantityCombo} sản phẩm");
+            }
+            
+            foreach (var material in comboResult.Materials)
+            {
+                if (!int.TryParse(material.NhanhProductId, out var materialItemId))
+                {
+                    throw new BadRequestException(
+                        $"Vật liệu MatId={material.MatId} không có NhanhProductId hợp lệ");
+                }
+
+                var materialNumber = item.Number * material.Quantity;
+
+                stockItems.Add(new AhaMoveRequest.Items()
+                {
+                    ItemId = materialItemId,
+                    Number = materialNumber,
+                });
+            }
+        }
+
+
+        var mergedItems = stockItems.GroupBy(x => x.ItemId);
+
+        var itemRequest = mergedItems.Select(x => new AhaMoveRequest.Items()
+        {
+            ItemId = x.Key,
+            Number = x.Sum(item => item.Number)
+        }).ToList();
+           
+
+        foreach (var item in itemRequest)
         {
             var productDetailRequest = new HoaTheoMua.Service.Product.Request.ProductDetailRequest
             {
@@ -373,6 +442,45 @@ public class Service : IService
         }
     }
 
+    public async Task<Response.ComboResult> GetLimitCoreProduct(Guid subId)
+    {
+        var query  = _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(x => 
+                x.SubId == subId &&
+                x.IsActive &&
+                !x.IsDeleted &&
+                !x.Mat.IsDeleted);//Product Mat
+
+        var specifications = await query
+            .Select(x => new Response.ComboResponse
+        {
+            MatId = x.MatId,
+            NhanhProductId = x.Mat.NhanhProductId,
+            IsCore = x.IsCore,
+            Quantity = x.Quantity,
+            AvailableForSaleMaterial = x.Mat.AvailableForSale ?? 0m,
+        }).ToListAsync();
+
+        var coreSpecifications = specifications
+            .Where(x => x.IsCore).ToList();
+
+        if (coreSpecifications.Count == 0 ||
+            coreSpecifications.Any(x => x.Quantity <= 0))
+        {
+            throw new BadRequestException("Tồn tại vật liệu core với số lượng <= 0");
+        }
+        
+        var result = coreSpecifications.Min(x => Math.Floor(x.AvailableForSaleMaterial / x.Quantity));
+        
+        return new Response.ComboResult()
+        {
+            SellableQuantityCombo = result,
+            Materials = specifications
+        };
+    }
+    
+    
     // Calls Ahamove to estimate the shipping fee from the shop's warehouse to the buyer.
     private async Task<decimal> EstimateShippingFeeAsync(
         Request.CreateOrderRequest request,

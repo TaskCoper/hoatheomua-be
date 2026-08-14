@@ -6,6 +6,14 @@ namespace HoaTheoMua.Service.Order;
 
 public class Request
 {
+
+    public class ItemRequest
+    {
+        public string ItemId { get; set; } = string.Empty;
+        public string Number { get; set; } = string.Empty;
+        public bool? IsCore { get; set; }
+    }
+    
     public class CreateOrderRequest : AhaMoveRequest.EstimateShippingFeeRequest
     {
         public required string Gateway { get; set; }
