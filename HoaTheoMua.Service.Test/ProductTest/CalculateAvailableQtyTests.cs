@@ -60,8 +60,8 @@ public class CalculateAvailableQtyTests
         var service = CreateService(dbContext);
 
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
-        var mat1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 100, IsDeleted = false };
-        var mat2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 99, IsDeleted = false };
+        var mat1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
+        var mat2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 99, IsDeleted = false };
 
         var spec1 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat1.Id, Quantity = 2, IsCore = true, IsActive = true, IsDeleted = false };
         var spec2 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat2.Id, Quantity = 3, IsCore = true, IsActive = true, IsDeleted = false };
@@ -83,11 +83,11 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", NhanhProductId = "parent-1", IsDeleted = false };
+        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", NhanhProductId = "parent-1", IsDeleted = false };
         var variant1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
         var variant2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
 
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 100, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
 
         var spec1 = new ComboSpecification { Id = Guid.NewGuid(), SubId = variant1.Id, MatId = mat.Id, Quantity = 2, IsCore = true, IsActive = true, IsDeleted = false }; // Qty = 50
         var spec2 = new ComboSpecification { Id = Guid.NewGuid(), SubId = variant2.Id, MatId = mat.Id, Quantity = 5, IsCore = true, IsActive = true, IsDeleted = false }; // Qty = 20
@@ -108,7 +108,7 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 15, IsDeleted = false };
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 15, IsDeleted = false };
         await dbContext.Products.AddAsync(product);
         await dbContext.SaveChangesAsync();
 
@@ -127,7 +127,7 @@ public class CalculateAvailableQtyTests
         var service = CreateService(dbContext);
 
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 100, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
         var spec = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat.Id, Quantity = 1, IsCore = false, IsActive = true, IsDeleted = false };
 
         await dbContext.Products.AddRangeAsync(combo, mat);
@@ -148,8 +148,8 @@ public class CalculateAvailableQtyTests
         var service = CreateService(dbContext);
 
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
-        var mat1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 0, IsDeleted = false };
-        var mat2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 50, IsDeleted = false };
+        var mat1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 0, IsDeleted = false };
+        var mat2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 50, IsDeleted = false };
 
         var spec1 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat1.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
         var spec2 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat2.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
@@ -172,8 +172,8 @@ public class CalculateAvailableQtyTests
         var service = CreateService(dbContext);
 
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
-        var mat1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 100, IsDeleted = false };
-        var mat2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 50, IsDeleted = false };
+        var mat1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
+        var mat2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 50, IsDeleted = false };
 
         var spec1 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat1.Id, Quantity = 0, IsCore = true, IsActive = true, IsDeleted = false };
         var spec2 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat2.Id, Quantity = 2, IsCore = true, IsActive = true, IsDeleted = false };
@@ -195,8 +195,8 @@ public class CalculateAvailableQtyTests
         var service = CreateService(dbContext);
 
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
-        var mat1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 100, IsDeleted = false };
-        var mat2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 50, IsDeleted = false };
+        var mat1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
+        var mat2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 50, IsDeleted = false };
 
         var spec1 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat1.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = true }; // deleted
         var spec2 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat2.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
@@ -231,7 +231,7 @@ public class CalculateAvailableQtyTests
 
         var combo1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
         var combo2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 1, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 1, IsDeleted = false };
 
         var spec1 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo1.Id, MatId = mat.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
         var spec2 = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo2.Id, MatId = mat.Id, Quantity = 2, IsCore = true, IsActive = true, IsDeleted = false }; // requires 2 but stock is 1 -> qty = 0
@@ -281,7 +281,7 @@ public class CalculateAvailableQtyTests
         var service = CreateService(dbContext);
 
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ProductName = "Combo 1", IsDeleted = false };
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 100, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
         var spec = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
 
         await dbContext.Products.AddRangeAsync(combo, mat);
@@ -304,10 +304,10 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", ProductName = "Parent", NhanhProductId = "parent-1", IsDeleted = false };
+        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Parent", NhanhProductId = "parent-1", IsDeleted = false };
         var variant1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
         var variant2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 100, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
 
         var spec1 = new ComboSpecification { Id = Guid.NewGuid(), SubId = variant1.Id, MatId = mat.Id, Quantity = 2, IsCore = true, IsActive = true, IsDeleted = false };
         var spec2 = new ComboSpecification { Id = Guid.NewGuid(), SubId = variant2.Id, MatId = mat.Id, Quantity = 5, IsCore = true, IsActive = true, IsDeleted = false };
@@ -332,7 +332,7 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", ProductName = "Normal Product", Stock = 15, IsDeleted = false };
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Normal Product", Stock = 15, IsDeleted = false };
         await dbContext.Products.AddAsync(product);
         await dbContext.SaveChangesAsync();
 
@@ -352,11 +352,11 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var product1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", ProductName = "Normal 1", Stock = 10, IsDeleted = false };
+        var product1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Normal 1", Stock = 10, IsDeleted = false };
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ProductName = "Combo 1", IsDeleted = false };
-        var product2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", ProductName = "Normal 2", Stock = 0, IsDeleted = false };
+        var product2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Normal 2", Stock = 0, IsDeleted = false };
 
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 30, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 30, IsDeleted = false };
         var spec = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
 
         await dbContext.Products.AddRangeAsync(product1, combo, product2, mat);
@@ -424,7 +424,7 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 15, IsDeleted = false };
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 15, IsDeleted = false };
         await dbContext.Products.AddAsync(product);
         await dbContext.SaveChangesAsync();
 
@@ -442,7 +442,7 @@ public class CalculateAvailableQtyTests
         var service = CreateService(dbContext);
 
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 100, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
         var spec = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
 
         await dbContext.Products.AddRangeAsync(combo, mat);
@@ -462,10 +462,10 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", NhanhProductId = "parent-1", IsDeleted = false };
+        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", NhanhProductId = "parent-1", IsDeleted = false };
         var variant1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
         var variant2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 100, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
 
         var spec1 = new ComboSpecification { Id = Guid.NewGuid(), SubId = variant1.Id, MatId = mat.Id, Quantity = 2, IsCore = true, IsActive = true, IsDeleted = false };
         var spec2 = new ComboSpecification { Id = Guid.NewGuid(), SubId = variant2.Id, MatId = mat.Id, Quantity = 5, IsCore = true, IsActive = true, IsDeleted = false };
@@ -500,7 +500,7 @@ public class CalculateAvailableQtyTests
         var service = CreateService(dbContext);
 
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 0, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 0, IsDeleted = false };
         var spec = new ComboSpecification { Id = Guid.NewGuid(), SubId = combo.Id, MatId = mat.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
 
         await dbContext.Products.AddRangeAsync(combo, mat);
@@ -537,7 +537,7 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", IsDeleted = true };
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", IsDeleted = true };
         await dbContext.Products.AddAsync(product);
         await dbContext.SaveChangesAsync();
 
@@ -551,10 +551,10 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", NhanhProductId = "parent-1", IsDeleted = false };
+        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", NhanhProductId = "parent-1", IsDeleted = false };
         var variant1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
         var variant2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 0, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 0, IsDeleted = false };
 
         var spec1 = new ComboSpecification { Id = Guid.NewGuid(), SubId = variant1.Id, MatId = mat.Id, Quantity = 2, IsCore = true, IsActive = true, IsDeleted = false };
         var spec2 = new ComboSpecification { Id = Guid.NewGuid(), SubId = variant2.Id, MatId = mat.Id, Quantity = 5, IsCore = true, IsActive = true, IsDeleted = false };
@@ -576,9 +576,9 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", NhanhProductId = "parent-1", IsDeleted = false };
+        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", NhanhProductId = "parent-1", IsDeleted = false };
         var variant = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
-        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản Phẩm", Stock = 50, IsDeleted = false };
+        var mat = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 50, IsDeleted = false };
 
         var spec = new ComboSpecification { Id = Guid.NewGuid(), SubId = variant.Id, MatId = mat.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
 

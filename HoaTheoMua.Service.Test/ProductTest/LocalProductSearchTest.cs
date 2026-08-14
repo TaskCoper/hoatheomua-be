@@ -357,7 +357,6 @@ public class LocalProductSearchTest
 
         Assert.NotNull(childResult.Parent);
         Assert.Equal(parent.Id, childResult.Parent.Id);
-        Assert.Equal(parent.NhanhProductId, childResult.Parent.NhanhProductId);
     }
 
     [Fact]

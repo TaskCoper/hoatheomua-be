@@ -471,17 +471,9 @@ public class Service : IService
             throw new NotFoundException("PRODUCT_NOT_FOUND");
         }
 
-        var parentTask = !string.IsNullOrWhiteSpace(response.ParentProductId)
-            ? _dbContext.Products
-                .AsNoTracking()
-                .Where(p =>
-                    !p.IsDeleted &&
-                    p.NhanhProductId == response.ParentProductId)
-                .Select(LocalProductDetailSelector)
-                .FirstOrDefaultAsync()
-            : Task.FromResult<Response.LocalProductDetailResponse?>(null);
+        var isParentProduct = string.IsNullOrWhiteSpace(response.ParentProductId);
 
-        var childrenTask = !string.IsNullOrWhiteSpace(response.NhanhProductId)
+        var childrenTask = isParentProduct && !string.IsNullOrWhiteSpace(response.NhanhProductId)
             ? _dbContext.Products
                 .AsNoTracking()
                 .Where(p =>
@@ -491,9 +483,21 @@ public class Service : IService
                 .ToListAsync()
             : Task.FromResult(new List<Response.LocalProductDetailResponse>());
 
-        await Task.WhenAll(parentTask, childrenTask);
+        if (!isParentProduct)
+        {
+            var parentId = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted && p.NhanhProductId == response.ParentProductId)
+                .Select(p => p.Id)
+                .FirstOrDefaultAsync();
 
-        response.Parent = await parentTask;
+            response.Parent = new Response.ParentProductResponse { Id = parentId };
+        }
+        else
+        {
+            response.Parent = null;
+        }
+
         response.Children = await childrenTask;
 
         var isCombo = response.ProductType == "Combo" ||
@@ -502,10 +506,6 @@ public class Service : IService
         if (isCombo)
         {
             var idsToCalculate = new List<Guid> { response.Id };
-            if (response.Parent != null)
-            {
-                idsToCalculate.Add(response.Parent.Id);
-            }
             if (response.Children != null && response.Children.Any())
             {
                 idsToCalculate.AddRange(response.Children.Select(c => c.Id));
@@ -517,11 +517,6 @@ public class Service : IService
             {
                 response.SellableQuantity = mainInfo.SellableQuantity;
                 response.StockStatus = mainInfo.StockStatus;
-            }
-            if (response.Parent != null && quantities.TryGetValue(response.Parent.Id, out var parentInfo))
-            {
-                response.Parent.SellableQuantity = parentInfo.SellableQuantity;
-                response.Parent.StockStatus = parentInfo.StockStatus;
             }
             if (response.Children != null)
             {
@@ -862,7 +857,7 @@ public class Service : IService
             .ToList();
 
         var parents = products
-            .Where(p => p.ProductType == "Sản Phẩm" && string.IsNullOrEmpty(p.ParentProductId))
+            .Where(p => p.ProductType == "Sản phẩm" && string.IsNullOrEmpty(p.ParentProductId))
             .ToList();
 
         var parentNhanhIds = parents

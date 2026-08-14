@@ -6,6 +6,11 @@ namespace HoaTheoMua.Service.Product;
 
 public class Response
 {
+    public class ParentProductResponse
+    {
+        public Guid Id { get; set; }
+    }
+
     public class ProductDetailResponse
     {
         public Guid Id { get; set; }
@@ -178,7 +183,7 @@ public class Response
     public string? StockStatus { get; set; }
 
     public List<CategoryProductResponse> Categories { get; set; } = new();
-    public LocalProductDetailResponse? Parent { get; set; }
+    public ParentProductResponse? Parent { get; set; }
     public List<LocalProductDetailResponse> Children { get; set; } = new();  
 }
 }
