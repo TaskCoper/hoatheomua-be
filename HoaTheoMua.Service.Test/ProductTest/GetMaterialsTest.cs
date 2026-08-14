@@ -80,13 +80,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             // Assert
             Assert.NotNull(result);
             Assert.Equal(1, result.Value.PageIndex); // PaginationValue uses pageIndex
-            
-            var items = result.Value.Items.Cast<HoaTheoMua.Service.Product.Response.MaterialResponse>().ToList();
-            
-            // Should only return Material 1 and Material 2. Combo and Deleted should be excluded.
-            // Note: EF.Functions.ILike in unit test might not support case-insensitivity without proper setup, 
-            // but we'll verify if it throws or evaluates exactly.
-            Assert.NotEmpty(items);
+            Assert.Equal(2, result.Value.Items.Count);
         }
 
         [Fact]
@@ -113,6 +107,33 @@ namespace HoaTheoMua.Service.Test.ProductTest
             
             var items = result.Value.Items.Cast<HoaTheoMua.Service.Product.Response.MaterialResponse>().ToList();
             Assert.Equal(5, items.Count);
+        }
+        
+        [Fact]
+        public async Task GetMaterialsAsync_NoMaterialsInDb_ReturnsEmptyList()
+        {
+            // Arrange
+            // Tạo ra danh sách sản phẩm nhưng KHÔNG CÓ cái nào là "Thành phần"
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo 1", ProductLabel = "Combo", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Product 1", ProductLabel = "Sản phẩm thông thường", IsDeleted = false }
+            };
+
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10 };
+
+            // Act
+            var result = await service.GetMaterialsAsync(request);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(0, result.Value.TotalCount);
+            
+            var items = result.Value.Items.Cast<HoaTheoMua.Service.Product.Response.MaterialResponse>().ToList();
+            Assert.Empty(items); // Đảm bảo mảng trả ra là mảng rỗng
         }
     }
 }

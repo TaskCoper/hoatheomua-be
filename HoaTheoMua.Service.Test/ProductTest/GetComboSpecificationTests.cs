@@ -134,7 +134,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.False(result.Materials[0].Role);
             Assert.True(result.Materials[1].Role);
             Assert.True(result.Materials[2].Role);
-
+            
             // Verify individual max combos
             var core1Item = result.Materials.First(m => m.MaterialId == coreMat1.Id.ToString());
             Assert.Equal(5, core1Item.MaxComboPossible);

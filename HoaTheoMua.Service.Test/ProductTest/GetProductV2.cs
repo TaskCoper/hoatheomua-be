@@ -85,7 +85,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Equal(2, result.Value.TotalCount); // Excludes deleted and child products
             Assert.Equal(2, result.Value.Items.Count());
         }
-
+        
         [Fact]
         public async Task GetLocalProductsV2_SearchKeyword_ReturnsMatchingProducts()
         {
