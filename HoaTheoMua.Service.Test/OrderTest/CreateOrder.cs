@@ -34,6 +34,7 @@ using OrderDetailEntity = HoaTheoMua.Repository.Entity.OrderDetails;
 using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
 using AddressEntity = HoaTheoMua.Repository.Entity.Address;
 using TransactionEntity = HoaTheoMua.Repository.Entity.Transaction;
+using ProductEntity = HoaTheoMua.Repository.Entity.Product;
 
 namespace HoaTheoMua.Service.Test.OrderTest
 {
@@ -146,15 +147,17 @@ namespace HoaTheoMua.Service.Test.OrderTest
             List<CompanyAddressEntity>? companyAddresses = null,
             List<OrderDetailEntity>? capturedOrderDetails = null,
             double? freeShipDistance = null,
-            List<AddressEntity>? addresses = null)
+            List<AddressEntity>? addresses = null,
+            List<ProductEntity>? products = null,
+            List<ComboSpecification>? comboSpecifications = null)
         {
             var mockOrders = (orders ?? new List<OrderEntity>()).BuildMockDbSet();
             var orderDetailsList = capturedOrderDetails ?? new List<OrderDetailEntity>();
             var mockOrderDetails = orderDetailsList.BuildMockDbSet();
             var mockCompany = (companyAddresses ?? new List<CompanyAddressEntity>()).BuildMockDbSet();
             var mockAddresses = (addresses ?? new List<AddressEntity> { CreateAddress() }).BuildMockDbSet();
-            var mockProducts = new List<HoaTheoMua.Repository.Entity.Product>().BuildMockDbSet();
-            var mockComboSpecifications = new List<ComboSpecification>().BuildMockDbSet();
+            var mockProducts = (products ?? new List<ProductEntity>()).BuildMockDbSet();
+            var mockComboSpecifications = (comboSpecifications ?? new List<ComboSpecification>()).BuildMockDbSet();
 
             mockOrderDetails.Setup(x => x.AddRangeAsync(It.IsAny<IEnumerable<OrderDetailEntity>>(), It.IsAny<CancellationToken>()))
                 .Callback<IEnumerable<OrderDetailEntity>, CancellationToken>((items, ct) => orderDetailsList.AddRange(items))
@@ -306,6 +309,102 @@ namespace HoaTheoMua.Service.Test.OrderTest
                     }
                 });
             return mock.Object;
+        }
+
+        private static ProductEntity CreateStockProduct(int nhanhProductId, string name, decimal availableForSale)
+        {
+            return new ProductEntity
+            {
+                Id = Guid.NewGuid(),
+                NhanhProductId = nhanhProductId.ToString(),
+                ProductName = name,
+                AvailableForSale = availableForSale,
+                IsDeleted = false
+            };
+        }
+
+        private static ComboSpecification CreateComboSpecification(Guid comboId, ProductEntity material, int quantity, bool isCore)
+        {
+            return new ComboSpecification
+            {
+                Id = Guid.NewGuid(),
+                SubId = comboId,
+                MatId = material.Id,
+                Mat = material,
+                Quantity = quantity,
+                IsCore = isCore,
+                IsActive = true,
+                IsDeleted = false
+            };
+        }
+        
+        //setup dữ liệu mà nhanhvn trả về khi gọi check tồn kho
+        private static ProductDetailResponse.NhanhVnProductDetailResponse CreateStockResponse(
+            int nhanhProductId,
+            double available)
+        {
+            return new ProductDetailResponse.NhanhVnProductDetailResponse
+            {
+                Code = 1,
+                Data = new ProductDetailResponse.ProductDetailData
+                {
+                    Id = nhanhProductId,
+                    Inventory = new ProductDetailResponse.ProductInventory
+                    {
+                        Depots = new List<ProductDetailResponse.DepotInventoryDetail>
+                        {
+                            new ProductDetailResponse.DepotInventoryDetail
+                            {
+                                Id = 129255,
+                                Available = available
+                            }
+                        }
+                    }
+                }
+            };
+        }
+    
+        //Mô phỏng gọi tồn kho
+        private static ProductService CreateStockProductService(IReadOnlyDictionary<int, double> stocks)
+        {
+            var mock = new Mock<ProductService>();
+            mock.Setup(x => x.GetProductDetails(
+                    It.IsAny<ProductRequestDto.ProductDetailRequest>()))
+                .ReturnsAsync((ProductRequestDto.ProductDetailRequest request) =>
+                {
+                    var nhanhProductId = int.Parse(request.Filters.Id);
+                    return CreateStockResponse(nhanhProductId, stocks[nhanhProductId]);
+                });
+
+            return mock.Object;
+        }
+        //seutp resonse lấy danh sách sản phẩm thành công từ nhanhvn
+        private static HttpResponseMessage NhanhCatalogSuccess(params int[] productIds)
+        {
+            return new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = JsonContent.Create(new NhanhProductListResponse
+                {
+                    Code = 1,
+                    Data = productIds.Select(id => new NhanhProductData
+                    {
+                        Id = id,
+                        Name = $"Product {id}"
+                    }).ToList()
+                })
+            };
+        }
+        //setup request đặt hàng
+        private static OrderRequest.CreateOrderRequest CreateStockOrderRequest(
+            params AhaMoveRequest.Items[] items)
+        {
+            return new OrderRequest.CreateOrderRequest
+            {
+                Gateway = "BaoKim",
+                PhoneReceiver = TestPhoneReceiver,
+                Items = items.ToList()
+            };
         }
 
         private static HttpResponseMessage AhamoveSuccess(decimal totalFee = 50000m, double distance = 10000)
@@ -909,6 +1008,149 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(30000m, createdOrder.ShippingFee);
             Assert.Equal(80000m, createdOrder.TotalFee);
 
+        }
+
+        // Test case 15: Core trong combo và sản phẩm mua riêng dùng chung tồn kho.
+        [Fact]
+        public async Task CreateOrder_ComboAAndExtraCoreMaterial_ThrowsOutOfStock()
+        {
+            const int comboAItemId = 1001;
+            const int hoaMaiItemId = 2001;
+            const int hoaDaoItemId = 2002;
+
+            var comboA = CreateStockProduct(comboAItemId, "ComboA", 0m);
+            var hoaMai = CreateStockProduct(hoaMaiItemId, "Hoa Mai", 37m);
+            var hoaDao = CreateStockProduct(hoaDaoItemId, "Hoa Đào", 4m);
+
+            var specifications = new List<ComboSpecification>
+            {
+                CreateComboSpecification(comboA.Id, hoaMai, quantity: 6, isCore: true),
+                CreateComboSpecification(comboA.Id, hoaDao, quantity: 2, isCore: true)
+            };
+
+            var dbContext = CreateMockDbContext(
+                products: new List<ProductEntity> { comboA, hoaMai, hoaDao },
+                comboSpecifications: specifications).Object;
+            var productService = CreateStockProductService(new Dictionary<int, double>
+            {
+                [hoaMaiItemId] = 37,
+                [hoaDaoItemId] = 4
+            });
+            var httpClient = new HttpClient(CreateHttpHandler(
+                NhanhCatalogSuccess(comboAItemId, hoaDaoItemId)).Object);
+            var service = CreateService(
+                dbContext,
+                httpClient,
+                CreateMockCurrentUserService(TestUserId),
+                productService);
+
+            var request = CreateStockOrderRequest(
+                new AhaMoveRequest.Items { ItemId = comboAItemId, Number = 2 },
+                new AhaMoveRequest.Items { ItemId = hoaDaoItemId, Number = 1 });
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => service.CreateOrder(request));
+
+            Assert.Equal("Không đủ hàng (Yêu cầu: 5, Kho có: 4)", exception.Message);
+        }
+
+        // Test case 16: Support active trong combo vẫn phải cộng với sản phẩm mua riêng.
+        [Fact]
+        public async Task CreateOrder_ComboAAndExtraSupportMaterial_ThrowsOutOfStock()
+        {
+            const int comboAItemId = 1001;
+            const int hoaMaiItemId = 2001;
+            const int hoaDaoItemId = 2002;
+
+            var comboA = CreateStockProduct(comboAItemId, "ComboA", 0m);
+            var hoaMai = CreateStockProduct(hoaMaiItemId, "Hoa Mai", 37m);
+            var hoaDao = CreateStockProduct(hoaDaoItemId, "Hoa Đào", 4m);
+
+            var specifications = new List<ComboSpecification>
+            {
+                CreateComboSpecification(comboA.Id, hoaMai, quantity: 6, isCore: true),
+                CreateComboSpecification(comboA.Id, hoaDao, quantity: 2, isCore: false)
+            };
+
+            var dbContext = CreateMockDbContext(
+                products: new List<ProductEntity> { comboA, hoaMai, hoaDao },
+                comboSpecifications: specifications).Object;
+            var productService = CreateStockProductService(new Dictionary<int, double>
+            {
+                [hoaMaiItemId] = 37,
+                [hoaDaoItemId] = 4
+            });
+            var httpClient = new HttpClient(CreateHttpHandler(
+                NhanhCatalogSuccess(comboAItemId, hoaDaoItemId)).Object);
+            var service = CreateService(
+                dbContext,
+                httpClient,
+                CreateMockCurrentUserService(TestUserId),
+                productService);
+
+            var request = CreateStockOrderRequest(
+                new AhaMoveRequest.Items { ItemId = comboAItemId, Number = 2 },
+                new AhaMoveRequest.Items { ItemId = hoaDaoItemId, Number = 1 });
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => service.CreateOrder(request));
+
+            Assert.Equal("Không đủ hàng (Yêu cầu: 5, Kho có: 4)", exception.Message);
+        }
+
+        // Test case 17: Một material xuất hiện trong nhiều combo và được mua riêng.
+        [Fact]
+        public async Task CreateOrder_SharedMaterialAcrossCombosAndDirectItem_ThrowsOutOfStock()
+        {
+            const int comboAItemId = 1001;
+            const int comboBItemId = 1002;
+            const int hoaDaoItemId = 2002;
+            const int hoaCucItemId = 2003;
+            const int hoaVangItemId = 2004;
+
+            var comboA = CreateStockProduct(comboAItemId, "ComboA", 0m);
+            var comboB = CreateStockProduct(comboBItemId, "ComboB", 0m);
+            var hoaDao = CreateStockProduct(hoaDaoItemId, "Hoa Đào", 4m);
+            var hoaCuc = CreateStockProduct(hoaCucItemId, "Hoa Cúc", 3m);
+            var hoaVang = CreateStockProduct(hoaVangItemId, "Hoa Vàng", 5m);
+
+            var specifications = new List<ComboSpecification>
+            {
+                CreateComboSpecification(comboB.Id, hoaCuc, quantity: 1, isCore: true),
+                CreateComboSpecification(comboB.Id, hoaVang, quantity: 2, isCore: false),
+                CreateComboSpecification(comboA.Id, hoaVang, quantity: 2, isCore: true),
+                CreateComboSpecification(comboA.Id, hoaDao, quantity: 2, isCore: false)
+            };
+
+            var dbContext = CreateMockDbContext(
+                products: new List<ProductEntity>
+                {
+                    comboA, comboB, hoaDao, hoaCuc, hoaVang
+                },
+                comboSpecifications: specifications).Object;
+            var productService = CreateStockProductService(new Dictionary<int, double>
+            {
+                [hoaCucItemId] = 3,
+                [hoaVangItemId] = 5,
+                [hoaDaoItemId] = 4
+            });
+            var httpClient = new HttpClient(CreateHttpHandler(
+                NhanhCatalogSuccess(comboBItemId, comboAItemId, hoaVangItemId)).Object);
+            var service = CreateService(
+                dbContext,
+                httpClient,
+                CreateMockCurrentUserService(TestUserId),
+                productService);
+
+            var request = CreateStockOrderRequest(
+                new AhaMoveRequest.Items { ItemId = comboBItemId, Number = 1 },
+                new AhaMoveRequest.Items { ItemId = comboAItemId, Number = 1 },
+                new AhaMoveRequest.Items { ItemId = hoaVangItemId, Number = 2 });
+
+            var exception = await Assert.ThrowsAsync<BadRequestException>(
+                () => service.CreateOrder(request));
+
+            Assert.Equal("Không đủ hàng (Yêu cầu: 6, Kho có: 5)", exception.Message);
         }
     }
 }
