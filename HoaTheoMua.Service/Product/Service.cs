@@ -471,27 +471,30 @@ public class Service : IService
             throw new NotFoundException("PRODUCT_NOT_FOUND");
         }
 
-        if (!string.IsNullOrWhiteSpace(response.ParentProductId))
-        {
-            response.Parent = await _dbContext.Products
+        var parentTask = !string.IsNullOrWhiteSpace(response.ParentProductId)
+            ? _dbContext.Products
                 .AsNoTracking()
                 .Where(p =>
                     !p.IsDeleted &&
                     p.NhanhProductId == response.ParentProductId)
                 .Select(LocalProductDetailSelector)
-                .FirstOrDefaultAsync();
-        }
+                .FirstOrDefaultAsync()
+            : Task.FromResult<Response.LocalProductDetailResponse?>(null);
 
-        if (!string.IsNullOrWhiteSpace(response.NhanhProductId))
-        {
-            response.Children = await _dbContext.Products
+        var childrenTask = !string.IsNullOrWhiteSpace(response.NhanhProductId)
+            ? _dbContext.Products
                 .AsNoTracking()
                 .Where(p =>
                     !p.IsDeleted &&
                     p.ParentProductId == response.NhanhProductId)
                 .Select(LocalProductDetailSelector)
-                .ToListAsync();
-        }
+                .ToListAsync()
+            : Task.FromResult(new List<Response.LocalProductDetailResponse>());
+
+        await Task.WhenAll(parentTask, childrenTask);
+
+        response.Parent = await parentTask;
+        response.Children = await childrenTask;
 
         var isCombo = response.ProductType == "Combo" ||
                       (response.Children != null && response.Children.Any(c => c.ProductType == "Combo"));
@@ -824,6 +827,15 @@ public class Service : IService
         };
     }
 
+    private class ProductQtyProjection
+    {
+        public Guid Id { get; set; }
+        public string? ProductType { get; set; }
+        public string? ParentProductId { get; set; }
+        public string? NhanhProductId { get; set; }
+        public decimal? Stock { get; set; }
+    }
+
     public async Task<Dictionary<Guid, (int SellableQuantity, string StockStatus)>> CalculateAvailableQty(List<Guid> productIds)
     {
         if (productIds == null || !productIds.Any())
@@ -832,6 +844,14 @@ public class Service : IService
         var products = await _dbContext.Products
             .AsNoTracking()
             .Where(p => productIds.Contains(p.Id))
+            .Select(p => new ProductQtyProjection
+            {
+                Id = p.Id,
+                ProductType = p.ProductType,
+                ParentProductId = p.ParentProductId,
+                NhanhProductId = p.NhanhProductId,
+                Stock = p.Stock
+            })
             .ToListAsync();
 
         var result = new Dictionary<Guid, (int SellableQuantity, string StockStatus)>();
@@ -850,7 +870,7 @@ public class Service : IService
             .Select(p => p.NhanhProductId!)
             .ToList();
 
-        List<HoaTheoMua.Repository.Entity.Product> comboVariants = new();
+        List<ProductQtyProjection> comboVariants = new();
         if (parentNhanhIds.Any())
         {
             comboVariants = await _dbContext.Products
@@ -858,11 +878,19 @@ public class Service : IService
                 .Where(p => !p.IsDeleted &&
                             p.ProductType == "Combo" &&
                             parentNhanhIds.Contains(p.ParentProductId!))
+                .Select(p => new ProductQtyProjection
+                {
+                    Id = p.Id,
+                    ProductType = p.ProductType,
+                    ParentProductId = p.ParentProductId,
+                    NhanhProductId = p.NhanhProductId,
+                    Stock = p.Stock
+                })
                 .ToListAsync();
         }
 
-        var comboParents = new List<HoaTheoMua.Repository.Entity.Product>();
-        var normalProducts = new List<HoaTheoMua.Repository.Entity.Product>();
+        var comboParents = new List<ProductQtyProjection>();
+        var normalProducts = new List<ProductQtyProjection>();
 
         foreach (var parent in parents)
         {
