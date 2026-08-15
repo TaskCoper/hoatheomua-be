@@ -30,7 +30,7 @@ public class DeleteMaterialInCombo
         var service = CreateService(dbContext);
         var request = new MaterialRequest.DeleteMaterial
         {
-            MaterialIds = [MatSupportId]
+            Materials = [MatSupportId]
         };
 
         var result = await service.DeleteMaterialInCombo(ComboId, request);
@@ -49,14 +49,14 @@ public class DeleteMaterialInCombo
     }
 
     [Fact]
-    public async Task DeleteMaterialInCombo_EmptyMaterialIds_ThrowsBadRequest()
+    public async Task DeleteMaterialInCombo_EmptyMaterials_ThrowsBadRequest()
     {
         await using var dbContext = CreateDbContext();
         SeedComboRecipe(dbContext);
         await dbContext.SaveChangesAsync();
 
         var service = CreateService(dbContext);
-        var request = new MaterialRequest.DeleteMaterial { MaterialIds = [] };
+        var request = new MaterialRequest.DeleteMaterial { Materials = [] };
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.DeleteMaterialInCombo(ComboId, request));
@@ -75,7 +75,7 @@ public class DeleteMaterialInCombo
         var service = CreateService(dbContext);
         var request = new MaterialRequest.DeleteMaterial
         {
-            MaterialIds = [MissingMatId]
+            Materials = [MissingMatId]
         };
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(
@@ -103,7 +103,7 @@ public class DeleteMaterialInCombo
         var service = CreateService(dbContext);
         var request = new MaterialRequest.DeleteMaterial
         {
-            MaterialIds = [MatCoreId]
+            Materials = [MatCoreId]
         };
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(

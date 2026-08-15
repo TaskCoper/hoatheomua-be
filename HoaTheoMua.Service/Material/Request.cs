@@ -17,7 +17,7 @@ public class Request
 
     public class DeleteMaterial
     {
-        public List<Guid> MaterialIds { get; set; }
+        public List<Guid> Materials { get; set; }
     }
     
 

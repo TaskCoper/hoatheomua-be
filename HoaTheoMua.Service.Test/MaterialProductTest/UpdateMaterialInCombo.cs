@@ -69,6 +69,7 @@ public class UpdateMaterialInCombo
     }
 
     [Fact]
+    //cập 1 số lượng sản phẩm thành 0
     public async Task UpdateMaterialInCombo_InvalidQuantity_ThrowsBadRequest()
     {
         await using var dbContext = CreateDbContext();
@@ -103,6 +104,7 @@ public class UpdateMaterialInCombo
     }
 
     [Fact]
+    //cần xem lại
     public async Task UpdateMaterialInCombo_ChildMissingMaterial_ThrowsNotFound()
     {
         await using var dbContext = CreateDbContext();
@@ -110,7 +112,8 @@ public class UpdateMaterialInCombo
         dbContext.ComboSpecifications.AddRange(
             CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: false),
             CreateSpecification(ChildLargeId, MatCoreId, quantity: 5, isCore: false),
-            CreateSpecification(ComboId, MatSupportId, quantity: 3, isCore: true),
+            CreateSpecification(ComboId, MatSupportId, quantity: 3, isCore: true), 
+            //thiếu thằng ChildSmallId và MatSupportId vì có 1 thằng vô tình bị xóa do 1 trường hợp vô tình nào đó
             CreateSpecification(ChildSmallId, MatSupportId, quantity: 3, isCore: true),
             CreateSpecification(ChildLargeId, MatSupportId, quantity: 3, isCore: true));
         await dbContext.SaveChangesAsync();

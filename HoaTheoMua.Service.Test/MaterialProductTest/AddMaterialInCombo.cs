@@ -119,6 +119,7 @@ public class AddMaterialInCombo
     }
 
     [Fact]
+    //Thêm 1 vật liệu vào công thức, nếu hiện tại combo ko có core, thì thêm vào vật liệu bắt buộc phải là core
     public async Task AddMaterialInCombo_NoActiveCoreInRequestOrExistingRecipe_ThrowsBadRequest()
     {
         await using var dbContext = CreateDbContext();

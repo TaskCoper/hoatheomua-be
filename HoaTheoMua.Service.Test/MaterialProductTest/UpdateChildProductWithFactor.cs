@@ -50,6 +50,7 @@ public class UpdateChildProductWithFactor
     }
 
     [Fact]
+    //factor phải > 0 mới hợp lệ
     public async Task UpdateChildProductWithFactor_InvalidFactor_ThrowsBadRequest()
     {
         await using var dbContext = CreateDbContext();
@@ -89,6 +90,7 @@ public class UpdateChildProductWithFactor
     }
 
     [Fact]
+    //xem lại
     public async Task UpdateChildProductWithFactor_ParentRecipeMissing_ThrowsNotFound()
     {
         await using var dbContext = CreateDbContext();
@@ -114,6 +116,7 @@ public class UpdateChildProductWithFactor
     }
 
     [Fact]
+    //xem lại
     public async Task UpdateChildProductWithFactor_ChildMissingParentMaterial_ThrowsNotFound()
     {
         await using var dbContext = CreateDbContext();
@@ -125,7 +128,8 @@ public class UpdateChildProductWithFactor
         dbContext.ComboSpecifications.AddRange(
             CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true),
             CreateSpecification(ComboId, MatSupportId, quantity: 2, isCore: false),
-            CreateSpecification(ChildLargeId, MatCoreId, quantity: 5, isCore: true));
+            CreateSpecification(ChildLargeId, MatCoreId, quantity: 5, isCore: true)); 
+        //con đang thiếu support, rào trước cho trường hợp người dùng admin vô tình xóa lộn dòng nào trong DB thì ném lỗi này
         await dbContext.SaveChangesAsync();
 
         var service = CreateService(dbContext);
@@ -142,6 +146,7 @@ public class UpdateChildProductWithFactor
     }
 
     [Fact]
+    //confirm => Không cho cập nhật quantity về 0 VD: 1 * 0.5 = 0.5 -> floor -> 0 -> INVALID_QUANTITY
     public async Task UpdateChildProductWithFactor_FactorMakesQuantityZero_ThrowsBadRequest()
     {
         await using var dbContext = CreateDbContext();

@@ -28,6 +28,7 @@ public class Service : IService
         
         foreach (var item in request.Items)
         {
+            //quantity phải > 0 vì là công thức
             if (item.Quantity <= 0)
             {
                 throw new BadRequestException("INVALID_QUANTITY");
@@ -120,6 +121,7 @@ public class Service : IService
 
         foreach (var item in request.Items)
         {
+            //quantity phải > 0 vì là công thức
             if (item.Quantity <= 0)
             {
                 throw new BadRequestException("INVALID_QUANTITY");
@@ -178,7 +180,7 @@ public class Service : IService
             throw new NotFoundException("COMBO_NOT_FOUND");
         }
         
-        if (request.MaterialIds == null || !request.MaterialIds.Any())
+        if (request.Materials == null || !request.Materials.Any())
         {
             throw new BadRequestException("INVALID_INPUT");
         }
@@ -195,7 +197,7 @@ public class Service : IService
         
         var specifications = await querySpecification.ToListAsync();
         
-        foreach (var materialId in request.MaterialIds)
+        foreach (var materialId in request.Materials)
         {
             var parentSpecification = specifications
                 .FirstOrDefault(x =>
@@ -213,8 +215,12 @@ public class Service : IService
             var hasCoreAfterDelete = specifications.Any(x =>
                 x.SubId == id &&
                 x.IsCore &&
-                !request.MaterialIds.Contains(x.MatId));
-
+                !request.Materials.Contains(x.MatId)); //còn core ko ?
+            
+            //1. láy những thằng material khác danh sách mà của request (TỨC LÀ LẤY NHỮNG THẰNG CÒN LẠI)
+            //tìm những dòng đó trong ds specification
+            //còn thằng nào có SubId là 1, 1, 1 và có core ko ?
+            //nếu ko có thì ném ra lỗi
             if (!hasCoreAfterDelete)
             {
                 throw new BadRequestException("CORE_MATERIAL_REQUIRED");
@@ -222,7 +228,7 @@ public class Service : IService
         }
         
         var specificationsToDelete = specifications
-            .Where(x => request.MaterialIds.Contains(x.MatId))
+            .Where(x => request.Materials.Contains(x.MatId))
             .ToList();
 
         foreach (var specification in specificationsToDelete)
@@ -236,6 +242,7 @@ public class Service : IService
 
     public async Task<string> UpdateChildProductWithFactor(Request.UpdateMaterialChildRequest request)
     {
+        //factor hợp lệ phải > 0
         if (request.Factor <= 0)
         {
             throw new BadRequestException("INVALID_FACTOR");
@@ -296,6 +303,7 @@ public class Service : IService
             
             var quantity = Math.Floor(item.Quantity * request.Factor);
             
+            //quantity phải > 0 vì là công thức
             if (quantity <= 0)
             {
                 throw new BadRequestException("INVALID_QUANTITY");
