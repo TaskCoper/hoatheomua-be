@@ -379,8 +379,10 @@ public class Service : IService
                     $"Combo Id={item.ItemId} chỉ có thể đặt tối đa " +
                     $"{comboResult.SellableQuantityCombo} sản phẩm");
             }
+
+            var coreMaterials = comboResult.Materials.Where(x => x.IsCore);
             
-            foreach (var material in comboResult.Materials)
+            foreach (var material in coreMaterials)
             {
                 if (!int.TryParse(material.NhanhProductId, out var materialItemId))
                 {
