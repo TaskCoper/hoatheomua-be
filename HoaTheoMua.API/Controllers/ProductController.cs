@@ -68,7 +68,7 @@ public class ProductController: ControllerBase
         JsonElement json = JsonSerializer.SerializeToElement(new
         {
             entity = "product",
-            id = id,
+            id = new[] { id },
         });
         await _revalidateService.RevalidateApi(json);
         return Ok(result);
@@ -82,7 +82,7 @@ public class ProductController: ControllerBase
         JsonElement json = JsonSerializer.SerializeToElement(new
         {
             entity = "product",
-            id = request.ProductId,
+            id = new[] { request.ProductId },
         });
         await _revalidateService.RevalidateApi(json);
         return Ok(result);
