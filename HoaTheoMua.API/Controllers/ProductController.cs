@@ -111,11 +111,4 @@ public class ProductController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
-    [HttpGet("/api/v1/products/config-parent")]
-    public async Task<IActionResult> UpdateParentProductId()
-    {
-         await _productService.UpdateParentProductGuid();
-         return Ok(ApiResponseFactory.Base("result", true, "", HttpContext.TraceIdentifier)); 
-    }
-    
 }

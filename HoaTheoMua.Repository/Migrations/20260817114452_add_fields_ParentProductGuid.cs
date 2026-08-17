@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class add_field_ParentProductGuid : Migration
+    public partial class add_fields_ParentProductGuid : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,6 +17,16 @@ namespace HoaTheoMua.Repository.Migrations
                 type: "uuid",
                 nullable: true);
 
+            migrationBuilder.Sql("""
+                                 UPDATE "Products" AS child
+                                 SET "ParentProductGuid" = parent."Id"
+                                 FROM "Products" AS parent
+                                 WHERE child."ParentProductId" IS NOT NULL
+                                   AND child."ParentProductId" <> ''
+                                   AND child."ParentProductId" = parent."NhanhProductId"
+                                   AND child."Id" <> parent."Id";
+                                 """);
+            
             migrationBuilder.CreateIndex(
                 name: "IX_Products_ParentProductGuid",
                 table: "Products",

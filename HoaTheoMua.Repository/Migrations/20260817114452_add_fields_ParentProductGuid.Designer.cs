@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260817101351_add_field_ParentProductGuid")]
-    partial class add_field_ParentProductGuid
+    [Migration("20260817114452_add_fields_ParentProductGuid")]
+    partial class add_fields_ParentProductGuid
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

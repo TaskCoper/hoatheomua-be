@@ -1,35 +1,36 @@
-# Task 1 - Thêm `ParentProductGuid` cho Product
+# ParentProductGuid - Migration và Excel import
 
-## 1. Mục tiêu
+## 1. Quy tắc quan hệ
 
-Quan hệ hiện tại từ Nhanh.vn:
+Quan hệ từ Nhanh.vn:
 
 ```text
 Product con.ParentProductId == Product cha.NhanhProductId
 ```
 
-Quan hệ mới trong hệ thống:
+Quan hệ nội bộ cần lưu:
 
 ```text
-Product con.ParentProductGuid == Product cha.Id
+Product con.ParentProductGuid = Product cha.Id
 ```
 
 Ví dụ:
 
 ```text
-Product cha: NhanhProductId = "100", Id = Guid-A
-Product con: ParentProductId = "100"
+Product cha:
+Id = Guid-A
+NhanhProductId = "100"
 
-Kết quả: Product con.ParentProductGuid = Guid-A
+Product con:
+ParentProductId = "100"
+
+Kết quả:
+Product con.ParentProductGuid = Guid-A
 ```
 
-Vẫn giữ `NhanhProductId` và `ParentProductId` vì đây là dữ liệu của Nhanh.vn.
+## 2. Entity và configuration
 
-## 2. Thêm field và navigation vào Product
-
-File: `HoaTheoMua.Repository/Entity/Product.cs`
-
-Thêm ba property:
+Trong `Product.cs`:
 
 ```csharp
 public Guid? ParentProductGuid { get; set; }
@@ -37,20 +38,7 @@ public Product? ParentProduct { get; set; }
 public ICollection<Product> ChildProducts { get; set; } = new List<Product>();
 ```
 
-Ý nghĩa:
-
-- `ParentProductGuid`: khóa ngoại chứa `Id` của Product cha.
-- `ParentProduct`: navigation từ Product con tới Product cha.
-- `ChildProducts`: các Product con của Product cha.
-- Product cha có `ParentProductGuid = null`.
-
-Đây cũng là quan hệ trỏ về `Product`, tương tự `ComboSpecification.Sub` và `ComboSpecification.Mat` đều trỏ về `Product`. Điểm khác là quan hệ cha-con nằm ngay trong bảng `Products`, vì vậy không cần bảng trung gian.
-
-## 3. Cấu hình quan hệ
-
-File: `HoaTheoMua.Repository/Configurations/ProductConfiguration.cs`
-
-Thêm:
+Trong `ProductConfiguration.cs`:
 
 ```csharp
 builder.HasOne(x => x.ParentProduct)
@@ -59,94 +47,118 @@ builder.HasOne(x => x.ParentProduct)
     .OnDelete(DeleteBehavior.Restrict);
 ```
 
-Quan hệ này có nghĩa:
+## 3. Backfill trong migration
 
-```text
-Một Product cha có nhiều ChildProducts.
-Một Product con có tối đa một ParentProduct.
-```
-
-`ParentProductGuid` phải là `Guid?` vì Product cha không có cha.
-
-Sau bước này bạn tự tạo migration và cập nhật database.
-
-## 4. Cập nhật đúng giá trị `ParentProductGuid`
-
-Sau khi cột đã được thêm, tạo một hàm cập nhật như sau:
+Trong `Up()`, đặt câu SQL này ngay sau `AddColumn`:
 
 ```csharp
-private async Task UpdateParentProductGuidsAsync()
+migrationBuilder.Sql("""
+    UPDATE "Products" AS child
+    SET "ParentProductGuid" = parent."Id"
+    FROM "Products" AS parent
+    WHERE child."ParentProductId" IS NOT NULL
+      AND child."ParentProductId" <> ''
+      AND child."ParentProductId" = parent."NhanhProductId"
+      AND child."Id" <> parent."Id";
+    """);
+```
+
+Nếu không tìm thấy cha, `ParentProductGuid` giữ nguyên là null và migration vẫn hoàn thành.
+
+Trong `Down()`:
+
+```text
+DropForeignKey
+-> DropIndex
+-> DropColumn ParentProductGuid
+```
+
+## 4. Cập nhật Excel import
+
+Không thêm `ParentProductGuid` vào `ExcelRow`, vì file Nhanh.vn không có Guid nội bộ.
+
+Trong `BuildUpsertBatchAsync`, giữ vòng lặp hiện tại để tạo/update toàn bộ Product trước:
+
+```csharp
+foreach (var row in rows)
 {
-    var products = await _dbContext.Products
-        .Where(x => !x.IsDeleted)
-        .ToListAsync();
+    var product = ResolveProduct(row, existingMap, out var isUpdate);
 
-    // Key: NhanhProductId của Product cha.
-    // Value: Id nội bộ của Product cha.
-    var productIdMap = products
-        .Where(x => !string.IsNullOrWhiteSpace(x.NhanhProductId))
-        .ToDictionary(
-            x => x.NhanhProductId!.Trim(),
-            x => x.Id);
+    ApplyRowToProduct(row, product);
+    product.UpdatedAt = DateTimeOffset.UtcNow;
 
-    foreach (var product in products)
+    if (isUpdate)
     {
-        var parentNhanhId = product.ParentProductId?.Trim();
-
-        if (string.IsNullOrWhiteSpace(parentNhanhId))
-        {
-            product.ParentProductGuid = null;
-            continue;
-        }
-
-        product.ParentProductGuid = productIdMap.TryGetValue(
-            parentNhanhId,
-            out var parentGuid)
-                ? parentGuid
-                : null;
+        batch.ToUpdate.Add(product);
     }
-
-    await _dbContext.SaveChangesAsync();
+    else
+    {
+        batch.ToInsert.Add(product);
+    }
 }
 ```
 
-Logic chính của hàm:
+Sau vòng lặp trên, toàn bộ Product mới đã có `Id` do `ResolveProduct` dùng `Guid.NewGuid()`.
 
-```text
-Lấy ParentProductId của Product con
-    -> tìm Product có NhanhProductId tương ứng
-    -> lấy Product.Id
-    -> gán vào ParentProductGuid của Product con
+Gộp Product trong database và Product vừa import để tìm cha:
+
+```csharp
+var allProducts = existingMap.Values
+    .Concat(batch.ToInsert)
+    .Concat(batch.ToUpdate)
+    .DistinctBy(x => x.Id)
+    .ToList();
 ```
 
-Nếu `ParentProductId` null/rỗng hoặc không tìm thấy Product cha thì giữ `ParentProductGuid = null`. Không tự tạo Guid mới và không gán sang Product khác.
+Sau đó tìm cha và gán Guid:
 
-## 5. Thứ tự thực hiện
+```csharp
+foreach (var productChild in batch.ToInsert.Concat(batch.ToUpdate))
+{
+    if (string.IsNullOrWhiteSpace(productChild.ParentProductId))
+    {
+        productChild.ParentProductGuid = null;
+        continue;
+    }
 
-```text
-1. Thêm field và navigation vào Product.
-2. Thêm cấu hình quan hệ trong ProductConfiguration.
-3. Tự tạo migration và cập nhật database.
-4. Bảo đảm Product cha và Product con đã tồn tại trong bảng Products.
-5. Chạy UpdateParentProductGuidsAsync().
-6. Kiểm tra lại kết quả.
+    var productParent = allProducts.FirstOrDefault(x =>
+        x.Id != productChild.Id &&
+        x.NhanhProductId == productChild.ParentProductId);
+
+    if (productParent != null)
+    {
+        productChild.ParentProductGuid = productParent.Id;
+    }
+    else
+    {
+        productChild.ParentProductGuid = null;
+    }
+}
 ```
 
-Phải cập nhật sau khi toàn bộ Product đã có trong database. Nếu xử lý từng dòng, Product con có thể xuất hiện trước Product cha và không tìm được `parent.Id`.
+Cuối cùng giữ nguyên:
 
-## 6. Kết quả đúng cần đạt
+```csharp
+return batch;
+```
 
-| Trường hợp | `ParentProductId` | `ParentProductGuid` |
-|---|---|---|
-| Product cha | null hoặc rỗng | null |
-| Product con tìm thấy cha | bằng `NhanhProductId` của cha | bằng `Id` của cha |
-| Product con chưa tìm thấy cha | có giá trị | null |
+`PersistBatchAsync` không cần thay đổi. Nó sẽ lưu Product và `ParentProductGuid` trong transaction hiện tại.
 
-Checklist:
+## 5. Điểm cần chú ý
 
-- [ ] Có `ParentProductGuid`, `ParentProduct` và `ChildProducts`.
-- [ ] Có self-reference một-nhiều trong `ProductConfiguration`.
-- [ ] `ParentProductGuid` của Product con bằng đúng `Id` của Product cha.
-- [ ] Product cha có `ParentProductGuid = null`.
-- [ ] Không resolve quan hệ trước khi toàn bộ Product đã được lưu.
+`existingMap` hiện chỉ load Product có `NhanhProductId` xuất hiện trong file. Nếu file Excel luôn là bản export đầy đủ thì đoạn trên đủ dùng.
+
+Nếu có trường hợp import file chỉ chứa một phần sản phẩm và Product cha không nằm trong file, cần load thêm các Product có:
+
+```text
+NhanhProductId nằm trong danh sách ParentProductId của file
+```
+
+## Checklist
+
+- [ ] Tạo/update toàn bộ Product trước.
+- [ ] Tìm cha bằng `child.ParentProductId == parent.NhanhProductId`.
+- [ ] Gán `child.ParentProductGuid = parent.Id`.
+- [ ] Product không có cha thì `ParentProductGuid = null`.
+- [ ] Gán quan hệ trước `PersistBatchAsync`.
 

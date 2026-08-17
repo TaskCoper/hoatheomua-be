@@ -135,6 +135,34 @@ public class Service : IService
             else
                 batch.ToInsert.Add(product);
         }
+        
+        var allProducts = existingMap.Values
+            .Concat(batch.ToInsert)
+            .Concat(batch.ToUpdate)
+            .DistinctBy(x => x.Id)
+            .ToList();
+
+        foreach (var productChild in batch.ToInsert.Concat(batch.ToUpdate))
+        {
+            if (string.IsNullOrWhiteSpace(productChild.ParentProductId))
+            {
+                productChild.ParentProductGuid = null;
+                continue;
+            }
+            
+            var productParent = allProducts.FirstOrDefault(x =>
+                !x.IsDeleted &&
+                x.NhanhProductId == productChild.ParentProductId);
+
+            if (productParent != null)
+            {
+                productChild.ParentProductGuid = productParent.Id;
+            }
+            else
+            {
+                productChild.ParentProductGuid = null;
+            }
+        }
 
         return batch;
     }
