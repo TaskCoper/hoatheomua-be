@@ -116,8 +116,7 @@ public class UpdateChildProductWithFactor
     }
 
     [Fact]
-    //xem lại
-    public async Task UpdateChildProductWithFactor_ChildMissingParentMaterial_ThrowsNotFound()
+    public async Task UpdateChildProductWithFactor_ChildMissingParentMaterial_CreatesMissingChildSpecification()
     {
         await using var dbContext = CreateDbContext();
         dbContext.Products.AddRange(
@@ -139,10 +138,20 @@ public class UpdateChildProductWithFactor
             Factor = 1.5m
         };
 
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.UpdateChildProductWithFactor(request));
+        var result = await service.UpdateChildProductWithFactor(request);
 
-        Assert.Equal("MATERIAL_NOT_FOUND_IN_CHILD_RECIPE", ex.Message);
+        Assert.Equal("Cập nhật hệ số và định lượng sản phẩm con thành công", result);
+
+        var childCore = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ChildLargeId && x.MatId == MatCoreId);
+        var childSupport = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ChildLargeId && x.MatId == MatSupportId);
+
+        Assert.Equal(7, childCore.Quantity);
+        Assert.Equal(3, childSupport.Quantity);
+        Assert.True(childCore.IsCore);
+        Assert.False(childSupport.IsCore);
+        Assert.True(childSupport.IsActive);
     }
 
     [Fact]

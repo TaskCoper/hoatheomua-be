@@ -66,6 +66,30 @@ public class AddMaterialInCombo
     }
 
     [Fact]
+    public async Task AddMaterialInCombo_ChildWithFactor_MultipliesChildQuantity()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s", factor: 1.5m),
+            CreateMaterial(MatCoreId));
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var request = CreateRequest(MatCoreId, quantity: 10, isCore: true);
+
+        await service.AddMaterialInCombo(ComboId, request);
+
+        var parentSpecification = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ComboId && x.MatId == MatCoreId);
+        var childSpecification = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ChildSmallId && x.MatId == MatCoreId);
+
+        Assert.Equal(10, parentSpecification.Quantity);
+        Assert.Equal(15, childSpecification.Quantity);
+    }
+
+    [Fact]
     public async Task AddMaterialInCombo_ComboNotFound_ThrowsNotFound()
     {
         await using var dbContext = CreateDbContext();
@@ -210,13 +234,14 @@ public class AddMaterialInCombo
         };
     }
 
-    private static ProductEntity CreateChildProduct(Guid id, string nhanhProductId)
+    private static ProductEntity CreateChildProduct(Guid id, string nhanhProductId, decimal? factor = null)
     {
         return new ProductEntity
         {
             Id = id,
             NhanhProductId = nhanhProductId,
             ParentProductId = ParentNhanhProductId,
+            Factor = factor,
             ProductName = $"Combo child {nhanhProductId}",
             CreatedAt = DateTimeOffset.UtcNow
         };
