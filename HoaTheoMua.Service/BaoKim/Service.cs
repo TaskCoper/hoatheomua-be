@@ -205,7 +205,7 @@ public class Service : IService
                 Code = order.UserId.ToString(),
                 Name = order.FullName,
                 Email = order.ReceiptEmail ?? "khachkhongcoemail@gmail.com",
-                Phone = order.Phone,
+                Phone = order.PhoneReceiver,
                 Address = order.Address,
                 Gender = 1
             },
