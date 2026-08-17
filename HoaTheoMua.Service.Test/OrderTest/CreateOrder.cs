@@ -1054,9 +1054,9 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal("Không đủ hàng (Yêu cầu: 5, Kho có: 4)", exception.Message);
         }
 
-        // Test case 16: Support active trong combo vẫn phải cộng với sản phẩm mua riêng.
+        // Test case 16: Support trong combo bị bỏ qua; chỉ kiểm số lượng sản phẩm mua riêng.
         [Fact]
-        public async Task CreateOrder_ComboAAndExtraSupportMaterial_ThrowsOutOfStock()
+        public async Task CreateOrder_ComboAAndExtraSupportMaterial_OnlyChecksDirectQuantity()
         {
             const int comboAItemId = 1001;
             const int hoaMaiItemId = 2001;
@@ -1078,7 +1078,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var productService = CreateStockProductService(new Dictionary<int, double>
             {
                 [hoaMaiItemId] = 37,
-                [hoaDaoItemId] = 4
+                [hoaDaoItemId] = 0
             });
             var httpClient = new HttpClient(CreateHttpHandler(
                 NhanhCatalogSuccess(comboAItemId, hoaDaoItemId)).Object);
@@ -1095,12 +1095,13 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => service.CreateOrder(request));
 
-            Assert.Equal("Không đủ hàng (Yêu cầu: 5, Kho có: 4)", exception.Message);
+            Assert.Equal("Không đủ hàng (Yêu cầu: 1, Kho có: 0)", exception.Message);
         }
 
-        // Test case 17: Một material xuất hiện trong nhiều combo và được mua riêng.
+        // Test case 17: Chỉ cộng material core giữa các combo với sản phẩm mua riêng;
+        // material support trong combo không tham gia kiểm kho.
         [Fact]
-        public async Task CreateOrder_SharedMaterialAcrossCombosAndDirectItem_ThrowsOutOfStock()
+        public async Task CreateOrder_SharedCoreAndSupportMaterial_OnlyAggregatesCoreAndDirectItem()
         {
             const int comboAItemId = 1001;
             const int comboBItemId = 1002;
@@ -1131,7 +1132,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var productService = CreateStockProductService(new Dictionary<int, double>
             {
                 [hoaCucItemId] = 3,
-                [hoaVangItemId] = 5,
+                [hoaVangItemId] = 3,
                 [hoaDaoItemId] = 4
             });
             var httpClient = new HttpClient(CreateHttpHandler(
@@ -1150,7 +1151,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => service.CreateOrder(request));
 
-            Assert.Equal("Không đủ hàng (Yêu cầu: 6, Kho có: 5)", exception.Message);
+            Assert.Equal("Không đủ hàng (Yêu cầu: 4, Kho có: 3)", exception.Message);
         }
     }
 }
