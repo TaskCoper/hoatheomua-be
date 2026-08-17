@@ -333,58 +333,40 @@ public class Service : IService
                 (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
         }
 
-        var productLabel = "Thành phần";
-        var productTypeCombo = "Combo";
-        var productTypeProduct = "Sản phẩm";
-        
-        if (request.productType != null)
+        if (!string.IsNullOrWhiteSpace(request.productType))
         {
-            if (request.productType == productLabel)
+            var normalizedProductType = request.productType.Trim().ToLower();
+
+            if (normalizedProductType == "thành phần" || normalizedProductType == "components" || normalizedProductType == "2")
             {
+                // Vật liệu / Thành phần: Lọc theo tag/label
                 query = query.Where(x => x.ProductLabel != null && x.ProductLabel.ToLower().Contains("thành phần"));
             }
-            if(request.productType == productTypeCombo)
+            else if (normalizedProductType == "combo" || normalizedProductType == "1")
             {
-                query = query.Where(x => x.ProductType == productTypeCombo);
+                // Combo: 
+                // TH1: Là sản phẩm độc lập (không có con) và ProductType là Combo
+                // TH2: Là sản phẩm cha (có con) và toàn bộ các con đều là Combo
+                query = query.Where(x => 
+                    (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Combo")
+                    ||
+                    (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
+                     _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Combo"))
+                );
             }
-            if(request.productType ==  productTypeProduct)
+            else if (normalizedProductType == "sản phẩm" || normalizedProductType == "product" || normalizedProductType == "3")
             {
-                query = query.Where(x => x.ProductType == productTypeProduct);    
+                // Sản phẩm:
+                // TH1: Là sản phẩm độc lập (không có con) và ProductType là Sản phẩm
+                // TH2: Là sản phẩm cha (có con) và toàn bộ các con đều là Sản phẩm
+                query = query.Where(x => 
+                    (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Sản phẩm")
+                    ||
+                    (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
+                     _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Sản phẩm"))
+                );
             }
         }
-        
-        // if (request.productType.HasValue)
-        // {
-        //     switch (request.productType.Value)
-        //     {
-        //         case ProductType.Components:
-        //             query = query.Where(x => x.ProductLabel != null && x.ProductLabel.ToLower()
-        //                 .Contains("thành phần"));
-        //             break;
-        //         
-        //         case ProductType.Combo: // Enum = 1 (Combo)
-        //             query = query.Where(x => 
-        //                 // th1: la san pham doc lap (ko co con) va ProductType la combo
-        //                 (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Combo")
-        //                 ||
-        //                 // th2: la san pham cha (co con) va tat ca con la combo
-        //                 (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
-        //                  _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Combo"))
-        //             );
-        //             break;
-        //         
-        //         case ProductType.Product: 
-        //             query = query.Where(x => 
-        //                 // th1: la san pham doc lap va product type la san pham
-        //                 (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Sản phẩm")
-        //                 ||
-        //                 // th2: la san pham cha va co it nhat 1 con ko phai combo
-        //                 (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
-        //                  _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Sản phẩm"))
-        //             );
-        //             break;
-        //     }
-        // }
 
         if (request.priceFrom.HasValue)
         {
@@ -1007,7 +989,7 @@ public class Service : IService
                     !x.CategoryProduct.IsDeleted &&
                     !x.Product.IsDeleted &&
                     (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty))
-                .OrderBy(x => x.Position) //
+                .OrderBy(x => x.Position)
                 .ThenBy(x => x.Product.ProductName);
 
             var result = await categoryPinnedQuery
@@ -1032,7 +1014,7 @@ public class Service : IService
                 !x.IsDeleted &&
                 x.IsPin &&
                 x.ParentProductId == null)
-            .OrderBy(x => x.Position) //
+            .OrderBy(x => x.Position)
             .ThenBy(x => x.ProductName);
 
         var pinnedProducts = await pinnedProductQuery
@@ -1098,7 +1080,7 @@ public class Service : IService
 
         var comboSpecs = await _dbContext.ComboSpecification
             .Include(c => c.Mat)
-            .Where(c => c.SubId == product.Id && !c.Mat.IsDeleted)
+            .Where(c => c.SubId == product.Id && c.IsActive && !c.Mat.IsDeleted)
             .ToListAsync();
 
         var response = new Response.ComboSpecificationResponse
