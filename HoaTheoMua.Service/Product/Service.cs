@@ -1028,6 +1028,7 @@ public class Service : IService
             if (string.IsNullOrWhiteSpace(productChildren.ParentProductId))
             {
                 productChildren.ParentProductGuid = null;
+                continue;
             }
             
             var productParent = products.FirstOrDefault(x => 
