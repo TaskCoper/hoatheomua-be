@@ -1017,6 +1017,22 @@ public class Service : IService
         return "Cập nhật thành công";
     }
 
+    public async Task<List<Response.ProductResponseWithList>> GetProductWithList(Request.GetProductWithList request)
+    {
+        var queryProduct = _dbContext.Products.Where(x => request.ProductIds.Contains(x.Id) && !x.IsDeleted);
+
+        var selectedQuery = queryProduct.Select(x => new Response.ProductResponseWithList()
+        {
+            Id = x.Id,
+            CoverImage = x.CoverImage,
+            ProductName = x.ProductName,
+        });
+
+        var result = await selectedQuery.ToListAsync();
+        
+        return result;
+    }
+
     public async Task UpdateParentProductGuid()
     {
         var products = await _dbContext.Products

@@ -14,5 +14,6 @@ public interface IService
     Task<BaseResponse> PinProduct(Request.PinProductRequest request);
     Task<List<Response.PinnedProductResponse>> GetProductPin(Request.GetProductPinRequest request);
     Task<string> UpdateProduct(Guid id, Request.UpdateProductRequest request);
+    Task<List<Response.ProductResponseWithList>> GetProductWithList(Request.GetProductWithList request);
     Task UpdateParentProductGuid();
 }

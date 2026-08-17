@@ -175,4 +175,11 @@ public class Response
     public LocalProductDetailResponse? Parent { get; set; }
     public List<LocalProductDetailResponse> Children { get; set; } = new();  
 }
+
+    public class ProductResponseWithList
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+    }
 }
