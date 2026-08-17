@@ -1078,6 +1078,23 @@ public class Service : IService
         if (product == null)
             throw new NotFoundException($"Không tìm thấy combo với ID: {id}");
 
+    public async Task<List<Response.ProductResponseWithList>> GetProductWithList(Request.GetProductWithList request)
+    {
+        var queryProduct = _dbContext.Products.Where(x => request.ProductIds.Contains(x.Id) && !x.IsDeleted);
+
+        var selectedQuery = queryProduct.Select(x => new Response.ProductResponseWithList()
+        {
+            Id = x.Id,
+            CoverImage = x.CoverImage,
+            ProductName = x.ProductName,
+        });
+
+        var result = await selectedQuery.ToListAsync();
+        
+        return result;
+    }
+}
+
         var comboSpecs = await _dbContext.ComboSpecification
             .Include(c => c.Mat)
             .Where(c => c.SubId == product.Id && c.IsActive && !c.Mat.IsDeleted)
