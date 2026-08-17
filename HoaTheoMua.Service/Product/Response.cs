@@ -194,5 +194,12 @@ public class Response
         public string? Unit { get; set; }
         public decimal AvailableForSale { get; set; }
         public int MaxComboPossible { get; set; }
+}
+
+    public class ProductResponseWithList
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
     }
 }

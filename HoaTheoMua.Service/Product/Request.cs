@@ -190,5 +190,10 @@ public class Request
         public double? Position { get; set; }
         public bool? IsPin { get; set; }
     }
+
+    public class GetProductWithList
+    {
+        public List<Guid> ProductIds { get; set; }
+    }
 }
 
