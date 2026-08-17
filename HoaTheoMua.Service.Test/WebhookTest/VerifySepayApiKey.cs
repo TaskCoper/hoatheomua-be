@@ -41,6 +41,7 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             var mockOrderService = new Mock<HoaTheoMua.Service.Order.IService>();
             var mockConfigService = new Mock<HoaTheoMua.Service.Config.IService>();
             var mockAhaMoveService = new Mock<IService>();
+            var mockRevalidateService = new Mock<HoaTheoMua.Service.Revalidate.IService>();
 
             return new WebhookServiceImpl(
                 CreateInMemoryDbContext(),
@@ -48,7 +49,8 @@ namespace HoaTheoMua.Service.Test.WebhookTest
                 configuration,
                 mockOrderService.Object,
                 mockConfigService.Object,
-                mockAhaMoveService.Object);
+                mockAhaMoveService.Object,
+                mockRevalidateService.Object);
         }
 
         [Fact]

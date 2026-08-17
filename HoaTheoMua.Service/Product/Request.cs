@@ -191,9 +191,15 @@ public class Request
         public bool? IsPin { get; set; }
     }
 
+    public class GetProductWithList
+    {
+        public List<Guid> ProductIds { get; set; }
+    }
+
     public class GetMaterialsRequest
     {
         public int PageIndex { get; set; } = 1;
         public int PageSize { get; set; } = 20;
     }
 }
+
