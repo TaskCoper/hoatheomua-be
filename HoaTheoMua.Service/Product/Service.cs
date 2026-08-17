@@ -1016,8 +1016,35 @@ public class Service : IService
 
         return "Cập nhật thành công";
     }
-    
-    
+
+    public async Task UpdateParentProductGuid()
+    {
+        var products = await _dbContext.Products
+            .Where(x => !x.IsDeleted)
+            .ToListAsync();
+
+        foreach (var productChildren in products)
+        {
+            if (string.IsNullOrWhiteSpace(productChildren.ParentProductId))
+            {
+                productChildren.ParentProductGuid = null;
+            }
+            
+            var productParent = products.FirstOrDefault(x => 
+                !string.IsNullOrWhiteSpace(x.NhanhProductId) &&
+                x.NhanhProductId == productChildren.ParentProductId);
+
+            if (productParent != null)
+            {
+                productChildren.ParentProductGuid = productParent.Id;
+            }
+            else
+            {
+                productChildren.ParentProductGuid = null;
+            }
+        }
+        await _dbContext.SaveChangesAsync();
+    }
 }
 
 

@@ -97,5 +97,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("now()");
+        
+        builder.HasOne(x => x.ParentProduct)
+            .WithMany( x => x.ChildProducts)
+            .HasForeignKey(x => x.ParentProductGuid)
+            .OnDelete(DeleteBehavior.Cascade);
+        
     }
 }
