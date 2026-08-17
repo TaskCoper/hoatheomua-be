@@ -182,7 +182,7 @@ public class Service: IService
                     JsonElement jsonData = JsonSerializer.SerializeToElement(new
                     {
                         entity = "product",
-                        id = result
+                        id = new[] { result }
                     });
                      await _revalidateService.RevalidateApi(jsonData);
                      return result;

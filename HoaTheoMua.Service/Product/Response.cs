@@ -206,4 +206,10 @@ public class Response
        
     }
     
+    public class ProductResponseWithList
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+    }
 }

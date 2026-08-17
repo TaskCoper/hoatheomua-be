@@ -16,4 +16,5 @@ public interface IService
     Task<string> UpdateProduct(Guid id, Request.UpdateProductRequest request);
     Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(Guid id);
     Task<BasePaginationResponse> GetMaterialsAsync(Request.GetMaterialsRequest request);
+    Task<List<Response.ProductResponseWithList>> GetProductWithList(Request.GetProductWithList request);
 }
