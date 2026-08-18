@@ -188,15 +188,22 @@ public class Service : IService
         if (request.Items is null || request.Items.Count == 0)
             throw new BadRequestException("INVALID_INPUT");
 
-        if (request.Items.Count != 1)
-            throw new BadRequestException("SINGLE_ITEM_REQUIRED");
-
-        var item = request.Items[0];
-        if (item.MatId == Guid.Empty)
+        if (request.Items.Any(x => x.MatId == Guid.Empty))
             throw new BadRequestException("INVALID_MATERIAL_ID");
 
-        if (item.Quantity <= 0)
+        if (request.Items.Any(x => x.Quantity <= 0))
             throw new BadRequestException("INVALID_QUANTITY");
+
+        var duplicateMaterialId = request.Items
+            .GroupBy(x => x.MatId)
+            .FirstOrDefault(x => x.Count() > 1)
+            ?.Key;
+
+        if (duplicateMaterialId.HasValue)
+            throw new BadRequestException($"DUPLICATE_MATERIAL_ID:{duplicateMaterialId.Value}");
+
+        var items = request.Items;
+        var matIds = items.Select(x => x.MatId).ToList();
 
         var combo = await _dbContext.Products
             .AsNoTracking()
@@ -208,12 +215,18 @@ public class Service : IService
         if (string.IsNullOrWhiteSpace(combo.NhanhProductId))
             throw new BadRequestException("COMBO_NOT_SYNCED");
 
-        var material = await _dbContext.Products
+        var materials = await _dbContext.Products
             .AsNoTracking()
-            .Where(x => x.Id == item.MatId && !x.IsDeleted)
+            .Where(x => matIds.Contains(x.Id) && !x.IsDeleted)
             .Select(x => new MaterialInfo(x.Id, x.ProductLabel, x.Unit))
-            .FirstOrDefaultAsync()
-            ?? throw new NotFoundException("MATERIAL_NOT_FOUND");
+            .ToListAsync();
+
+        if (materials.Count != matIds.Count || materials.Any(x =>
+                !HasLabel(x.ProductLabel, ComponentLabel) &&
+                !HasLabel(x.ProductLabel, AuxiliaryLabel)))
+            throw new NotFoundException("MATERIAL_NOT_FOUND");
+
+        var materialMap = materials.ToDictionary(x => x.Id);
 
         var syncableChildren = await _dbContext.Products
             .AsNoTracking()
@@ -221,66 +234,80 @@ public class Service : IService
             .Select(x => new { x.Id, Factor = x.Factor ?? 1m })
             .ToListAsync();
 
-        var parentQuantity = CalculateParentQuantity(item.Quantity, material.ProductLabel, material.Unit);
-        ValidateChildQuantity(parentQuantity, item.MatId);
+        if (syncableChildren.Count == 0)
+            throw new BadRequestException("COMBO_CHILDREN_REQUIRED");
 
-        var childQuantities = new List<(Guid SubId, decimal Quantity)>(syncableChildren.Count);
         foreach (var child in syncableChildren)
         {
             if (child.Factor <= 0)
                 throw new BadRequestException($"INVALID_FACTOR:{child.Id}");
-
-            var childQuantity = CalculateChildQuantity(
-                parentQuantity,
-                child.Factor,
-                material.ProductLabel,
-                material.Unit);
-            ValidateChildQuantity(childQuantity, item.MatId);
-            childQuantities.Add((child.Id, childQuantity));
         }
 
-        var targetIds = childQuantities.Select(x => x.SubId).Append(comboId).ToList();
+        var calculatedSpecs = new List<(Guid SubId, Guid MatId, decimal Quantity, bool IsCore)>();
+        foreach (var item in items)
+        {
+            var material = materialMap[item.MatId];
+            var parentQuantity = CalculateParentQuantity(item.Quantity, material.ProductLabel, material.Unit);
+            ValidateChildQuantity(parentQuantity, item.MatId);
+
+            calculatedSpecs.Add((comboId, item.MatId, parentQuantity, item.IsCore));
+
+            foreach (var child in syncableChildren)
+            {
+                var childQuantity = CalculateChildQuantity(
+                    parentQuantity,
+                    child.Factor,
+                    material.ProductLabel,
+                    material.Unit);
+                ValidateChildQuantity(childQuantity, item.MatId);
+                calculatedSpecs.Add((child.Id, item.MatId, childQuantity, item.IsCore));
+            }
+        }
+
+        var targetIds = syncableChildren.Select(x => x.Id).Append(comboId).ToList();
         var existingSpecs = await _dbContext.ComboSpecifications
-            .Where(x => targetIds.Contains(x.SubId) && x.MatId == item.MatId)
+            .Where(x => targetIds.Contains(x.SubId) && matIds.Contains(x.MatId))
             .ToListAsync();
         var specMap = existingSpecs
-            .GroupBy(x => x.SubId)
+            .GroupBy(x => (x.SubId, x.MatId))
             .ToDictionary(
                 x => x.Key,
                 x => x.OrderBy(y => y.IsDeleted)
                     .ThenByDescending(y => y.UpdatedAt ?? y.CreatedAt)
                     .First());
 
-        if (!specMap.TryGetValue(comboId, out var parentSpec) || parentSpec.IsDeleted)
-            throw new NotFoundException($"MATERIAL_NOT_FOUND:{item.MatId}");
+        foreach (var item in items)
+        {
+            if (!specMap.TryGetValue((comboId, item.MatId), out var parentSpec) || parentSpec.IsDeleted)
+                throw new NotFoundException($"MATERIAL_NOT_FOUND:{item.MatId}");
+        }
 
         var now = DateTimeOffset.UtcNow;
         var toInsert = new List<ComboSpecification>();
 
-        parentSpec.Quantity = parentQuantity;
-        parentSpec.IsCore = item.IsCore;
-        parentSpec.UpdatedAt = now;
-
-        foreach (var child in childQuantities)
+        foreach (var calculated in calculatedSpecs)
         {
-            if (specMap.TryGetValue(child.SubId, out var childSpec))
+            if (specMap.TryGetValue((calculated.SubId, calculated.MatId), out var specification))
             {
-                childSpec.Quantity = child.Quantity;
-                childSpec.IsCore = item.IsCore;
-                childSpec.IsActive = parentSpec.IsActive;
-                childSpec.IsDeleted = false;
-                childSpec.UpdatedAt = now;
+                specification.Quantity = calculated.Quantity;
+                specification.IsCore = calculated.IsCore;
+                if (calculated.SubId != comboId &&
+                    specMap.TryGetValue((comboId, calculated.MatId), out var parentSpec))
+                    specification.IsActive = parentSpec.IsActive;
+                specification.IsDeleted = false;
+                specification.UpdatedAt = now;
                 continue;
             }
 
             toInsert.Add(new ComboSpecification
             {
                 Id = Guid.NewGuid(),
-                SubId = child.SubId,
-                MatId = item.MatId,
-                Quantity = child.Quantity,
-                IsCore = item.IsCore,
-                IsActive = parentSpec.IsActive,
+                SubId = calculated.SubId,
+                MatId = calculated.MatId,
+                Quantity = calculated.Quantity,
+                IsCore = calculated.IsCore,
+                IsActive = calculated.SubId == comboId ||
+                           specMap[(comboId, calculated.MatId)].IsActive,
                 IsDeleted = false,
                 CreatedAt = now,
             });
