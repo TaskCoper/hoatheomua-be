@@ -145,6 +145,9 @@ public class Service : IService
             }
         }
 
+        if (syncableChildren.Count == 0)
+            throw new BadRequestException("COMBO_CHILDREN_REQUIRED");
+
         var now = DateTimeOffset.UtcNow;
         var toInsert = new List<ComboSpecification>();
 

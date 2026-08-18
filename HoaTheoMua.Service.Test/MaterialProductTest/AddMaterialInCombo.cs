@@ -187,7 +187,10 @@ public class AddMaterialInCombo
     public async Task AddMaterialInCombo_SupportOnlyRecipeWithoutCore_Succeeds()
     {
         await using var dbContext = CreateDbContext();
-        dbContext.Products.AddRange(CreateParentCombo(), CreateMaterial(MatSupportId));
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s"),
+            CreateMaterial(MatSupportId));
         await dbContext.SaveChangesAsync();
 
         var service = CreateService(dbContext);
@@ -196,10 +199,16 @@ public class AddMaterialInCombo
         var result = await service.AddMaterialInCombo(ComboId, request);
 
         Assert.Equal("Lưu công thức thành công.", result);
-        var specification = await dbContext.ComboSpecifications.SingleAsync();
-        Assert.Equal(MatSupportId, specification.MatId);
-        Assert.False(specification.IsCore);
-        Assert.True(specification.IsActive);
+        var specifications = await dbContext.ComboSpecifications
+            .Where(x => x.MatId == MatSupportId)
+            .ToListAsync();
+        Assert.Equal(2, specifications.Count);
+        Assert.All(specifications, specification =>
+        {
+            Assert.Equal(MatSupportId, specification.MatId);
+            Assert.False(specification.IsCore);
+            Assert.True(specification.IsActive);
+        });
     }
 
     [Fact]
@@ -208,6 +217,7 @@ public class AddMaterialInCombo
         await using var dbContext = CreateDbContext();
         dbContext.Products.AddRange(
             CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s"),
             CreateMaterial(MatCoreId),
             CreateMaterial(MatSupportId));
         dbContext.ComboSpecifications.Add(
@@ -230,20 +240,19 @@ public class AddMaterialInCombo
     }
 
     [Fact]
-    public async Task AddMaterialInCombo_ValidMaterialWithoutChildren_AddsOnlyParentSpecification()
+    public async Task AddMaterialInCombo_ComboWithoutChildren_ThrowsBadRequestWithoutWriting()
     {
         await using var dbContext = CreateDbContext();
         dbContext.Products.AddRange(CreateParentCombo(), CreateMaterial(MatCoreId));
         await dbContext.SaveChangesAsync();
 
-        var result = await CreateService(dbContext).AddMaterialInCombo(
-            ComboId,
-            CreateRequest(MatCoreId, quantity: 3.5m, isCore: true));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).AddMaterialInCombo(
+                ComboId,
+                CreateRequest(MatCoreId, quantity: 3.5m, isCore: true)));
 
-        Assert.Equal("Lưu công thức thành công.", result);
-        var specification = await dbContext.ComboSpecifications.SingleAsync();
-        Assert.Equal(ComboId, specification.SubId);
-        Assert.Equal(3.5m, specification.Quantity);
+        Assert.Equal("COMBO_CHILDREN_REQUIRED", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
     }
 
     [Theory]
@@ -304,7 +313,10 @@ public class AddMaterialInCombo
             quantity: 7,
             isCore: false,
             isActive: false);
-        dbContext.Products.AddRange(CreateParentCombo(), CreateMaterial(MatCoreId));
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s"),
+            CreateMaterial(MatCoreId));
         dbContext.ComboSpecifications.Add(existing);
         await dbContext.SaveChangesAsync();
 
@@ -463,6 +475,7 @@ public class AddMaterialInCombo
         await using var dbContext = CreateDbContext();
         dbContext.Products.AddRange(
             CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s"),
             CreateMaterial(MatCoreId, unit: "cành"));
         await dbContext.SaveChangesAsync();
 

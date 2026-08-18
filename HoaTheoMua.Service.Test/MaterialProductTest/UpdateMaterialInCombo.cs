@@ -104,8 +104,7 @@ public class UpdateMaterialInCombo
     }
 
     [Fact]
-    //cần xem lại
-    public async Task UpdateMaterialInCombo_ChildMissingMaterial_ThrowsNotFound()
+    public async Task UpdateMaterialInCombo_ChildMissingMaterial_CreatesMissingChildSpecification()
     {
         await using var dbContext = CreateDbContext();
         SeedParentChildrenAndMaterials(dbContext);
@@ -121,14 +120,20 @@ public class UpdateMaterialInCombo
         var service = CreateService(dbContext);
         var request = CreateRequest(MatCoreId, quantity: 10, isCore: true);
 
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => service.UpdateMaterialInCombo(ComboId, request));
+        var result = await service.UpdateMaterialInCombo(ComboId, request);
 
-        Assert.Equal("MATERIAL_NOT_IN_RECIPE", ex.Message);
+        Assert.Equal("Cập nhật vật liệu trong công thức thành công.", result);
+
+        var childSpecification = await dbContext.ComboSpecifications
+            .SingleAsync(x => x.SubId == ChildSmallId && x.MatId == MatCoreId && !x.IsDeleted);
+
+        Assert.Equal(10, childSpecification.Quantity);
+        Assert.True(childSpecification.IsCore);
+        Assert.True(childSpecification.IsActive);
     }
 
     [Fact]
-    public async Task UpdateMaterialInCombo_NoActiveCoreAfterUpdate_ThrowsBadRequest()
+    public async Task UpdateMaterialInCombo_NoActiveCoreAfterUpdate_IsAllowed()
     {
         await using var dbContext = CreateDbContext();
         SeedParentChildrenAndMaterials(dbContext);
@@ -141,10 +146,20 @@ public class UpdateMaterialInCombo
         var service = CreateService(dbContext);
         var request = CreateRequest(MatCoreId, quantity: 5, isCore: false, isActive: true);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.UpdateMaterialInCombo(ComboId, request));
+        var result = await service.UpdateMaterialInCombo(ComboId, request);
 
-        Assert.Equal("CORE_MATERIAL_REQUIRED", ex.Message);
+        Assert.Equal("Cập nhật vật liệu trong công thức thành công.", result);
+
+        var specifications = await dbContext.ComboSpecifications
+            .Where(x => x.MatId == MatCoreId && !x.IsDeleted)
+            .ToListAsync();
+
+        Assert.Equal(3, specifications.Count);
+        Assert.All(specifications, x =>
+        {
+            Assert.False(x.IsCore);
+            Assert.True(x.IsActive);
+        });
     }
 
     private static void SeedParentChildrenAndMaterials(AppDbContext dbContext)

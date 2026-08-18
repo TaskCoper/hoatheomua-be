@@ -93,7 +93,7 @@ public class UpdateChildProductWithFactor
             CreateParentCombo(),
             CreateChildProduct(ChildLargeId, "combo-a-l"),
             coreMaterial,
-            CreateMaterial(accessoryId, productLabel: "Phụ kiện", unit: "cành"),
+            CreateMaterial(accessoryId, productLabel: "Phụ liệu", unit: "cành"),
             CreateMaterial(orphanId));
         dbContext.ComboSpecifications.AddRange(
             CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true),
