@@ -361,7 +361,7 @@ public partial class Service : IService
         //     .FirstOrDefaultAsync(x => x.Id == order.AddressId);
 
         // var phoneReceiver = address?.PhoneNumber; //cột này required
-        var phoneReceiver = order.Phone; //cột này required
+        var phoneReceiver = order.PhoneReceiver; //cột này required
         
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
         privateDescription += $"\n-------------------------\nNN: {phoneReceiver}";
