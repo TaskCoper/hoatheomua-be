@@ -184,8 +184,7 @@ public class AddMaterialInCombo
     }
 
     [Fact]
-    //Thêm 1 vật liệu vào công thức, nếu hiện tại combo ko có core, thì thêm vào vật liệu bắt buộc phải là core
-    public async Task AddMaterialInCombo_NoActiveCoreInRequestOrExistingRecipe_ThrowsBadRequest()
+    public async Task AddMaterialInCombo_SupportOnlyRecipeWithoutCore_Succeeds()
     {
         await using var dbContext = CreateDbContext();
         dbContext.Products.AddRange(CreateParentCombo(), CreateMaterial(MatSupportId));
@@ -194,11 +193,13 @@ public class AddMaterialInCombo
         var service = CreateService(dbContext);
         var request = CreateRequest(MatSupportId, quantity: 2, isCore: false, isActive: true);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.AddMaterialInCombo(ComboId, request));
+        var result = await service.AddMaterialInCombo(ComboId, request);
 
-        Assert.Equal("CORE_MATERIAL_REQUIRED", ex.Message);
-        Assert.Empty(dbContext.ComboSpecifications);
+        Assert.Equal("Lưu công thức thành công.", result);
+        var specification = await dbContext.ComboSpecifications.SingleAsync();
+        Assert.Equal(MatSupportId, specification.MatId);
+        Assert.False(specification.IsCore);
+        Assert.True(specification.IsActive);
     }
 
     [Fact]
@@ -226,6 +227,306 @@ public class AddMaterialInCombo
                  x.Quantity == 2 &&
                  !x.IsCore &&
                  x.IsActive);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_ValidMaterialWithoutChildren_AddsOnlyParentSpecification()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(CreateParentCombo(), CreateMaterial(MatCoreId));
+        await dbContext.SaveChangesAsync();
+
+        var result = await CreateService(dbContext).AddMaterialInCombo(
+            ComboId,
+            CreateRequest(MatCoreId, quantity: 3.5m, isCore: true));
+
+        Assert.Equal("Lưu công thức thành công.", result);
+        var specification = await dbContext.ComboSpecifications.SingleAsync();
+        Assert.Equal(ComboId, specification.SubId);
+        Assert.Equal(3.5m, specification.Quantity);
+    }
+
+    [Theory]
+    [InlineData("bó")]
+    [InlineData("giỏ")]
+    [InlineData("chậu")]
+    public async Task AddMaterialInCombo_DecimalUnit_PreservesDecimalQuantity(string unit)
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s", factor: 1.5m),
+            CreateMaterial(MatCoreId, unit: unit));
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).AddMaterialInCombo(
+            ComboId,
+            CreateRequest(MatCoreId, quantity: 1.5m, isCore: true));
+
+        Assert.Equal(
+            1.5m,
+            (await dbContext.ComboSpecifications.SingleAsync(x => x.SubId == ComboId)).Quantity);
+        Assert.Equal(
+            2.25m,
+            (await dbContext.ComboSpecifications.SingleAsync(x => x.SubId == ChildSmallId)).Quantity);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_DuplicateMaterialInRequest_ThrowsConflictWithoutWriting()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(CreateParentCombo(), CreateMaterial(MatCoreId));
+        await dbContext.SaveChangesAsync();
+
+        var request = new MaterialRequest.MaterialComboRequest
+        {
+            Items =
+            [
+                new MaterialRequest.ComboSpecification { MatId = MatCoreId, Quantity = 1 },
+                new MaterialRequest.ComboSpecification { MatId = MatCoreId, Quantity = 2 }
+            ]
+        };
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(
+            () => CreateService(dbContext).AddMaterialInCombo(ComboId, request));
+
+        Assert.Equal("MATERIAL_ALREADY_EXISTS", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_ActiveParentSpecificationAlreadyExists_ThrowsConflictWithoutUpdating()
+    {
+        await using var dbContext = CreateDbContext();
+        var existing = CreateSpecification(
+            ComboId,
+            MatCoreId,
+            quantity: 7,
+            isCore: false,
+            isActive: false);
+        dbContext.Products.AddRange(CreateParentCombo(), CreateMaterial(MatCoreId));
+        dbContext.ComboSpecifications.Add(existing);
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(
+            () => CreateService(dbContext).AddMaterialInCombo(
+                ComboId,
+                CreateRequest(MatCoreId, quantity: 10, isCore: true)));
+
+        Assert.Equal("MATERIAL_ALREADY_EXISTS", exception.Message);
+        Assert.Single(dbContext.ComboSpecifications);
+        Assert.Equal(7, existing.Quantity);
+        Assert.False(existing.IsCore);
+        Assert.False(existing.IsActive);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_SoftDeletedSpecifications_RevivesExistingRows()
+    {
+        await using var dbContext = CreateDbContext();
+        var deletedParent = CreateSpecification(
+            ComboId,
+            MatCoreId,
+            quantity: 99,
+            isCore: false,
+            isActive: false,
+            isDeleted: true);
+        var deletedChild = CreateSpecification(
+            ChildSmallId,
+            MatCoreId,
+            quantity: 99,
+            isCore: false,
+            isActive: false,
+            isDeleted: true);
+        var originalIds = new[] { deletedParent.Id, deletedChild.Id };
+
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s", factor: 2m),
+            CreateMaterial(MatCoreId));
+        dbContext.ComboSpecifications.AddRange(deletedParent, deletedChild);
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).AddMaterialInCombo(
+            ComboId,
+            CreateRequest(MatCoreId, quantity: 3, isCore: true));
+
+        var specifications = await dbContext.ComboSpecifications.OrderBy(x => x.SubId).ToListAsync();
+        Assert.Equal(2, specifications.Count);
+        Assert.Equal(originalIds.OrderBy(x => x), specifications.Select(x => x.Id).OrderBy(x => x));
+        Assert.All(specifications, x =>
+        {
+            Assert.False(x.IsDeleted);
+            Assert.True(x.IsCore);
+            Assert.True(x.IsActive);
+            Assert.NotNull(x.UpdatedAt);
+        });
+        Assert.Equal(3m, specifications.Single(x => x.SubId == ComboId).Quantity);
+        Assert.Equal(6m, specifications.Single(x => x.SubId == ChildSmallId).Quantity);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_InactiveMaterial_ThrowsBadRequestWithoutWriting()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateMaterial(MatCoreId, status: "2"));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).AddMaterialInCombo(
+                ComboId,
+                CreateRequest(MatCoreId, quantity: 1, isCore: true)));
+
+        Assert.Equal($"MATERIAL_INACTIVE:{MatCoreId}", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_DeletedMaterial_ThrowsNotFoundWithoutWriting()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateMaterial(MatCoreId, isDeleted: true));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => CreateService(dbContext).AddMaterialInCombo(
+                ComboId,
+                CreateRequest(MatCoreId, quantity: 1, isCore: true)));
+
+        Assert.Equal("MATERIAL_NOT_FOUND", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_ChildComboId_ThrowsComboNotFound()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s"),
+            CreateMaterial(MatCoreId));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => CreateService(dbContext).AddMaterialInCombo(
+                ChildSmallId,
+                CreateRequest(MatCoreId, quantity: 1, isCore: true)));
+
+        Assert.Equal("COMBO_NOT_FOUND", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_UnsyncedParentCombo_ThrowsBadRequest()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(nhanhProductId: null),
+            CreateMaterial(MatCoreId));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).AddMaterialInCombo(
+                ComboId,
+                CreateRequest(MatCoreId, quantity: 1, isCore: true)));
+
+        Assert.Equal("COMBO_NOT_SYNCED", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_NonPositiveChildFactor_ThrowsBeforeWriting()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s", factor: 0),
+            CreateMaterial(MatCoreId));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).AddMaterialInCombo(
+                ComboId,
+                CreateRequest(MatCoreId, quantity: 1, isCore: true)));
+
+        Assert.Equal($"INVALID_FACTOR:{ChildSmallId}", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_QuantityRoundsToZero_ThrowsBeforeWriting()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateMaterial(MatCoreId, unit: "cành"));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).AddMaterialInCombo(
+                ComboId,
+                CreateRequest(MatCoreId, quantity: 0.5m, isCore: true)));
+
+        Assert.Equal($"INVALID_QUANTITY:{MatCoreId}", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_AddingNewMaterial_DoesNotChangeExistingRecipeRows()
+    {
+        await using var dbContext = CreateDbContext();
+        var existingParent = CreateSpecification(
+            ComboId,
+            MatCoreId,
+            quantity: 7,
+            isCore: true,
+            isActive: false);
+        var existingChild = CreateSpecification(
+            ChildSmallId,
+            MatCoreId,
+            quantity: 11,
+            isCore: false,
+            isActive: true);
+
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s", factor: 2m),
+            CreateMaterial(MatCoreId),
+            CreateMaterial(MatSupportId, productLabel: "Phụ liệu"));
+        dbContext.ComboSpecifications.AddRange(existingParent, existingChild);
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).AddMaterialInCombo(
+            ComboId,
+            CreateRequest(MatSupportId, quantity: 4, isCore: false));
+
+        Assert.Equal(7m, existingParent.Quantity);
+        Assert.True(existingParent.IsCore);
+        Assert.False(existingParent.IsActive);
+        Assert.Equal(11m, existingChild.Quantity);
+        Assert.False(existingChild.IsCore);
+        Assert.True(existingChild.IsActive);
+        Assert.Equal(4, await dbContext.ComboSpecifications.CountAsync());
+    }
+
+    [Fact]
+    public async Task AddMaterialInCombo_EmptyMaterialId_ThrowsBadRequestWithoutWriting()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.Add(CreateParentCombo());
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).AddMaterialInCombo(
+                ComboId,
+                CreateRequest(Guid.Empty, quantity: 1, isCore: true)));
+
+        Assert.Equal("INVALID_MATERIAL_ID", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
     }
 
     private static MaterialRequest.MaterialComboRequest CreateRequest(
@@ -263,12 +564,12 @@ public class AddMaterialInCombo
         return new HoaTheoMua.Service.Material.Service(dbContext);
     }
 
-    private static ProductEntity CreateParentCombo()
+    private static ProductEntity CreateParentCombo(string? nhanhProductId = ParentNhanhProductId)
     {
         return new ProductEntity
         {
             Id = ComboId,
-            NhanhProductId = ParentNhanhProductId,
+            NhanhProductId = nhanhProductId,
             ParentProductId = null,
             ProductName = "Combo A",
             CreatedAt = DateTimeOffset.UtcNow
@@ -288,7 +589,12 @@ public class AddMaterialInCombo
         };
     }
 
-    private static ProductEntity CreateMaterial(Guid id, string? productLabel = MaterialLabel, string? unit = null)
+    private static ProductEntity CreateMaterial(
+        Guid id,
+        string? productLabel = MaterialLabel,
+        string? unit = null,
+        string? status = null,
+        bool isDeleted = false)
     {
         return new ProductEntity
         {
@@ -296,12 +602,20 @@ public class AddMaterialInCombo
             NhanhProductId = $"mat-{id:N}",
             ProductLabel = productLabel,
             Unit = unit,
+            Status = status,
+            IsDeleted = isDeleted,
             ProductName = $"Material {id:N}",
             CreatedAt = DateTimeOffset.UtcNow
         };
     }
 
-    private static ComboSpecEntity CreateSpecification(Guid subId, Guid matId, int quantity, bool isCore)
+    private static ComboSpecEntity CreateSpecification(
+        Guid subId,
+        Guid matId,
+        decimal quantity,
+        bool isCore,
+        bool isActive = true,
+        bool isDeleted = false)
     {
         return new ComboSpecEntity
         {
@@ -310,7 +624,8 @@ public class AddMaterialInCombo
             MatId = matId,
             Quantity = quantity,
             IsCore = isCore,
-            IsActive = true,
+            IsActive = isActive,
+            IsDeleted = isDeleted,
             CreatedAt = DateTimeOffset.UtcNow
         };
     }

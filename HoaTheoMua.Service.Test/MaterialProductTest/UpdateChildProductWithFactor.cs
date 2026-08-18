@@ -79,6 +79,51 @@ public class UpdateChildProductWithFactor
         Assert.Equal(2.5m, (await dbContext.ComboSpecifications.FirstAsync(x => x.SubId == ChildLargeId && x.MatId == bunchId)).Quantity);
         Assert.Equal(3m, (await dbContext.ComboSpecifications.FirstAsync(x => x.SubId == ChildLargeId && x.MatId == auxiliaryId)).Quantity);
     }
+
+    [Fact]
+    public async Task UpdateChildProductWithFactor_SynchronizesRecipeAndRecalculatesAvailableForSale()
+    {
+        await using var dbContext = CreateDbContext();
+        var accessoryId = Guid.NewGuid();
+        var orphanId = Guid.NewGuid();
+        var coreMaterial = CreateMaterial(MatCoreId, unit: "cành");
+        coreMaterial.AvailableForSale = 100m;
+
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildLargeId, "combo-a-l"),
+            coreMaterial,
+            CreateMaterial(accessoryId, productLabel: "Phụ kiện", unit: "cành"),
+            CreateMaterial(orphanId));
+        dbContext.ComboSpecifications.AddRange(
+            CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true),
+            CreateSpecification(ComboId, accessoryId, quantity: 3, isCore: false),
+            CreateSpecification(ChildLargeId, MatCoreId, quantity: 5, isCore: true),
+            CreateSpecification(ChildLargeId, accessoryId, quantity: 3, isCore: false),
+            CreateSpecification(ChildLargeId, orphanId, quantity: 1, isCore: false));
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).UpdateChildProductWithFactor(new MaterialRequest.UpdateMaterialChildRequest
+        {
+            ProductId = ChildLargeId,
+            Factor = 2m
+        });
+
+        var childProduct = await dbContext.Products.FirstAsync(x => x.Id == ChildLargeId);
+        var childCore = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ChildLargeId && x.MatId == MatCoreId);
+        var childAccessory = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ChildLargeId && x.MatId == accessoryId);
+        var orphan = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ChildLargeId && x.MatId == orphanId);
+
+        Assert.Equal(10m, childCore.Quantity);
+        Assert.Equal(3m, childAccessory.Quantity);
+        Assert.True(orphan.IsDeleted);
+        Assert.Equal(10m, childProduct.AvailableForSale);
+        Assert.NotNull(childProduct.UpdatedAt);
+    }
+
     [Fact]
     //factor phải > 0 mới hợp lệ
     public async Task UpdateChildProductWithFactor_InvalidFactor_ThrowsBadRequest()
@@ -208,7 +253,7 @@ public class UpdateChildProductWithFactor
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.UpdateChildProductWithFactor(request));
 
-        Assert.Equal("INVALID_QUANTITY", ex.Message);
+        Assert.Equal($"INVALID_QUANTITY:Material {MatCoreId:N}", ex.Message);
     }
 
     private static void SeedParentAndChildRecipe(AppDbContext dbContext)
