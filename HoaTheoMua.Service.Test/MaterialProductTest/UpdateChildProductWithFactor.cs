@@ -50,6 +50,36 @@ public class UpdateChildProductWithFactor
     }
 
     [Fact]
+    public async Task UpdateChildProductWithFactor_AppliesUnitAndAuxiliaryRules()
+    {
+        await using var dbContext = CreateDbContext();
+        var bunchId = Guid.NewGuid();
+        var auxiliaryId = Guid.NewGuid();
+
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildLargeId, "combo-a-l"),
+            CreateMaterial(MatCoreId, unit: "cành"),
+            CreateMaterial(bunchId, unit: " BÓ "),
+            CreateMaterial(auxiliaryId, productLabel: " Phụ liệu ", unit: "cành"));
+        dbContext.ComboSpecifications.AddRange(
+            CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true),
+            CreateSpecification(ComboId, bunchId, quantity: 2, isCore: false),
+            CreateSpecification(ComboId, auxiliaryId, quantity: 3, isCore: false));
+        await dbContext.SaveChangesAsync();
+
+        var result = await CreateService(dbContext).UpdateChildProductWithFactor(new MaterialRequest.UpdateMaterialChildRequest
+        {
+            ProductId = ChildLargeId,
+            Factor = 1.25m
+        });
+
+        Assert.Equal("Cập nhật hệ số và định lượng sản phẩm con thành công", result);
+        Assert.Equal(6m, (await dbContext.ComboSpecifications.FirstAsync(x => x.SubId == ChildLargeId && x.MatId == MatCoreId)).Quantity);
+        Assert.Equal(2.5m, (await dbContext.ComboSpecifications.FirstAsync(x => x.SubId == ChildLargeId && x.MatId == bunchId)).Quantity);
+        Assert.Equal(3m, (await dbContext.ComboSpecifications.FirstAsync(x => x.SubId == ChildLargeId && x.MatId == auxiliaryId)).Quantity);
+    }
+    [Fact]
     //factor phải > 0 mới hợp lệ
     public async Task UpdateChildProductWithFactor_InvalidFactor_ThrowsBadRequest()
     {
@@ -234,13 +264,14 @@ public class UpdateChildProductWithFactor
         };
     }
 
-    private static ProductEntity CreateMaterial(Guid id)
+    private static ProductEntity CreateMaterial(Guid id, string productLabel = MaterialLabel, string? unit = null)
     {
         return new ProductEntity
         {
             Id = id,
             NhanhProductId = $"mat-{id:N}",
-            ProductLabel = MaterialLabel,
+            ProductLabel = productLabel,
+            Unit = unit,
             ProductName = $"Material {id:N}",
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -260,3 +291,4 @@ public class UpdateChildProductWithFactor
         };
     }
 }
+

@@ -66,6 +66,28 @@ public class AddMaterialInCombo
     }
 
     [Fact]
+    public async Task AddMaterialInCombo_BranchUnit_FloorsParentAndChildQuantity()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s"),
+            CreateMaterial(MatCoreId, unit: "cành"));
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).AddMaterialInCombo(
+            ComboId,
+            CreateRequest(MatCoreId, quantity: 1.5m, isCore: true));
+
+        var parentSpecification = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ComboId && x.MatId == MatCoreId);
+        var childSpecification = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ChildSmallId && x.MatId == MatCoreId);
+
+        Assert.Equal(1m, parentSpecification.Quantity);
+        Assert.Equal(1m, childSpecification.Quantity);
+    }
+    [Fact]
     public async Task AddMaterialInCombo_ChildWithFactor_MultipliesChildQuantity()
     {
         await using var dbContext = CreateDbContext();
@@ -89,6 +111,25 @@ public class AddMaterialInCombo
         Assert.Equal(15, childSpecification.Quantity);
     }
 
+    [Fact]
+    public async Task AddMaterialInCombo_AuxiliaryMaterial_KeepsParentQuantityForChildWithFactor()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s", factor: 1.5m),
+            CreateMaterial(MatSupportId, productLabel: "Phụ liệu"));
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).AddMaterialInCombo(
+            ComboId,
+            CreateRequest(MatSupportId, quantity: 2, isCore: true));
+
+        var childSpecification = await dbContext.ComboSpecifications
+            .FirstAsync(x => x.SubId == ChildSmallId && x.MatId == MatSupportId);
+
+        Assert.Equal(2m, childSpecification.Quantity);
+    }
     [Fact]
     public async Task AddMaterialInCombo_ComboNotFound_ThrowsNotFound()
     {
@@ -189,7 +230,7 @@ public class AddMaterialInCombo
 
     private static MaterialRequest.MaterialComboRequest CreateRequest(
         Guid matId,
-        int quantity,
+        decimal quantity,
         bool isCore,
         bool isActive = true)
     {
@@ -247,13 +288,14 @@ public class AddMaterialInCombo
         };
     }
 
-    private static ProductEntity CreateMaterial(Guid id, string? productLabel = MaterialLabel)
+    private static ProductEntity CreateMaterial(Guid id, string? productLabel = MaterialLabel, string? unit = null)
     {
         return new ProductEntity
         {
             Id = id,
             NhanhProductId = $"mat-{id:N}",
             ProductLabel = productLabel,
+            Unit = unit,
             ProductName = $"Material {id:N}",
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -273,3 +315,8 @@ public class AddMaterialInCombo
         };
     }
 }
+
+
+
+
+

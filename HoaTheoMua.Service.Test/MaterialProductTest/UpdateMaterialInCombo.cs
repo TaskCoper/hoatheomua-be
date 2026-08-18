@@ -159,7 +159,7 @@ public class UpdateMaterialInCombo
 
     private static MaterialRequest.MaterialComboRequest CreateRequest(
         Guid matId,
-        int quantity,
+        decimal quantity,
         bool isCore,
         bool isActive = true)
     {
@@ -242,3 +242,4 @@ public class UpdateMaterialInCombo
         };
     }
 }
+

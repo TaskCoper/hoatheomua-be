@@ -12,6 +12,38 @@ public class Service : IService
     {
         _dbContext = dbContext;
     }
+
+    private const string ComponentLabel = "Thành phần";
+    private const string AuxiliaryLabel = "Phụ liệu";
+
+    private sealed record MaterialInfo(Guid Id, string? ProductLabel, string? Unit);
+    private sealed record ParentMaterialInfo(Guid MatId, decimal Quantity, bool IsCore, bool IsActive, string? ProductLabel, string? Unit);
+
+    private static bool HasLabel(string? value, string expected) =>
+        string.Equals(value?.Trim(), expected, StringComparison.OrdinalIgnoreCase);
+
+    private static bool KeepsDecimal(string? unit) =>
+        HasLabel(unit, "bó") || HasLabel(unit, "chậu");
+
+    private static decimal CalculateParentQuantity(decimal requestedQuantity, string? productLabel, string? unit) =>
+        HasLabel(productLabel, ComponentLabel) && HasLabel(unit, "cành")
+            ? Math.Floor(requestedQuantity)
+            : requestedQuantity;
+
+    private static decimal CalculateChildQuantity(decimal parentQuantity, decimal factor, string? productLabel, string? unit)
+    {
+        if (HasLabel(productLabel, AuxiliaryLabel))
+            return parentQuantity;
+
+        var calculated = parentQuantity * factor;
+        return KeepsDecimal(unit) ? calculated : Math.Floor(calculated);
+    }
+
+    private static void ValidateChildQuantity(decimal quantity, Guid matId, bool includeMaterialId = true)
+    {
+        if (quantity <= 0)
+            throw new BadRequestException(includeMaterialId ? $"INVALID_QUANTITY:{matId}" : "INVALID_QUANTITY");
+    }
     
     public async Task<string> AddMaterialInCombo(Guid comboId, Request.MaterialComboRequest request)
     {
@@ -41,24 +73,24 @@ public class Service : IService
             throw new BadRequestException("COMBO_NOT_SYNCED");
 
         // ══════════ 3. Validate material — 1 query ══════════
-        var validMatCount = await _dbContext.Products
-            .CountAsync(x => matIds.Contains(x.Id)
-                             && x.ProductLabel == "Thành phần"
-                             && !x.IsDeleted);
-
-        if (validMatCount != matIds.Count)
-            throw new NotFoundException("MATERIAL_NOT_FOUND");
-
-        // ══════════ 4. Load child — Factor null = dùng quantity giống cha ══════════
-        var children = await _dbContext.Products
+        var materials = await _dbContext.Products
             .AsNoTracking()
-            .Where(x => x.ParentProductId == combo.NhanhProductId && !x.IsDeleted)
-            .Select(x => new { x.Id, x.Factor })
+            .Where(x => matIds.Contains(x.Id) && !x.IsDeleted)
+            .Select(x => new MaterialInfo(x.Id, x.ProductLabel, x.Unit))
             .ToListAsync();
 
-        var syncableChildren = children
+        if (materials.Count != matIds.Count || materials.Any(x =>
+                !HasLabel(x.ProductLabel, ComponentLabel) && !HasLabel(x.ProductLabel, AuxiliaryLabel)))
+            throw new NotFoundException("MATERIAL_NOT_FOUND");
+
+        var materialMap = materials.ToDictionary(x => x.Id);
+
+        // ══════════ 4. Load child — Factor null = dùng quantity giống cha ══════════
+        var syncableChildren = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => x.ParentProductId == combo.NhanhProductId && !x.IsDeleted)
             .Select(x => new { x.Id, Factor = x.Factor ?? 1m })
-            .ToList();
+            .ToListAsync();
 
         var factorMap = syncableChildren.ToDictionary(x => x.Id, x => x.Factor);
         var targetIds = syncableChildren.Select(x => x.Id).Append(comboId).ToList();
@@ -113,13 +145,12 @@ public class Service : IService
 
             foreach (var state in finalParentState)
             {
-                var raw = state.Quantity * child.Factor;
+                var material = materialMap[state.MatId];
+                var parentQuantity = CalculateParentQuantity(state.Quantity, material.ProductLabel, material.Unit);
+                ValidateChildQuantity(parentQuantity, state.MatId);
 
-                if (raw > int.MaxValue)
-                    throw new BadRequestException($"INVALID_FACTOR:{child.Id}");
-
-                if ((int)Math.Floor(raw) <= 0)
-                    throw new BadRequestException($"INVALID_QUANTITY:{state.MatId}");
+                var quantity = CalculateChildQuantity(parentQuantity, child.Factor, material.ProductLabel, material.Unit);
+                ValidateChildQuantity(quantity, state.MatId);
             }
         }
 
@@ -133,7 +164,11 @@ public class Service : IService
 
             foreach (var item in items)
             {
-                var quantity = (int)Math.Floor(item.Quantity * factor);
+                var material = materialMap[item.MatId];
+                var parentQuantity = CalculateParentQuantity(item.Quantity, material.ProductLabel, material.Unit);
+                var quantity = subId == comboId
+                    ? parentQuantity
+                    : CalculateChildQuantity(parentQuantity, factor, material.ProductLabel, material.Unit);
 
                 if (specMap.TryGetValue((subId, item.MatId), out var spec))
                 {
@@ -260,6 +295,12 @@ public class Service : IService
 
         if (!finalParentState.Any(x => x.IsCore && x.IsActive))
             throw new BadRequestException("CORE_MATERIAL_REQUIRED");
+        var materialProfiles = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => finalParentState.Select(s => s.MatId).Contains(x.Id) && !x.IsDeleted)
+            .Select(x => new MaterialInfo(x.Id, x.ProductLabel, x.Unit))
+            .ToListAsync();
+        var materialMap = materialProfiles.ToDictionary(x => x.Id);
 
         foreach (var child in syncableChildren)
         {
@@ -268,13 +309,12 @@ public class Service : IService
 
             foreach (var state in finalParentState)
             {
-                var raw = state.Quantity * child.Factor;
+                var material = materialMap[state.MatId];
+                var parentQuantity = CalculateParentQuantity(state.Quantity, material.ProductLabel, material.Unit);
+                ValidateChildQuantity(parentQuantity, state.MatId);
 
-                if (raw > int.MaxValue)
-                    throw new BadRequestException($"INVALID_FACTOR:{child.Id}");
-
-                if ((int)Math.Floor(raw) <= 0)
-                    throw new BadRequestException($"INVALID_QUANTITY:{state.MatId}");
+                var quantity = CalculateChildQuantity(parentQuantity, child.Factor, material.ProductLabel, material.Unit);
+                ValidateChildQuantity(quantity, state.MatId);
             }
         }
 
@@ -289,7 +329,11 @@ public class Service : IService
             
             foreach (var state in finalParentState)
             {
-                var quantity = (int)Math.Floor(state.Quantity * factor);
+                var material = materialMap[state.MatId];
+                var parentQuantity = CalculateParentQuantity(state.Quantity, material.ProductLabel, material.Unit);
+                var quantity = subId == comboId
+                    ? parentQuantity
+                    : CalculateChildQuantity(parentQuantity, factor, material.ProductLabel, material.Unit);
 
                 if (specMap.TryGetValue((subId, state.MatId), out var spec))
                 {
@@ -428,6 +472,13 @@ public class Service : IService
         var parentSpecTask = _dbContext.ComboSpecifications
             .AsNoTracking()
             .Where(x => x.SubId == parentProduct.Id && !x.IsDeleted)
+            .Select(x => new ParentMaterialInfo(
+                x.MatId,
+                x.Quantity,
+                x.IsCore,
+                x.IsActive,
+                x.Mat.ProductLabel,
+                x.Mat.Unit))
             .ToListAsync();
 
         // childSpecifications sẽ được lọc lại theo parentMatIds sau khi parentSpecTask xong,
@@ -442,13 +493,8 @@ public class Service : IService
 
         foreach (var item in parentSpecification)
         {
-            var raw = item.Quantity * request.Factor;
-
-            if (raw > int.MaxValue)
-                throw new BadRequestException("INVALID_FACTOR");
-
-            if ((int)Math.Floor(raw) <= 0)
-                throw new BadRequestException("INVALID_QUANTITY");
+            var quantity = CalculateChildQuantity(item.Quantity, request.Factor, item.ProductLabel, item.Unit);
+            ValidateChildQuantity(quantity, item.MatId);
         }
 
         // Chỉ load spec của child liên quan tới MatId có trong công thức cha
@@ -473,7 +519,7 @@ public class Service : IService
 
         foreach (var item in parentSpecification)
         {
-            var quantity = (int)Math.Floor(item.Quantity * request.Factor);
+            var quantity = CalculateChildQuantity(item.Quantity, request.Factor, item.ProductLabel, item.Unit);
 
             if (childSpecificationMap.TryGetValue(item.MatId, out var childSpecification))
             {
@@ -516,3 +562,4 @@ public class Service : IService
         return "Cập nhật hệ số và định lượng sản phẩm con thành công";
     }
 }
+

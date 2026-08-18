@@ -10,7 +10,7 @@ public class Request
     public class ComboSpecification
     {
         public Guid MatId { get; set; }
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
         public bool IsCore { get; set; }
         public bool IsActive { get; set; }
     }
