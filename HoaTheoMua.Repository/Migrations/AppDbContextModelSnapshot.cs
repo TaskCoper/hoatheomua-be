@@ -1404,6 +1404,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("ParentProductGuid")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ParentProductId")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -1537,6 +1540,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("NhanhProductId")
                         .IsUnique()
                         .HasFilter("\"NhanhProductId\" IS NOT NULL");
+
+                    b.HasIndex("ParentProductGuid");
 
                     b.ToTable("Products");
                 });
@@ -1777,6 +1782,16 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("OrderNhanhVn");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.Product", "ParentProduct")
+                        .WithMany("ChildProducts")
+                        .HasForeignKey("ParentProductGuid")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("ParentProduct");
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.JobDescriptions", "JobDescription")
@@ -1838,6 +1853,8 @@ namespace HoaTheoMua.Repository.Migrations
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
                 {
                     b.Navigation("CategoryProductDetails");
+
+                    b.Navigation("ChildProducts");
 
                     b.Navigation("MatIds");
 
