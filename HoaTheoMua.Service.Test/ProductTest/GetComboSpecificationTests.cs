@@ -114,9 +114,9 @@ namespace HoaTheoMua.Service.Test.ProductTest
 
             var comboSpecs = new List<ComboSpecEntity>
             {
-                new ComboSpecEntity { SubId = comboId, MatId = coreMat1.Id, Mat = coreMat1, Quantity = 2, IsCore = true }, // max = 5
-                new ComboSpecEntity { SubId = comboId, MatId = supportMat.Id, Mat = supportMat, Quantity = 1, IsCore = false }, // max = 0 (support)
-                new ComboSpecEntity { SubId = comboId, MatId = coreMat2.Id, Mat = coreMat2, Quantity = 5, IsCore = true }, // max = 8
+                new ComboSpecEntity { SubId = comboId, MatId = coreMat1.Id, Mat = coreMat1, Quantity = 2, IsCore = true, IsActive = true }, // max = 5
+                new ComboSpecEntity { SubId = comboId, MatId = supportMat.Id, Mat = supportMat, Quantity = 1, IsCore = false, IsActive = true }, // max = 0 (support)
+                new ComboSpecEntity { SubId = comboId, MatId = coreMat2.Id, Mat = coreMat2, Quantity = 5, IsCore = true, IsActive = true }, // max = 8
             };
 
             var dbContext = CreateMockDbContext(products, comboSpecs);

@@ -39,17 +39,20 @@ namespace HoaTheoMua.Service.Test.ProductTest
 
         private AppDbContext CreateMockDbContext(List<ProductEntity> products)
         {
-            var options = new DbContextOptionsBuilder<AppDbContext>().Options;
-            var mockDbContext = new Mock<AppDbContext>(options);
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+                .Options;
 
-            var mockProductDbSet = products.BuildMockDbSet();
-            mockDbContext.Setup(x => x.Products).Returns(mockProductDbSet.Object);
+            var dbContext = new AppDbContext(options);
 
-            // Need to mock Configs for the constructor, similar to GetProductDetails.cs
-            var configs = new List<ConfigEntity>().BuildMockDbSet();
-            mockDbContext.Setup(x => x.Configs).Returns(configs.Object);
+            if (products != null && products.Any())
+            {
+                dbContext.Products.AddRange(products);
+                dbContext.SaveChanges();
+            }
 
-            return mockDbContext.Object;
+            return dbContext;
         }
 
         private ProductServiceImpl CreateService(AppDbContext dbContext)
@@ -108,18 +111,17 @@ namespace HoaTheoMua.Service.Test.ProductTest
         }
 
         [Theory]
-        [InlineData("Thành phần", 1)]
-        [InlineData("Combo", 1)]
-        [InlineData("Sản phẩm", 1)]
-        [InlineData("InvalidType", 3)]
-        public async Task GetLocalProductsV2_FilterByProductType_ReturnsCorrectTypes(string productType, int expectedCount)
+        [InlineData("Thành phần")]
+        [InlineData("components")]
+        [InlineData("2")]
+        public async Task GetLocalProductsV2_FilterByProductType_Components_Success(string productType)
         {
             // Arrange
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 1", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo 1", ProductType = "Combo", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Product 1", ProductType = "Sản phẩm", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 1", ProductLabel = "Thành phần 1", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 2", ProductLabel = "Vật liệu và thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Product 1", ProductLabel = "Hoa hồng", ProductType = "Sản phẩm", IsDeleted = false }
             };
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
@@ -129,7 +131,113 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var result = await service.GetLocalProductsV2(request);
 
             // Assert
-            Assert.Equal(expectedCount, result.Value.TotalCount);
+            Assert.NotNull(result);
+            Assert.Equal(2, result.Value.TotalCount);
+            var items = result.Value.Items.Cast<ProductDetailResponse>().ToList();
+            Assert.Contains(items, x => x.ProductName == "Material 1");
+            Assert.Contains(items, x => x.ProductName == "Material 2");
+        }
+
+        [Theory]
+        [InlineData("Combo")]
+        [InlineData("combo")]
+        [InlineData("1")]
+        public async Task GetLocalProductsV2_FilterByProductType_Combo_BothCases_Success(string productType)
+        {
+            // Arrange
+            var products = new List<ProductEntity>
+            {
+                // TH1: Độc lập (không có con) + ProductType = Combo
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "COMBO_IND", ProductName = "Combo Doc Lap", ProductType = "Combo", IsDeleted = false },
+
+                // TH2: Cha (ProductType = "Sản phẩm"), có con và TẤT CẢ con là Combo
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PARENT_ALL_COMBO", ProductName = "Cha Co Con Toan Combo", ProductType = "Sản phẩm", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_1", ParentProductId = "PARENT_ALL_COMBO", ProductName = "Con Combo 1", ProductType = "Combo", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_2", ParentProductId = "PARENT_ALL_COMBO", ProductName = "Con Combo 2", ProductType = "Combo", IsDeleted = false },
+
+                // Case loại trừ: Cha có con nhưng có con KHÔNG PHẢI Combo
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PARENT_MIXED", ProductName = "Cha Co Con Hon Hop", ProductType = "Sản phẩm", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_3", ParentProductId = "PARENT_MIXED", ProductName = "Con Combo 3", ProductType = "Combo", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_4", ParentProductId = "PARENT_MIXED", ProductName = "Con San Pham 4", ProductType = "Sản phẩm", IsDeleted = false },
+
+                // Sản phẩm thường độc lập
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "NORMAL_PROD", ProductName = "San Pham Thuong", ProductType = "Sản phẩm", IsDeleted = false }
+            };
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+            var request = new ProductRequest.LocalProductQueryRequest { productType = productType };
+
+            // Act
+            var result = await service.GetLocalProductsV2(request);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(2, result.Value.TotalCount); // "Combo Doc Lap" và "Cha Co Con Toan Combo"
+            var items = result.Value.Items.Cast<ProductDetailResponse>().ToList();
+            Assert.Contains(items, x => x.ProductName == "Combo Doc Lap");
+            Assert.Contains(items, x => x.ProductName == "Cha Co Con Toan Combo");
+        }
+
+        [Theory]
+        [InlineData("Sản phẩm")]
+        [InlineData("san pham")]
+        [InlineData("product")]
+        [InlineData("3")]
+        public async Task GetLocalProductsV2_FilterByProductType_Product_Success(string productType)
+        {
+            // Arrange
+            var products = new List<ProductEntity>
+            {
+                // TH Sản phẩm thường độc lập -> ĐƯỢC CHỌN
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PROD_IND", ProductName = "San Pham Doc Lap", ProductType = "Sản phẩm", IsDeleted = false },
+
+                // TH Cha có con hỗn hợp (có con không phải Combo) -> ĐƯỢC CHỌN
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PARENT_MIXED", ProductName = "Cha Co Con Hon Hop", ProductType = "Sản phẩm", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_1", ParentProductId = "PARENT_MIXED", ProductName = "Con Combo 1", ProductType = "Combo", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_2", ParentProductId = "PARENT_MIXED", ProductName = "Con San Pham 2", ProductType = "Sản phẩm", IsDeleted = false },
+
+                // TH Cha có con và TẤT CẢ con là Combo -> BỊ LOẠI TRỪ (thuộc nhóm Combo)
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PARENT_ALL_COMBO", ProductName = "Cha Toan Con Combo", ProductType = "Sản phẩm", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_3", ParentProductId = "PARENT_ALL_COMBO", ProductName = "Con Combo 3", ProductType = "Combo", IsDeleted = false },
+
+                // Combo độc lập -> BỊ LOẠI TRỪ
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "COMBO_IND", ProductName = "Combo Doc Lap", ProductType = "Combo", IsDeleted = false }
+            };
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+            var request = new ProductRequest.LocalProductQueryRequest { productType = productType };
+
+            // Act
+            var result = await service.GetLocalProductsV2(request);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(2, result.Value.TotalCount); // "San Pham Doc Lap" và "Cha Co Con Hon Hop"
+            var items = result.Value.Items.Cast<ProductDetailResponse>().ToList();
+            Assert.Contains(items, x => x.ProductName == "San Pham Doc Lap");
+            Assert.Contains(items, x => x.ProductName == "Cha Co Con Hon Hop");
+        }
+
+        [Fact]
+        public async Task GetLocalProductsV2_FilterByProductType_InvalidOrEmpty_ReturnsAllProducts()
+        {
+            // Arrange
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", ProductType = "Combo", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", ProductType = "Sản phẩm", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "Thành phần", IsDeleted = false }
+            };
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+            var request = new ProductRequest.LocalProductQueryRequest { productType = "invalid_type" };
+
+            // Act
+            var result = await service.GetLocalProductsV2(request);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(3, result.Value.TotalCount);
         }
 
         [Fact]

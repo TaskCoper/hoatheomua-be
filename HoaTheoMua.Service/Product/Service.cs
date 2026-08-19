@@ -333,38 +333,53 @@ public class Service : IService
                 (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
         }
 
+        const string TypeCombo = "Combo";
+        const string TypeProduct = "Sản phẩm";
+
         if (!string.IsNullOrWhiteSpace(request.productType))
         {
             var normalizedProductType = request.productType.Trim().ToLower();
 
-            if (normalizedProductType == "thành phần" || normalizedProductType == "components" || normalizedProductType == "2")
+            switch (normalizedProductType)
             {
-                // Vật liệu / Thành phần: Lọc theo tag/label
-                query = query.Where(x => x.ProductLabel != null && x.ProductLabel.ToLower().Contains("thành phần"));
-            }
-            else if (normalizedProductType == "combo" || normalizedProductType == "1")
-            {
-                // Combo: 
-                // TH1: Là sản phẩm độc lập (không có con) và ProductType là Combo
-                // TH2: Là sản phẩm cha (có con) và toàn bộ các con đều là Combo
-                query = query.Where(x => 
-                    (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Combo")
-                    ||
-                    (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
-                     _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Combo"))
-                );
-            }
-            else if (normalizedProductType == "sản phẩm" || normalizedProductType == "product" || normalizedProductType == "3")
-            {
-                // Sản phẩm:
-                // TH1: Là sản phẩm độc lập (không có con) và ProductType là Sản phẩm
-                // TH2: Là sản phẩm cha (có con) và toàn bộ các con đều là Sản phẩm
-                query = query.Where(x => 
-                    (!_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && x.ProductType == "Sản phẩm")
-                    ||
-                    (_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) && 
-                     _dbContext.Products.Where(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted).All(c => c.ProductType == "Sản phẩm"))
-                );
+                case "thành phần":
+                case "thanh phan":
+                case "components":
+                case "2":
+                    query = query.Where(x =>
+                        x.ProductLabel != null &&
+                        EF.Functions.Like(x.ProductLabel, "%thành phần%"));
+                    break;
+
+                case "combo":
+                case "1":
+                    query = query.Where(x =>
+                        // TH1: độc lập (không con) + type Combo
+                        (x.ProductType == TypeCombo &&
+                         !_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted))
+                        ||
+                        // TH2: cha type "Sản phẩm", có con, và mọi con đều Combo
+                        (x.ProductType == TypeProduct &&
+                         _dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) &&
+                         !_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted
+                                                    && c.ProductType != TypeCombo))
+                    );
+                    break;
+
+                case "sản phẩm":
+                case "san pham":
+                case "product":
+                case "3":
+                    query = query.Where(x =>
+                        x.ProductType == TypeProduct &&
+                        // loại trừ đúng 1 case: cha có con và toàn bộ con là Combo
+                        !(_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) &&
+                          !_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted
+                                                     && c.ProductType != TypeCombo))
+                    );
+                    break;
+                default:
+                    break;
             }
         }
 
