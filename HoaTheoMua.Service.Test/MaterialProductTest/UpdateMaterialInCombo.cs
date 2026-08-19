@@ -133,7 +133,7 @@ public class UpdateMaterialInCombo
     }
 
     [Fact]
-    public async Task UpdateMaterialInCombo_NoActiveCoreAfterUpdate_IsAllowed()
+    public async Task UpdateMaterialInCombo_NoActiveCoreAfterUpdate_ThrowsBadRequest()
     {
         await using var dbContext = CreateDbContext();
         SeedParentChildrenAndMaterials(dbContext);
@@ -146,9 +146,10 @@ public class UpdateMaterialInCombo
         var service = CreateService(dbContext);
         var request = CreateRequest(MatCoreId, quantity: 5, isCore: false, isActive: true);
 
-        var result = await service.UpdateMaterialInCombo(ComboId, request);
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => service.UpdateMaterialInCombo(ComboId, request));
 
-        Assert.Equal("Cập nhật vật liệu trong công thức thành công.", result);
+        Assert.Equal("CORE_MATERIAL_REQUIRED", ex.Message);
 
         var specifications = await dbContext.ComboSpecifications
             .Where(x => x.MatId == MatCoreId && !x.IsDeleted)
@@ -157,8 +158,9 @@ public class UpdateMaterialInCombo
         Assert.Equal(3, specifications.Count);
         Assert.All(specifications, x =>
         {
-            Assert.False(x.IsCore);
+            Assert.True(x.IsCore);
             Assert.True(x.IsActive);
+            Assert.Null(x.UpdatedAt);
         });
     }
 
