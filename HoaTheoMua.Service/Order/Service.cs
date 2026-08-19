@@ -735,9 +735,17 @@ public class Service : IService
 
     public async Task<string> CancelOrder(Guid id)
     {
+        //nếu người dùng đó đặt hàng thì mới cho người dùng đó hủy đơn hàng
+        var userId = _currentUser.GetRequiredUserId();
+        
+        if (!_currentUser.IsVerified)
+        {
+            throw new UnauthorizedException("User is not verified");
+        }
+        
         var isExistPendingOrder = await _dbContext.Orders.
             FirstOrDefaultAsync(x =>
-                x.Id == id && x.Status == "Pending");
+                x.Id == id && x.Status == "Pending" && x.UserId == userId);
 
         if (isExistPendingOrder == null)
         {

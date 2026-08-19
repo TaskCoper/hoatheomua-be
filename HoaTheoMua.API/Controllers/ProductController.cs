@@ -39,6 +39,13 @@ public class ProductController: ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("/api/v1/product")]
+    public async Task<IActionResult> GetLocalProductByList([FromBody] Request.GetProductWithList request)
+    {
+        var result = await _productService.GetProductWithList(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpGet("/api/v2/products")]
     public async Task<IActionResult> GetLocalProductsV2([FromQuery] Request.LocalProductQueryRequest request)
     {
