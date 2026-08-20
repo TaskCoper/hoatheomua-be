@@ -473,7 +473,6 @@ public class Service : IService
 
         var hasParent = !string.IsNullOrWhiteSpace(response.ParentProductId);
         var hasChildren = !string.IsNullOrWhiteSpace(response.NhanhProductId);
-
         if (hasParent || hasChildren)
         {
             // Parent and children used to be loaded by two separate queries. They are
