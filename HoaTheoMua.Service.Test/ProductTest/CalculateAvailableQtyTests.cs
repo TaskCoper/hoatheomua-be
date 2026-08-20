@@ -419,7 +419,7 @@ public class CalculateAvailableQtyTests
     #region UT-013: GetLocalProductDetail Integration Tests
 
     [Fact]
-    public async Task UT_013_01_GetLocalProductDetail_NormalProduct_HasNullSellableQuantityAndStockStatus()
+    public async Task UT_013_01_GetLocalProductDetail_NormalProduct_UsesStockForSellableQuantity()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -431,8 +431,8 @@ public class CalculateAvailableQtyTests
         var result = await service.GetLocalProductDetail(product.Id);
 
         Assert.Equal(product.Id, result.Id);
-        Assert.Null(result.SellableQuantity);
-        Assert.Null(result.StockStatus);
+        Assert.Equal(15, result.SellableQuantity);
+        Assert.Equal("Còn hàng", result.StockStatus);
     }
 
     [Fact]

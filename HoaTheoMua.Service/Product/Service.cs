@@ -499,48 +499,50 @@ public class Service : IService
                 .Select(LocalProductDetailSelector)
                 .ToListAsync();
 
-        var isCombo = response.ProductType == "Combo" ||
-                      (response.Children != null && response.Children.Any(c => c.ProductType == "Combo"));
-
-        if (isCombo)
+        var productsToCalculate = new List<ProductQtyProjection>
         {
-            var productsToCalculate = new List<ProductQtyProjection>
+            new()
             {
-                new()
-                {
-                    Id = response.Id,
-                    ProductType = response.ProductType,
-                    ParentProductId = response.ParentProductId,
-                    NhanhProductId = response.NhanhProductId,
-                    Stock = response.Stock
-                }
-            };
-            productsToCalculate.AddRange(response.Children.Select(c => new ProductQtyProjection
-            {
-                Id = c.Id,
-                ProductType = c.ProductType,
-                ParentProductId = c.ParentProductId,
-                NhanhProductId = c.NhanhProductId,
-                Stock = c.Stock
-            }));
-
-            var quantities = await CalculateAvailableQty(productsToCalculate);
-
-            if (quantities.TryGetValue(response.Id, out var mainInfo))
-            {
-                response.SellableQuantity = mainInfo.SellableQuantity;
-                response.StockStatus = mainInfo.StockStatus;
+                Id = response.Id,
+                ProductType = response.ProductType,
+                ParentProductId = response.ParentProductId,
+                NhanhProductId = response.NhanhProductId,
+                Stock = response.Stock
             }
-            if (response.Children != null)
+        };
+        productsToCalculate.AddRange(response.Children.Select(c => new ProductQtyProjection
+        {
+            Id = c.Id,
+            ProductType = c.ProductType,
+            ParentProductId = c.ParentProductId,
+            NhanhProductId = c.NhanhProductId,
+            Stock = c.Stock
+        }));
+
+        var quantities = await CalculateAvailableQty(productsToCalculate);
+
+        if (quantities.TryGetValue(response.Id, out var mainInfo))
+        {
+            response.SellableQuantity = mainInfo.SellableQuantity;
+            response.StockStatus = mainInfo.StockStatus;
+        }
+        else
+        {
+            response.SellableQuantity = 0;
+            response.StockStatus = "Hết hàng";
+        }
+
+        foreach (var child in response.Children)
+        {
+            if (quantities.TryGetValue(child.Id, out var childInfo))
             {
-                foreach (var child in response.Children)
-                {
-                    if (quantities.TryGetValue(child.Id, out var childInfo))
-                    {
-                        child.SellableQuantity = childInfo.SellableQuantity;
-                        child.StockStatus = childInfo.StockStatus;
-                    }
-                }
+                child.SellableQuantity = childInfo.SellableQuantity;
+                child.StockStatus = childInfo.StockStatus;
+            }
+            else
+            {
+                child.SellableQuantity = 0;
+                child.StockStatus = "Hết hàng";
             }
         }
 
