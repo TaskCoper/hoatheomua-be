@@ -316,8 +316,6 @@ public class Service : IService
 
         var query = _dbContext.Products
             .AsNoTracking()
-            .Include(p => p.CategoryProductDetails)
-            .ThenInclude(cpd => cpd.CategoryProduct)
             .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
@@ -415,10 +413,17 @@ public class Service : IService
             .ToListAsync();
 
         var mappedItems = items.Select(MapToProductDetailResponse).ToList();
-        if (mappedItems.Any())
+        if (items.Count > 0)
         {
-            var productIds = mappedItems.Select(p => p.Id).ToList();
-            var comboQuantities = await CalculateAvailableQty(productIds);
+            var comboQuantities = await CalculateAvailableQty(
+                items.Select(p => new ProductQtyProjection
+                {
+                    Id = p.Id,
+                    ProductType = p.ProductType,
+                    ParentProductId = p.ParentProductId,
+                    NhanhProductId = p.NhanhProductId,
+                    Stock = p.Stock
+                }).ToList());
             foreach (var response in mappedItems)
             {
                 if (comboQuantities.TryGetValue(response.Id, out var comboInfo))
@@ -460,8 +465,6 @@ public class Service : IService
     {
         var response = await _dbContext.Products
             .AsNoTracking()
-            .Include(x => x.CategoryProductDetails)
-                .ThenInclude(x => x.CategoryProduct)
             .Where(p => p.Id == id && !p.IsDeleted)
             .Select(LocalProductDetailSelector)
             .FirstOrDefaultAsync();
@@ -473,16 +476,6 @@ public class Service : IService
 
         var isParentProduct = string.IsNullOrWhiteSpace(response.ParentProductId);
 
-        var childrenTask = isParentProduct && !string.IsNullOrWhiteSpace(response.NhanhProductId)
-            ? _dbContext.Products
-                .AsNoTracking()
-                .Where(p =>
-                    !p.IsDeleted &&
-                    p.ParentProductId == response.NhanhProductId)
-                .Select(LocalProductDetailSelector)
-                .ToListAsync()
-            : Task.FromResult(new List<Response.LocalProductDetailResponse>());
-
         if (!isParentProduct)
         {
             var parentId = await _dbContext.Products
@@ -491,27 +484,47 @@ public class Service : IService
                 .Select(p => p.Id)
                 .FirstOrDefaultAsync();
 
-            response.Parent = new Response.ParentProductResponse { Id = parentId };
+            response.ParentId = parentId == Guid.Empty ? null : parentId;
         }
         else
         {
-            response.Parent = null;
+            response.ParentId = null;
         }
 
-        response.Children = await childrenTask;
+        response.Children = !isParentProduct || string.IsNullOrWhiteSpace(response.NhanhProductId)
+            ? new List<Response.LocalProductDetailResponse>()
+            : await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted && p.ParentProductId == response.NhanhProductId)
+                .Select(LocalProductDetailSelector)
+                .ToListAsync();
 
         var isCombo = response.ProductType == "Combo" ||
                       (response.Children != null && response.Children.Any(c => c.ProductType == "Combo"));
 
         if (isCombo)
         {
-            var idsToCalculate = new List<Guid> { response.Id };
-            if (response.Children != null && response.Children.Any())
+            var productsToCalculate = new List<ProductQtyProjection>
             {
-                idsToCalculate.AddRange(response.Children.Select(c => c.Id));
-            }
+                new()
+                {
+                    Id = response.Id,
+                    ProductType = response.ProductType,
+                    ParentProductId = response.ParentProductId,
+                    NhanhProductId = response.NhanhProductId,
+                    Stock = response.Stock
+                }
+            };
+            productsToCalculate.AddRange(response.Children.Select(c => new ProductQtyProjection
+            {
+                Id = c.Id,
+                ProductType = c.ProductType,
+                ParentProductId = c.ParentProductId,
+                NhanhProductId = c.NhanhProductId,
+                Stock = c.Stock
+            }));
 
-            var quantities = await CalculateAvailableQty(idsToCalculate);
+            var quantities = await CalculateAvailableQty(productsToCalculate);
 
             if (quantities.TryGetValue(response.Id, out var mainInfo))
             {
@@ -833,7 +846,7 @@ public class Service : IService
 
     public async Task<Dictionary<Guid, (int SellableQuantity, string StockStatus)>> CalculateAvailableQty(List<Guid> productIds)
     {
-        if (productIds == null || !productIds.Any())
+        if (productIds == null || productIds.Count == 0)
             return new Dictionary<Guid, (int, string)>();
 
         var products = await _dbContext.Products
@@ -849,26 +862,32 @@ public class Service : IService
             })
             .ToListAsync();
 
-        var result = new Dictionary<Guid, (int SellableQuantity, string StockStatus)>();
+        return await CalculateAvailableQty(products);
+    }
+
+    private async Task<Dictionary<Guid, (int SellableQuantity, string StockStatus)>> CalculateAvailableQty(
+        IReadOnlyCollection<ProductQtyProjection> products)
+    {
+        if (products.Count == 0)
+            return new Dictionary<Guid, (int, string)>();
+
+        var result = new Dictionary<Guid, (int SellableQuantity, string StockStatus)>(products.Count);
 
         var directComboIds = products
             .Where(p => p.ProductType == "Combo")
             .Select(p => p.Id)
-            .ToList();
+            .ToHashSet();
 
-        var parents = products
+        var parentNhanhIds = products
             .Where(p => p.ProductType == "Sản phẩm" && string.IsNullOrEmpty(p.ParentProductId))
-            .ToList();
+            .Select(p => p.NhanhProductId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Select(id => id!)
+            .ToHashSet();
 
-        var parentNhanhIds = parents
-            .Where(p => !string.IsNullOrEmpty(p.NhanhProductId))
-            .Select(p => p.NhanhProductId!)
-            .ToList();
-
-        List<ProductQtyProjection> comboVariants = new();
-        if (parentNhanhIds.Any())
-        {
-            comboVariants = await _dbContext.Products
+        var comboVariants = parentNhanhIds.Count == 0
+            ? new List<ProductQtyProjection>()
+            : await _dbContext.Products
                 .AsNoTracking()
                 .Where(p => !p.IsDeleted &&
                             p.ProductType == "Combo" &&
@@ -876,60 +895,41 @@ public class Service : IService
                 .Select(p => new ProductQtyProjection
                 {
                     Id = p.Id,
-                    ProductType = p.ProductType,
-                    ParentProductId = p.ParentProductId,
-                    NhanhProductId = p.NhanhProductId,
-                    Stock = p.Stock
+                    ParentProductId = p.ParentProductId
                 })
                 .ToListAsync();
-        }
 
-        var comboParents = new List<ProductQtyProjection>();
-        var normalProducts = new List<ProductQtyProjection>();
+        var comboVariantsByParent = comboVariants.ToLookup(v => v.ParentProductId);
 
-        foreach (var parent in parents)
-        {
-            var hasComboVariants = comboVariants.Any(v => v.ParentProductId == parent.NhanhProductId);
-            if (hasComboVariants)
-            {
-                comboParents.Add(parent);
-            }
-            else
-            {
-                normalProducts.Add(parent);
-            }
-        }
+        var comboIdsToCalculate = directComboIds
+            .Concat(comboVariants.Select(v => v.Id))
+            .ToHashSet();
+        var comboQuantities = new Dictionary<Guid, int>(comboIdsToCalculate.Count);
 
-        foreach (var product in normalProducts)
-        {
-            var stock = (int)(product.Stock ?? 0);
-            result[product.Id] = (stock, stock > 0 ? "Còn hàng" : "Hết hàng");
-        }
-
-        var variantComboIds = comboVariants.Select(v => v.Id).ToList();
-        var comboIdsToCalculate = directComboIds.Concat(variantComboIds).Distinct().ToList();
-
-        if (comboIdsToCalculate.Any())
+        if (comboIdsToCalculate.Count > 0)
         {
             var specifications = await _dbContext.ComboSpecifications
                 .AsNoTracking()
                 .Where(cs => !cs.IsDeleted &&
                              cs.IsActive &&
+                             cs.IsCore &&
                              comboIdsToCalculate.Contains(cs.SubId))
+                .Select(cs => new { cs.SubId, cs.MatId, cs.Quantity })
                 .ToListAsync();
+            var specificationsByCombo = specifications.ToLookup(s => s.SubId);
 
-            var materialIds = specifications.Select(s => s.MatId).Distinct().ToList();
-            var inventories = await _dbContext.Products
-                .AsNoTracking()
-                .Where(p => materialIds.Contains(p.Id))
-                .Select(p => new { p.Id, Stock = (int)(p.Stock ?? 0) })
-                .ToDictionaryAsync(p => p.Id, p => p.Stock);
+            var materialIds = specifications.Select(s => s.MatId).ToHashSet();
+            var inventories = materialIds.Count == 0
+                ? new Dictionary<Guid, int>()
+                : await _dbContext.Products
+                    .AsNoTracking()
+                    .Where(p => materialIds.Contains(p.Id) && !p.IsDeleted)
+                    .Select(p => new { p.Id, Stock = (int)(p.Stock ?? 0) })
+                    .ToDictionaryAsync(p => p.Id, p => p.Stock);
 
-            var comboQuantities = new Dictionary<Guid, int>();
             foreach (var comboId in comboIdsToCalculate)
             {
-                var comboSpecs = specifications.Where(cs => cs.SubId == comboId).ToList();
-                var coreSpecs = comboSpecs.Where(cs => cs.IsCore).ToList();
+                var coreSpecs = specificationsByCombo[comboId];
 
                 if (!coreSpecs.Any())
                 {
@@ -954,24 +954,28 @@ public class Service : IService
                 comboQuantities[comboId] = hasValidCore ? minQty : 0;
             }
 
-            foreach (var comboId in directComboIds)
+        }
+
+        foreach (var product in products)
+        {
+            var quantity = (int)(product.Stock ?? 0);
+
+            if (product.ProductType == "Combo")
             {
-                var qty = comboQuantities.TryGetValue(comboId, out var q) ? q : 0;
-                result[comboId] = (qty, qty > 0 ? "Còn hàng" : "Hết hàng");
+                quantity = comboQuantities.GetValueOrDefault(product.Id);
+            }
+            else if (product.ProductType == "Sản phẩm" &&
+                     string.IsNullOrEmpty(product.ParentProductId) &&
+                     !string.IsNullOrEmpty(product.NhanhProductId))
+            {
+                var variants = comboVariantsByParent[product.NhanhProductId];
+                if (variants.Any())
+                    quantity = variants.Min(v => comboQuantities.GetValueOrDefault(v.Id));
             }
 
-            foreach (var parent in comboParents)
-            {
-                var variants = comboVariants.Where(v => v.ParentProductId == parent.NhanhProductId).ToList();
-                if (!variants.Any())
-                {
-                    result[parent.Id] = (0, "Hết hàng");
-                    continue;
-                }
-
-                var minQty = variants.Min(v => comboQuantities.TryGetValue(v.Id, out var q) ? q : 0);
-                result[parent.Id] = (minQty, minQty > 0 ? "Còn hàng" : "Hết hàng");
-            }
+            result[product.Id] = (
+                quantity,
+                quantity > 0 ? "Còn hàng" : "Hết hàng");
         }
 
         return result;
