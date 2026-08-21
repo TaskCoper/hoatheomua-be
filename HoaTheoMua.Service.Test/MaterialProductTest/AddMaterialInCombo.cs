@@ -327,7 +327,7 @@ public class AddMaterialInCombo
     }
 
     [Fact]
-    public async Task AddMaterialInCombo_SoftDeletedSpecifications_RevivesExistingRows()
+    public async Task AddMaterialInCombo_SoftDeletedSpecifications_CreatesNewActiveRows()
     {
         await using var dbContext = CreateDbContext();
         var deletedParent = CreateSpecification(
@@ -344,8 +344,6 @@ public class AddMaterialInCombo
             isCore: false,
             isActive: false,
             isDeleted: true);
-        var originalIds = new[] { deletedParent.Id, deletedChild.Id };
-
         dbContext.Products.AddRange(
             CreateParentCombo(),
             CreateChildProduct(ChildSmallId, "combo-a-s", factor: 2m),
@@ -357,15 +355,21 @@ public class AddMaterialInCombo
             ComboId,
             CreateRequest(MatCoreId, quantity: 3, isCore: true));
 
-        var specifications = await dbContext.ComboSpecifications.OrderBy(x => x.SubId).ToListAsync();
+        var specifications = await dbContext.ComboSpecifications
+            .Where(x => !x.IsDeleted)
+            .OrderBy(x => x.SubId)
+            .ToListAsync();
         Assert.Equal(2, specifications.Count);
-        Assert.Equal(originalIds.OrderBy(x => x), specifications.Select(x => x.Id).OrderBy(x => x));
+        Assert.DoesNotContain(specifications, x => x.Id == deletedParent.Id || x.Id == deletedChild.Id);
+        Assert.Equal(4, await dbContext.ComboSpecifications.CountAsync());
+        Assert.All(
+            await dbContext.ComboSpecifications.Where(x => x.IsDeleted).ToListAsync(),
+            x => Assert.Contains(x.Id, new[] { deletedParent.Id, deletedChild.Id }));
         Assert.All(specifications, x =>
         {
             Assert.False(x.IsDeleted);
             Assert.True(x.IsCore);
             Assert.True(x.IsActive);
-            Assert.NotNull(x.UpdatedAt);
         });
         Assert.Equal(3m, specifications.Single(x => x.SubId == ComboId).Quantity);
         Assert.Equal(6m, specifications.Single(x => x.SubId == ChildSmallId).Quantity);

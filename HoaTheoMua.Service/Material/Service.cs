@@ -1,7 +1,10 @@
+using System.Data;
+using System.Data.Common;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace HoaTheoMua.Service.Material;
 
@@ -51,6 +54,26 @@ public class Service : IService
             throw new BadRequestException(includeMaterialId ? $"INVALID_QUANTITY:{matId}" : "INVALID_QUANTITY");
     }
 
+    private static async Task SafeRollbackAsync(IDbContextTransaction transaction)
+    {
+        try
+        {
+            await transaction.RollbackAsync();
+        }
+        catch (DbException)
+        {
+            // Transaction có thể đã bị DB hủy sẵn (ví dụ nạn nhân của deadlock).
+            // Nuốt lỗi ở đây để không che mất exception gốc; `await using` sẽ dispose.
+        }
+    }
+    
+    private sealed record CalculatedChildSpec(
+        Guid MatId,
+        decimal? Quantity,
+        bool IsCore,
+        bool IsActive,
+        decimal? AvailableForSale);
+
     public async Task<string> AddMaterialInCombo(Guid comboId, Request.MaterialComboRequest request)
     {
         if (request.Items is null || request.Items.Count == 0)
@@ -74,11 +97,11 @@ public class Service : IService
         var matIds = items.Select(x => x.MatId).ToList();
 
         var combo = await _dbContext.Products
-            .AsNoTracking()
-            .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
-            .Select(x => new { x.Id, x.NhanhProductId, x.ProductType })
-            .FirstOrDefaultAsync()
-            ?? throw new NotFoundException("COMBO_NOT_FOUND");
+                        .AsNoTracking()
+                        .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
+                        .Select(x => new { x.Id, x.NhanhProductId, x.ProductType })
+                        .FirstOrDefaultAsync()
+                    ?? throw new NotFoundException("COMBO_NOT_FOUND");
 
         if (string.IsNullOrWhiteSpace(combo.NhanhProductId))
             throw new BadRequestException("COMBO_NOT_SYNCED");
@@ -117,7 +140,7 @@ public class Service : IService
         var syncableChildren = await _dbContext.Products
             .AsNoTracking()
             .Where(x => x.ParentProductId == combo.NhanhProductId && !x.IsDeleted)
-            .Select(x => new { x.Id, x.Factor })   // decimal?, Factor null -> không mặc định 1m
+            .Select(x => new { x.Id, x.Factor }) 
             .ToListAsync();
 
         // Combo không size (ProductType = "Combo") không có combo con:
@@ -142,18 +165,14 @@ public class Service : IService
             .Append(comboId)
             .ToList();
 
-        var existingSpecs = await _dbContext.ComboSpecifications
-            .Where(x => targetIds.Contains(x.SubId) && matIds.Contains(x.MatId))
-            .ToListAsync();
+        var hasActiveSpec = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .AnyAsync(x => targetIds.Contains(x.SubId)
+                           && matIds.Contains(x.MatId)
+                           && !x.IsDeleted);
 
-        if (existingSpecs.Any(x => !x.IsDeleted))
+        if (hasActiveSpec)
             throw new ConflictException("MATERIAL_ALREADY_EXISTS");
-
-        var existingSpecMap = existingSpecs
-            .GroupBy(x => (x.SubId, x.MatId))
-            .ToDictionary(
-                x => x.Key,
-                x => x.OrderByDescending(y => y.UpdatedAt ?? y.CreatedAt).First());
 
         var calculatedSpecs = new List<(Guid SubId, Guid MatId, decimal? Quantity, bool IsCore, bool IsActive)>();
 
@@ -193,15 +212,15 @@ public class Service : IService
 
         foreach (var calculated in calculatedSpecs)
         {
-            if (existingSpecMap.TryGetValue((calculated.SubId, calculated.MatId), out var deletedSpec))
-            {
-                deletedSpec.Quantity = calculated.Quantity;
-                deletedSpec.IsCore = calculated.IsCore;
-                deletedSpec.IsActive = calculated.IsActive;
-                deletedSpec.IsDeleted = false;
-                deletedSpec.UpdatedAt = now;
-                continue;
-            }
+            // if (existingSpecMap.TryGetValue((calculated.SubId, calculated.MatId), out var deletedSpec))
+            // {
+            //     deletedSpec.Quantity = calculated.Quantity;
+            //     deletedSpec.IsCore = calculated.IsCore;
+            //     deletedSpec.IsActive = calculated.IsActive;
+            //     deletedSpec.IsDeleted = false;
+            //     deletedSpec.UpdatedAt = now;
+            //     continue;
+            // }
 
             toInsert.Add(new ComboSpecification
             {
@@ -248,11 +267,11 @@ public class Service : IService
 
         // 2. Load combo cha
         var combo = await _dbContext.Products
-            .AsNoTracking()
-            .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
-            .Select(x => new { x.Id, x.NhanhProductId })
-            .FirstOrDefaultAsync()
-            ?? throw new NotFoundException("COMBO_NOT_FOUND");
+                        .AsNoTracking()
+                        .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
+                        .Select(x => new { x.Id, x.NhanhProductId })
+                        .FirstOrDefaultAsync()
+                    ?? throw new NotFoundException("COMBO_NOT_FOUND");
 
         if (string.IsNullOrWhiteSpace(combo.NhanhProductId))
             throw new BadRequestException("COMBO_NOT_SYNCED");
@@ -275,8 +294,9 @@ public class Service : IService
         var syncableChildren = await _dbContext.Products
             .AsNoTracking()
             .Where(x => x.ParentProductId == combo.NhanhProductId && !x.IsDeleted)
-            .Select(x => new { x.Id, x.Factor })   // decimal?
+            .Select(x => new { x.Id, x.Factor })
             .ToListAsync();
+        //co the dung any() throw ra cung duoc
 
         foreach (var child in syncableChildren)
         {
@@ -293,22 +313,21 @@ public class Service : IService
         // Lưu ý: KHÔNG check "already exists" ở đây như Add — Update yêu cầu spec
         // phải đã tồn tại từ trước (được xác nhận ở bước 6), nên check đó luôn throw nhầm.
         var existingSpecs = await _dbContext.ComboSpecifications
-            .Where(x => targetIds.Contains(x.SubId) && matIds.Contains(x.MatId))
+            .Where(x => targetIds.Contains(x.SubId) && matIds.Contains(x.MatId) && !x.IsDeleted)
             .ToListAsync();
-
+        
         var specMap = existingSpecs
             .GroupBy(x => (x.SubId, x.MatId))
             .ToDictionary(
                 group => group.Key,
                 group => group
-                    .OrderBy(x => x.IsDeleted)
-                    .ThenByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+                    .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
                     .First());
 
         // 6. Material phải tồn tại trong recipe cha
         foreach (var item in items)
         {
-            if (!specMap.TryGetValue((comboId, item.MatId), out var parentSpec) || parentSpec.IsDeleted)
+            if (!specMap.TryGetValue((comboId, item.MatId), out _))
                 throw new NotFoundException($"MATERIAL_NOT_FOUND:{item.MatId}");
         }
 
@@ -360,7 +379,7 @@ public class Service : IService
             }
         }
 
-        // 9. Update hoặc insert specification
+        // 9. Update hoặc insert specification — không hồi sinh dòng đã xóa.
         var now = DateTimeOffset.UtcNow;
         var toInsert = new List<ComboSpecification>();
 
@@ -380,11 +399,11 @@ public class Service : IService
                     specification.IsActive = parentSpec.IsActive;
                 }
 
-                specification.IsDeleted = false;
                 specification.UpdatedAt = now;
                 continue;
             }
 
+            // Chưa có dòng active -> tạo dòng MỚI, kể cả khi từng có dòng đã xóa.
             var isActive = calculated.SubId == comboId
                 ? calculated.IsActive
                 : specMap[(comboId, calculated.MatId)].IsActive;
@@ -410,102 +429,138 @@ public class Service : IService
 
         return "Cập nhật vật liệu trong công thức thành công.";
     }
-
+    
     public async Task<string> DeleteMaterialInCombo(Guid comboId, Request.DeleteMaterial request)
     {
-        if (request.Materials is null || request.Materials.Count == 0)
+        // ---- 1. Validate request -----------------------------------------------
+        if (request?.Materials is null || request.Materials.Count == 0)
             throw new BadRequestException("INVALID_INPUT");
+
+        if (request.Materials.Any(x => x == Guid.Empty))
+            throw new BadRequestException("INVALID_MATERIAL_ID");
 
         var matIds = request.Materials.ToHashSet();
 
-        var isRelational = _dbContext.Database.IsRelational();
+        // ---- 2. Mở transaction Serializable ------------------------------------
+        // Serializable chặn tình huống hai Quản trị viên cùng lúc xóa hai dòng CORE
+        // khác nhau: cả hai đều đọc thấy "vẫn còn CORE khác" rồi cùng xóa, làm công
+        // thức mất sạch CORE. Check ở tầng ứng dụng không chặn được việc này.
+        await using var transaction = await _dbContext.Database
+            .BeginTransactionAsync(IsolationLevel.Serializable);
 
-        // Serializable prevents concurrent requests from deleting different CORE rows
-        // after validating against the same recipe state.
-        await using var transaction = isRelational
-            ? await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable)
-            : null;
-
-        var combo = await _dbContext.Products
-                        .AsNoTracking()
-                        .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
-                        .Select(x => new { x.NhanhProductId })
-                        .FirstOrDefaultAsync()
-                    ?? throw new NotFoundException("COMBO_NOT_FOUND");
-
-        var nhanhProductId = combo.NhanhProductId;
-
-        if (string.IsNullOrWhiteSpace(nhanhProductId))
-            throw new BadRequestException("COMBO_NOT_SYNCED");
-
-        var parentSpecs = await _dbContext.ComboSpecifications
-            .AsNoTracking()
-            .Where(x => x.SubId == comboId
-                        && !x.IsDeleted
-                        && (matIds.Contains(x.MatId) || (x.IsCore && x.IsActive)))
-            .Select(x => new { x.MatId, x.IsCore, x.IsActive })
-            .ToListAsync();
-
-        var parentMatIds = parentSpecs.Select(x => x.MatId).ToHashSet();
-        if (!matIds.IsSubsetOf(parentMatIds))
-            throw new NotFoundException("MATERIAL_NOT_FOUND_IN_RECIPE");
-
-        var hasCoreAfterDelete = parentSpecs.Any(x =>
-            x.IsCore && x.IsActive && !matIds.Contains(x.MatId));
-
-        if (!hasCoreAfterDelete)
-            throw new BadRequestException("CORE_MATERIAL_REQUIRED");
-
-        var now = DateTimeOffset.UtcNow;
-
-        if (isRelational)
+        try
         {
-            await _dbContext.ComboSpecifications
-                .Where(x => !x.IsDeleted
-                            && matIds.Contains(x.MatId)
-                            && (x.SubId == comboId || _dbContext.Products.Any(product =>
-                                product.Id == x.SubId
-                                && product.ParentProductId == nhanhProductId
-                                && !product.IsDeleted)))
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(x => x.IsDeleted, true)
-                    .SetProperty(x => x.UpdatedAt, now));
+            // ---- 3. Load combo cha ---------------------------------------------
+            var combo = await _dbContext.Products
+                            .AsNoTracking()
+                            .Where(x => x.Id == comboId
+                                        && x.ParentProductId == null
+                                        && !x.IsDeleted)
+                            .Select(x => new { x.NhanhProductId })
+                            .FirstOrDefaultAsync()
+                        ?? throw new NotFoundException("COMBO_NOT_FOUND");
+            var nhanhProductId = combo.NhanhProductId;
 
-            await transaction!.CommitAsync();
-        }
-        else
-        {
-            // ExecuteUpdate is not available for the EF InMemory provider used by service tests.
-            var specsToDelete = await _dbContext.ComboSpecifications
-                .Where(x =>
-                    !x.IsDeleted &&
-                    matIds.Contains(x.MatId) &&
-                    (
-                        x.SubId == comboId ||
-                        _dbContext.Products.Any(product =>
-                            product.Id == x.SubId &&
-                            product.ParentProductId == combo.NhanhProductId &&
-                            !product.IsDeleted)
-                    ))
+            if (string.IsNullOrWhiteSpace(nhanhProductId))
+                throw new BadRequestException("COMBO_NOT_SYNCED");
+
+            // ---- 4. Load dòng công thức còn hiệu lực của combo cha ---------------
+            // IsDeleted = true coi như không tồn tại, không đọc tới.
+            var parentSpecs = await _dbContext.ComboSpecifications
+                .AsNoTracking()
+                .Where(x => x.SubId == comboId
+                            && !x.IsDeleted
+                            && (matIds.Contains(x.MatId) || (x.IsCore && x.IsActive)))
+                .Select(x => new { x.MatId, x.IsCore, x.IsActive })
                 .ToListAsync();
 
-            foreach (var spec in specsToDelete)
+            var parentMatIds = parentSpecs.Select(x => x.MatId).ToHashSet();
+
+            // Vật liệu được yêu cầu nhưng không còn dòng hiệu lực nào trong công thức.
+            // Nguyên nhân phổ biến nhất là trang đang mở đã cũ, hoặc người khác vừa xóa
+            // (EXC-02 / AC-011). Frontend nhận mã này thì làm mới công thức.
+            var missing = matIds.Where(id => !parentMatIds.Contains(id)).ToList();
+
+            if (missing.Count > 0)
+                throw new ConflictException($"RECIPE_CHANGED:{string.Join(',', missing)}");
+
+            // ---- 5. Kiểm tra ràng buộc CORE ------------------------------------
+            var activeCoreMatIds = parentSpecs
+                .Where(x => x.IsCore && x.IsActive)
+                .Select(x => x.MatId)
+                .ToHashSet();
+
+            // 5a. Công thức vốn đã không còn dòng CORE active nào -> dữ liệu ở trạng
+            //     thái không hợp lệ từ trước, không phải lỗi của thao tác hiện tại.
+            //     Tách mã lỗi để người dùng không hiểu nhầm là dòng họ đang xóa có vấn đề.
+            if (activeCoreMatIds.Count == 0)
+                throw new BadRequestException("RECIPE_HAS_NO_ACTIVE_CORE");
+
+            // 5b. Chặn cả lô nếu lô xóa làm mất dòng CORE cuối cùng (EXC-03 / AC-008).
+            //     Không xóa một phần: người dùng chọn một lô là chọn một ý định.
+            if (activeCoreMatIds.All(id => matIds.Contains(id)))
+                throw new BadRequestException("CORE_MATERIAL_REQUIRED");
+
+            // ---- 6. Xóa mềm ở combo cha và toàn bộ combo con --------------------
+            var now = DateTimeOffset.UtcNow;
+
+            var specificationsToDelete = await _dbContext.ComboSpecifications
+                .Where(x => !x.IsDeleted
+                            && matIds.Contains(x.MatId)
+                            && (x.SubId == comboId
+                                || _dbContext.Products.Any(product =>
+                                    product.Id == x.SubId
+                                    && product.ParentProductId == nhanhProductId
+                                    && !product.IsDeleted)))
+                .ToListAsync();
+
+            foreach (var specification in specificationsToDelete)
             {
-                spec.IsDeleted = true;
-                spec.UpdatedAt = now;
+                specification.IsDeleted = true;
+                specification.UpdatedAt = now;
+                // specification.DeletedAt = now;
+                // TODO: specification.DeletedBy = _currentUser.Id khi có sẵn accessor
             }
 
-            await _dbContext.SaveChangesAsync();
-        }
+            var affected = specificationsToDelete.Count;
 
-        return "Xóa vật liệu khỏi công thức thành công";
+            if (affected > 0)
+                await _dbContext.SaveChangesAsync();
+
+            if (affected == 0)
+                throw new ConflictException("RECIPE_CHANGED");
+
+            await transaction.CommitAsync();
+
+            return "Xóa vật liệu khỏi công thức thành công";
+        }
+        catch (DbUpdateException)
+        {
+            // Ghi thất bại ở tầng EF
+            await SafeRollbackAsync(transaction);
+            throw new ConflictException("RECIPE_UPDATE_FAILED");
+        }
+        catch (DbException)
+        {
+            // Deadlock, timeout, mất kết nối. Với Serializable, deadlock là cơ chế
+            // bình thường khi có tranh chấp chứ không phải trường hợp hiếm.
+            await SafeRollbackAsync(transaction);
+            throw new ConflictException("RECIPE_UPDATE_FAILED");
+        }
+        // Các exception nghiệp vụ (BadRequest/NotFound/Conflict) không bị bắt ở đây;
+        // chúng thoát ra ngoài và transaction được rollback khi `await using` dispose.
     }
 
     public async Task<string> UpdateChildProductWithFactor(Request.UpdateMaterialChildRequest request)
     {
-        if (request is null || request.Factor is not null && request.Factor <= 0)
+        // ---- 1. Validate request -----------------------------------------------
+        if (request is null)
+            throw new BadRequestException("INVALID_INPUT");
+
+        if (request.Factor is not null && request.Factor <= 0)
             throw new BadRequestException("INVALID_FACTOR");
 
+        // ---- 2. Load combo con và combo cha ------------------------------------
         var childProduct = await _dbContext.Products
                                .FirstOrDefaultAsync(x => x.Id == request.ProductId && !x.IsDeleted)
                            ?? throw new NotFoundException("PRODUCT_NOT_FOUND");
@@ -515,13 +570,14 @@ public class Service : IService
 
         var parentProduct = await _dbContext.Products
                                 .AsNoTracking()
-                                .Where(x => x.NhanhProductId == childProduct.ParentProductId &&
-                                            x.ParentProductId == null &&
-                                            !x.IsDeleted)
+                                .Where(x => x.NhanhProductId == childProduct.ParentProductId
+                                            && x.ParentProductId == null
+                                            && !x.IsDeleted)
                                 .Select(x => new { x.Id })
                                 .FirstOrDefaultAsync()
                             ?? throw new NotFoundException("PARENT_PRODUCT_NOT_FOUND");
 
+        // ---- 3. Load công thức cha (chỉ dòng còn hiệu lực) ----------------------
         var parentSpecifications = await _dbContext.ComboSpecifications
             .AsNoTracking()
             .Where(x => x.SubId == parentProduct.Id && !x.IsDeleted)
@@ -541,66 +597,90 @@ public class Service : IService
         if (parentSpecifications.Count == 0)
             throw new NotFoundException("PARENT_COMBO_SPECIFICATION_NOT_FOUND");
 
-        var calculatedSpecifications = parentSpecifications
-            .Select(item =>
+        // ---- 4. Tính định lượng con, gom hết lỗi rồi mới báo --------------------
+        var calculatedSpecifications = new List<CalculatedChildSpec>();
+        var invalidParentQuantities = new List<string>();
+        var invalidChildQuantities = new List<string>();
+
+        foreach (var item in parentSpecifications)
+        {
+            var materialName = string.IsNullOrWhiteSpace(item.ProductName)
+                ? item.MatId.ToString()
+                : item.ProductName;
+
+            // Định lượng cha lẽ ra luôn > 0 (Add/Update đã ép). Rơi vào đây nghĩa là
+            // dữ liệu cha đang lệch, KHÔNG phải người dùng nhập sai hệ số.
+            if (item.Quantity is null || item.Quantity <= 0)
             {
-                if (item.Quantity is null || item.Quantity <= 0)
-                {
-                    var materialName = string.IsNullOrWhiteSpace(item.ProductName)
-                        ? item.MatId.ToString()
-                        : item.ProductName;
-                    throw new BadRequestException($"INVALID_QUANTITY:{materialName}");
-                }
+                invalidParentQuantities.Add(materialName);
+                continue;
+            }
 
-                decimal? calculated = request.Factor is null
-                    ? null
-                    : CalculateChildQuantity(
-                        item.Quantity.Value,
-                        request.Factor.Value,
-                        item.ProductLabel,
-                        item.Unit);
+            // Chưa có hệ số -> định lượng con để trống, không phải 0.
+            decimal? calculated = request.Factor is null
+                ? null
+                : CalculateChildQuantity(
+                    item.Quantity.Value,
+                    request.Factor.Value,
+                    item.ProductLabel,
+                    item.Unit);
 
-                if (calculated is not null && calculated <= 0)
-                {
-                    var materialName = string.IsNullOrWhiteSpace(item.ProductName)
-                        ? item.MatId.ToString()
-                        : item.ProductName;
-                    throw new BadRequestException($"INVALID_QUANTITY:{materialName}");
-                }
+            // EXC-03 / AC-010: định lượng con rơi xuống 0 sau khi làm tròn.
+            if (calculated is not null && calculated <= 0)
+            {
+                invalidChildQuantities.Add(materialName);
+                continue;
+            }
 
-                return new
-                {
-                    item.MatId,
-                    Quantity = calculated,
-                    item.IsCore,
-                    item.IsActive,
-                    item.AvailableForSale
-                };
-            })
+            calculatedSpecifications.Add(new CalculatedChildSpec(
+                item.MatId, calculated, item.IsCore, item.IsActive, item.AvailableForSale));
+        }
+
+        if (invalidParentQuantities.Count > 0)
+            throw new BadRequestException(
+                $"PARENT_RECIPE_INVALID_QUANTITY:{string.Join(", ", invalidParentQuantities)}");
+
+        if (invalidChildQuantities.Count > 0)
+            throw new BadRequestException(
+                $"INVALID_QUANTITY:{string.Join(", ", invalidChildQuantities)}");
+
+        // ---- 5. Kiểm tra CORE — TRƯỚC khi sửa bất kỳ entity nào -----------------
+        // Nguồn là công thức cha, nên đổi hệ số không thể làm mất CORE. Câu này chỉ
+        // fail khi công thức cha vốn đã hỏng -> dùng mã riêng để không khiến người
+        // dùng tưởng lỗi nằm ở hệ số họ vừa nhập.
+        var coreSpecifications = calculatedSpecifications
+            .Where(x => x.IsCore && x.IsActive)
             .ToList();
+
+        if (coreSpecifications.Count == 0)
+            throw new BadRequestException("PARENT_RECIPE_HAS_NO_ACTIVE_CORE");
+
+        // ---- 6. Load công thức con đang hiệu lực -------------------------------
+        // Dòng IsDeleted = true coi như không tồn tại: không đọc, không hồi sinh.
+        var childSpecifications = await _dbContext.ComboSpecifications
+            .Where(x => x.SubId == childProduct.Id && !x.IsDeleted)
+            .ToListAsync();
 
         var parentMatIds = calculatedSpecifications.Select(x => x.MatId).ToHashSet();
 
-        // Load toàn bộ công thức con để có thể loại bỏ những dòng không còn ở công thức cha.
-        var childSpecifications = await _dbContext.ComboSpecifications
-            .Where(x => x.SubId == childProduct.Id)
-            .ToListAsync();
-
+        // Giữ một dòng cho mỗi vật liệu. Sau khi có unique index lọc theo IsDeleted
+        // thì mỗi cặp (SubId, MatId) chỉ còn tối đa một dòng hiệu lực và GroupBy này
+        // thành thừa — giữ lại cho tới khi migration chạy xong và dữ liệu trùng cũ
+        // đã được dọn.
         var childSpecificationMap = childSpecifications
             .Where(x => parentMatIds.Contains(x.MatId))
             .GroupBy(x => x.MatId)
             .ToDictionary(
                 g => g.Key,
-                g => g.OrderBy(x => x.IsDeleted)
-                    .ThenByDescending(x => x.UpdatedAt ?? x.CreatedAt)
-                    .First());
+                g => g.OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt).First());
 
-        var staleDuplicates = childSpecifications
-            .Where(x => !x.IsDeleted &&
-                        (!parentMatIds.Contains(x.MatId) ||
-                         !ReferenceEquals(x, childSpecificationMap[x.MatId])))
+        // Dòng cần dọn: vật liệu không còn ở công thức cha, hoặc dòng trùng dư ra.
+        var staleSpecifications = childSpecifications
+            .Where(x => !parentMatIds.Contains(x.MatId)
+                        || !ReferenceEquals(x, childSpecificationMap[x.MatId]))
             .ToList();
 
+        // ---- 7. Ghi công thức con ----------------------------------------------
         var now = DateTimeOffset.UtcNow;
         var toInsert = new List<ComboSpecification>();
 
@@ -608,45 +688,45 @@ public class Service : IService
         {
             if (childSpecificationMap.TryGetValue(item.MatId, out var childSpecification))
             {
+                // Dòng đang hiệu lực -> cập nhật tại chỗ.
                 childSpecification.Quantity = item.Quantity;
                 childSpecification.IsCore = item.IsCore;
                 childSpecification.IsActive = item.IsActive;
-                childSpecification.IsDeleted = false;
                 childSpecification.UpdatedAt = now;
+                continue;
             }
-            else
+
+            // Chưa có dòng hiệu lực -> tạo dòng MỚI, kể cả khi từng có dòng đã xóa.
+            toInsert.Add(new ComboSpecification
             {
-                toInsert.Add(new ComboSpecification
-                {
-                    Id = Guid.NewGuid(),
-                    SubId = childProduct.Id,
-                    MatId = item.MatId,
-                    Quantity = item.Quantity,
-                    IsCore = item.IsCore,
-                    IsActive = item.IsActive,
-                    IsDeleted = false,
-                    CreatedAt = now
-                });
-            }
+                Id = Guid.NewGuid(),
+                SubId = childProduct.Id,
+                MatId = item.MatId,
+                Quantity = item.Quantity,
+                IsCore = item.IsCore,
+                IsActive = item.IsActive,
+                IsDeleted = false,
+                CreatedAt = now
+            });
         }
 
-        foreach (var dup in staleDuplicates)
+        foreach (var stale in staleSpecifications)
         {
-            dup.IsDeleted = true;
-            dup.UpdatedAt = now;
+            stale.IsDeleted = true;
+            stale.UpdatedAt = now;
+            // stale.DeletedAt = now; // CẦN MIGRATION: cột DeletedAt
         }
 
-        var coreSpecifications = calculatedSpecifications
-            .Where(x => x.IsCore && x.IsActive)
-            .ToList();
-
-        if (!coreSpecifications.Any())
-            throw new BadRequestException("CORE_MATERIAL_REQUIRED");
+        // ---- 8. Cập nhật hệ số --------------------------------------------------
+        // TREO — cần chốt cách biểu diễn "chưa xác định" trước khi bật lại:
+        // gán 0 cho trường hợp chưa có hệ số là SAI, vì 0 nghĩa là hết hàng còn chưa
+        // có hệ số nghĩa là chưa cấu hình. Hai thứ này người vận hành xử lý khác nhau.
         //
         // childProduct.AvailableForSale = request.Factor is null
-        //     ? 0m
+        //     ? null
         //     : coreSpecifications.Min(x =>
         //         Math.Floor((x.AvailableForSale ?? 0m) / x.Quantity!.Value));
+
         childProduct.Factor = request.Factor;
         childProduct.UpdatedAt = now;
 

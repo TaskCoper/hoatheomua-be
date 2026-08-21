@@ -364,7 +364,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("MatId");
 
                     b.HasIndex("SubId", "MatId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("ComboSpecifications");
                 });

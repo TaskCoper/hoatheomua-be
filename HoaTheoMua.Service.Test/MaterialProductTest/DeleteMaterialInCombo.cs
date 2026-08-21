@@ -1,6 +1,7 @@
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 using ComboSpecEntity = HoaTheoMua.Repository.Entity.ComboSpecification;
 using MaterialRequest = HoaTheoMua.Service.Material.Request;
@@ -66,7 +67,7 @@ public class DeleteMaterialInCombo
     }
 
     [Fact]
-    public async Task DeleteMaterialInCombo_MaterialNotInParentRecipe_ThrowsNotFound()
+    public async Task DeleteMaterialInCombo_MaterialNotInParentRecipe_ThrowsConflict()
     {
         await using var dbContext = CreateDbContext();
         SeedComboRecipe(dbContext);
@@ -78,10 +79,10 @@ public class DeleteMaterialInCombo
             Materials = [MissingMatId]
         };
 
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
+        var ex = await Assert.ThrowsAsync<ConflictException>(
             () => service.DeleteMaterialInCombo(ComboId, request));
 
-        Assert.Equal("MATERIAL_NOT_FOUND_IN_RECIPE", ex.Message);
+        Assert.Equal($"RECIPE_CHANGED:{MissingMatId}", ex.Message);
         Assert.All(dbContext.ComboSpecifications, x => Assert.False(x.IsDeleted));
     }
 
@@ -186,6 +187,7 @@ public class DeleteMaterialInCombo
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AppDbContext(options);

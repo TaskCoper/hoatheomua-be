@@ -30,8 +30,7 @@ public class ComboSpecificationConfiguration: IEntityTypeConfiguration<ComboSpec
             .OnDelete(DeleteBehavior.Restrict);
         
         builder.HasIndex(x => new { x.SubId, x.MatId })
-            .IsUnique();
-        
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
     }
-
 }

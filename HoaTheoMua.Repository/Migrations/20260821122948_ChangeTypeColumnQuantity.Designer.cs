@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260820171056_ChangeTypeColumnQuantity")]
+    [Migration("20260821122948_ChangeTypeColumnQuantity")]
     partial class ChangeTypeColumnQuantity
     {
         /// <inheritdoc />
@@ -367,7 +367,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("MatId");
 
                     b.HasIndex("SubId", "MatId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("ComboSpecifications");
                 });
