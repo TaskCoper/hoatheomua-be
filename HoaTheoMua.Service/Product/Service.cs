@@ -1128,11 +1128,9 @@ public class Service : IService
         request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
-        var searchPattern = "thành phần";
-        
         var query = _dbContext.Products.AsNoTracking()
             .Where(p => !p.IsDeleted && p.ProductLabel != null &&
-                        p.ProductLabel.ToLower() == searchPattern);
+                        (p.ProductLabel.ToLower() == "thành phần" || p.ProductLabel.ToLower() == "phụ liệu"));
         
         int totalItems = await query.CountAsync();
                 
