@@ -76,7 +76,7 @@ public class Service : IService
         var combo = await _dbContext.Products
             .AsNoTracking()
             .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
-            .Select(x => new { x.Id, x.NhanhProductId })
+            .Select(x => new { x.Id, x.NhanhProductId, x.ProductType })
             .FirstOrDefaultAsync()
             ?? throw new NotFoundException("COMBO_NOT_FOUND");
 
@@ -96,6 +96,9 @@ public class Service : IService
 
         // Sau khi thêm, công thức cha phải còn ít nhất 1 material core + active
         // (tính cả material đang add mới lẫn material core-active đã có sẵn không nằm trong request)
+        //Note: context: Khi mà combo A (có các biến thể S, L) có có cách Hoa Lan, Hoa Hồng
+        //con factor = null thi van luu thang cha, va con nhung thang con, thang nao co factor == null thi luu null
+        //tuong ung voi cac vat lieu trong combo
         var existingParentSpecs = await _dbContext.ComboSpecifications
             .AsNoTracking()
             .Where(x => x.SubId == comboId && !x.IsDeleted && !matIds.Contains(x.MatId))
@@ -117,7 +120,15 @@ public class Service : IService
             .Select(x => new { x.Id, x.Factor })   // decimal?, Factor null -> không mặc định 1m
             .ToListAsync();
 
-        if (syncableChildren.Count == 0)
+        // Combo không size (ProductType = "Combo") không có combo con:
+        // chỉ lưu công thức ở combo cha, không nhân Factor và không tạo dòng cho child.
+        var normalizedProductType = combo.ProductType?.Trim().ToUpperInvariant();
+        var isComboProductType = normalizedProductType == "COMBO";
+        var isNoSizeCombo =
+            isComboProductType &&
+            syncableChildren.Count == 0;
+
+        if (!isNoSizeCombo && syncableChildren.Count == 0)
             throw new BadRequestException("COMBO_CHILDREN_REQUIRED");
 
         foreach (var child in syncableChildren)
@@ -144,24 +155,37 @@ public class Service : IService
                 x => x.Key,
                 x => x.OrderByDescending(y => y.UpdatedAt ?? y.CreatedAt).First());
 
-        var calculatedSpecs = new List<(Guid SubId, Guid MatId, decimal Quantity, bool IsCore, bool IsActive)>();
+        var calculatedSpecs = new List<(Guid SubId, Guid MatId, decimal? Quantity, bool IsCore, bool IsActive)>();
 
         foreach (var item in items)
         {
             var material = materialMap[item.MatId];
             var parentQuantity = CalculateParentQuantity(item.Quantity, material.ProductLabel, material.Unit);
+            //
             ValidateChildQuantity(parentQuantity, item.MatId);
 
             // Combo cha: giữ nguyên số lượng đã tính, không nhân Factor
             calculatedSpecs.Add((comboId, item.MatId, parentQuantity, item.IsCore, item.IsActive));
 
+            if (isNoSizeCombo)
+                continue;
+
             foreach (var child in syncableChildren)
             {
-                var childQuantity = CalculateChildQuantity(
-                    parentQuantity, child.Factor, material.ProductLabel, material.Unit);
-                ValidateChildQuantity(childQuantity, item.MatId);
+                decimal? childQuantity = child.Factor is null
+                    ? null
+                    : CalculateChildQuantity(
+                        parentQuantity,
+                        child.Factor,
+                        material.ProductLabel,
+                        material.Unit);
+
+                if (childQuantity is not null)
+                    ValidateChildQuantity(childQuantity.Value, item.MatId);
+
                 calculatedSpecs.Add((child.Id, item.MatId, childQuantity, item.IsCore, item.IsActive));
             }
+            //
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -254,9 +278,6 @@ public class Service : IService
             .Select(x => new { x.Id, x.Factor })   // decimal?
             .ToListAsync();
 
-        if (syncableChildren.Count == 0)
-            throw new BadRequestException("COMBO_CHILDREN_REQUIRED");
-
         foreach (var child in syncableChildren)
         {
             if (child.Factor is not null && child.Factor <= 0)
@@ -311,7 +332,7 @@ public class Service : IService
             throw new BadRequestException("CORE_MATERIAL_REQUIRED");
 
         // 8. Calculate quantity parent và child
-        var calculatedSpecs = new List<(Guid SubId, Guid MatId, decimal Quantity, bool IsCore, bool IsActive)>();
+        var calculatedSpecs = new List<(Guid SubId, Guid MatId, decimal? Quantity, bool IsCore, bool IsActive)>();
 
         foreach (var item in items)
         {
@@ -324,10 +345,16 @@ public class Service : IService
 
             foreach (var child in syncableChildren)
             {
-                var childQuantity = CalculateChildQuantity(
-                    parentQuantity, child.Factor, material.ProductLabel, material.Unit);
+                decimal? childQuantity = child.Factor is null
+                    ? null
+                    : CalculateChildQuantity(
+                        parentQuantity,
+                        child.Factor,
+                        material.ProductLabel,
+                        material.Unit);
 
-                ValidateChildQuantity(childQuantity, item.MatId);
+                if (childQuantity is not null)
+                    ValidateChildQuantity(childQuantity.Value, item.MatId);
 
                 calculatedSpecs.Add((child.Id, item.MatId, childQuantity, item.IsCore, item.IsActive));
             }
@@ -476,7 +503,7 @@ public class Service : IService
 
     public async Task<string> UpdateChildProductWithFactor(Request.UpdateMaterialChildRequest request)
     {
-        if (request.Factor <= 0)
+        if (request is null || request.Factor is not null && request.Factor <= 0)
             throw new BadRequestException("INVALID_FACTOR");
 
         var childProduct = await _dbContext.Products
@@ -517,9 +544,23 @@ public class Service : IService
         var calculatedSpecifications = parentSpecifications
             .Select(item =>
             {
-                var calculated = CalculateChildQuantity(item.Quantity, request.Factor, item.ProductLabel, item.Unit);
+                if (item.Quantity is null || item.Quantity <= 0)
+                {
+                    var materialName = string.IsNullOrWhiteSpace(item.ProductName)
+                        ? item.MatId.ToString()
+                        : item.ProductName;
+                    throw new BadRequestException($"INVALID_QUANTITY:{materialName}");
+                }
 
-                if (calculated <= 0)
+                decimal? calculated = request.Factor is null
+                    ? null
+                    : CalculateChildQuantity(
+                        item.Quantity.Value,
+                        request.Factor.Value,
+                        item.ProductLabel,
+                        item.Unit);
+
+                if (calculated is not null && calculated <= 0)
                 {
                     var materialName = string.IsNullOrWhiteSpace(item.ProductName)
                         ? item.MatId.ToString()
@@ -599,11 +640,13 @@ public class Service : IService
             .Where(x => x.IsCore && x.IsActive)
             .ToList();
 
-        if (coreSpecifications.Count == 0)
+        if (!coreSpecifications.Any())
             throw new BadRequestException("CORE_MATERIAL_REQUIRED");
-
-        childProduct.AvailableForSale = coreSpecifications.Min(x =>
-            Math.Floor((x.AvailableForSale ?? 0m) / x.Quantity));
+        //
+        // childProduct.AvailableForSale = request.Factor is null
+        //     ? 0m
+        //     : coreSpecifications.Min(x =>
+        //         Math.Floor((x.AvailableForSale ?? 0m) / x.Quantity!.Value));
         childProduct.Factor = request.Factor;
         childProduct.UpdatedAt = now;
 

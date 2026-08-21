@@ -11,7 +11,7 @@ public class ComboSpecification: BaseEntity<Guid>, IAuditableEntity
     public Guid MatId { get; set; }
     public Product Mat { get; set; } = null!;
 
-    public decimal Quantity { get; set; }
+    public decimal? Quantity { get; set; }
     public bool IsCore { get; set; }
     public bool IsActive { get; set; }
     

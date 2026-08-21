@@ -350,8 +350,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("MatId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal?>("Quantity")
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("SubId")
                         .HasColumnType("uuid");

@@ -10,8 +10,7 @@ public class ComboSpecificationConfiguration: IEntityTypeConfiguration<ComboSpec
     {
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Quantity)
-            .IsRequired();
+        builder.Property(x => x.Quantity);
 
         builder.Property(x => x.IsCore)
             .IsRequired();

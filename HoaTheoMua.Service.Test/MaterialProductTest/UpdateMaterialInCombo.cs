@@ -43,9 +43,11 @@ public class UpdateMaterialInCombo
             .ToListAsync();
 
         Assert.Equal(3, specifications.Count);
+        Assert.Equal(10m, specifications.Single(x => x.SubId == ComboId).Quantity);
+        Assert.Null(specifications.Single(x => x.SubId == ChildSmallId).Quantity);
+        Assert.Null(specifications.Single(x => x.SubId == ChildLargeId).Quantity);
         Assert.All(specifications, x =>
         {
-            Assert.Equal(10, x.Quantity);
             Assert.True(x.IsCore);
             Assert.True(x.IsActive);
         });
@@ -127,9 +129,35 @@ public class UpdateMaterialInCombo
         var childSpecification = await dbContext.ComboSpecifications
             .SingleAsync(x => x.SubId == ChildSmallId && x.MatId == MatCoreId && !x.IsDeleted);
 
-        Assert.Equal(10, childSpecification.Quantity);
+        Assert.Null(childSpecification.Quantity);
         Assert.True(childSpecification.IsCore);
         Assert.True(childSpecification.IsActive);
+    }
+
+    [Fact]
+    public async Task UpdateMaterialInCombo_ChildWithFactor_UpdatesChildQuantityFromParent()
+    {
+        await using var dbContext = CreateDbContext();
+        SeedParentChildrenAndMaterials(dbContext);
+        dbContext.Products.Local.Single(x => x.Id == ChildSmallId).Factor = 1.5m;
+        dbContext.ComboSpecifications.AddRange(
+            CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true),
+            CreateSpecification(ChildSmallId, MatCoreId, quantity: 5, isCore: true),
+            CreateSpecification(ChildLargeId, MatCoreId, quantity: 5, isCore: true));
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).UpdateMaterialInCombo(
+            ComboId,
+            CreateRequest(MatCoreId, quantity: 10, isCore: true));
+
+        Assert.Equal(
+            10m,
+            (await dbContext.ComboSpecifications.SingleAsync(x => x.SubId == ComboId)).Quantity);
+        Assert.Equal(
+            15m,
+            (await dbContext.ComboSpecifications.SingleAsync(x => x.SubId == ChildSmallId)).Quantity);
+        Assert.Null(
+            (await dbContext.ComboSpecifications.SingleAsync(x => x.SubId == ChildLargeId)).Quantity);
     }
 
     [Fact]

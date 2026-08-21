@@ -24,6 +24,6 @@ public class Request
     public class UpdateMaterialChildRequest
     {
         public Guid ProductId { get; set; }
-        public decimal Factor { get; set; }
+        public decimal? Factor { get; set; }
     }
 }

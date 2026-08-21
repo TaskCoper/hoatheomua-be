@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class changeTypeColumnQuantity : Migration
+    public partial class ChangeTypeColumnQuantity : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -14,7 +14,7 @@ namespace HoaTheoMua.Repository.Migrations
                 name: "Quantity",
                 table: "ComboSpecifications",
                 type: "numeric",
-                nullable: false,
+                nullable: true,
                 oldClrType: typeof(int),
                 oldType: "integer");
         }
@@ -27,11 +27,10 @@ namespace HoaTheoMua.Repository.Migrations
                 table: "ComboSpecifications",
                 type: "integer",
                 nullable: false,
+                defaultValue: 0,
                 oldClrType: typeof(decimal),
-                oldType: "numeric");
+                oldType: "numeric",
+                oldNullable: true);
         }
     }
 }
-
-
-

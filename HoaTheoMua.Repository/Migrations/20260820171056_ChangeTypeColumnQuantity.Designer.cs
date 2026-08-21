@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260818031151_changeTypeColumnQuantity")]
-    partial class changeTypeColumnQuantity
+    [Migration("20260820171056_ChangeTypeColumnQuantity")]
+    partial class ChangeTypeColumnQuantity
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -353,7 +353,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("MatId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("Quantity")
+                    b.Property<decimal?>("Quantity")
                         .HasColumnType("numeric");
 
                     b.Property<Guid>("SubId")

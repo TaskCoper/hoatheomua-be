@@ -113,6 +113,57 @@ public class DeleteMaterialInCombo
         Assert.All(dbContext.ComboSpecifications, x => Assert.False(x.IsDeleted));
     }
 
+    [Fact]
+    public async Task DeleteMaterialInCombo_NoSizeCombo_DeletesMaterialFromParentOnly()
+    {
+        await using var dbContext = CreateDbContext();
+        var parentCombo = CreateParentCombo();
+        parentCombo.ProductType = "Combo";
+
+        dbContext.Products.AddRange(
+            parentCombo,
+            CreateMaterial(MatCoreId),
+            CreateMaterial(MatSupportId));
+        dbContext.ComboSpecifications.AddRange(
+            CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true),
+            CreateSpecification(ComboId, MatSupportId, quantity: 2, isCore: false));
+        await dbContext.SaveChangesAsync();
+
+        var result = await CreateService(dbContext).DeleteMaterialInCombo(
+            ComboId,
+            new MaterialRequest.DeleteMaterial { Materials = [MatSupportId] });
+
+        Assert.Equal("Xóa vật liệu khỏi công thức thành công", result);
+
+        var specifications = await dbContext.ComboSpecifications.ToListAsync();
+        Assert.Equal(2, specifications.Count);
+        Assert.True(specifications.Single(x => x.MatId == MatSupportId).IsDeleted);
+        Assert.False(specifications.Single(x => x.MatId == MatCoreId).IsDeleted);
+    }
+
+    [Fact]
+    public async Task DeleteMaterialInCombo_NoSizeCombo_LastCoreMaterial_ThrowsBadRequest()
+    {
+        await using var dbContext = CreateDbContext();
+        var parentCombo = CreateParentCombo();
+        parentCombo.ProductType = "Combo";
+
+        dbContext.Products.AddRange(
+            parentCombo,
+            CreateMaterial(MatCoreId));
+        dbContext.ComboSpecifications.Add(
+            CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).DeleteMaterialInCombo(
+                ComboId,
+                new MaterialRequest.DeleteMaterial { Materials = [MatCoreId] }));
+
+        Assert.Equal("CORE_MATERIAL_REQUIRED", exception.Message);
+        Assert.False((await dbContext.ComboSpecifications.SingleAsync()).IsDeleted);
+    }
+
     private static void SeedComboRecipe(AppDbContext dbContext)
     {
         dbContext.Products.AddRange(

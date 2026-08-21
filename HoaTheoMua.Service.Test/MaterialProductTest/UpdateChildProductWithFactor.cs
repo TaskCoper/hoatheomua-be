@@ -50,6 +50,33 @@ public class UpdateChildProductWithFactor
     }
 
     [Fact]
+    public async Task UpdateChildProductWithFactor_NullFactor_ClearsChildQuantities()
+    {
+        await using var dbContext = CreateDbContext();
+        SeedParentAndChildRecipe(dbContext);
+        await dbContext.SaveChangesAsync();
+
+        var result = await CreateService(dbContext).UpdateChildProductWithFactor(
+            new MaterialRequest.UpdateMaterialChildRequest
+            {
+                ProductId = ChildLargeId,
+                Factor = null
+            });
+
+        Assert.Equal("Cập nhật hệ số và định lượng sản phẩm con thành công", result);
+
+        var childProduct = await dbContext.Products.FirstAsync(x => x.Id == ChildLargeId);
+        var childSpecifications = await dbContext.ComboSpecifications
+            .Where(x => x.SubId == ChildLargeId && !x.IsDeleted)
+            .ToListAsync();
+
+        Assert.Null(childProduct.Factor);
+        // AvailableForSale is not recalculated by UpdateChildProductWithFactor.
+        Assert.Equal(2, childSpecifications.Count);
+        Assert.All(childSpecifications, x => Assert.Null(x.Quantity));
+    }
+
+    [Fact]
     public async Task UpdateChildProductWithFactor_AppliesUnitAndAuxiliaryRules()
     {
         await using var dbContext = CreateDbContext();
@@ -81,7 +108,7 @@ public class UpdateChildProductWithFactor
     }
 
     [Fact]
-    public async Task UpdateChildProductWithFactor_SynchronizesRecipeAndRecalculatesAvailableForSale()
+    public async Task UpdateChildProductWithFactor_SynchronizesRecipe()
     {
         await using var dbContext = CreateDbContext();
         var accessoryId = Guid.NewGuid();
@@ -120,7 +147,7 @@ public class UpdateChildProductWithFactor
         Assert.Equal(10m, childCore.Quantity);
         Assert.Equal(3m, childAccessory.Quantity);
         Assert.True(orphan.IsDeleted);
-        Assert.Equal(10m, childProduct.AvailableForSale);
+        // AvailableForSale is not recalculated by UpdateChildProductWithFactor.
         Assert.NotNull(childProduct.UpdatedAt);
     }
 

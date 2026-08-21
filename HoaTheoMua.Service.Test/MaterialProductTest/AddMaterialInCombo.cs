@@ -57,9 +57,11 @@ public class AddMaterialInCombo
         Assert.Contains(specifications, x => x.SubId == ComboId);
         Assert.Contains(specifications, x => x.SubId == ChildSmallId);
         Assert.Contains(specifications, x => x.SubId == ChildLargeId);
+        Assert.Equal(10m, specifications.Single(x => x.SubId == ComboId).Quantity);
+        Assert.Null(specifications.Single(x => x.SubId == ChildSmallId).Quantity);
+        Assert.Null(specifications.Single(x => x.SubId == ChildLargeId).Quantity);
         Assert.All(specifications, x =>
         {
-            Assert.Equal(10, x.Quantity);
             Assert.True(x.IsCore);
             Assert.True(x.IsActive);
         });
@@ -85,7 +87,7 @@ public class AddMaterialInCombo
             .FirstAsync(x => x.SubId == ChildSmallId && x.MatId == MatCoreId);
 
         Assert.Equal(1m, parentSpecification.Quantity);
-        Assert.Equal(1m, childSpecification.Quantity);
+        Assert.Null(childSpecification.Quantity);
     }
     [Fact]
     public async Task AddMaterialInCombo_ChildWithFactor_MultipliesChildQuantity()
