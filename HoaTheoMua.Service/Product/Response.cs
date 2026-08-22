@@ -203,7 +203,7 @@ public class Response
         public string? Unit { get; set; }
         public decimal? AvailableForSale { get; set; }
         public string? CoverImage { get; set; }
-       
+        public string? ProductLabel { get; set; }
     }
     
     public class ProductResponseWithList

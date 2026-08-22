@@ -57,12 +57,11 @@ namespace HoaTheoMua.Service.Test.ProductTest
             );
         }
 
-        /// Test: Lọc đúng nguyên liệu theo cả 2 nhãn "Thành phần" và "Phụ liệu" (không phân biệt hoa/thường),
+        /// Test: Khi không truyền ProductLabel (hoặc null/rỗng), API trả về cả 2 loại nhãn "Thành phần" và "Phụ liệu",
         /// đồng thời bỏ qua các sản phẩm đã xóa (IsDeleted = true) và các loại khác (Combo, Sản phẩm thường).
         [Fact]
-        public async Task GetMaterialsAsync_FiltersByProductLabel_ReturnsOnlyMaterials()
+        public async Task GetMaterialsAsync_NoProductLabelProvided_ReturnsBothThanhPhanAndPhuLieu()
         {
-            // Arrange: Cả "Thành phần" và "Phụ liệu" (không phân biệt hoa thường), loại bỏ IsDeleted = true và các loại khác
             var products = new List<ProductEntity>
             {
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
@@ -78,7 +77,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
 
-            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10 };
+            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10, ProductLabel = null };
 
             var result = await service.GetMaterialsAsync(request);
 
@@ -88,26 +87,24 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Equal(4, result.Value.Items.Count);
         }
 
-        /// Test: Trường hợp DB chỉ có các sản phẩm nhãn "Phụ liệu",
-        /// kiểm tra hàm lọc và trả về chính xác danh sách phụ liệu đang hoạt động.
+        /// Test: Khi FE truyền ProductLabel = "Thành phần" (không phân biệt hoa/thường),
+        /// API chỉ lọc và trả về các sản phẩm mang nhãn "Thành phần".
         [Fact]
-        public async Task GetMaterialsAsync_OnlyPhuLieuInDb_ReturnsOnlyPhuLieuMaterials()
+        public async Task GetMaterialsAsync_ProductLabelThanhPhanProvided_ReturnsOnlyThanhPhan()
         {
-            // Arrange: DB chỉ có các sản phẩm nhãn "Phụ liệu"
-            var phuLieu1Id = Guid.NewGuid();
-            var phuLieu2Id = Guid.NewGuid();
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = phuLieu1Id, ProductName = "Giấy gói báo", ProductLabel = "Phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = phuLieu2Id, ProductName = "Xốp cắm hoa Oasis", ProductLabel = "phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giỏ hoa đã xóa", ProductLabel = "Phụ liệu", IsDeleted = true },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Bó hoa hoàn chỉnh", ProductLabel = "Sản phẩm", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Cúc", ProductLabel = "thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Ruy Băng", ProductLabel = "phụ liệu", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Đã Xóa", ProductLabel = "Thành phần", IsDeleted = true }
             };
 
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
 
-            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10 };
+            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10, ProductLabel = "Thành phần" };
 
             var result = await service.GetMaterialsAsync(request);
 
@@ -116,57 +113,52 @@ namespace HoaTheoMua.Service.Test.ProductTest
 
             var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
             Assert.Equal(2, items.Count);
-            Assert.Contains(items, x => x.MaterialId == phuLieu1Id.ToString() && x.MaterialName == "Giấy gói báo");
-            Assert.Contains(items, x => x.MaterialId == phuLieu2Id.ToString() && x.MaterialName == "Xốp cắm hoa Oasis");
+            Assert.All(items, item => Assert.True(item.ProductLabel?.Equals("thành phần", StringComparison.OrdinalIgnoreCase)));
         }
 
-        /// Test: Trường hợp DB chỉ có các sản phẩm nhãn "Thành phần",
-        /// đảm bảo logic lọc hoa/thành phần nguyên bản vẫn hoạt động chính xác.
+        /// Test: Khi FE truyền ProductLabel = "Phụ liệu" (không phân biệt hoa/thường),
+        /// API chỉ lọc và trả về các sản phẩm mang nhãn "Phụ liệu".
         [Fact]
-        public async Task GetMaterialsAsync_OnlyThanhPhanInDb_ReturnsOnlyThanhPhanMaterials()
+        public async Task GetMaterialsAsync_ProductLabelPhuLieuProvided_ReturnsOnlyPhuLieu()
         {
-            // Arrange: DB chỉ có các sản phẩm nhãn "Thành phần"
-            var thanhPhan1Id = Guid.NewGuid();
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = thanhPhan1Id, ProductName = "Hoa Baby Trắng", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Lẵng hoa chúc mừng", ProductLabel = "Combo", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói Hàn Quốc", ProductLabel = "Phụ liệu", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Ruy Băng Satin", ProductLabel = "phụ liệu", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Phụ Liệu Đã Xóa", ProductLabel = "Phụ liệu", IsDeleted = true }
             };
 
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
 
-            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10 };
+            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10, ProductLabel = "phụ liệu" };
 
             var result = await service.GetMaterialsAsync(request);
 
             Assert.NotNull(result);
-            Assert.Equal(1, result.Value.TotalCount);
+            Assert.Equal(2, result.Value.TotalCount);
 
             var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
-            Assert.Single(items);
-            Assert.Equal(thanhPhan1Id.ToString(), items[0].MaterialId);
-            Assert.Equal("Hoa Baby Trắng", items[0].MaterialName);
+            Assert.Equal(2, items.Count);
+            Assert.All(items, item => Assert.True(item.ProductLabel?.Equals("phụ liệu", StringComparison.OrdinalIgnoreCase)));
         }
 
-        /// Test: Đảm bảo các sản phẩm có nhãn null hoặc mang các nhãn khác (Combo, Sản phẩm, Khác)
-        /// sẽ bị loại trừ hoàn toàn, không trả về trong danh sách nguyên liệu.
+        /// Test: Khi FE truyền ProductLabel không tồn tại trong DB,
+        /// API trả về danh sách rỗng và TotalCount = 0.
         [Fact]
-        public async Task GetMaterialsAsync_ProductLabelNullOrOther_Excluded()
+        public async Task GetMaterialsAsync_ProductLabelNonExistentProvided_ReturnsEmpty()
         {
-            // Arrange: Các sản phẩm có ProductLabel = null hoặc các nhãn khác không phải Thành phần / Phụ liệu
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Null Label Product", ProductLabel = null, IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo Product", ProductLabel = "Combo", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Finished Product", ProductLabel = "Sản phẩm", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Other Label", ProductLabel = "Khác", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false }
             };
 
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
 
-            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10 };
+            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10, ProductLabel = "Nhãn không tồn tại" };
 
             var result = await service.GetMaterialsAsync(request);
 
@@ -181,7 +173,6 @@ namespace HoaTheoMua.Service.Test.ProductTest
         [Fact]
         public async Task GetMaterialsAsync_Pagination_ReturnsCorrectPageSize()
         {
-            // Arrange: 15 materials (mix giữa Thành phần và Phụ liệu)
             var products = new List<ProductEntity>();
             for (int i = 0; i < 15; i++)
             {
@@ -216,7 +207,6 @@ namespace HoaTheoMua.Service.Test.ProductTest
         [Fact]
         public async Task GetMaterialsAsync_InvalidPagination_AdjustsToDefaults()
         {
-            // Arrange: PageIndex <= 0 -> 1, PageSize <= 0 -> 10, PageSize > 100 -> 100
             var products = new List<ProductEntity>
             {
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "Phụ liệu 1", ProductLabel = "Phụ liệu", IsDeleted = false }
@@ -225,13 +215,13 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
 
-            // Test 1: PageIndex <= 0 and PageSize <= 0
+            // Case 1: PageIndex <= 0 và PageSize <= 0
             var request1 = new Request.GetMaterialsRequest { PageIndex = -1, PageSize = 0 };
             var result1 = await service.GetMaterialsAsync(request1);
             Assert.Equal(1, result1.Value.PageIndex);
             Assert.Equal(10, result1.Value.PageSize);
 
-            // Test 2: PageSize > 100 caps at 100
+            // Case 2: PageSize > 100 giới hạn về 100
             var request2 = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 500 };
             var result2 = await service.GetMaterialsAsync(request2);
             Assert.Equal(1, result2.Value.PageIndex);
@@ -239,7 +229,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
         }
 
         /// Test: Kiểm tra việc ánh xạ (mapping) dữ liệu từ Product Entity sang MaterialResponse DTO
-        /// đầy đủ và chính xác tất cả các trường (Id, Mã, Tên, Đơn vị, Tồn kho, Ảnh đại diện).
+        /// đầy đủ và chính xác tất cả các trường (Id, Mã, Tên, Đơn vị, Tồn kho, Ảnh đại diện, ProductLabel).
         [Fact]
         public async Task GetMaterialsAsync_FieldMapping_ReturnsExpectedFields()
         {
@@ -277,6 +267,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Equal("Cuộn", item.Unit);
             Assert.Equal(45.5m, item.AvailableForSale);
             Assert.Equal("https://cdn.example.com/ruy-bang-do.png", item.CoverImage);
+            Assert.Equal("Phụ liệu", item.ProductLabel);
         }
 
         /// Test: Trường hợp DB hoàn toàn không có nguyên liệu nào (không có Thành phần lẫn Phụ liệu),
@@ -284,7 +275,6 @@ namespace HoaTheoMua.Service.Test.ProductTest
         [Fact]
         public async Task GetMaterialsAsync_NoMaterialsInDb_ReturnsEmptyList()
         {
-            // Arrange: DB không có sản phẩm "Thành phần" hay "Phụ liệu"
             var products = new List<ProductEntity>
             {
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo 1", ProductLabel = "Combo", IsDeleted = false },

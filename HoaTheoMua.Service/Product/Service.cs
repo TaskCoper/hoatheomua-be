@@ -1129,8 +1129,17 @@ public class Service : IService
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
         var query = _dbContext.Products.AsNoTracking()
-            .Where(p => !p.IsDeleted && p.ProductLabel != null &&
-                        (p.ProductLabel.ToLower() == "thành phần" || p.ProductLabel.ToLower() == "phụ liệu"));
+            .Where(p => !p.IsDeleted && p.ProductLabel != null);
+
+        if (!string.IsNullOrWhiteSpace(request.ProductLabel))
+        {
+            var normalizedLabel = request.ProductLabel.Trim().ToLower();
+            query = query.Where(p => p.ProductLabel!.ToLower() == normalizedLabel);
+        }
+        else
+        {
+            query = query.Where(p => p.ProductLabel!.ToLower() == "thành phần" || p.ProductLabel!.ToLower() == "phụ liệu");
+        }
         
         int totalItems = await query.CountAsync();
                 
@@ -1146,6 +1155,7 @@ public class Service : IService
             Unit = p.Unit ?? null,
             AvailableForSale = p.AvailableForSale ?? 0,
             CoverImage = p.CoverImage,
+            ProductLabel = p.ProductLabel,
         }).ToListAsync();
 
         return ApiResponseFactory.BasePagination(items, request.PageIndex, request.PageSize, totalItems);
