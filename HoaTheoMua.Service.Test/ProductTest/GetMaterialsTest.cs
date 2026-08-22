@@ -168,6 +168,93 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Empty(items);
         }
 
+        /// Test: Tìm kiếm theo tên sản phẩm (Search theo ProductName, không phân biệt hoa/thường).
+        [Fact]
+        public async Task GetMaterialsAsync_SearchByProductName_ReturnsMatchingMaterials()
+        {
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HH01", ProductName = "Hoa Hồng Đỏ", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HH02", ProductName = "Hoa Hồng Trắng", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HC01", ProductName = "Hoa Cúc Mẫu Đơn", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "PL01", ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false }
+            };
+
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10, Search = "hồng" };
+
+            var result = await service.GetMaterialsAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal(2, result.Value.TotalCount);
+
+            var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
+            Assert.Equal(2, items.Count);
+            Assert.All(items, item => Assert.Contains("Hồng", item.MaterialName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// Test: Tìm kiếm theo mã thành phần/phụ liệu (Search theo ProductCode, không phân biệt hoa/thường).
+        [Fact]
+        public async Task GetMaterialsAsync_SearchByProductCode_ReturnsMatchingMaterials()
+        {
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "MAT_001", ProductName = "Hoa Hồng Đỏ", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "MAT_002", ProductName = "Hoa Cúc", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "ACC_001", ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false }
+            };
+
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            var request = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10, Search = "acc_001" };
+
+            var result = await service.GetMaterialsAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Value.TotalCount);
+
+            var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
+            Assert.Single(items);
+            Assert.Equal("ACC_001", items[0].MaterialCode);
+        }
+
+        /// Test: Kết hợp cả ProductLabel và Search theo tên/mã thành phần.
+        [Fact]
+        public async Task GetMaterialsAsync_SearchCombinedWithProductLabel_ReturnsCorrectResults()
+        {
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HH01", ProductName = "Hoa Hồng Đỏ", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "PL01", ProductName = "Nơ Ruy Băng Hồng", ProductLabel = "Phụ liệu", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "PL02", ProductName = "Giấy Gói Xanh", ProductLabel = "Phụ liệu", IsDeleted = false }
+            };
+
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            // Tìm kiếm chữ "Hồng" nhưng chỉ lấy loại "Phụ liệu"
+            var request = new Request.GetMaterialsRequest
+            {
+                PageIndex = 1,
+                PageSize = 10,
+                ProductLabel = "Phụ liệu",
+                Search = "hồng"
+            };
+
+            var result = await service.GetMaterialsAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Value.TotalCount);
+
+            var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
+            Assert.Single(items);
+            Assert.Equal("Nơ Ruy Băng Hồng", items[0].MaterialName);
+            Assert.Equal("Phụ liệu", items[0].ProductLabel);
+        }
+
         /// Test: Kiểm tra phân trang (PageIndex, PageSize, Skip/Take) hoạt động chính xác
         /// khi có nhiều nguyên liệu (kết hợp cả Thành phần và Phụ liệu).
         [Fact]

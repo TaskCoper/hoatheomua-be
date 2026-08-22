@@ -1140,6 +1140,14 @@ public class Service : IService
         {
             query = query.Where(p => p.ProductLabel!.ToLower() == "thành phần" || p.ProductLabel!.ToLower() == "phụ liệu");
         }
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var normalizedSearch = request.Search.Trim().ToLower();
+            query = query.Where(p =>
+                (p.ProductName != null && p.ProductName.ToLower().Contains(normalizedSearch)) ||
+                (p.ProductCode != null && p.ProductCode.ToLower().Contains(normalizedSearch)));
+        }
         
         int totalItems = await query.CountAsync();
                 
