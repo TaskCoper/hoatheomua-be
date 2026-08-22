@@ -737,4 +737,132 @@ public class Service : IService
 
         return "Cập nhật hệ số và định lượng sản phẩm con thành công";
     }
+
+   public async Task<string> PublicActiveCombo(Guid comboId)
+    {
+        // Serializable: cùng mức isolation với DeleteMaterialInCombo, để chặn race
+        // giữa "công khai" và "sửa/xóa vật liệu" xảy ra đồng thời trên cùng combo.
+        await using var transaction = await _dbContext.Database
+            .BeginTransactionAsync(IsolationLevel.Serializable);
+ 
+        try
+        {
+            // ---- 1. Load combo cha ---------------------------------------------
+            var combo = await _dbContext.Products
+                            .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
+                            .FirstOrDefaultAsync()
+                        ?? throw new NotFoundException("COMBO_NOT_FOUND");
+ 
+            if (string.IsNullOrWhiteSpace(combo.NhanhProductId))
+                throw new BadRequestException("COMBO_NOT_SYNCED");
+ 
+            // EXC-07: bấm Công khai nhiều lần -> idempotent, không làm gì thêm.
+            if (combo.IsActive)
+            {
+                await transaction.CommitAsync();
+                return "Combo đã được công khai trước đó.";
+            }
+ 
+            // ---- 2. Lấy danh sách combo con (size variants) để công khai cùng lúc ----
+            // Đồng nhất với AddMaterialInCombo/UpdateMaterialInCombo: combo con không có
+            // trạng thái công khai độc lập, luôn ăn theo cha.
+            //
+            // NOTE: Hàm này CHỈ làm nhiệm vụ publish (đổi IsActive). Việc validate công thức
+            // (BR-008 core, BR-009 định lượng, BR-010 trùng, BR-002 vật liệu bị xóa) và tính
+            // AvailableForSale (BR-017) KHÔNG nằm ở đây — do AddMaterialInCombo/UpdateMaterialInCombo
+            // và service của story khác đảm nhiệm.
+            var syncableChildren = await _dbContext.Products
+                .Where(x => x.ParentProductId == combo.NhanhProductId && !x.IsDeleted)
+                .ToListAsync();
+ 
+            // ---- 3. Công khai combo cha (AC-003) ----
+            combo.IsActive = true;
+            combo.UpdatedAt = DateTimeOffset.UtcNow;
+ 
+            // ---- 4. Công khai đồng thời toàn bộ combo con ----
+            foreach (var child in syncableChildren)
+            {
+                child.IsActive = true;
+                child.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+ 
+            // TODO (AC-004/NFR): ghi ComboAuditLog (actor, thời điểm, IsActive trước/sau,
+            // áp dụng cho cả cha và từng con) khi có accessor lấy user hiện tại trong project.
+ 
+            await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+ 
+            return "Công khai combo thành công.";
+        }
+        catch (DbUpdateException)
+        {
+            await SafeRollbackAsync(transaction);
+            throw new ConflictException("PUBLISH_FAILED");
+        }
+        catch (DbException)
+        {
+            await SafeRollbackAsync(transaction);
+            throw new ConflictException("PUBLISH_FAILED");
+        }
+        // Exception nghiệp vụ (BadRequest/NotFound/Conflict) không bị bắt ở đây;
+        // thoát ra ngoài, transaction tự rollback khi `await using` dispose.
+    }
+ 
+    public async Task<string> UnPublicActiveCombo(Guid comboId)
+    {
+        await using var transaction = await _dbContext.Database
+            .BeginTransactionAsync(IsolationLevel.Serializable);
+ 
+        try
+        {
+            // ---- 1. Load combo cha ---------------------------------------------
+            var combo = await _dbContext.Products
+                            .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
+                            .FirstOrDefaultAsync()
+                        ?? throw new NotFoundException("COMBO_NOT_FOUND");
+ 
+            // Idempotent: đã chưa công khai rồi thì không làm gì thêm.
+            if (!combo.IsActive)
+            {
+                await transaction.CommitAsync();
+                return "Combo đang ở trạng thái chưa công khai.";
+            }
+ 
+            // ---- 2. Ngừng công khai combo cha (ALT-02 bước 2, AC-005) ----
+            // Chỉ đổi trạng thái công khai ở đây. Việc sửa/xóa dòng công thức thuộc về
+            // AddMaterialInCombo / UpdateMaterialInCombo / DeleteMaterialInCombo.
+            combo.IsActive = false;
+            combo.UpdatedAt = DateTimeOffset.UtcNow;
+ 
+            // ---- 3. Lan trạng thái xuống toàn bộ combo con ----
+            // Combo con không có trạng thái công khai độc lập -> ẩn theo cha luôn,
+            // tránh trường hợp cha đang "chỉnh sửa" mà variant con vẫn hiển thị bán được.
+            var syncableChildren = await _dbContext.Products
+                .Where(x => x.ParentProductId == combo.NhanhProductId && !x.IsDeleted)
+                .ToListAsync();
+ 
+            foreach (var child in syncableChildren)
+            {
+                child.IsActive = false;
+                child.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+ 
+            // TODO (AC-005/NFR): ghi ComboAuditLog (cả cha và từng con) khi có accessor lấy user hiện tại.
+ 
+            await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+ 
+            return "Ngừng công khai combo thành công.";
+        }
+        catch (DbUpdateException)
+        {
+            await SafeRollbackAsync(transaction);
+            throw new ConflictException("UNPUBLISH_FAILED");
+        }
+        catch (DbException)
+        {
+            await SafeRollbackAsync(transaction);
+            throw new ConflictException("UNPUBLISH_FAILED");
+        }
+    }
 }

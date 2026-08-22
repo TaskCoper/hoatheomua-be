@@ -50,4 +50,20 @@ public class ComboSpecificationController : ControllerBase
         var result = await _materialComboService.UpdateChildProductWithFactor(request);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
+
+    [HttpPost("{comboId:guid}/publish")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> PublishActiveCombo(Guid comboId)
+    {
+        var result = await _materialComboService.PublicActiveCombo(comboId);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpPost("{comboId:guid}/unpublish")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> UnPublishActiveCombo(Guid comboId)
+    {
+        var result = await _materialComboService.UnPublicActiveCombo(comboId);
+        return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
+    }
 }

@@ -8,4 +8,6 @@ public interface IService
     public Task<string> UpdateMaterialInCombo(Guid comboId, Request.MaterialComboRequest request);
     public Task<string> DeleteMaterialInCombo(Guid comboId, Request.DeleteMaterial request);
     public Task<string> UpdateChildProductWithFactor(Request.UpdateMaterialChildRequest request);
+    public Task<string> PublicActiveCombo(Guid comboId);
+    public Task<string> UnPublicActiveCombo(Guid comboId);
 }
