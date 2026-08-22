@@ -362,9 +362,10 @@ public partial class Service : IService
 
         // var phoneReceiver = address?.PhoneNumber; //cột này required
         var phoneReceiver = order.PhoneReceiver; //cột này required
+        var fullNameReceiver = order.FullNameReceiver;
         
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
-        privateDescription += $"\n-------------------------\nNN: {phoneReceiver}";
+        privateDescription += $"\n-------------------------\nNN: {fullNameReceiver} - {phoneReceiver}";
 
         var vnDt = new DateTimeOffset();
         if (order.OrderTime > 0)

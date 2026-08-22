@@ -172,7 +172,8 @@ public class Service : IService
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
             PhoneReceiver = request.PhoneReceiver,
-
+            FullNameReceiver = request.FullNameReceiver, //số điện thoại người nhận
+            
             TagIds = request.TagIds,
             TaxCode = request.TaxCode,
             IdentityNumber = request.IdentityNumber,
