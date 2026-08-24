@@ -195,14 +195,14 @@ public class Service: IService
             throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
         }
 
-        if (ahamoveResult?.First().Data == null)
-        {
-            throw new AhamoveException();
-        }
-        
         if (ahamoveResult == null || ahamoveResult.Any() == false)
         {
             throw new BadRequestException("Ahamove returned null or empty data");
+        }
+
+        if (ahamoveResult[0].Data == null)
+        {
+            throw new AhamoveException();
         }
         
         return new { ahamoveResult, productNhanhResult};
