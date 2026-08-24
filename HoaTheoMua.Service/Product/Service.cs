@@ -307,6 +307,7 @@ public class Service : IService
 
     public async Task<BasePaginationResponse> GetLocalProductsV2(Request.LocalProductQueryRequest request)
     {
+        // Giai đoạn 1: Chuẩn hoá dữ liệu đầu vào.
         var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
         var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
         var search = request.search?.Trim();
@@ -314,12 +315,14 @@ public class Service : IService
             .Distinct()
             .ToList() ?? new List<Guid>();
 
+        // Giai đoạn 2: Khởi tạo query chỉ lấy sản phẩm gốc chưa bị xoá.
         var query = _dbContext.Products
             .AsNoTracking()
             .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
 
+        // Giai đoạn 3: Áp dụng các điều kiện lọc tại cơ sở dữ liệu.
         if (!string.IsNullOrWhiteSpace(search))
         {
             var normalizedSearch = search.ToLower();
@@ -363,6 +366,7 @@ public class Service : IService
             }
         }
 
+        // Giai đoạn 4: Thiết lập thứ tự cơ sở trước khi tính tồn kho khả dụng.
         IOrderedQueryable<HoaTheoMua.Repository.Entity.Product> orderedQuery;
 
         if (categoryIds.Count == 1)
@@ -406,63 +410,62 @@ public class Service : IService
             orderedQuery = orderedQuery.ThenByDescending(x => x.CreatedAt);
         }
 
-        var totalCount = await query.CountAsync();
-        var items = await orderedQuery
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        // Giai đoạn 5: Lấy tập dữ liệu cần tính vì filter/sort theo SellableQuantity phải chạy trước phân trang.
+        var allItems = await orderedQuery.ToListAsync();
 
-        var mappedItems = items.Select(MapToProductDetailResponse).ToList();
-        if (items.Count > 0)
-        {
-            var comboQuantities = await CalculateAvailableQty(
-                items.Select(p => new ProductQtyProjection
-                {
-                    Id = p.Id,
-                    ProductType = p.ProductType,
-                    ParentProductId = p.ParentProductId,
-                    NhanhProductId = p.NhanhProductId,
-                    Stock = p.Stock
-                }).ToList());
-            foreach (var response in mappedItems)
+        // Giai đoạn 6: Tính số lượng khả dụng cho toàn bộ tập kết quả.
+        var quantities = allItems.Count == 0
+            ? new Dictionary<Guid, (int? SellableQuantity, string? StockStatus, string? UnavailableReason)>()
+            : await CalculateAvailableQty(allItems.Select(product => new ProductQtyProjection
             {
-                if (comboQuantities.TryGetValue(response.Id, out var comboInfo))
-                {
-                    response.SellableQuantity = comboInfo.SellableQuantity;
-                    response.StockStatus = comboInfo.StockStatus;
-                }
-                else
-                {
-                    // Sản phẩm thường: lấy từ Stock
-                    var stock = (int)(response.Stock ?? 0);
-                    response.SellableQuantity = stock;
-                    response.StockStatus = stock > 0 ? "Còn hàng" : "Hết hàng";
-                }
-            }
+                Id = product.Id,
+                ProductType = product.ProductType,
+                ParentProductId = product.ParentProductId,
+                NhanhProductId = product.NhanhProductId,
+                Stock = product.Stock
+            }).ToList());
+
+        // Giai đoạn 7: Lọc entity trước khi map để chỉ tạo response DTO cho trang được yêu cầu.
+        var filteredItems = new List<HoaTheoMua.Repository.Entity.Product>(allItems.Count);
+        foreach (var product in allItems)
+        {
+            var quantityInfo = GetQuantityInfo(product, quantities);
+            if (request.soldOutOnly == true && quantityInfo.SellableQuantity != 0)
+                continue;
+            if (request.inStockOnly == true && quantityInfo.SellableQuantity <= 0)
+                continue;
+
+            filteredItems.Add(product);
         }
 
-        return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
+        var sellableQuantitySort = request.sortBy?
+            .FirstOrDefault(s => s?.ToLower().Contains("sellablequantity") == true);
+        if (sellableQuantitySort != null)
+        {
+            var isAsc = !sellableQuantitySort.StartsWith("-");
+            filteredItems = isAsc
+                ? filteredItems.OrderBy(product => GetQuantityInfo(product, quantities).SellableQuantity ?? int.MaxValue).ToList()
+                : filteredItems.OrderByDescending(product => GetQuantityInfo(product, quantities).SellableQuantity ?? int.MinValue).ToList();
+        }
+
+        // Giai đoạn 8: Phân trang, map response và gán thông tin tồn kho khả dụng.
+        var paginatedItems = new List<Response.ProductDetailResponse>(Math.Min(pageSize, filteredItems.Count));
+        foreach (var product in filteredItems.Skip((pageIndex - 1) * pageSize).Take(pageSize))
+        {
+            var response = MapToProductDetailResponse(product);
+            var quantityInfo = GetQuantityInfo(product, quantities);
+            response.SellableQuantity = quantityInfo.SellableQuantity;
+            response.StockStatus = quantityInfo.StockStatus;
+            response.UnavailableReason = quantityInfo.UnavailableReason;
+            paginatedItems.Add(response);
+        }
+
+        return ApiResponseFactory.BasePagination(paginatedItems, pageIndex, pageSize, filteredItems.Count);
     }
 
-    // public async Task<Response.ProductDetailResponse> GetLocalProductDetail(Guid id)
-    // {
-    //     var product = await _dbContext.Products
-    //         .Include(p => p.CategoryProductDetails)
-    //         .ThenInclude(cpd => cpd.CategoryProduct)
-    //         .ThenInclude(x => x.ParentCategoryProduct)
-    //         .ThenInclude(x => x!.ChildCategoryProducts)
-    //         .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
-    //
-    //     if (product == null)
-    //     {
-    //         throw new NotFoundException("PRODUCT_NOT_FOUND");
-    //     }
-    //
-    //     return MapToProductDetailResponse(product);
-    // }
-    
     public async Task<Response.LocalProductDetailResponse> GetLocalProductDetail(Guid id)
     {
+        // Giai đoạn 1: Lấy thông tin sản phẩm chính.
         var response = await _dbContext.Products
             .AsNoTracking()
             .Where(p => p.Id == id && !p.IsDeleted)
@@ -474,6 +477,7 @@ public class Service : IService
             throw new NotFoundException("PRODUCT_NOT_FOUND");
         }
 
+        // Giai đoạn 2: Xác định sản phẩm cha nếu sản phẩm hiện tại là biến thể.
         var isParentProduct = string.IsNullOrWhiteSpace(response.ParentProductId);
 
         if (!isParentProduct)
@@ -491,6 +495,7 @@ public class Service : IService
             response.ParentId = null;
         }
 
+        // Giai đoạn 3: Lấy các biến thể con của sản phẩm gốc.
         response.Children = !isParentProduct || string.IsNullOrWhiteSpace(response.NhanhProductId)
             ? new List<Response.LocalProductDetailResponse>()
             : await _dbContext.Products
@@ -499,6 +504,7 @@ public class Service : IService
                 .Select(LocalProductDetailSelector)
                 .ToListAsync();
 
+        // Giai đoạn 4: Chuẩn bị sản phẩm chính và biến thể để tính tồn kho khả dụng.
         var productsToCalculate = new List<ProductQtyProjection>
         {
             new()
@@ -519,17 +525,22 @@ public class Service : IService
             Stock = c.Stock
         }));
 
-        var quantities = await CalculateAvailableQty(productsToCalculate);
+        // Giai đoạn 5: Tính và gán số lượng khả dụng cho sản phẩm chính và từng biến thể.
+        var quantities = await CalculateAvailableQty(
+            productsToCalculate,
+            variantsArePreloaded: isParentProduct && !string.IsNullOrWhiteSpace(response.NhanhProductId));
 
         if (quantities.TryGetValue(response.Id, out var mainInfo))
         {
             response.SellableQuantity = mainInfo.SellableQuantity;
             response.StockStatus = mainInfo.StockStatus;
+            response.UnavailableReason = mainInfo.UnavailableReason;
         }
         else
         {
             response.SellableQuantity = 0;
             response.StockStatus = "Hết hàng";
+            response.UnavailableReason = null;
         }
 
         foreach (var child in response.Children)
@@ -538,11 +549,13 @@ public class Service : IService
             {
                 child.SellableQuantity = childInfo.SellableQuantity;
                 child.StockStatus = childInfo.StockStatus;
+                child.UnavailableReason = childInfo.UnavailableReason;
             }
             else
             {
                 child.SellableQuantity = 0;
                 child.StockStatus = "Hết hàng";
+                child.UnavailableReason = null;
             }
         }
 
@@ -846,14 +859,28 @@ public class Service : IService
         public decimal? Stock { get; set; }
     }
 
-    public async Task<Dictionary<Guid, (int SellableQuantity, string StockStatus)>> CalculateAvailableQty(List<Guid> productIds)
+    private static (int? SellableQuantity, string? StockStatus, string? UnavailableReason) GetQuantityInfo(
+        HoaTheoMua.Repository.Entity.Product product,
+        IReadOnlyDictionary<Guid, (int? SellableQuantity, string? StockStatus, string? UnavailableReason)> quantities)
     {
-        if (productIds == null || productIds.Count == 0)
-            return new Dictionary<Guid, (int, string)>();
+        if (quantities.TryGetValue(product.Id, out var quantityInfo))
+            return quantityInfo;
 
+        var stock = Math.Max(0, (int)(product.Stock ?? 0));
+        return (stock, stock > 0 ? "Còn hàng" : "Hết hàng", null);
+    }
+
+    public async Task<Dictionary<Guid, (int? SellableQuantity, string? StockStatus, string? UnavailableReason)>> CalculateAvailableQty(List<Guid> productIds)
+    {
+        // Giai đoạn 1: Kết thúc sớm khi không có sản phẩm cần tính.
+        if (productIds == null || productIds.Count == 0)
+            return new Dictionary<Guid, (int?, string?, string?)>();
+
+        // Giai đoạn 2: Loại ID trùng và chỉ lấy các trường phục vụ tính toán.
+        var distinctProductIds = productIds.Distinct().ToList();
         var products = await _dbContext.Products
             .AsNoTracking()
-            .Where(p => productIds.Contains(p.Id))
+            .Where(p => distinctProductIds.Contains(p.Id))
             .Select(p => new ProductQtyProjection
             {
                 Id = p.Id,
@@ -864,16 +891,19 @@ public class Service : IService
             })
             .ToListAsync();
 
+        // Giai đoạn 3: Chuyển phần tính toán nghiệp vụ cho overload nội bộ.
         return await CalculateAvailableQty(products);
     }
 
-    private async Task<Dictionary<Guid, (int SellableQuantity, string StockStatus)>> CalculateAvailableQty(
-        IReadOnlyCollection<ProductQtyProjection> products)
+    private async Task<Dictionary<Guid, (int? SellableQuantity, string? StockStatus, string? UnavailableReason)>> CalculateAvailableQty(
+        IReadOnlyCollection<ProductQtyProjection> products,
+        bool variantsArePreloaded = false)
     {
+        // Giai đoạn 1: Khởi tạo kết quả và xác định combo trực tiếp/các sản phẩm cha.
         if (products.Count == 0)
-            return new Dictionary<Guid, (int, string)>();
+            return new Dictionary<Guid, (int?, string?, string?)>();
 
-        var result = new Dictionary<Guid, (int SellableQuantity, string StockStatus)>(products.Count);
+        var result = new Dictionary<Guid, (int? SellableQuantity, string? StockStatus, string? UnavailableReason)>(products.Count);
 
         var directComboIds = products
             .Where(p => p.ProductType == "Combo")
@@ -887,9 +917,21 @@ public class Service : IService
             .Select(id => id!)
             .ToHashSet();
 
-        var comboVariants = parentNhanhIds.Count == 0
-            ? new List<ProductQtyProjection>()
-            : await _dbContext.Products
+        // Giai đoạn 2: Lấy combo biến thể; detail có thể tái sử dụng children đã nạp.
+        List<ProductQtyProjection> comboVariants;
+        if (parentNhanhIds.Count == 0)
+        {
+            comboVariants = new List<ProductQtyProjection>();
+        }
+        else if (variantsArePreloaded)
+        {
+            comboVariants = products
+                .Where(p => p.ProductType == "Combo" && parentNhanhIds.Contains(p.ParentProductId!))
+                .ToList();
+        }
+        else
+        {
+            comboVariants = await _dbContext.Products
                 .AsNoTracking()
                 .Where(p => !p.IsDeleted &&
                             p.ProductType == "Combo" &&
@@ -900,71 +942,122 @@ public class Service : IService
                     ParentProductId = p.ParentProductId
                 })
                 .ToListAsync();
+        }
 
         var comboVariantsByParent = comboVariants.ToLookup(v => v.ParentProductId);
 
         var comboIdsToCalculate = directComboIds
             .Concat(comboVariants.Select(v => v.Id))
             .ToHashSet();
-        var comboQuantities = new Dictionary<Guid, int>(comboIdsToCalculate.Count);
+
+        // Giai đoạn 3: Lưu quantity và mã lý do không khả dụng cho từng combo.
+        // Các mã no_formula, no_core, calculation_error là contract cho frontend, không phải message hiển thị.
+        var comboQuantities = new Dictionary<Guid, (int Quantity, string? UnavailableReason)>(comboIdsToCalculate.Count);
 
         if (comboIdsToCalculate.Count > 0)
         {
-            var specifications = await _dbContext.ComboSpecifications
+            // Giai đoạn 4: Nạp công thức active/chưa xoá để phân biệt thiếu công thức và thiếu CORE.
+            var allSpecs = await _dbContext.ComboSpecifications
                 .AsNoTracking()
                 .Where(cs => !cs.IsDeleted &&
                              cs.IsActive &&
-                             cs.IsCore &&
                              comboIdsToCalculate.Contains(cs.SubId))
-                .Select(cs => new { cs.SubId, cs.MatId, cs.Quantity })
+                .Select(cs => new { cs.SubId, cs.MatId, cs.Quantity, cs.IsCore })
                 .ToListAsync();
-            var specificationsByCombo = specifications.ToLookup(s => s.SubId);
 
-            var materialIds = specifications.Select(s => s.MatId).ToHashSet();
+            // Nhóm toàn bộ công thức theo combo để xác định combo có công thức hay không.
+            var hasAnySpecsByCombo = allSpecs.ToLookup(s => s.SubId);
+
+            // Nhóm CORE specs mà không tạo thêm list trung gian.
+            var specificationsByCombo = allSpecs.Where(s => s.IsCore).ToLookup(s => s.SubId);
+
+            // Quantity không dương sẽ bị bỏ qua ở dưới nên không cần truy vấn tồn kho.
+            var materialIds = allSpecs
+                .Where(s => s.IsCore && s.Quantity > 0)
+                .Select(s => s.MatId)
+                .ToHashSet();
+            // Tồn kho âm được clamp về 0 ngay khi nạp inventory.
             var inventories = materialIds.Count == 0
                 ? new Dictionary<Guid, int>()
                 : await _dbContext.Products
                     .AsNoTracking()
                     .Where(p => materialIds.Contains(p.Id) && !p.IsDeleted)
-                    .Select(p => new { p.Id, Stock = (int)(p.Stock ?? 0) })
+                    .Select(p => new { p.Id, Stock = Math.Max(0, (int)(p.Stock ?? 0)) })
                     .ToDictionaryAsync(p => p.Id, p => p.Stock);
 
+            // Giai đoạn 5: Tính số combo bán được theo vật liệu CORE giới hạn nhất.
             foreach (var comboId in comboIdsToCalculate)
             {
-                var coreSpecs = specificationsByCombo[comboId];
-
-                if (!coreSpecs.Any())
+                try
                 {
-                    comboQuantities[comboId] = 0;
-                    continue;
-                }
+                    var coreSpecsList = specificationsByCombo[comboId];
+                    var hasAnySpecs = hasAnySpecsByCombo[comboId].Any();
 
-                int minQty = int.MaxValue;
-                bool hasValidCore = false;
-
-                foreach (var spec in coreSpecs)
-                {
-                    if (spec.Quantity <= 0)
+                    if (!hasAnySpecs)
+                    {
+                        comboQuantities[comboId] = (0, "no_formula");
                         continue;
+                    }
 
-                    var stock = inventories.TryGetValue(spec.MatId, out var s) ? s : 0;
-                    int availableCombos = stock / spec.Quantity;
-                    minQty = Math.Min(minQty, availableCombos);
-                    hasValidCore = true;
+                    if (!coreSpecsList.Any())
+                    {
+                        comboQuantities[comboId] = (0, "no_core");
+                        continue;
+                    }
+
+                    int minQty = int.MaxValue;
+                    bool hasValidCore = false;
+
+                    foreach (var spec in coreSpecsList)
+                    {
+                        if (spec.Quantity <= 0)
+                            continue;
+
+                        // Bảo vệ bổ sung: tồn kho vật liệu âm được coi là 0.
+                        var stock = Math.Max(0, inventories.TryGetValue(spec.MatId, out var s) ? s : 0);
+                        int availableCombos = stock / spec.Quantity;
+                        minQty = Math.Min(minQty, availableCombos);
+                        hasValidCore = true;
+                    }
+
+                    // Có ít nhất một CORE hợp lệ thì dùng quantity nhỏ nhất đã tính.
+                    comboQuantities[comboId] = hasValidCore
+                        ? (Math.Max(0, minQty), null)
+                        : (0, "no_core");
                 }
-
-                comboQuantities[comboId] = hasValidCore ? minQty : 0;
+                catch
+                {
+                    // Lỗi tại một combo không làm gián đoạn việc tính các combo khác.
+                    comboQuantities[comboId] = (0, "calculation_error");
+                }
             }
-
         }
 
+        // Giai đoạn 6: Chuyển kết quả combo thành kết quả cho từng sản phẩm đầu vào.
         foreach (var product in products)
         {
-            var quantity = (int)(product.Stock ?? 0);
+            int? quantity;
+            string? stockStatus;
+            string? unavailableReason = null;
 
             if (product.ProductType == "Combo")
             {
-                quantity = comboQuantities.GetValueOrDefault(product.Id);
+                var combo = comboQuantities.GetValueOrDefault(product.Id);
+                quantity = combo.Quantity;
+                unavailableReason = combo.UnavailableReason;
+
+                if (unavailableReason == "calculation_error")
+                {
+                    stockStatus = null;  // null nghĩa là chưa tính được.
+                }
+                else if (quantity > 0)
+                {
+                    stockStatus = "Còn hàng";
+                }
+                else
+                {
+                    stockStatus = null;  // Frontend hiển thị nhãn riêng dựa trên mã lý do.
+                }
             }
             else if (product.ProductType == "Sản phẩm" &&
                      string.IsNullOrEmpty(product.ParentProductId) &&
@@ -972,12 +1065,44 @@ public class Service : IService
             {
                 var variants = comboVariantsByParent[product.NhanhProductId];
                 if (variants.Any())
-                    quantity = variants.Min(v => comboQuantities.GetValueOrDefault(v.Id));
+                {
+                    var minQuantity = int.MaxValue;
+                    var reasons = new HashSet<string?>();
+                    var hasCalculationError = false;
+                    foreach (var v in variants)
+                    {
+                        var combo = comboQuantities.GetValueOrDefault(v.Id);
+                        minQuantity = Math.Min(minQuantity, combo.Quantity);
+                        reasons.Add(combo.UnavailableReason);
+                        hasCalculationError |= combo.UnavailableReason == "calculation_error";
+                    }
+
+                    quantity = minQuantity;
+                    // Chỉ giữ mã lý do khi toàn bộ biến thể có cùng một lý do.
+                    unavailableReason = reasons.Count == 1 ? reasons.First() : null;
+
+                    if (hasCalculationError)
+                        stockStatus = null;
+                    else if (quantity > 0)
+                        stockStatus = "Còn hàng";
+                    else
+                        stockStatus = null;
+                }
+                else
+                {
+                    // Sản phẩm cha không có biến thể combo dùng tồn kho trực tiếp, có clamp âm.
+                    quantity = Math.Max(0, (int)(product.Stock ?? 0));
+                    stockStatus = quantity > 0 ? "Còn hàng" : "Hết hàng";
+                }
+            }
+            else
+            {
+                // Sản phẩm thường hoặc biến thể không phải combo dùng tồn kho trực tiếp, có clamp âm.
+                quantity = Math.Max(0, (int)(product.Stock ?? 0));
+                stockStatus = quantity > 0 ? "Còn hàng" : "Hết hàng";
             }
 
-            result[product.Id] = (
-                quantity,
-                quantity > 0 ? "Còn hàng" : "Hết hàng");
+            result[product.Id] = (quantity, stockStatus, unavailableReason);
         }
 
         return result;

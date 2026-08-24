@@ -94,6 +94,16 @@ public class Request
         public List<string>? sortBy { get; set; }
         public List<Guid>? categoryIds { get; set; }
         public bool? isPin { get; set; }
+
+        /// <summary>
+        /// Filter: chỉ hiển thị sản phẩm có SellableQuantity = 0
+        /// </summary>
+        public bool? soldOutOnly { get; set; }
+
+        /// <summary>
+        /// Filter: chỉ hiển thị sản phẩm có SellableQuantity > 0
+        /// </summary>
+        public bool? inStockOnly { get; set; }
     }
     
     public class MoveProductRequest

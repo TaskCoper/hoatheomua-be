@@ -83,6 +83,11 @@ public class Response
 
         public int? SellableQuantity { get; set; }
         public string? StockStatus { get; set; }
+        /// <summary>
+        /// Lý do không thể bán (null nếu còn hàng hoặc đang tính lỗi).
+        /// Giá trị: "no_formula" | "no_core" | "calculation_error"
+        /// </summary>
+        public string? UnavailableReason { get; set; }
 
         public List<CategoryProductResponse> Categories { get; set; } = new List<CategoryProductResponse>();
     }
@@ -176,9 +181,14 @@ public class Response
 
     public int? SellableQuantity { get; set; }
     public string? StockStatus { get; set; }
+    /// <summary>
+    /// Lý do không thể bán (null nếu còn hàng hoặc đang tính lỗi).
+    /// Giá trị: "no_formula" | "no_core" | "calculation_error"
+    /// </summary>
+    public string? UnavailableReason { get; set; }
 
     public List<CategoryProductResponse> Categories { get; set; } = new();
     public Guid? ParentId { get; set; }
-    public List<LocalProductDetailResponse> Children { get; set; } = new();  
+    public List<LocalProductDetailResponse> Children { get; set; } = new();
 }
 }
