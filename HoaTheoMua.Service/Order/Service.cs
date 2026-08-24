@@ -533,6 +533,7 @@ public class Service : IService
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
             PhoneReceiver = orders.PhoneReceiver,
+            FullNameReceiver = orders.FullNameReceiver,
             CreateAt = orders.CreatedAt,
             Address = orders.Address,
             ShortAddress = orders.ShortAddress,
