@@ -60,6 +60,8 @@ public class CalculateAvailableQtyTests
     /// <summary>
     /// UT-005-01: Combo không biến thể có SellableQuantity đúng.
     /// MIN(floor(stock_i / Quantity_i)) = MIN(100/2, 99/3) = MIN(50, 33) = 33
+    ///
+    /// **Rationale:** Xác nhận combo tính đúng MIN(CORE ratio) với nhiều materials
     /// </summary>
     [Fact]
     public async Task UT_005_01_StandaloneCombo_CalculatesCorrectlyBasedOnMinCoreComponentRatio()
@@ -93,6 +95,8 @@ public class CalculateAvailableQtyTests
     /// → parent = MIN(50, 20) = 20
     ///
     /// NOTE: Phải truyền cả parent.Id VÀ variant IDs để code tìm được variants.
+    ///
+    /// **Rationale:** Xác nhận parent lấy MIN từ các variant con
     /// </summary>
     [Fact]
     public async Task UT_005_02_ComboParent_CalculatesMinOfChildVariants()
@@ -124,6 +128,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-03: Sản phẩm thường lấy trực tiếp Stock.
+    ///
+    /// **Rationale:** Xác nhận sản phẩm thường dùng trực tiếp Stock
     /// </summary>
     [Fact]
     public async Task UT_005_03_NormalProduct_ReturnsStockDirectly()
@@ -146,6 +152,8 @@ public class CalculateAvailableQtyTests
     /// <summary>
     /// UT-005-04: EXC-02 - Combo có specs nhưng không có dòng CORE nào.
     /// SellableQuantity = 0, StockStatus = null, UnavailableReason = "no_core"
+    ///
+    /// **Rationale:** Xác nhận combo có spec nhưng không CORE trả no_core
     /// </summary>
     [Fact]
     public async Task UT_005_04_EXC_02_ComboWithNoCoreComponents_ReturnsNoCore()
@@ -172,6 +180,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-05: Combo có CORE đủ hàng → qty > 0, "Còn hàng"
+    ///
+    /// **Rationale:** Xác nhận combo 1 material đủ hàng tính đúng
     /// </summary>
     [Fact]
     public async Task UT_005_05_ComboWithSufficientStock_ReturnsCorrectQuantity()
@@ -198,6 +208,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-06: Quantity <= 0 được skip, không gây divide by zero.
+    ///
+    /// **Rationale:** Xác nhận spec có Quantity<=0 được skip không divide by zero
     /// </summary>
     [Fact]
     public async Task UT_005_06_RequiredQuantityZeroOrNegative_AvoidsDivideByZeroAndSkips()
@@ -226,6 +238,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-07: Specs bị IsDeleted hoặc IsActive=false được filter ra.
+    ///
+    /// **Rationale:** Xác nhận chỉ specs IsActive=true và IsDeleted=false được tính
     /// </summary>
     [Fact]
     public async Task UT_005_07_SoftDeletedOrInactiveSpecifications_AreFilteredOut()
@@ -253,6 +267,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-08: Empty input list → empty dictionary.
+    ///
+    /// **Rationale:** Xác nhận input rỗng trả {} không lỗi
     /// </summary>
     [Fact]
     public async Task UT_005_08_EmptyInputList_ReturnsEmptyDictionary()
@@ -268,6 +284,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-09: StockStatus 2 mức đúng - "Còn hàng" (qty>0) vs null (qty=0 có CORE).
+    ///
+    /// **Rationale:** Xác nhận combo có CORE nhưng stock=0 trả qty=0, status=null
     /// </summary>
     [Fact]
     public async Task UT_005_09_StockStatusDeterminism_CorrectlyMapsStatus()
@@ -302,6 +320,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-10: Material không tồn tại trong inventory → treated as 0 stock.
+    ///
+    /// **Rationale:** Xác nhận material không tồn tại được coi là stock=0
     /// </summary>
     [Fact]
     public async Task UT_005_10_ComponentMissingFromInventory_TreatedAsZeroStock()
@@ -328,6 +348,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-11: EXC-03 - Stock âm được clamp về 0.
+    ///
+    /// **Rationale:** Xác nhận stock âm được clamp về 0
     /// </summary>
     [Fact]
     public async Task UT_005_11_EXC_03_NegativeStock_ClampedToZero()
@@ -356,6 +378,8 @@ public class CalculateAvailableQtyTests
     /// <summary>
     /// UT-005-12: EXC-01 - Combo không có công thức (không có ComboSpecification).
     /// SellableQuantity = 0, StockStatus = null, UnavailableReason = "no_formula"
+    ///
+    /// **Rationale:** Xác nhận combo không có spec trả no_formula
     /// </summary>
     [Fact]
     public async Task UT_005_12_EXC_01_ComboWithoutFormula_ReturnsNoFormula()
@@ -379,6 +403,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-13: Combo parent với mixed reasons trong variants → UnavailableReason = null.
+    ///
+    /// **Rationale:** Xác nhận parent với variants có lý do khác nhau trả null
     /// </summary>
     [Fact]
     public async Task UT_005_13_ComboParentWithMixedVariantReasons_HasNullUnavailableReason()
@@ -412,6 +438,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-14: Parent với tất cả variants đều hết hàng → StockStatus = null.
+    ///
+    /// **Rationale:** Xác nhận parent với variants hết material trả status=null
     /// </summary>
     [Fact]
     public async Task UT_005_14_ComboParentWithAllVariantsOutOfStock_ReturnsNullStockStatus()
@@ -447,6 +475,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-01: Combo không biến thể có SellableQuantity.
+    ///
+    /// **Rationale:** Xác nhận combo độc lập tính đúng MIN(CORE ratio)
     /// </summary>
     [Fact]
     public async Task UT_004_01_GetLocalProductsV2_StandaloneCombo_HasSellableQuantity()
@@ -475,6 +505,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-02: Cha combo có biến thể lấy MIN variant.
+    ///
+    /// **Rationale:** Xác nhận parent combo lấy MIN từ các variant con
     /// </summary>
     [Fact]
     public async Task UT_004_02_GetLocalProductsV2_ComboParent_HasSellableQuantityAsMinOfVariants()
@@ -507,6 +539,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-03: Mixed products - sản phẩm thường + combo cùng trang.
+    ///
+    /// **Rationale:** Xác nhận cả 2 loại product trả về đúng SellableQuantity
     /// </summary>
     [Fact]
     public async Task UT_004_03_GetLocalProductsV2_MixedProducts()
@@ -548,6 +582,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-04: Danh sách rỗng - early return.
+    ///
+    /// **Rationale:** Xác nhận early return khi không có dữ liệu
     /// </summary>
     [Fact]
     public async Task UT_004_04_GetLocalProductsV2_EmptyDatabase_ReturnsEmptyList()
@@ -562,6 +598,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-05: EXC-01 - Combo không có công thức.
+    ///
+    /// **Rationale:** Xác nhận combo không công thức trả về no_formula
     /// </summary>
     [Fact]
     public async Task UT_004_05_EXC_01_GetLocalProductsV2_ComboWithoutFormula_ReturnsNoFormula()
@@ -586,6 +624,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-06: EXC-02 - Combo không có dòng CORE.
+    ///
+    /// **Rationale:** Xác nhận combo không CORE trả về no_core
     /// </summary>
     [Fact]
     public async Task UT_004_06_EXC_02_GetLocalProductsV2_ComboWithNoCore_ReturnsNoCore()
@@ -615,6 +655,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-07: EXC-03 - Stock âm clamp về 0.
+    ///
+    /// **Rationale:** Xác nhận stock âm được clamp về 0
     /// </summary>
     [Fact]
     public async Task UT_004_07_EXC_03_GetLocalProductsV2_NegativeStock_ClampedToZero()
@@ -643,6 +685,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-08: StockStatus 2 mức đúng - "Còn hàng" khi qty > 0.
+    ///
+    /// **Rationale:** Xác nhận StockStatus mapping đúng khi qty > 0
     /// </summary>
     [Fact]
     public async Task UT_004_08_GetLocalProductsV2_StockStatus_CònHàng_WhenQuantityPositive()
@@ -671,6 +715,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-09: EXC-04 - Lỗi tính 1 combo không ảnh hưởng combo khác.
+    ///
+    /// **Rationale:** Xác nhận lỗi 1 combo không ảnh hưởng combo khác
     /// </summary>
     [Fact]
     public async Task UT_004_09_EXC_04_GetLocalProductsV2_CalculationError_OneComboOnly()
@@ -711,6 +757,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-10: AC-010 - soldOutOnly=true filter đúng.
+    ///
+    /// **Rationale:** Xác nhận soldOutOnly=true chỉ trả items qty=0
     /// </summary>
     [Fact]
     public async Task UT_004_10_AC_010_GetLocalProductsV2_SoldOutOnly_ReturnsOnlyOutOfStockItems()
@@ -736,6 +784,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-11: AC-011 - sort sellableQuantity tăng dần.
+    ///
+    /// **Rationale:** Xác nhận sort asc theo SellableQuantity đúng
     /// </summary>
     [Fact]
     public async Task UT_004_11_AC_011_GetLocalProductsV2_SortBySellableQuantityAscending()
@@ -763,6 +813,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-12: inStockOnly=true filter đúng.
+    ///
+    /// **Rationale:** Xác nhận inStockOnly=true chỉ trả items qty>0
     /// </summary>
     [Fact]
     public async Task UT_004_12_GetLocalProductsV2_InStockOnly_ReturnsOnlyInStockItems()
@@ -787,6 +839,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-13: soldOutOnly + sortBy kết hợp.
+    ///
+    /// **Rationale:** Xác nhận filter và sort kết hợp đúng
     /// </summary>
     [Fact]
     public async Task UT_004_13_GetLocalProductsV2_SoldOutOnlyWithSort_CombinesCorrectly()
@@ -815,6 +869,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-14: sortBy=-sellableQuantity giảm dần.
+    ///
+    /// **Rationale:** Xác nhận sort desc theo SellableQuantity đúng
     /// </summary>
     [Fact]
     public async Task UT_004_14_GetLocalProductsV2_SortBySellableQuantityDescending()
@@ -846,6 +902,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-01: Sản phẩm thường lấy Stock.
+    ///
+    /// **Rationale:** Xác nhận sản phẩm thường dùng trực tiếp Stock
     /// </summary>
     [Fact]
     public async Task UT_013_01_GetLocalProductDetail_NormalProduct_UsesStockForSellableQuantity()
@@ -867,6 +925,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-02: Combo không biến thể có SellableQuantity.
+    ///
+    /// **Rationale:** Xác nhận combo độc lập tính đúng MIN(CORE)
     /// </summary>
     [Fact]
     public async Task UT_013_02_GetLocalProductDetail_StandaloneCombo_HasSellableQuantity()
@@ -892,6 +952,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-03: Cha combo lấy MIN variant.
+    ///
+    /// **Rationale:** Xác nhận parent lấy MIN từ các variant con
     /// </summary>
     [Fact]
     public async Task UT_013_03_GetLocalProductDetail_ComboParent_HasSellableQuantityAsMinOfVariants()
@@ -921,6 +983,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-04: Không tìm thấy sản phẩm thì ném NotFoundException.
+    ///
+    /// **Rationale:** Xác nhận sản phẩm không tồn tại ném NotFoundException
     /// </summary>
     [Fact]
     public async Task UT_013_04_GetLocalProductDetail_NonExistentProduct_ThrowsNotFoundException()
@@ -936,6 +1000,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-05: Combo hết nguyên liệu → qty=0, StockStatus=null.
+    ///
+    /// **Rationale:** Xác nhận combo hết material trả qty=0, status=null
     /// </summary>
     [Fact]
     public async Task UT_013_05_GetLocalProductDetail_ComboOutOfStock_HasZeroQtyAndNullStockStatus()
@@ -961,6 +1027,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-06: EXC-01 - Combo không có công thức.
+    ///
+    /// **Rationale:** Xác nhận combo không có spec trả no_formula
     /// </summary>
     [Fact]
     public async Task UT_013_06_EXC_01_GetLocalProductDetail_ComboWithoutFormula_ReturnsNoFormula()
@@ -982,6 +1050,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-07: Sản phẩm bị xóa mềm thì ném NotFoundException.
+    ///
+    /// **Rationale:** Xác nhận sản phẩm IsDeleted=true ném NotFoundException
     /// </summary>
     [Fact]
     public async Task UT_013_07_GetLocalProductDetail_SoftDeletedProduct_ThrowsNotFoundException()
@@ -999,6 +1069,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-08: Parent với tất cả variants đều hết hàng.
+    ///
+    /// **Rationale:** Xác nhận parent với variants hết material trả status=null
     /// </summary>
     [Fact]
     public async Task UT_013_08_GetLocalProductDetail_ComboParentWithAllVariantsOutOfStock_ReturnsZeroAndNullStatus()
@@ -1028,6 +1100,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-09: Child variant combo query trực tiếp → trả về qty riêng.
+    ///
+    /// **Rationale:** Xác nhận variant combo query riêng trả qty độc lập
     /// </summary>
     [Fact]
     public async Task UT_013_09_GetLocalProductDetail_ChildVariantComboDirectQuery_ReturnsIndividualQty()
@@ -1055,6 +1129,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-10: EXC-02 - Combo có specs nhưng không có dòng CORE.
+    ///
+    /// **Rationale:** Xác nhận combo có spec nhưng không CORE trả no_core
     /// </summary>
     [Fact]
     public async Task UT_013_10_EXC_02_GetLocalProductDetail_ComboWithNoCore_ReturnsNoCore()
@@ -1081,6 +1157,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-11: Sản phẩm thường Stock = 0 → "Hết hàng".
+    ///
+    /// **Rationale:** Xác nhận sản phẩm thường stock=0 trả "Hết hàng"
     /// </summary>
     [Fact]
     public async Task UT_013_11_GetLocalProductDetail_NormalProduct_OutOfStock_ReturnsHếtHàng()
@@ -1102,6 +1180,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-12: EXC-03 - Material stock âm clamp về 0.
+    ///
+    /// **Rationale:** Xác nhận material stock âm được clamp về 0
     /// </summary>
     [Fact]
     public async Task UT_013_12_EXC_03_GetLocalProductDetail_NegativeMaterialStock_ClampedToZero()
@@ -1127,6 +1207,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-15: Input null được xử lý như input rỗng.
+    ///
+    /// **Rationale:** Xác nhận input null được xử lý như rỗng
     /// </summary>
     [Fact]
     public async Task UT_005_15_NullInput_ReturnsEmptyDictionary()
@@ -1141,6 +1223,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-16: Spec inactive hoặc xóa mềm không được coi là công thức.
+    ///
+    /// **Rationale:** Xác nhận combo chỉ có spec inactive/deleted trả no_formula
     /// </summary>
     [Fact]
     public async Task UT_005_16_OnlyInactiveOrDeletedSpecifications_ReturnsNoFormula()
@@ -1166,6 +1250,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-17: Công thức có toàn bộ dòng CORE với Quantity không dương thì không có CORE khả dụng.
+    ///
+    /// **Rationale:** Xác nhận combo có CORE nhưng Quantity<=0 trả no_core
     /// </summary>
     [Fact]
     public async Task UT_005_17_AllCoreQuantitiesNonPositive_ReturnsNoCore()
@@ -1191,6 +1277,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-005-18: Stock âm của sản phẩm thường được clamp về 0.
+    ///
+    /// **Rationale:** Xác nhận sản phẩm thường stock âm được clamp về 0
     /// </summary>
     [Fact]
     public async Task UT_005_18_NormalProductNegativeStock_IsClampedToZero()
@@ -1211,6 +1299,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-15: Search được trim và không phân biệt hoa thường trên các trường hỗ trợ.
+    ///
+    /// **Rationale:** Xác nhận search trim và không phân biệt hoa thường
     /// </summary>
     [Fact]
     public async Task UT_004_15_GetLocalProductsV2_SearchesBarcodeCaseInsensitivelyAfterTrim()
@@ -1232,6 +1322,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-16: Lọc tồn kho xảy ra trước phân trang nên trang chỉ chứa item phù hợp.
+    ///
+    /// **Rationale:** Xác nhận filter được áp dụng TRƯỚC phân trang
     /// </summary>
     [Fact]
     public async Task UT_004_16_GetLocalProductsV2_SoldOutFilterIsAppliedBeforePagination()
@@ -1261,6 +1353,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-004-17: Khi cả hai cờ tồn kho cùng true, hai filter tuần tự cho kết quả rỗng.
+    ///
+    /// **Rationale:** Xác nhận soldOutOnly + inStockOnly loại trừ nhau
     /// </summary>
     [Fact]
     public async Task UT_004_17_GetLocalProductsV2_BothStockFilters_ReturnsNoItems()
@@ -1285,6 +1379,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-13: Biến thể con resolve đúng ParentId và không có children riêng.
+    ///
+    /// **Rationale:** Xác nhận variant combo resolve đúng ParentId
     /// </summary>
     [Fact]
     public async Task UT_013_13_GetLocalProductDetail_ChildVariant_ResolvesParentId()
@@ -1309,6 +1405,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-14: Parent trả children active cùng số lượng được tính độc lập.
+    ///
+    /// **Rationale:** Xác nhận parent trả đúng children active với qty tính độc lập
     /// </summary>
     [Fact]
     public async Task UT_013_14_GetLocalProductDetail_Parent_ReturnsCalculatedActiveChildren()
@@ -1337,6 +1435,8 @@ public class CalculateAvailableQtyTests
 
     /// <summary>
     /// UT-013-15: Stock âm của sản phẩm thường cũng được clamp trong response detail.
+    ///
+    /// **Rationale:** Xác nhận sản phẩm thường stock âm clamp về 0 trong detail
     /// </summary>
     [Fact]
     public async Task UT_013_15_GetLocalProductDetail_NormalProductNegativeStock_IsClampedToZero()

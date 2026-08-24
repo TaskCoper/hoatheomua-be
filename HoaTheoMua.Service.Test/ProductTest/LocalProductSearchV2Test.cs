@@ -52,6 +52,11 @@ public class LocalProductSearchV2Test
         return new ProductService(dbContext, httpContextMock.Object, httpClient, configuration, MapperFactory.Create());
     }
 
+    /// <summary>
+    /// UT-004-18: Sort không dùng IsPin, chỉ dùng Position từ CategoryProductDetail
+    ///
+    /// **Rationale:** Xác nhận khi không có sort theo isPin, sắp xếp chỉ theo Position của CPD
+    /// </summary>
     [Fact]
     public async Task GetLocalProductsV2_NoPinSorting_SingleCategory_SortsOnlyByPosition()
     {
@@ -91,6 +96,11 @@ public class LocalProductSearchV2Test
         Assert.Equal(new[] { "B", "C", "A" }, items.Select(x => x.ProductName));
     }
 
+    /// <summary>
+    /// UT-004-19: Không có category thì sort chỉ theo Product.Position
+    ///
+    /// **Rationale:** Xác nhận khi không có category, sort chỉ theo Product.Position
+    /// </summary>
     [Fact]
     public async Task GetLocalProductsV2_NoPinSorting_ZeroCategories_SortsOnlyByProductPosition()
     {
@@ -114,6 +124,11 @@ public class LocalProductSearchV2Test
         Assert.Equal(new[] { "B", "C", "A" }, items.Select(x => x.ProductName));
     }
 
+    /// <summary>
+    /// UT-004-20: Filter by isPin=true không có category
+    ///
+    /// **Rationale:** Xác nhận isPin filter không có category dùng Product.IsPin
+    /// </summary>
     [Fact]
     public async Task GetLocalProductsV2_FilterByIsPinTrue_NoCategory()
     {
@@ -138,6 +153,11 @@ public class LocalProductSearchV2Test
         Assert.Contains("C", items.Select(x => x.ProductName));
     }
 
+    /// <summary>
+    /// UT-004-21: Filter by isPin=false không có category
+    ///
+    /// **Rationale:** Xác nhận isPin=false filter đúng
+    /// </summary>
     [Fact]
     public async Task GetLocalProductsV2_FilterByIsPinFalse_NoCategory()
     {
@@ -161,6 +181,11 @@ public class LocalProductSearchV2Test
         Assert.Equal("B", items[0].ProductName);
     }
 
+    /// <summary>
+    /// UT-004-22: Filter by isPin với category
+    ///
+    /// **Rationale:** Xác nhận isPin filter với category dùng CPD.IsPin
+    /// </summary>
     [Fact]
     public async Task GetLocalProductsV2_FilterByIsPinTrue_WithCategory()
     {
