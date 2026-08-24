@@ -1,6 +1,7 @@
 ﻿using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using HoaTheoMua.Repository.Configurations.Seeds;
 
 namespace HoaTheoMua.Repository.Configurations;
 
@@ -32,6 +33,8 @@ public class ComboSpecificationConfiguration: IEntityTypeConfiguration<ComboSpec
         
         builder.HasIndex(x => new { x.SubId, x.MatId })
             .IsUnique();
+
+        builder.SeedComboSpecification();
         
     }
 
