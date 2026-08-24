@@ -46,7 +46,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             mockDbContext.Setup(x => x.Products).Returns(mockProductDbSet.Object);
 
             var mockComboSpecsDbSet = comboSpecs.BuildMockDbSet();
-            mockDbContext.Setup(x => x.ComboSpecification).Returns(mockComboSpecsDbSet.Object);
+            mockDbContext.Setup(x => x.ComboSpecifications).Returns(mockComboSpecsDbSet.Object);
 
             var configs = new List<HoaTheoMua.Repository.Entity.Config>().BuildMockDbSet();
             mockDbContext.Setup(x => x.Configs).Returns(configs.Object);

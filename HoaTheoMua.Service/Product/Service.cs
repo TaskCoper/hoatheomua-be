@@ -1086,7 +1086,7 @@ public class Service : IService
 
     public async Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(Guid id)  
     {  
-        var comboSpec = await _dbContext.ComboSpecification  
+        var comboSpec = await _dbContext.ComboSpecifications  
             .AsNoTracking()  
             .Include(c => c.Sub)  
             .FirstOrDefaultAsync(c => c.SubId == id  
@@ -1096,7 +1096,7 @@ public class Service : IService
         if (comboSpec == null)  
             throw new NotFoundException($"Không tìm thấy combo với ID: {id}");  
   
-        var materialSpecs = await _dbContext.ComboSpecification  
+        var materialSpecs = await _dbContext.ComboSpecifications
             .AsNoTracking()  
             .Include(c => c.Mat)  
             .Where(c => c.SubId == id  
@@ -1118,7 +1118,7 @@ public class Service : IService
                     Unit = c.Mat.Unit,  
                     AvailableForSale = c.Mat.AvailableForSale ?? 0,  
                     MaxComboPossible = (c.Mat.AvailableForSale ?? 0) > 0 && c.Quantity > 0  
-                        ? (int)Math.Floor((c.Mat.AvailableForSale ?? 0) / c.Quantity)  
+                        ? Math.Floor((decimal)((c.Mat.AvailableForSale ?? 0) / c.Quantity))  
                         : 0  
                 })  
                 .OrderByDescending(x => x.Role)  

@@ -350,8 +350,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("MatId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal?>("Quantity")
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("SubId")
                         .HasColumnType("uuid");
@@ -364,9 +364,10 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("MatId");
 
                     b.HasIndex("SubId", "MatId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
-                    b.ToTable("ComboSpecification");
+                    b.ToTable("ComboSpecifications");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
@@ -645,6 +646,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FullNameReceiver")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -1330,6 +1335,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("DeliveringStock")
                         .HasColumnType("numeric");
 
+                    b.Property<decimal?>("Factor")
+                        .HasColumnType("numeric");
+
                     b.Property<decimal?>("Height")
                         .HasColumnType("numeric");
 
@@ -1355,6 +1363,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("InternalCategoryCode")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");

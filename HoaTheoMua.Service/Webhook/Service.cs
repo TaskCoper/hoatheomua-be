@@ -361,10 +361,11 @@ public partial class Service : IService
         //     .FirstOrDefaultAsync(x => x.Id == order.AddressId);
 
         // var phoneReceiver = address?.PhoneNumber; //cột này required
-        var phoneReceiver = order.Phone; //cột này required
+        var phoneReceiver = order.PhoneReceiver; //cột này required
+        var fullNameReceiver = order.FullNameReceiver;
         
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
-        privateDescription += $"\n-------------------------\nNN: {phoneReceiver}";
+        privateDescription += $"\n-------------------------\nNN: {fullNameReceiver} - {phoneReceiver}";
 
         var vnDt = new DateTimeOffset();
         if (order.OrderTime > 0)
@@ -756,13 +757,37 @@ public partial class Service : IService
             .Distinct()
             .ToList();
 
-        var productIds = await _dbContext.Products
+        var orderedProducts = await _dbContext.Products
             .Where(x => !x.IsDeleted
                         && x.NhanhProductId != null
                         && nhanhProductIds.Contains(x.NhanhProductId))
-            .Select(x => x.Id.ToString())
+            .Select(x => new
+            {
+                x.Id,
+                x.ParentProductId
+            })
             .ToListAsync();
 
+        var parentNhanhProductIds = orderedProducts
+            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
+            .Select(x => x.ParentProductId!)
+            .Distinct()
+            .ToList();
+
+        var parentProductIds = await _dbContext.Products
+            .Where(x => !x.IsDeleted
+                        && x.NhanhProductId != null
+                        && parentNhanhProductIds.Contains(x.NhanhProductId))
+            .Select(x => x.Id)
+            .ToListAsync();
+
+        var productIds = orderedProducts
+            .Select(x => x.Id)
+            .Concat(parentProductIds)
+            .Distinct()
+            .Select(x => x.ToString())
+            .ToList();
+        
         var revalidateBody = JsonSerializer.SerializeToElement(new
         {
             entity = "product",

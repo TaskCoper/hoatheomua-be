@@ -189,10 +189,10 @@ public class Response
         public string? MaterialId { get; set; }
         public string? MaterialName { get; set; }
         public bool? Role { get; set; }
-        public int QuantityPerCombo { get; set; }
+        public decimal? QuantityPerCombo { get; set; }
         public string? Unit { get; set; }
         public decimal AvailableForSale { get; set; }
-        public int MaxComboPossible { get; set; }
+        public decimal? MaxComboPossible { get; set; }
     }
 
     public class MaterialResponse
