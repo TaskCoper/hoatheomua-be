@@ -648,6 +648,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("FullNameReceiver")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("IdentityNumber")
                         .HasColumnType("text");
 
