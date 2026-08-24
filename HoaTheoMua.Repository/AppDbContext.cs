@@ -30,6 +30,7 @@ public class AppDbContext : DbContext
     
     public virtual DbSet<CategoryProduct> CategoryProducts { get; set; }
     public virtual DbSet<CategoryProductDetail> CategoryProductDetails { get; set; }
+    public virtual DbSet<ComboSpecification> ComboSpecifications { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // base.OnModelCreating(modelBuilder);
