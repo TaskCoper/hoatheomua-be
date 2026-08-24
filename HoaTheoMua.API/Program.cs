@@ -22,6 +22,7 @@ using ProductImportService = HoaTheoMua.Service.ProductImport;
 using BaoKimService = HoaTheoMua.Service.BaoKim;
 using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 using RevalidateService = HoaTheoMua.Service.Revalidate;
+using HoaTheoMua.Service.DependencyInjection.Extensions;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -73,6 +74,14 @@ builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImpor
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 
 
+// MassTransit + RabbitMQ: consumers, the fulfilment saga and the EF transactional outbox. Runs
+// in-process alongside the API, so the outbox shares this host's AppDbContext scope.
+builder.Services.AddMasstransitRabbitMqInfrastructure(builder.Configuration);
+
+// AddMassTransit registers a bus health check of its own, so /health reflects the RabbitMQ
+// connection as well as the app being up.
+builder.Services.AddHealthChecks();
+
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 builder.Services.AddAutoMapper(x => x.AddMaps(AssemblyReference.Assembly));
 
@@ -115,5 +124,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

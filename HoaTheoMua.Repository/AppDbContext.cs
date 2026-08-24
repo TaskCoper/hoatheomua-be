@@ -1,6 +1,7 @@
 using HoaTheoMua.Repository.Configurations.Seeds;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace HoaTheoMua.Repository;
@@ -30,10 +31,19 @@ public class AppDbContext : DbContext
     
     public virtual DbSet<CategoryProduct> CategoryProducts { get; set; }
     public virtual DbSet<CategoryProductDetail> CategoryProductDetails { get; set; }
+
+    /// <summary>Persisted progress of the order-fulfilment saga, keyed by Order.Id.</summary>
+    public virtual DbSet<OrderFulfillmentState> OrderFulfillmentStates { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(AssemblyReference.Assembly);
 
+        // MassTransit transactional outbox/inbox. All three are required: the webhook publishes
+        // through UseBusOutbox (OutboxMessage + OutboxState) and every consumer endpoint runs
+        // UseEntityFrameworkOutbox, which dedups via InboxState.
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 }

@@ -15,6 +15,14 @@ services:
     volumes:
       - postgres-hoatheomua-data-prod:/var/lib/postgresql/data
 
+  hoatheomua-rabbitmq:
+    container_name: hoatheomua-rabbitmq-prod
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+    volumes:
+      - rabbitmq-hoatheomua-data-prod:/var/lib/rabbitmq
+
   hoatheomua-api:
     container_name: hoatheomua-api-prod
     environment:
@@ -75,4 +83,7 @@ services:
 volumes:
   postgres-hoatheomua-data-prod:
     name: postgres-hoatheomua-data-prod
+    driver: local
+  rabbitmq-hoatheomua-data-prod:
+    name: rabbitmq-hoatheomua-data-prod
     driver: local
