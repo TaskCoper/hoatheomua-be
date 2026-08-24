@@ -123,6 +123,6 @@ public class ProductController: ControllerBase
     public async Task<IActionResult> GetMaterials([FromQuery] Request.GetMaterialsRequest request)
     {
         var result = await _productService.GetMaterialsAsync(request);
-        return Ok(ApiResponseFactory.Base(result, true, "Tải danh sách sản phẩm thành phần thành công", HttpContext.TraceIdentifier));
+        return Ok(result);
     }
 }

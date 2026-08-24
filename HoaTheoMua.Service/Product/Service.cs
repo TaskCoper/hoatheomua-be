@@ -1084,43 +1084,46 @@ public class Service : IService
         return result;
     }
 
-    public async Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(Guid id)
-    {
-        var product = await _dbContext.Products
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
-
-        if (product == null)
-            throw new NotFoundException($"Không tìm thấy combo với ID: {id}");
-
-        
-        var comboSpecs = await _dbContext.ComboSpecification
-            .Include(c => c.Mat)
-            .Where(c => c.SubId == product.Id && c.IsActive && !c.Mat.IsDeleted)
-            .ToListAsync();
-
-        var response = new Response.ComboSpecificationResponse
-        {
-            SubId = product.Id.ToString(),
-            ProductCode = product.ProductCode,
-            ProductName = product.ProductName,
-            Materials = comboSpecs.Select(c => new Response.MaterialItemResponse
-            {
-                MaterialId = c.Mat?.Id.ToString(),
-                MaterialName = c.Mat?.ProductName,
-                Role = c.IsCore,
-                QuantityPerCombo = c.Quantity,
-                Unit = c.Mat?.Unit ?? null,
-                AvailableForSale = c.Mat?.AvailableForSale ?? 0,
-                MaxComboPossible = (c.Mat?.AvailableForSale ?? 0) > 0 && c.Quantity > 0 
-                    ? (int)Math.Floor((c.Mat?.AvailableForSale ?? 0) / c.Quantity) 
-                    : 0
-            })
-                .OrderBy(x => x.Role)
-                .ToList()
-        };
-        
-        return response;
+    public async Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(Guid id)  
+    {  
+        var comboSpec = await _dbContext.ComboSpecification  
+            .AsNoTracking()  
+            .Include(c => c.Sub)  
+            .FirstOrDefaultAsync(c => c.SubId == id  
+                                      && !c.IsDeleted  
+                                      && !c.Sub.IsDeleted);  
+  
+        if (comboSpec == null)  
+            throw new NotFoundException($"Không tìm thấy combo với ID: {id}");  
+  
+        var materialSpecs = await _dbContext.ComboSpecification  
+            .AsNoTracking()  
+            .Include(c => c.Mat)  
+            .Where(c => c.SubId == id  
+                        && !c.IsDeleted  
+                        && !c.Mat.IsDeleted)  
+            .ToListAsync();  
+  
+        var response = new Response.ComboSpecificationResponse  
+        {  
+            SubId = comboSpec.Sub.Id.ToString(),  
+            ProductCode = comboSpec.Sub.ProductCode,  
+            ProductName = comboSpec.Sub.ProductName,  
+            Materials = materialSpecs.Select(c => new Response.MaterialItemResponse  
+                {  
+                    MaterialId = c.Mat.Id.ToString(),  
+                    MaterialName = c.Mat.ProductName,  
+                    Role = c.IsCore,  
+                    QuantityPerCombo = c.Quantity,  
+                    Unit = c.Mat.Unit,  
+                    AvailableForSale = c.Mat.AvailableForSale ?? 0,  
+                    MaxComboPossible = (c.Mat.AvailableForSale ?? 0) > 0 && c.Quantity > 0  
+                        ? (int)Math.Floor((c.Mat.AvailableForSale ?? 0) / c.Quantity)  
+                        : 0  
+                })  
+                .OrderBy(x => x.Role)  
+                .ToList()  
+        };    return response;  
     }
 
     public async Task<BasePaginationResponse> GetMaterialsAsync(Request.GetMaterialsRequest request)
@@ -1128,43 +1131,44 @@ public class Service : IService
         request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
-        var query = _dbContext.Products.AsNoTracking()
-            .Where(p => !p.IsDeleted && p.ProductLabel != null);
+        var query = _dbContext.Products
+            .AsNoTracking()
+            .Where(product => !product.IsDeleted);
 
         if (!string.IsNullOrWhiteSpace(request.ProductLabel))
         {
             var normalizedLabel = request.ProductLabel.Trim().ToLower();
-            query = query.Where(p => p.ProductLabel!.ToLower() == normalizedLabel);
+            query = query.Where(product =>
+                product.ProductLabel != null &&
+                product.ProductLabel.Trim().ToLower() == normalizedLabel);
         }
-        else
-        {
-            query = query.Where(p => p.ProductLabel!.ToLower() == "thành phần" || p.ProductLabel!.ToLower() == "phụ liệu");
-        }
-
+        
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var normalizedSearch = request.Search.Trim().ToLower();
-            query = query.Where(p =>
-                (p.ProductName != null && p.ProductName.ToLower().Contains(normalizedSearch)) ||
-                (p.ProductCode != null && p.ProductCode.ToLower().Contains(normalizedSearch)));
+            query = query.Where(product =>
+                (product.ProductName != null &&
+                 product.ProductName.ToLower().Contains(normalizedSearch)) ||
+                (product.ProductCode != null &&
+                 product.ProductCode.ToLower().Contains(normalizedSearch)));
         }
         
-        int totalItems = await query.CountAsync();
-                
-        var page = query
+        var totalItems = await query.CountAsync();
+
+        var items = await query
             .Skip((request.PageIndex - 1) * request.PageSize)
-            .Take(request.PageSize);  
-        
-        var items = await page.Select(p => new Response.MaterialResponse
-        {
-            MaterialId = p.Id.ToString(),
-            MaterialCode = p.ProductCode,
-            MaterialName = p.ProductName,
-            Unit = p.Unit ?? null,
-            AvailableForSale = p.AvailableForSale ?? 0,
-            CoverImage = p.CoverImage,
-            ProductLabel = p.ProductLabel,
-        }).ToListAsync();
+            .Take(request.PageSize)
+            .Select(product => new Response.MaterialResponse
+            {
+                MaterialId = product.Id.ToString(),
+                MaterialCode = product.ProductCode,
+                MaterialName = product.ProductName,
+                Unit = product.Unit,
+                AvailableForSale = product.AvailableForSale ?? 0,
+                CoverImage = product.CoverImage,
+                ProductLabel = product.ProductLabel
+            })
+            .ToListAsync();
 
         return ApiResponseFactory.BasePagination(items, request.PageIndex, request.PageSize, totalItems);
     }
