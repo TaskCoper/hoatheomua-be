@@ -502,6 +502,254 @@ public class Service : IService
         await _revalidateService.RevalidateApi(revalidateBody);
     }
 
+    public async Task<CompensationOutcome> CompensateAsync(
+        Guid orderId, string? ahamoveOrderId, int? nhanhOrderId, string reason,
+        CancellationToken cancellationToken = default)
+    {
+        var details = new List<string>();
+        var retryable = false;
+
+        var deliveryCleared = true;
+        if (!string.IsNullOrWhiteSpace(ahamoveOrderId))
+        {
+            var outcome = await CancelAhamoveOrderAsync(ahamoveOrderId, reason, cancellationToken);
+            deliveryCleared = outcome.Cleared;
+            retryable |= outcome.Retryable;
+            details.Add($"ahamove({ahamoveOrderId})={outcome.Detail}");
+        }
+
+        var posOrderCleared = true;
+        if (nhanhOrderId.HasValue)
+        {
+            var outcome = await CancelNhanhCarrierAsync(nhanhOrderId.Value, cancellationToken);
+            posOrderCleared = outcome.Cleared;
+            retryable |= outcome.Retryable;
+            details.Add($"nhanhvn({nhanhOrderId})={outcome.Detail}");
+        }
+
+        var summary = details.Count > 0 ? string.Join("; ", details) : "nothing to compensate";
+
+        // Throw ONLY for transport-level failures, so the endpoint retry policy gets another go at
+        // both legs - each cancel is idempotent, so re-running is safe. A business rejection must
+        // never throw: it would loop forever instead of reaching ops.
+        if (retryable)
+        {
+            throw new FulfillmentTransientException(
+                $"Compensation for order {orderId} hit a retryable failure: {summary}");
+        }
+
+        if (!deliveryCleared || !posOrderCleared)
+        {
+            _logger.LogCritical(
+                "Compensation for order {OrderId} left a real booking outstanding ({Summary}). Manual cleanup required.",
+                orderId, summary);
+        }
+
+        return new CompensationOutcome
+        {
+            DeliveryCleared = deliveryCleared,
+            PosOrderCleared = posOrderCleared,
+            Details = Truncate(summary)
+        };
+    }
+
+    public async Task MarkFulfillmentFailedAsync(
+        Guid orderId, string step, string reason, CancellationToken cancellationToken = default)
+    {
+        var order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
+        if (order == null)
+        {
+            _logger.LogError("Cannot park order {OrderId} as {Status}: order not found", orderId, FulfillmentFailedStatus);
+            return;
+        }
+
+        order.Status = FulfillmentFailedStatus;
+        order.UpdatedAt = DateTimeOffset.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // The one log line ops actually need: the payment was taken and the refund is manual.
+        _logger.LogCritical(
+            "Order {OrderId} parked as {Status} after {Step}: {Reason}. Payment WAS taken - manual refund required. "
+            + "ahamoveOrderId={AhamoveOrderId} nhanhOrderId={NhanhOrderId}",
+            orderId, FulfillmentFailedStatus, step, reason, order.AhahaMoveOrderId, order.NhanhOrderId);
+    }
+
+    /// <summary>DELETE /v3/orders/{id} - see https://developers.ahamove.com/docs/api-reference/order-apis/cancel-order</summary>
+    private async Task<CancelOutcome> CancelAhamoveOrderAsync(
+        string ahamoveOrderId, string reason, CancellationToken cancellationToken)
+    {
+        var configs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        var baseUrl = configs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl);
+        var token = configs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
+
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"{baseUrl}/v3/orders/{ahamoveOrderId}")
+        {
+            // `comment` is mandatory once a driver has ACCEPTED the order.
+            Content = JsonContent.Create(new { comment = Truncate(reason) })
+        };
+        // Raw token with no "Bearer" prefix. The docs show `Bearer <token>`, but every Ahamove call
+        // already in this codebase sends the JWT raw and works against the partner account, so this
+        // follows the code that demonstrably works rather than the doc sample.
+        request.Headers.Add("Authorization", token);
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await SendAsync(request, "Ahamove cancel", cancellationToken);
+        }
+        catch (FulfillmentTransientException ex)
+        {
+            // Surfaced as retryable rather than thrown, so the other leg still gets attempted.
+            return new CancelOutcome(false, true, ex.Message);
+        }
+
+        using (response)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Ahamove order {AhamoveOrderId} cancelled", ahamoveOrderId);
+                return new CancelOutcome(true, false, "cancelled");
+            }
+
+            return response.StatusCode switch
+            {
+                // ORDER_NOT_FOUND - nothing outstanding, which is the state we wanted anyway.
+                HttpStatusCode.NotFound => new CancelOutcome(true, false, "not found (already gone)"),
+
+                // INVALID_ORDER_STATUS - cancellable statuses are IDLE/ASSIGNING/ACCEPTED/CONFIRMING/
+                // PAYING, so this means already cancelled OR already delivered. Those two are not
+                // distinguishable from the status code, and a delivered order is emphatically NOT
+                // cleared, so report it and let a human look.
+                HttpStatusCode.NotAcceptable =>
+                    new CancelOutcome(false, false, $"not cancellable in current status: {body}"),
+
+                _ when (int)response.StatusCode >= 500 =>
+                    new CancelOutcome(false, true, $"HTTP {(int)response.StatusCode}"),
+
+                _ => new CancelOutcome(false, false, $"HTTP {(int)response.StatusCode}: {body}")
+            };
+        }
+    }
+
+    /// <summary>
+    /// POST /order/cancelcarrier - see https://apidocs.nhanh.vn/v3/order/cancelcarrier
+    /// </summary>
+    /// <remarks>
+    /// IMPORTANT: this cancels the CARRIER SHIPMENT, not the NhanhVn order record. The POS order
+    /// itself survives and still has to be cancelled by hand - which is why the failure log tells
+    /// ops the order id rather than claiming the order was cancelled.
+    /// </remarks>
+    private async Task<CancelOutcome> CancelNhanhCarrierAsync(int nhanhOrderId, CancellationToken cancellationToken)
+    {
+        var configs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
+        var url = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl)
+                  + "/order/cancelcarrier?appId=" + appId + "&businessId=" + businessId;
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = JsonContent.Create(new { orderId = nhanhOrderId })
+        };
+        request.Headers.Add("Authorization", token);
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await SendAsync(request, "NhanhVn cancelcarrier", cancellationToken);
+        }
+        catch (FulfillmentTransientException ex)
+        {
+            return new CancelOutcome(false, true, ex.Message);
+        }
+
+        using (response)
+        {
+            var raw = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return (int)response.StatusCode >= 500
+                    ? new CancelOutcome(false, true, $"HTTP {(int)response.StatusCode}")
+                    : new CancelOutcome(false, false, $"HTTP {(int)response.StatusCode}: {raw}");
+            }
+
+            // Like /order/add, this replies 200 even when it rejects the request; `code` is the
+            // real verdict.
+            int code;
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                code = doc.RootElement.TryGetProperty("code", out var codeElement)
+                       && codeElement.ValueKind == JsonValueKind.Number
+                    ? codeElement.GetInt32()
+                    : 0;
+            }
+            catch (JsonException)
+            {
+                return new CancelOutcome(false, true, "non-JSON response");
+            }
+
+            if (code == 1)
+            {
+                _logger.LogInformation("NhanhVn carrier shipment cancelled for order {NhanhOrderId}", nhanhOrderId);
+                return new CancelOutcome(true, false, "carrier shipment cancelled");
+            }
+
+            // The order never reached a carrier, so there is no shipment outstanding to cancel.
+            if (raw.Contains("ERR_ORDER_CARRIER_NOT_YET_SENT", StringComparison.OrdinalIgnoreCase))
+            {
+                return new CancelOutcome(true, false, "no carrier shipment to cancel");
+            }
+
+            // ERR_ORDER_CARRIER_NO_API_CANCEL / ERR_ORDER_CARRIER_REJECT - a real shipment survives.
+            return new CancelOutcome(false, false, $"rejected: {raw}");
+        }
+    }
+
+    private readonly record struct CancelOutcome(bool Cleared, bool Retryable, string Detail);
+
+    private static string Truncate(string value) => value.Length <= 500 ? value : value[..500];
+
+    public async Task<IReadOnlyList<FulfillmentStateView>> GetFulfillmentStatesAsync(
+        string? state, int? stuckForMinutes, int limit, CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.OrderFulfillmentStates.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(state))
+        {
+            query = query.Where(x => x.CurrentState == state);
+        }
+
+        if (stuckForMinutes is > 0)
+        {
+            var threshold = DateTimeOffset.UtcNow.AddMinutes(-stuckForMinutes.Value);
+            query = query.Where(x => (x.UpdatedAt ?? x.CreatedAt) < threshold);
+        }
+
+        return await query
+            .OrderBy(x => x.UpdatedAt ?? x.CreatedAt)
+            .Take(Math.Clamp(limit, 1, 500))
+            .Select(x => new FulfillmentStateView
+            {
+                OrderId = x.CorrelationId,
+                CurrentState = x.CurrentState,
+                Gateway = x.Gateway,
+                AhamoveOrderId = x.AhamoveOrderId,
+                NhanhOrderId = x.NhanhOrderId,
+                DeliveryDispatched = x.DeliveryDispatched,
+                FailedStep = x.FailedStep,
+                FailureReason = x.FailureReason,
+                CompensationAttempts = x.CompensationAttempts,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt
+            })
+            .ToListAsync(cancellationToken);
+    }
+
     private async Task<OrderEntity> LoadOrderAsync(Guid orderId, CancellationToken cancellationToken)
         => await _dbContext.Orders
                .Include(x => x.OrderDetails)

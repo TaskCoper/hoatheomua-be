@@ -4,6 +4,7 @@ using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Service.DependencyInjection.Options;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Fulfillment;
+using HoaTheoMua.Service.Fulfillment.Consumers;
 using HoaTheoMua.Service.Utils.JsonConverters;
 using MassTransit;
 using MassTransit.EntityFrameworkCoreIntegration;
@@ -27,6 +28,10 @@ public static class ServiceCollectionExtensions
                 .GetExecutingAssembly());
 
             cfg.SetKebabCaseEndpointNameFormatter();
+
+            // Đăng ký qua DI, KHÔNG dùng bus.ConnectConsumeObserver(new ...): instance tự new
+            // không lấy được ILogger từ container.
+            cfg.AddConsumeObserver<FulfillmentConsumeObserver>();
 
             cfg.AddSagaStateMachine<OrderFulfillmentStateMachine, OrderFulfillmentState>()
                 .EntityFrameworkRepository(r =>

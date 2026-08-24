@@ -39,10 +39,13 @@ namespace HoaTheoMua.Service.Test.WebhookTest
             // Everything Ahamove/NhanhVn related moved into Fulfillment.Service, so the webhook
             // now needs only the DbContext, its own SepayOption and the fulfilment service.
             var mockFulfillmentService = new Mock<HoaTheoMua.Service.Fulfillment.IService>();
+            var mockPublishEndpoint = new Mock<MassTransit.IPublishEndpoint>();
+
             return new WebhookServiceImpl(
                 CreateInMemoryDbContext(),
                 configuration,
-                mockFulfillmentService.Object);
+                mockFulfillmentService.Object,
+                mockPublishEndpoint.Object);
         }
 
         [Fact]

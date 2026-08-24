@@ -4,9 +4,13 @@ using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
+using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Fulfillment;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 
 namespace HoaTheoMua.Service.Webhook;
 
@@ -15,12 +19,14 @@ public partial class Service : IService
     private readonly AppDbContext _dbContext;
     private readonly SepayOption _sepayOption;
     private readonly Fulfillment.IService _fulfillmentService;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public Service(AppDbContext dbContext, IConfiguration configuration,
-        Fulfillment.IService fulfillmentService)
+        Fulfillment.IService fulfillmentService, IPublishEndpoint publishEndpoint)
     {
         _dbContext = dbContext;
         _fulfillmentService = fulfillmentService;
+        _publishEndpoint = publishEndpoint;
         _sepayOption = new SepayOption();
         configuration.GetSection(nameof(SepayOption)).Bind(_sepayOption);
     }
@@ -331,17 +337,71 @@ public partial class Service : IService
     private const string PendingStatus = "Pending";
     private const string PaidStatus = "Paid";
 
-    // Shared tail for both gateways. The actual work now lives in Fulfillment.Service so it can be
-    // driven step by step later; this method keeps the legacy inline ordering for now.
+    /// <summary>
+    /// Kill switch. While false the gateway callback keeps running the legacy inline fulfilment, so
+    /// a bad deploy can be rolled back by flipping a Config row instead of shipping code.
+    /// </summary>
+    private const string UseSagaConfigKey = "fulfillment.use_saga";
+
+    // Shared tail for both gateways.
     private async Task FulfillPaidOrder(Repository.Entity.Order order, Transaction transaction)
+    {
+        var fulfillmentConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "fulfillment");
+        var useSaga = fulfillmentConfigs.GetValue(UseSagaConfigKey, true);
+
+        if (!useSaga)
+        {
+            await FulfillPaidOrderInline(order, transaction);
+            return;
+        }
+
+        // The saga path does exactly one thing here: record that the money arrived, and hand the
+        // rest to the bus. No Ahamove call, no NhanhVn call, nothing that can make the gateway wait
+        // or make this request fail after the payment is already real.
+        order.Status = PaidStatus;
+        order.UpdatedAt = DateTimeOffset.UtcNow;
+
+        _dbContext.Orders.Update(order);
+        _dbContext.Transactions.Add(transaction);
+
+        // Bus outbox: this does not touch RabbitMQ. It stages an OutboxMessage row inside the very
+        // same SaveChanges below, so the order can never be marked Paid without the fulfilment
+        // message, nor the message sent for an order that failed to commit.
+        await _publishEndpoint.Publish(new OrderPaid
+        {
+            OrderId = order.Id,
+            TransactionId = transaction.Id,
+            Gateway = transaction.Gateway,
+            RequestId = transaction.RequestId,
+            Amount = transaction.TransferAmount
+        });
+
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (IsDuplicateGatewayEvent(exception))
+        {
+            // A concurrent redelivery won the race and already recorded this exact gateway event.
+            // The unique index is the only thing that actually stops two simultaneous callbacks -
+            // the status check above is read-then-act and both can pass it. Ack and drop.
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Pre-saga behaviour, kept for one release behind <see cref="UseSagaConfigKey"/>: run the three
+    /// fulfilment steps inline and only then commit. Delete once the saga has run clean in prod.
+    /// </summary>
+    private async Task FulfillPaidOrderInline(Repository.Entity.Order order, Transaction transaction)
     {
         var plan = await _fulfillmentService.DispatchDeliveryAsync(order.Id);
         await _fulfillmentService.CreatePosOrderAsync(order.Id, plan);
 
         // Status is flipped LAST, deliberately. Both fulfilment steps SaveChanges on this same
-        // scoped DbContext, so assigning "Paid" up front - as the original did - would now persist
-        // it before NhanhVn had succeeded, and the gateway's next redelivery would short-circuit on
-        // the Paid guard and never finish the order.
+        // scoped DbContext, so assigning "Paid" up front would persist it before NhanhVn had
+        // succeeded, and the gateway's next redelivery would short-circuit on the Paid guard and
+        // never finish the order.
         order.Status = PaidStatus;
         order.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -352,4 +412,10 @@ public partial class Service : IService
 
         await _fulfillmentService.RevalidateOrderProductsAsync(order.Id);
     }
+
+    // Matches the unique index on Transactions (Gateway, RequestId). RequestId carries each
+    // gateway's own event id - BaoKim's request_id, SePay's transaction id as text.
+    private static bool IsDuplicateGatewayEvent(DbUpdateException exception)
+        => exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgres
+           && (postgres.ConstraintName?.Contains("Gateway_RequestId", StringComparison.OrdinalIgnoreCase) ?? false);
 }

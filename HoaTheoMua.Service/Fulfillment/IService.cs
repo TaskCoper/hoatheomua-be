@@ -33,12 +33,62 @@ public interface IService
     /// </summary>
     Task RevalidateOrderProductsAsync(Guid orderId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Cancels whatever the failed fulfilment already booked outside our database. Attempts both
+    /// legs even if the first fails, and never throws on a rejection - a compensation that cannot
+    /// complete still has to reach ops rather than loop. Retryable transport failures DO throw, so
+    /// the endpoint retry policy gets a chance before the saga gives up.
+    /// </summary>
+    Task<CompensationOutcome> CompensateAsync(Guid orderId, string? ahamoveOrderId, int? nhanhOrderId,
+        string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Terminal bookkeeping: park the order in FulfillmentFailed so it stops looking like a healthy
+    /// paid order, and log loudly enough that ops can find it. The refund itself is manual.
+    /// </summary>
+    Task MarkFulfillmentFailedAsync(Guid orderId, string step, string reason,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ops view over the saga table. Because the design has no timers, this is also how a stalled
+    /// fulfilment is found: filter on a non-terminal state and sort by how long it has sat there.
+    /// </summary>
+    /// <param name="state">CurrentState to filter on, e.g. "Failed" or "CreatingPosOrder".</param>
+    /// <param name="stuckForMinutes">Only return sagas untouched for at least this long.</param>
+    Task<IReadOnlyList<FulfillmentStateView>> GetFulfillmentStatesAsync(
+        string? state, int? stuckForMinutes, int limit, CancellationToken cancellationToken = default);
 }
 
+/// <summary>Flattened saga row for the ops endpoint.</summary>
+public record FulfillmentStateView
+{
+    public Guid OrderId { get; init; }
+    public string CurrentState { get; init; } = string.Empty;
+    public string? Gateway { get; init; }
+    public string? AhamoveOrderId { get; init; }
+    public int? NhanhOrderId { get; init; }
+    public bool DeliveryDispatched { get; init; }
+    public string? FailedStep { get; init; }
+    public string? FailureReason { get; init; }
+    public int CompensationAttempts { get; init; }
+    public DateTimeOffset CreatedAt { get; init; }
+    public DateTimeOffset? UpdatedAt { get; init; }
+}
 
 /// <summary>Outcome of the POS step. Not a bus message - see PosOrderCreated for that.</summary>
 public record PosOrderResult
 {
     public int NhanhOrderId { get; init; }
     public string? TrackingUrl { get; init; }
+}
+
+/// <summary>
+/// What compensation managed to clear. A flag is true when nothing is left outstanding on that leg
+/// - either it was cancelled, or there was never anything there.
+/// </summary>
+public record CompensationOutcome
+{
+    public bool DeliveryCleared { get; init; }
+    public bool PosOrderCleared { get; init; }
+    public string? Details { get; init; }
 }
