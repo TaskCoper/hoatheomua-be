@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.Net.Http;
 using HoaTheoMua.Repository;
-using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -38,19 +36,13 @@ namespace HoaTheoMua.Service.Test.WebhookTest
                 .AddInMemoryCollection(settings)
                 .Build();
 
-            var mockOrderService = new Mock<HoaTheoMua.Service.Order.IService>();
-            var mockConfigService = new Mock<HoaTheoMua.Service.Config.IService>();
-            var mockAhaMoveService = new Mock<IService>();
-            var mockRevalidateService = new Mock<HoaTheoMua.Service.Revalidate.IService>();
-
+            // Everything Ahamove/NhanhVn related moved into Fulfillment.Service, so the webhook
+            // now needs only the DbContext, its own SepayOption and the fulfilment service.
+            var mockFulfillmentService = new Mock<HoaTheoMua.Service.Fulfillment.IService>();
             return new WebhookServiceImpl(
                 CreateInMemoryDbContext(),
-                new HttpClient(new Mock<HttpMessageHandler>().Object),
                 configuration,
-                mockOrderService.Object,
-                mockConfigService.Object,
-                mockAhaMoveService.Object,
-                mockRevalidateService.Object);
+                mockFulfillmentService.Object);
         }
 
         [Fact]

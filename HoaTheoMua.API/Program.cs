@@ -22,6 +22,7 @@ using ProductImportService = HoaTheoMua.Service.ProductImport;
 using BaoKimService = HoaTheoMua.Service.BaoKim;
 using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 using RevalidateService = HoaTheoMua.Service.Revalidate;
+using FulfillmentService = HoaTheoMua.Service.Fulfillment;
 using HoaTheoMua.Service.DependencyInjection.Extensions;
 
 
@@ -72,6 +73,11 @@ builder.Services.AddScoped<NhanhVnService.IService, NhanhVnService.Service>();
 builder.Services.AddScoped<ProductImportService.IService, ProductImportService.Service>();
 builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
+
+// Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove and NhanhVn, and
+// registering it with AddScoped would silently hand it the unnamed default HttpClient the way
+// Webhook.Service and Revalidate.Service currently get theirs.
+builder.Services.AddHttpClient<FulfillmentService.IService, FulfillmentService.Service>("FulfillmentService");
 
 
 // MassTransit + RabbitMQ: consumers, the fulfilment saga and the EF transactional outbox. Runs
