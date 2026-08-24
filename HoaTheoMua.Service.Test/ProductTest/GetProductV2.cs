@@ -1,5 +1,6 @@
 using AutoMapper;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -110,22 +111,19 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Equal(2, result.Value.TotalCount); // "Rose Combo" (Barcode has rc) and "Sunflower" (NhanhProductId has rc)
         }
 
-        [Theory]
-        [InlineData("Thành phần")]
-        [InlineData("components")]
-        [InlineData("2")]
-        public async Task GetLocalProductsV2_FilterByProductType_Components_Success(string productType)
+        [Fact]
+        public async Task GetLocalProductsV2_FilterByProductType_Components_Success()
         {
             // Arrange
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 1", ProductLabel = "Thành phần 1", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 2", ProductLabel = "Vật liệu và thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 1", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 2", ProductLabel = "THÀNH PHẦN", IsDeleted = false },
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "Product 1", ProductLabel = "Hoa hồng", ProductType = "Sản phẩm", IsDeleted = false }
             };
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
-            var request = new ProductRequest.LocalProductQueryRequest { productType = productType };
+            var request = new ProductRequest.LocalProductQueryRequest { productType = ProductType.Material };
 
             // Act
             var result = await service.GetLocalProductsV2(request);
@@ -138,11 +136,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Contains(items, x => x.ProductName == "Material 2");
         }
 
-        [Theory]
-        [InlineData("Combo")]
-        [InlineData("combo")]
-        [InlineData("1")]
-        public async Task GetLocalProductsV2_FilterByProductType_Combo_BothCases_Success(string productType)
+        [Fact]
+        public async Task GetLocalProductsV2_FilterByProductType_Combo_BothCases_Success()
         {
             // Arrange
             var products = new List<ProductEntity>
@@ -165,7 +160,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             };
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
-            var request = new ProductRequest.LocalProductQueryRequest { productType = productType };
+            var request = new ProductRequest.LocalProductQueryRequest { productType = ProductType.Combo };
 
             // Act
             var result = await service.GetLocalProductsV2(request);
@@ -178,12 +173,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Contains(items, x => x.ProductName == "Cha Co Con Toan Combo");
         }
 
-        [Theory]
-        [InlineData("Sản phẩm")]
-        [InlineData("san pham")]
-        [InlineData("product")]
-        [InlineData("3")]
-        public async Task GetLocalProductsV2_FilterByProductType_Product_Success(string productType)
+        [Fact]
+        public async Task GetLocalProductsV2_FilterByProductType_Product_Success()
         {
             // Arrange
             var products = new List<ProductEntity>
@@ -191,7 +182,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                 // TH Sản phẩm thường độc lập -> ĐƯỢC CHỌN
                 new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PROD_IND", ProductName = "San Pham Doc Lap", ProductType = "Sản phẩm", IsDeleted = false },
 
-                // TH Cha có con hỗn hợp (có con không phải Combo) -> ĐƯỢC CHỌN
+                // TH cha có con hỗn hợp -> ĐƯỢC CHỌN (không phải full combo)
                 new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PARENT_MIXED", ProductName = "Cha Co Con Hon Hop", ProductType = "Sản phẩm", IsDeleted = false },
                 new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_1", ParentProductId = "PARENT_MIXED", ProductName = "Con Combo 1", ProductType = "Combo", IsDeleted = false },
                 new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_2", ParentProductId = "PARENT_MIXED", ProductName = "Con San Pham 2", ProductType = "Sản phẩm", IsDeleted = false },
@@ -205,21 +196,22 @@ namespace HoaTheoMua.Service.Test.ProductTest
             };
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
-            var request = new ProductRequest.LocalProductQueryRequest { productType = productType };
+            var request = new ProductRequest.LocalProductQueryRequest { productType = ProductType.Product };
 
             // Act
             var result = await service.GetLocalProductsV2(request);
 
             // Assert
             Assert.NotNull(result);
-            Assert.Equal(2, result.Value.TotalCount); // "San Pham Doc Lap" và "Cha Co Con Hon Hop"
+            Assert.Equal(2, result.Value.TotalCount);
             var items = result.Value.Items.Cast<ProductDetailResponse>().ToList();
             Assert.Contains(items, x => x.ProductName == "San Pham Doc Lap");
             Assert.Contains(items, x => x.ProductName == "Cha Co Con Hon Hop");
+            Assert.DoesNotContain(items, x => x.ProductName == "Cha Toan Con Combo");
         }
 
         [Fact]
-        public async Task GetLocalProductsV2_FilterByProductType_InvalidOrEmpty_ReturnsAllProducts()
+        public async Task GetLocalProductsV2_FilterByProductType_NotProvided_ReturnsAllProducts()
         {
             // Arrange
             var products = new List<ProductEntity>
@@ -230,7 +222,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             };
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
-            var request = new ProductRequest.LocalProductQueryRequest { productType = "invalid_type" };
+            var request = new ProductRequest.LocalProductQueryRequest { productType = null };
 
             // Act
             var result = await service.GetLocalProductsV2(request);

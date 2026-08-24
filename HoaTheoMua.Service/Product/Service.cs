@@ -365,6 +365,53 @@ public class Service : IService
                 query = query.Where(x => x.IsPin == request.isPin.Value);
             }
         }
+        
+        if (request.productType.HasValue)
+        {
+            switch (request.productType.Value)
+            {
+                case ProductType.Material:
+                    query = query.Where(x =>
+                        x.ProductLabel != null &&
+                        x.ProductLabel.Trim().ToLower() == "thành phần");
+                    break;
+                
+                case ProductType.Combo:
+                    query = query.Where(x =>
+                        // Combo độc lập: không có product con và chính nó có type Combo.
+                        (x.ProductType == "Combo" &&
+                          !_dbContext.Products.Any(child =>
+                              !child.IsDeleted &&
+                              child.ParentProductId == x.NhanhProductId))
+                        ||
+                        // Combo cha: parent có type Sản phẩm, có con và tất cả con đều có type Combo.
+                        (x.ProductType == "Sản phẩm" &&
+                         _dbContext.Products.Any(child =>
+                             !child.IsDeleted &&
+                             child.ParentProductId == x.NhanhProductId) &&
+                         !_dbContext.Products.Any(child =>
+                             !child.IsDeleted &&
+                             child.ParentProductId == x.NhanhProductId &&
+                             child.ProductType != "Combo")));
+                    break;
+                
+                case ProductType.Product:
+                    query = query.Where(x =>
+                        x.ProductType == "Sản phẩm" &&
+                        (
+                            // Sản phẩm độc lập
+                            !_dbContext.Products.Any(child =>
+                                !child.IsDeleted &&
+                                child.ParentProductId == x.NhanhProductId) ||
+                            // Sản phẩm có con nhưng không phải full combo
+                            _dbContext.Products.Any(child =>
+                                !child.IsDeleted &&
+                                child.ParentProductId == x.NhanhProductId &&
+                                child.ProductType != "Combo")
+                        ));
+                    break;
+            }
+        }
 
         IOrderedQueryable<HoaTheoMua.Repository.Entity.Product> orderedQuery;
 

@@ -575,14 +575,14 @@ public class LocalProductSearchTest
 
         var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", ProductLabel = "Sản phẩm", IsDeleted = false };
         var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", ProductLabel = "thành phần", IsDeleted = false };
-        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "Thành phần 1", IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "THÀNH PHẦN", IsDeleted = false };
 
         await dbContext.Products.AddRangeAsync(p1, p2, p3);
         await dbContext.SaveChangesAsync();
 
         var request = new Request.LocalProductQueryRequest
         {
-            productType = "Thành phần"
+            productType = ProductType.Material
         };
 
         // Act
