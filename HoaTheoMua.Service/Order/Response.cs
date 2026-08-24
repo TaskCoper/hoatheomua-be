@@ -134,6 +134,8 @@ public class Response
         
         public Guid? ProductId { get; set; }
         public string? CoverImage { get; set; }
+        public Guid? ParentProductId { get; set; }
+        public string? ParentProductName { get; set; }
         
         public int ItemId { get; set; }
         public int Number { get; set; }
