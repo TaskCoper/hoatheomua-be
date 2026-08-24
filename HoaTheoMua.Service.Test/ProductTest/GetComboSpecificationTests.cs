@@ -66,7 +66,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
         }
 
         [Fact]
-        public async Task GetComboSpecification_ProductNotFound_ThrowsNotFoundException()
+        public async Task GetComboSpecification_ComboNotFound_ThrowsNotFoundException()
         {
             // Arrange
             var dbContext = CreateMockDbContext(new List<ProductEntity>(), new List<ComboSpecEntity>());
@@ -77,23 +77,52 @@ namespace HoaTheoMua.Service.Test.ProductTest
         }
 
         [Fact]
-        public async Task GetComboSpecification_NoMaterials_ReturnsEmptyMaterials()
+        public async Task GetComboSpecification_ComboFoundButNoAvailableMaterials_ReturnsEmptyMaterials()
         {
             // Arrange
             var comboId = Guid.NewGuid();
+            var combo = new ProductEntity
+            {
+                Id = comboId,
+                ProductCode = "EMPTY-COMBO",
+                ProductName = "Empty Combo",
+                IsDeleted = false
+            };
+            var deletedMaterial = new ProductEntity
+            {
+                Id = Guid.NewGuid(),
+                ProductName = "Deleted Material",
+                IsDeleted = true
+            };
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = comboId, ProductName = "Empty Combo", IsDeleted = false }
+                combo,
+                deletedMaterial
             };
-            var dbContext = CreateMockDbContext(products, new List<ComboSpecEntity>());
+            var comboSpecs = new List<ComboSpecEntity>
+            {
+                new ComboSpecEntity
+                {
+                    SubId = comboId,
+                    Sub = combo,
+                    MatId = deletedMaterial.Id,
+                    Mat = deletedMaterial,
+                    Quantity = 1,
+                    IsCore = true,
+                    IsActive = true,
+                    IsDeleted = false
+                }
+            };
+            var dbContext = CreateMockDbContext(products, comboSpecs);
             var service = CreateService(dbContext);
 
             // Act
             var result = await service.GetComboSpecificationAsync(comboId);
 
             // Assert
-            Assert.NotNull(result);
             Assert.Equal(comboId.ToString(), result.SubId);
+            Assert.Equal("EMPTY-COMBO", result.ProductCode);
+            Assert.Equal("Empty Combo", result.ProductName);
             Assert.Empty(result.Materials);
         }
 
@@ -102,21 +131,27 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             // Arrange
             var comboId = Guid.NewGuid();
+            var combo = new ProductEntity
+            {
+                Id = comboId,
+                ProductName = "Full Combo",
+                IsDeleted = false
+            };
             var coreMat1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Core 1", AvailableForSale = 10, IsDeleted = false };
             var coreMat2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Core 2", AvailableForSale = 40, IsDeleted = false };
             var supportMat = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Support 1", AvailableForSale = 0, IsDeleted = false };
             
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = comboId, ProductName = "Full Combo", IsDeleted = false },
+                combo,
                 coreMat1, coreMat2, supportMat
             };
 
             var comboSpecs = new List<ComboSpecEntity>
             {
-                new ComboSpecEntity { SubId = comboId, MatId = coreMat1.Id, Mat = coreMat1, Quantity = 2, IsCore = true, IsActive = true }, // max = 5
-                new ComboSpecEntity { SubId = comboId, MatId = supportMat.Id, Mat = supportMat, Quantity = 1, IsCore = false, IsActive = true }, // max = 0 (support)
-                new ComboSpecEntity { SubId = comboId, MatId = coreMat2.Id, Mat = coreMat2, Quantity = 5, IsCore = true, IsActive = true }, // max = 8
+                new ComboSpecEntity { SubId = comboId, Sub = combo, MatId = coreMat1.Id, Mat = coreMat1, Quantity = 2, IsCore = true, IsActive = true }, // max = 5
+                new ComboSpecEntity { SubId = comboId, Sub = combo, MatId = supportMat.Id, Mat = supportMat, Quantity = 1, IsCore = false, IsActive = true }, // max = 0 (support)
+                new ComboSpecEntity { SubId = comboId, Sub = combo, MatId = coreMat2.Id, Mat = coreMat2, Quantity = 5, IsCore = true, IsActive = true }, // max = 8
             };
 
             var dbContext = CreateMockDbContext(products, comboSpecs);
@@ -129,11 +164,10 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.NotNull(result);
             Assert.Equal(3, result.Materials.Count);
             
-            // Note: According to new user's implementation, Role is a boolean (c.IsCore), and OrderBy(x => x.Role) sorts false (Support) before true (Core).
-            // false is 0, true is 1 in sorting. So Support comes first!
-            Assert.False(result.Materials[0].Role);
+            // Core materials (Role = true) are sorted before support materials (Role = false).
+            Assert.True(result.Materials[0].Role);
             Assert.True(result.Materials[1].Role);
-            Assert.True(result.Materials[2].Role);
+            Assert.False(result.Materials[2].Role);
             
             // Verify individual max combos
             var core1Item = result.Materials.First(m => m.MaterialId == coreMat1.Id.ToString());

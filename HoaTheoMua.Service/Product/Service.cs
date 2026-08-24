@@ -1121,7 +1121,7 @@ public class Service : IService
                         ? (int)Math.Floor((c.Mat.AvailableForSale ?? 0) / c.Quantity)  
                         : 0  
                 })  
-                .OrderBy(x => x.Role)  
+                .OrderByDescending(x => x.Role)  
                 .ToList()  
         };    return response;  
     }
