@@ -333,56 +333,6 @@ public class Service : IService
                 (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
         }
 
-        const string TypeCombo = "Combo";
-        const string TypeProduct = "Sản phẩm";
-
-        if (!string.IsNullOrWhiteSpace(request.productType))
-        {
-            var normalizedProductType = request.productType.Trim().ToLower();
-
-            switch (normalizedProductType)
-            {
-                case "thành phần":
-                case "thanh phan":
-                case "components":
-                case "2":
-                    query = query.Where(x =>
-                        x.ProductLabel != null &&
-                        EF.Functions.Like(x.ProductLabel, "%thành phần%"));
-                    break;
-
-                case "combo":
-                case "1":
-                    query = query.Where(x =>
-                        // TH1: độc lập (không con) + type Combo
-                        (x.ProductType == TypeCombo &&
-                         !_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted))
-                        ||
-                        // TH2: cha type "Sản phẩm", có con, và mọi con đều Combo
-                        (x.ProductType == TypeProduct &&
-                         _dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) &&
-                         !_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted
-                                                    && c.ProductType != TypeCombo))
-                    );
-                    break;
-
-                case "sản phẩm":
-                case "san pham":
-                case "product":
-                case "3":
-                    query = query.Where(x =>
-                        x.ProductType == TypeProduct &&
-                        // loại trừ đúng 1 case: cha có con và toàn bộ con là Combo
-                        !(_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted) &&
-                          !_dbContext.Products.Any(c => c.ParentProductId == x.NhanhProductId && !c.IsDeleted
-                                                     && c.ProductType != TypeCombo))
-                    );
-                    break;
-                default:
-                    break;
-            }
-        }
-
         if (request.priceFrom.HasValue)
         {
             query = query.Where(x => x.Price >= request.priceFrom.Value);
