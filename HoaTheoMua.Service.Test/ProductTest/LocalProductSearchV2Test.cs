@@ -198,4 +198,116 @@ public class LocalProductSearchV2Test
         Assert.Single(items);
         Assert.Equal("A", items[0].ProductName);
     }
+
+    [Fact]
+    public async Task GetLocalProductsV2_FilterByCombo_ReturnsStandaloneComboAndProductParentWithOnlyComboChildren()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var standaloneCombo = new ProductEntity
+        {
+            Id = Guid.NewGuid(), ProductName = "Standalone Combo", NhanhProductId = "combo-1",
+            ProductType = "Combo", IsDeleted = false
+        };
+        var comboParent = new ProductEntity
+        {
+            Id = Guid.NewGuid(), ProductName = "Combo Parent", NhanhProductId = "parent-1",
+            ProductType = "Sản phẩm", IsDeleted = false
+        };
+        var mixedParent = new ProductEntity
+        {
+            Id = Guid.NewGuid(), ProductName = "Mixed Parent", NhanhProductId = "parent-2",
+            ProductType = "Sản phẩm", IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(
+            standaloneCombo,
+            comboParent,
+            mixedParent,
+            new ProductEntity { Id = Guid.NewGuid(), ParentProductId = "parent-1", ProductType = "Combo", IsDeleted = false },
+            new ProductEntity { Id = Guid.NewGuid(), ParentProductId = "parent-1", ProductType = "Combo", IsDeleted = false },
+            new ProductEntity { Id = Guid.NewGuid(), ParentProductId = "parent-2", ProductType = "Combo", IsDeleted = false },
+            new ProductEntity { Id = Guid.NewGuid(), ParentProductId = "parent-2", ProductType = "Sản phẩm", IsDeleted = false });
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest
+        {
+            productType = ProductType.Combo,
+            pageSize = 20
+        });
+
+        var names = result.Value.Items
+            .Cast<Response.ProductDetailResponse>()
+            .Select(x => x.ProductName)
+            .ToList();
+
+        Assert.Equal(2, names.Count);
+        Assert.Contains("Standalone Combo", names);
+        Assert.Contains("Combo Parent", names);
+        Assert.DoesNotContain("Mixed Parent", names);
+    }
+
+    [Fact]
+    public async Task GetLocalProductsV2_FilterByProduct_ReturnsOnlyStandaloneProducts()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        await dbContext.Products.AddRangeAsync(
+            new ProductEntity
+            {
+                Id = Guid.NewGuid(), ProductName = "Standalone Product", NhanhProductId = "product-1",
+                ProductType = "Sản phẩm", IsDeleted = false
+            },
+            new ProductEntity
+            {
+                Id = Guid.NewGuid(), ProductName = "Product Parent", NhanhProductId = "product-parent",
+                ProductType = "Sản phẩm", IsDeleted = false
+            },
+            new ProductEntity
+            {
+                Id = Guid.NewGuid(), ParentProductId = "product-parent",
+                ProductType = "Sản phẩm", IsDeleted = false
+            });
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest
+        {
+            productType = ProductType.Product
+        });
+
+        var item = Assert.Single(result.Value.Items.Cast<Response.ProductDetailResponse>());
+        Assert.Equal("Standalone Product", item.ProductName);
+    }
+
+    [Fact]
+    public async Task GetLocalProductsV2_FilterByMaterial_ReturnsExactComponentLabel()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        await dbContext.Products.AddRangeAsync(
+            new ProductEntity
+            {
+                Id = Guid.NewGuid(), ProductName = "Component", ProductLabel = " Thành phần ", IsDeleted = false
+            },
+            new ProductEntity
+            {
+                Id = Guid.NewGuid(), ProductName = "Accessory", ProductLabel = "Phụ liệu", IsDeleted = false
+            },
+            new ProductEntity
+            {
+                Id = Guid.NewGuid(), ProductName = "Similar Label", ProductLabel = "Vật liệu và thành phần", IsDeleted = false
+            });
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest
+        {
+            productType = ProductType.Material
+        });
+
+        var item = Assert.Single(result.Value.Items.Cast<Response.ProductDetailResponse>());
+        Assert.Equal("Component", item.ProductName);
+    }
 }

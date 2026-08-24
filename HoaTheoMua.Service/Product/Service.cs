@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AutoMapper;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -362,6 +363,45 @@ public class Service : IService
             if (request.isPin.HasValue)
             {
                 query = query.Where(x => x.IsPin == request.isPin.Value);
+            }
+        }
+        
+        if (request.productType.HasValue)
+        {
+            switch (request.productType.Value)
+            {
+                case ProductType.Material:
+                    query = query.Where(x =>
+                        x.ProductLabel != null &&
+                        x.ProductLabel.Trim().ToLower() == "thành phần");
+                    break;
+                
+                case ProductType.Combo:
+                    query = query.Where(x =>
+                        // Combo độc lập: không có product con và chính nó có type Combo.
+                        (x.ProductType == "Combo" &&
+                          !_dbContext.Products.Any(child =>
+                              !child.IsDeleted &&
+                              child.ParentProductId == x.NhanhProductId))
+                        ||
+                        // Combo cha: parent có type Sản phẩm, có con và tất cả con đều có type Combo.
+                        (x.ProductType == "Sản phẩm" &&
+                         _dbContext.Products.Any(child =>
+                             !child.IsDeleted &&
+                             child.ParentProductId == x.NhanhProductId) &&
+                         !_dbContext.Products.Any(child =>
+                             !child.IsDeleted &&
+                             child.ParentProductId == x.NhanhProductId &&
+                             child.ProductType != "Combo")));
+                    break;
+                
+                case ProductType.Product:
+                    query = query.Where(x =>
+                        x.ProductType == "Sản phẩm" &&
+                         !_dbContext.Products.Any(child =>
+                             !child.IsDeleted &&
+                             child.ParentProductId == x.NhanhProductId));
+                    break;
             }
         }
 
