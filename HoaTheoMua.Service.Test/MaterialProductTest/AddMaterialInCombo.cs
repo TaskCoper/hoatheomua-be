@@ -145,7 +145,7 @@ public class AddMaterialInCombo
         var ex = await Assert.ThrowsAsync<NotFoundException>(
             () => service.AddMaterialInCombo(ComboId, request));
 
-        Assert.Equal("COMBO_NOT_FOUND", ex.Message);
+        Assert.Equal("Không tìm thấy combo", ex.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -162,7 +162,7 @@ public class AddMaterialInCombo
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.AddMaterialInCombo(ComboId, request));
 
-        Assert.Equal("INVALID_QUANTITY", ex.Message);
+        Assert.Equal("Số lượng vật liệu phải lớn hơn 0", ex.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -181,7 +181,7 @@ public class AddMaterialInCombo
         var ex = await Assert.ThrowsAsync<NotFoundException>(
             () => service.AddMaterialInCombo(ComboId, request));
 
-        Assert.Equal("MATERIAL_NOT_FOUND", ex.Message);
+        Assert.Equal("Vật liệu không tồn tại hoặc không hợp lệ", ex.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -201,7 +201,7 @@ public class AddMaterialInCombo
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => service.AddMaterialInCombo(ComboId, request));
 
-        Assert.Equal("CORE_MATERIAL_REQUIRED", exception.Message);
+        Assert.Equal("Công thức phải có ít nhất một vật liệu chính (core) đang hoạt động", exception.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -245,7 +245,7 @@ public class AddMaterialInCombo
                 ComboId,
                 CreateRequest(MatCoreId, quantity: 3.5m, isCore: true)));
 
-        Assert.Equal("COMBO_CHILDREN_REQUIRED", exception.Message);
+        Assert.Equal("Combo phải có ít nhất một biến thể (combo con)", exception.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -293,7 +293,7 @@ public class AddMaterialInCombo
         var exception = await Assert.ThrowsAsync<ConflictException>(
             () => CreateService(dbContext).AddMaterialInCombo(ComboId, request));
 
-        Assert.Equal("MATERIAL_ALREADY_EXISTS", exception.Message);
+        Assert.Equal("Danh sách vật liệu bị trùng lặp", exception.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -319,7 +319,7 @@ public class AddMaterialInCombo
                 ComboId,
                 CreateRequest(MatCoreId, quantity: 10, isCore: true)));
 
-        Assert.Equal("MATERIAL_ALREADY_EXISTS", exception.Message);
+        Assert.Equal("Vật liệu đã có trong công thức của combo", exception.Message);
         Assert.Single(dbContext.ComboSpecifications);
         Assert.Equal(7, existing.Quantity);
         Assert.False(existing.IsCore);
@@ -407,7 +407,7 @@ public class AddMaterialInCombo
                 ComboId,
                 CreateRequest(MatCoreId, quantity: 1, isCore: true)));
 
-        Assert.Equal("MATERIAL_NOT_FOUND", exception.Message);
+        Assert.Equal("Vật liệu không tồn tại hoặc không hợp lệ", exception.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -426,7 +426,7 @@ public class AddMaterialInCombo
                 ChildSmallId,
                 CreateRequest(MatCoreId, quantity: 1, isCore: true)));
 
-        Assert.Equal("COMBO_NOT_FOUND", exception.Message);
+        Assert.Equal("Không tìm thấy combo", exception.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -444,7 +444,7 @@ public class AddMaterialInCombo
                 ComboId,
                 CreateRequest(MatCoreId, quantity: 1, isCore: true)));
 
-        Assert.Equal("COMBO_NOT_SYNCED", exception.Message);
+        Assert.Equal("Combo chưa đồng bộ", exception.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -463,7 +463,7 @@ public class AddMaterialInCombo
                 ComboId,
                 CreateRequest(MatCoreId, quantity: 1, isCore: true)));
 
-        Assert.Equal($"INVALID_FACTOR:{ChildSmallId}", exception.Message);
+        Assert.Equal($"Hệ số của combo con không hợp lệ: {ChildSmallId}", exception.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -482,7 +482,7 @@ public class AddMaterialInCombo
                 ComboId,
                 CreateRequest(MatCoreId, quantity: 0.5m, isCore: true)));
 
-        Assert.Equal($"INVALID_QUANTITY:{MatCoreId}", exception.Message);
+        Assert.Equal($"Số lượng vật liệu sau khi tính toán không hợp lệ: {MatCoreId}", exception.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
@@ -536,7 +536,7 @@ public class AddMaterialInCombo
                 ComboId,
                 CreateRequest(Guid.Empty, quantity: 1, isCore: true)));
 
-        Assert.Equal("INVALID_MATERIAL_ID", exception.Message);
+        Assert.Equal("Mã vật liệu không được để trống", exception.Message);
         Assert.Empty(dbContext.ComboSpecifications);
     }
 

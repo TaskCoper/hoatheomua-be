@@ -51,7 +51,7 @@ public class Service : IService
     private static void ValidateChildQuantity(decimal quantity, Guid matId, bool includeMaterialId = true)
     {
         if (quantity <= 0)
-            throw new BadRequestException(includeMaterialId ? $"INVALID_QUANTITY:{matId}" : "INVALID_QUANTITY");
+            throw new BadRequestException(includeMaterialId ? $"Số lượng vật liệu sau khi tính toán không hợp lệ: {matId}" : "Số lượng vật liệu sau khi tính toán không hợp lệ");
     }
 
     private static async Task SafeRollbackAsync(IDbContextTransaction transaction)
@@ -77,13 +77,13 @@ public class Service : IService
     public async Task<string> AddMaterialInCombo(Guid comboId, Request.MaterialComboRequest request)
     {
         if (request.Items is null || request.Items.Count == 0)
-            throw new BadRequestException("EMPTY_ITEMS");
+            throw new BadRequestException("Danh sách vật liệu không được để trống");
 
         if (request.Items.Any(x => x.MatId == Guid.Empty))
-            throw new BadRequestException("INVALID_MATERIAL_ID");
+            throw new BadRequestException("Mã vật liệu không được để trống");
 
         if (request.Items.Any(x => x.Quantity <= 0))
-            throw new BadRequestException("INVALID_QUANTITY");
+            throw new BadRequestException("Số lượng vật liệu phải lớn hơn 0");
 
         var duplicateMaterialId = request.Items
             .GroupBy(x => x.MatId)
@@ -91,7 +91,7 @@ public class Service : IService
             ?.Key;
 
         if (duplicateMaterialId.HasValue)
-            throw new ConflictException("MATERIAL_ALREADY_EXISTS");
+            throw new ConflictException("Danh sách vật liệu bị trùng lặp");
 
         var items = request.Items;
         var matIds = items.Select(x => x.MatId).ToList();
@@ -101,10 +101,10 @@ public class Service : IService
                         .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
                         .Select(x => new { x.Id, x.NhanhProductId, x.ProductType })
                         .FirstOrDefaultAsync()
-                    ?? throw new NotFoundException("COMBO_NOT_FOUND");
+                    ?? throw new NotFoundException("Không tìm thấy combo");
 
         if (string.IsNullOrWhiteSpace(combo.NhanhProductId))
-            throw new BadRequestException("COMBO_NOT_SYNCED");
+            throw new BadRequestException("Combo chưa đồng bộ");
 
         var requestMaterials = await _dbContext.Products
             .AsNoTracking()
@@ -115,7 +115,7 @@ public class Service : IService
         if (requestMaterials.Count != matIds.Count || requestMaterials.Any(x =>
                 !HasLabel(x.ProductLabel, ComponentLabel) &&
                 !HasLabel(x.ProductLabel, AuxiliaryLabel)))
-            throw new NotFoundException("MATERIAL_NOT_FOUND");
+            throw new NotFoundException("Vật liệu không tồn tại hoặc không hợp lệ");
 
         // Sau khi thêm, công thức cha phải còn ít nhất 1 material core + active
         // (tính cả material đang add mới lẫn material core-active đã có sẵn không nằm trong request)
@@ -133,7 +133,7 @@ public class Service : IService
             existingParentSpecs.Any(x => x.IsCore && x.IsActive);
 
         if (!hasCoreActive)
-            throw new BadRequestException("CORE_MATERIAL_REQUIRED");
+            throw new BadRequestException("Công thức phải có ít nhất một vật liệu chính (core) đang hoạt động");
 
         var materialMap = requestMaterials.ToDictionary(x => x.Id);
 
@@ -152,12 +152,12 @@ public class Service : IService
             syncableChildren.Count == 0;
 
         if (!isNoSizeCombo && syncableChildren.Count == 0)
-            throw new BadRequestException("COMBO_CHILDREN_REQUIRED");
+            throw new BadRequestException("Combo phải có ít nhất một biến thể (combo con)");
 
         foreach (var child in syncableChildren)
         {
             if (child.Factor is not null && child.Factor <= 0)
-                throw new BadRequestException($"INVALID_FACTOR:{child.Id}");
+                throw new BadRequestException($"Hệ số của combo con không hợp lệ: {child.Id}");
         }
 
         var targetIds = syncableChildren
@@ -172,7 +172,7 @@ public class Service : IService
                            && !x.IsDeleted);
 
         if (hasActiveSpec)
-            throw new ConflictException("MATERIAL_ALREADY_EXISTS");
+            throw new ConflictException("Vật liệu đã có trong công thức của combo");
 
         var calculatedSpecs = new List<(Guid SubId, Guid MatId, decimal? Quantity, bool IsCore, bool IsActive)>();
 
@@ -204,7 +204,6 @@ public class Service : IService
 
                 calculatedSpecs.Add((child.Id, item.MatId, childQuantity, item.IsCore, item.IsActive));
             }
-            //
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -212,16 +211,6 @@ public class Service : IService
 
         foreach (var calculated in calculatedSpecs)
         {
-            // if (existingSpecMap.TryGetValue((calculated.SubId, calculated.MatId), out var deletedSpec))
-            // {
-            //     deletedSpec.Quantity = calculated.Quantity;
-            //     deletedSpec.IsCore = calculated.IsCore;
-            //     deletedSpec.IsActive = calculated.IsActive;
-            //     deletedSpec.IsDeleted = false;
-            //     deletedSpec.UpdatedAt = now;
-            //     continue;
-            // }
-
             toInsert.Add(new ComboSpecification
             {
                 Id = Guid.NewGuid(),
@@ -246,13 +235,13 @@ public class Service : IService
     {
         // 1. Validate request
         if (request is null || request.Items is null || request.Items.Count == 0)
-            throw new BadRequestException("INVALID_INPUT");
+            throw new BadRequestException("Danh sách vật liệu không được để trống");
 
         if (request.Items.Any(x => x.MatId == Guid.Empty))
-            throw new BadRequestException("INVALID_MATERIAL_ID");
+            throw new BadRequestException("Mã vật liệu không được để trống");
 
         if (request.Items.Any(x => x.Quantity <= 0))
-            throw new BadRequestException("INVALID_QUANTITY");
+            throw new BadRequestException("Số lượng vật liệu phải lớn hơn 0");
 
         var duplicateMaterialId = request.Items
             .GroupBy(x => x.MatId)
@@ -260,7 +249,7 @@ public class Service : IService
             ?.Key;
 
         if (duplicateMaterialId.HasValue)
-            throw new ConflictException("MATERIAL_ALREADY_EXISTS");
+            throw new ConflictException("Danh sách vật liệu bị trùng lặp");
 
         var items = request.Items.ToList();
         var matIds = items.Select(x => x.MatId).ToList();
@@ -271,10 +260,10 @@ public class Service : IService
                         .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
                         .Select(x => new { x.Id, x.NhanhProductId })
                         .FirstOrDefaultAsync()
-                    ?? throw new NotFoundException("COMBO_NOT_FOUND");
+                    ?? throw new NotFoundException("Không tìm thấy combo");
 
         if (string.IsNullOrWhiteSpace(combo.NhanhProductId))
-            throw new BadRequestException("COMBO_NOT_SYNCED");
+            throw new BadRequestException("Combo chưa đồng bộ");
 
         // 3. Validate material
         var materials = await _dbContext.Products
@@ -286,7 +275,7 @@ public class Service : IService
         if (materials.Count != matIds.Count || materials.Any(x =>
                 !HasLabel(x.ProductLabel, ComponentLabel) &&
                 !HasLabel(x.ProductLabel, AuxiliaryLabel)))
-            throw new NotFoundException("MATERIAL_NOT_FOUND");
+            throw new NotFoundException("Vật liệu không tồn tại hoặc không hợp lệ");
 
         var materialMap = materials.ToDictionary(x => x.Id);
 
@@ -301,7 +290,7 @@ public class Service : IService
         foreach (var child in syncableChildren)
         {
             if (child.Factor is not null && child.Factor <= 0)
-                throw new BadRequestException($"INVALID_FACTOR:{child.Id}");
+                throw new BadRequestException($"Hệ số của combo con không hợp lệ: {child.Id}");
         }
 
         var targetIds = syncableChildren
@@ -328,7 +317,7 @@ public class Service : IService
         foreach (var item in items)
         {
             if (!specMap.TryGetValue((comboId, item.MatId), out _))
-                throw new NotFoundException($"MATERIAL_NOT_FOUND:{item.MatId}");
+                throw new NotFoundException($"Vật liệu không có trong công thức hiện tại của combo: {item.MatId}");
         }
 
         // 7. Kiểm tra sau update vẫn còn ít nhất một core active
@@ -348,7 +337,7 @@ public class Service : IService
         });
 
         if (!hasCoreActiveAfterUpdate)
-            throw new BadRequestException("CORE_MATERIAL_REQUIRED");
+            throw new BadRequestException("Công thức phải có ít nhất một vật liệu chính (core) đang hoạt động");
 
         // 8. Calculate quantity parent và child
         var calculatedSpecs = new List<(Guid SubId, Guid MatId, decimal? Quantity, bool IsCore, bool IsActive)>();
@@ -434,10 +423,10 @@ public class Service : IService
     {
         // ---- 1. Validate request -----------------------------------------------
         if (request?.Materials is null || request.Materials.Count == 0)
-            throw new BadRequestException("INVALID_INPUT");
+            throw new BadRequestException("Danh sách vật liệu cần xóa không được để trống");
 
         if (request.Materials.Any(x => x == Guid.Empty))
-            throw new BadRequestException("INVALID_MATERIAL_ID");
+            throw new BadRequestException("Mã vật liệu không được để trống");
 
         var matIds = request.Materials.ToHashSet();
 
@@ -458,11 +447,11 @@ public class Service : IService
                                         && !x.IsDeleted)
                             .Select(x => new { x.NhanhProductId })
                             .FirstOrDefaultAsync()
-                        ?? throw new NotFoundException("COMBO_NOT_FOUND");
+                        ?? throw new NotFoundException("Không tìm thấy combo");
             var nhanhProductId = combo.NhanhProductId;
 
             if (string.IsNullOrWhiteSpace(nhanhProductId))
-                throw new BadRequestException("COMBO_NOT_SYNCED");
+                throw new BadRequestException("Combo chưa đồng bộ");
 
             // ---- 4. Load dòng công thức còn hiệu lực của combo cha ---------------
             // IsDeleted = true coi như không tồn tại, không đọc tới.
@@ -482,7 +471,7 @@ public class Service : IService
             var missing = matIds.Where(id => !parentMatIds.Contains(id)).ToList();
 
             if (missing.Count > 0)
-                throw new ConflictException($"RECIPE_CHANGED:{string.Join(',', missing)}");
+                throw new ConflictException($"Công thức đã bị thay đổi, vui lòng tải lại trang: {string.Join(", ", missing)}");
 
             // ---- 5. Kiểm tra ràng buộc CORE ------------------------------------
             var activeCoreMatIds = parentSpecs
@@ -494,12 +483,12 @@ public class Service : IService
             //     thái không hợp lệ từ trước, không phải lỗi của thao tác hiện tại.
             //     Tách mã lỗi để người dùng không hiểu nhầm là dòng họ đang xóa có vấn đề.
             if (activeCoreMatIds.Count == 0)
-                throw new BadRequestException("RECIPE_HAS_NO_ACTIVE_CORE");
+                throw new BadRequestException("Công thức hiện tại không còn vật liệu chính (core) đang hoạt động");
 
             // 5b. Chặn cả lô nếu lô xóa làm mất dòng CORE cuối cùng (EXC-03 / AC-008).
             //     Không xóa một phần: người dùng chọn một lô là chọn một ý định.
             if (activeCoreMatIds.All(id => matIds.Contains(id)))
-                throw new BadRequestException("CORE_MATERIAL_REQUIRED");
+                throw new BadRequestException("Không thể xóa vì sẽ làm mất vật liệu chính (core) cuối cùng của công thức");
 
             // ---- 6. Xóa mềm ở combo cha và toàn bộ combo con --------------------
             var now = DateTimeOffset.UtcNow;
@@ -528,7 +517,7 @@ public class Service : IService
                 await _dbContext.SaveChangesAsync();
 
             if (affected == 0)
-                throw new ConflictException("RECIPE_CHANGED");
+                throw new ConflictException("Công thức đã bị thay đổi bởi người khác, vui lòng thử lại");
 
             await transaction.CommitAsync();
 
@@ -538,14 +527,14 @@ public class Service : IService
         {
             // Ghi thất bại ở tầng EF
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("RECIPE_UPDATE_FAILED");
+            throw new ConflictException("Cập nhật công thức thất bại, vui lòng thử lại");
         }
         catch (DbException)
         {
             // Deadlock, timeout, mất kết nối. Với Serializable, deadlock là cơ chế
             // bình thường khi có tranh chấp chứ không phải trường hợp hiếm.
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("RECIPE_UPDATE_FAILED");
+            throw new ConflictException("Cập nhật công thức thất bại, vui lòng thử lại");
         }
         // Các exception nghiệp vụ (BadRequest/NotFound/Conflict) không bị bắt ở đây;
         // chúng thoát ra ngoài và transaction được rollback khi `await using` dispose.
@@ -555,18 +544,18 @@ public class Service : IService
     {
         // ---- 1. Validate request -----------------------------------------------
         if (request is null)
-            throw new BadRequestException("INVALID_INPUT");
+            throw new BadRequestException("Dữ liệu yêu cầu không được để trống");
 
         if (request.Factor is not null && request.Factor <= 0)
-            throw new BadRequestException("INVALID_FACTOR");
+            throw new BadRequestException("Hệ số phải lớn hơn 0");
 
         // ---- 2. Load combo con và combo cha ------------------------------------
         var childProduct = await _dbContext.Products
                                .FirstOrDefaultAsync(x => x.Id == request.ProductId && !x.IsDeleted)
-                           ?? throw new NotFoundException("PRODUCT_NOT_FOUND");
+                           ?? throw new NotFoundException("Không tìm thấy sản phẩm");
 
         if (childProduct.ParentProductId == null)
-            throw new BadRequestException("PARENT_PRODUCT_REQUIRED");
+            throw new BadRequestException("Sản phẩm không phải là combo con (không có sản phẩm cha)");
 
         var parentProduct = await _dbContext.Products
                                 .AsNoTracking()
@@ -575,7 +564,7 @@ public class Service : IService
                                             && !x.IsDeleted)
                                 .Select(x => new { x.Id })
                                 .FirstOrDefaultAsync()
-                            ?? throw new NotFoundException("PARENT_PRODUCT_NOT_FOUND");
+                            ?? throw new NotFoundException("Không tìm thấy sản phẩm cha");
 
         // ---- 3. Load công thức cha (chỉ dòng còn hiệu lực) ----------------------
         var parentSpecifications = await _dbContext.ComboSpecifications
@@ -595,7 +584,7 @@ public class Service : IService
             .ToListAsync();
 
         if (parentSpecifications.Count == 0)
-            throw new NotFoundException("PARENT_COMBO_SPECIFICATION_NOT_FOUND");
+            throw new NotFoundException("Không tìm thấy công thức combo cha");
 
         // ---- 4. Tính định lượng con, gom hết lỗi rồi mới báo --------------------
         var calculatedSpecifications = new List<CalculatedChildSpec>();
@@ -638,11 +627,11 @@ public class Service : IService
 
         if (invalidParentQuantities.Count > 0)
             throw new BadRequestException(
-                $"PARENT_RECIPE_INVALID_QUANTITY:{string.Join(", ", invalidParentQuantities)}");
+                $"Công thức của combo cha có số lượng không hợp lệ: {string.Join(", ", invalidParentQuantities)}");
 
         if (invalidChildQuantities.Count > 0)
             throw new BadRequestException(
-                $"INVALID_QUANTITY:{string.Join(", ", invalidChildQuantities)}");
+                $"Số lượng vật liệu sau khi nhân hệ số bị giảm về 0, vui lòng kiểm tra lại hệ số: {string.Join(", ", invalidChildQuantities)}");
 
         // ---- 5. Kiểm tra CORE — TRƯỚC khi sửa bất kỳ entity nào -----------------
         // Nguồn là công thức cha, nên đổi hệ số không thể làm mất CORE. Câu này chỉ
@@ -653,7 +642,7 @@ public class Service : IService
             .ToList();
 
         if (coreSpecifications.Count == 0)
-            throw new BadRequestException("PARENT_RECIPE_HAS_NO_ACTIVE_CORE");
+            throw new BadRequestException("Công thức của combo cha không còn vật liệu chính (core) đang hoạt động");
 
         // ---- 6. Load công thức con đang hiệu lực -------------------------------
         // Dòng IsDeleted = true coi như không tồn tại: không đọc, không hồi sinh.
@@ -751,10 +740,10 @@ public class Service : IService
             var combo = await _dbContext.Products
                             .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
                             .FirstOrDefaultAsync()
-                        ?? throw new NotFoundException("COMBO_NOT_FOUND");
+                        ?? throw new NotFoundException("Không tìm thấy combo");
  
             if (string.IsNullOrWhiteSpace(combo.NhanhProductId))
-                throw new BadRequestException("COMBO_NOT_SYNCED");
+                throw new BadRequestException("Combo chưa đồng bộ");
  
             // EXC-07: bấm Công khai nhiều lần -> idempotent, không làm gì thêm.
             if (combo.IsActive)
@@ -792,17 +781,17 @@ public class Service : IService
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
  
-            return "Công khai combo thành công.";
+            return "Mở bán combo thành công.";
         }
         catch (DbUpdateException)
         {
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("PUBLISH_FAILED");
+            throw new ConflictException("Công khai combo thất bại, vui lòng thử lại");
         }
         catch (DbException)
         {
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("PUBLISH_FAILED");
+            throw new ConflictException("Công khai combo thất bại, vui lòng thử lại");
         }
         // Exception nghiệp vụ (BadRequest/NotFound/Conflict) không bị bắt ở đây;
         // thoát ra ngoài, transaction tự rollback khi `await using` dispose.
@@ -819,7 +808,7 @@ public class Service : IService
             var combo = await _dbContext.Products
                             .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
                             .FirstOrDefaultAsync()
-                        ?? throw new NotFoundException("COMBO_NOT_FOUND");
+                        ?? throw new NotFoundException("Không tìm thấy combo");
  
             // Idempotent: đã chưa công khai rồi thì không làm gì thêm.
             if (!combo.IsActive)
@@ -852,17 +841,17 @@ public class Service : IService
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
  
-            return "Ngừng công khai combo thành công.";
+            return "Ngừng mở bán combo thành công.";
         }
         catch (DbUpdateException)
         {
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("UNPUBLISH_FAILED");
+            throw new ConflictException("Ngừng công khai combo thất bại, vui lòng thử lại");
         }
         catch (DbException)
         {
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("UNPUBLISH_FAILED");
+            throw new ConflictException("Ngừng công khai combo thất bại, vui lòng thử lại");
         }
     }
 }

@@ -26,7 +26,7 @@ public class UnPublicActiveCombo
 
         var result = await CreateService(db).UnPublicActiveCombo(ComboId);
 
-        Assert.Equal("Ngừng công khai combo thành công.", result);
+        Assert.Equal("Ngừng mở bán combo thành công.", result);
         Assert.False((await db.Products.FindAsync(ComboId))!.IsActive);
         Assert.All(await db.Products.Where(x => x.ParentProductId == "COMBO-2" && !x.IsDeleted).ToListAsync(),
             x => Assert.False(x.IsActive));
@@ -58,7 +58,7 @@ public class UnPublicActiveCombo
         await using var db = CreateDbContext();
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => CreateService(db).UnPublicActiveCombo(ComboId));
-        Assert.Equal("COMBO_NOT_FOUND", exception.Message);
+        Assert.Equal("Không tìm thấy combo", exception.Message);
     }
 
     [Fact]

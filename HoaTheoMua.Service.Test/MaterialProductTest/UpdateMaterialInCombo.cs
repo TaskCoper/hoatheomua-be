@@ -67,7 +67,7 @@ public class UpdateMaterialInCombo
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.UpdateMaterialInCombo(ComboId, request));
 
-        Assert.Equal("INVALID_INPUT", ex.Message);
+        Assert.Equal("Danh sách vật liệu không được để trống", ex.Message);
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class UpdateMaterialInCombo
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.UpdateMaterialInCombo(ComboId, request));
 
-        Assert.Equal("INVALID_QUANTITY", ex.Message);
+        Assert.Equal("Số lượng vật liệu phải lớn hơn 0", ex.Message);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class UpdateMaterialInCombo
         var ex = await Assert.ThrowsAsync<NotFoundException>(
             () => service.UpdateMaterialInCombo(ComboId, request));
 
-        Assert.Equal("MATERIAL_NOT_FOUND", ex.Message);
+        Assert.Equal("Vật liệu không tồn tại hoặc không hợp lệ", ex.Message);
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class UpdateMaterialInCombo
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.UpdateMaterialInCombo(ComboId, request));
 
-        Assert.Equal("CORE_MATERIAL_REQUIRED", ex.Message);
+        Assert.Equal("Công thức phải có ít nhất một vật liệu chính (core) đang hoạt động", ex.Message);
 
         var specifications = await dbContext.ComboSpecifications
             .Where(x => x.MatId == MatCoreId && !x.IsDeleted)
