@@ -1081,7 +1081,7 @@ public class Service : IService
         return result;
     }
 
-    public async Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(Guid id)  
+    public async Task<Response.ComboSpecificationResponse?> GetComboSpecificationAsync(Guid id)  
     {  
         var comboSpec = await _dbContext.ComboSpecifications  
             .AsNoTracking()  
@@ -1091,7 +1091,7 @@ public class Service : IService
                                       && !c.Sub.IsDeleted);  
   
         if (comboSpec == null)  
-            throw new NotFoundException($"Không tìm thấy combo với ID: {id}");  
+            return null;  
   
         var materialSpecs = await _dbContext.ComboSpecifications
             .AsNoTracking()  
@@ -1106,10 +1106,12 @@ public class Service : IService
             SubId = comboSpec.Sub.Id.ToString(),  
             ProductCode = comboSpec.Sub.ProductCode,  
             ProductName = comboSpec.Sub.ProductName,  
+            CoverImage = comboSpec.Sub.CoverImage,
             Materials = materialSpecs.Select(c => new Response.MaterialItemResponse  
                 {  
                     MaterialId = c.Mat.Id.ToString(),  
                     MaterialName = c.Mat.ProductName,  
+                    CoverImage = c.Mat.CoverImage,
                     IsCore = c.IsCore, 
                     QuantityPerCombo = c.Quantity,  
                     Unit = c.Mat.Unit,  

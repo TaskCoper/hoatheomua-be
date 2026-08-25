@@ -67,24 +67,27 @@ namespace HoaTheoMua.Service.Test.ProductTest
         }
 
         /// <summary>
-        /// Test: Khi không tìm thấy combo với ID truyền vào, hàm ném ra NotFoundException.
+        /// Test: Khi không tìm thấy combo với ID truyền vào, hàm trả về null.
         /// </summary>
         [Fact]
-        public async Task GetComboSpecification_ComboNotFound_ThrowsNotFoundException()
+        public async Task GetComboSpecification_ComboNotFound_ReturnsNull()
         {
             // Arrange
             var dbContext = CreateMockDbContext(new List<ProductEntity>(), new List<ComboSpecEntity>());
             var service = CreateService(dbContext);
 
-            // Act & Assert
-            await Assert.ThrowsAsync<NotFoundException>(() => service.GetComboSpecificationAsync(Guid.NewGuid()));
+            // Act
+            var result = await service.GetComboSpecificationAsync(Guid.NewGuid());
+
+            // Assert
+            Assert.Null(result);
         }
 
         /// <summary>
-        /// Test: Khi combo đã bị xóa (IsDeleted = true), hàm ném ra NotFoundException.
+        /// Test: Khi combo đã bị xóa (IsDeleted = true), hàm trả về null.
         /// </summary>
         [Fact]
-        public async Task GetComboSpecification_DeletedCombo_ThrowsNotFoundException()
+        public async Task GetComboSpecification_DeletedCombo_ReturnsNull()
         {
             // Arrange
             var comboId = Guid.NewGuid();
@@ -118,8 +121,11 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var dbContext = CreateMockDbContext(products, comboSpecs);
             var service = CreateService(dbContext);
 
-            // Act & Assert
-            await Assert.ThrowsAsync<NotFoundException>(() => service.GetComboSpecificationAsync(comboId));
+            // Act
+            var result = await service.GetComboSpecificationAsync(comboId);
+
+            // Assert
+            Assert.Null(result);
         }
 
         /// <summary>
@@ -237,7 +243,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
         }
 
         /// <summary>
-        /// Test: Kiểm tra mapping đầy đủ các trường thông tin bao gồm IsCore, MaterialId, MaterialName, Unit, AvailableForSale, QuantityPerCombo.
+        /// Test: Kiểm tra mapping đầy đủ các trường thông tin bao gồm CoverImage, IsCore, MaterialId, MaterialName, Unit, AvailableForSale, QuantityPerCombo.
         /// </summary>
         [Fact]
         public async Task GetComboSpecification_FieldMapping_ReturnsExpectedFields()
@@ -249,6 +255,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                 Id = comboId,
                 ProductCode = "COMBO-FLOWER-01",
                 ProductName = "Bó Hoa Tình Yêu",
+                CoverImage = "https://cdn.example.com/combo.jpg",
                 IsDeleted = false
             };
             var matId = Guid.NewGuid();
@@ -257,6 +264,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                 Id = matId,
                 ProductName = "Hoa Hồng Đỏ",
                 Unit = "Cành",
+                CoverImage = "https://cdn.example.com/rose.jpg",
                 AvailableForSale = 100,
                 IsDeleted = false
             };
@@ -288,11 +296,13 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Equal(comboId.ToString(), result.SubId);
             Assert.Equal("COMBO-FLOWER-01", result.ProductCode);
             Assert.Equal("Bó Hoa Tình Yêu", result.ProductName);
+            Assert.Equal("https://cdn.example.com/combo.jpg", result.CoverImage);
             Assert.Single(result.Materials);
 
             var matItem = result.Materials[0];
             Assert.Equal(matId.ToString(), matItem.MaterialId);
             Assert.Equal("Hoa Hồng Đỏ", matItem.MaterialName);
+            Assert.Equal("https://cdn.example.com/rose.jpg", matItem.CoverImage);
             Assert.True(matItem.IsCore);
             Assert.Equal(10, matItem.QuantityPerCombo);
             Assert.Equal("Cành", matItem.Unit);
