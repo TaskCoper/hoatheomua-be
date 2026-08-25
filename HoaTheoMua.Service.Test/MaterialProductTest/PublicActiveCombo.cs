@@ -13,7 +13,7 @@ public class PublicActiveCombo
     private static readonly Guid ComboId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [Fact]
-    public async Task PublicActiveCombo_InactiveCombo_PublishesParentAndAllActiveChildren()
+    public async Task PublicActiveCombo_InactiveCombo_PublishesParentAndAllNonDeletedChildren()
     {
         await using var db = CreateDbContext();
         db.Products.AddRange(
@@ -47,7 +47,7 @@ public class PublicActiveCombo
 
         var result = await CreateService(db).PublicActiveCombo(ComboId);
 
-        Assert.Equal("Combo đã được công khai trước đó.", result);
+        Assert.Equal("Combo đã được mở bán trước đó.", result);
         Assert.False((await db.Products.FindAsync(child.Id))!.IsActive);
         Assert.Equal(oldUpdatedAt, (await db.Products.FindAsync(ComboId))!.UpdatedAt);
     }

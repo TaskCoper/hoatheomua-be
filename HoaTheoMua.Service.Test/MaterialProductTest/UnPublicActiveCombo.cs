@@ -13,7 +13,7 @@ public class UnPublicActiveCombo
     private static readonly Guid ComboId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
     [Fact]
-    public async Task UnPublicActiveCombo_ActiveCombo_UnpublishesParentAndAllActiveChildren()
+    public async Task UnPublicActiveCombo_ActiveCombo_UnpublishesParentAndAllNonDeletedChildren()
     {
         await using var db = CreateDbContext();
         db.Products.AddRange(
@@ -47,7 +47,7 @@ public class UnPublicActiveCombo
 
         var result = await CreateService(db).UnPublicActiveCombo(ComboId);
 
-        Assert.Equal("Combo đang ở trạng thái chưa công khai.", result);
+        Assert.Equal("Combo đang ở trạng thái chưa mở bán.", result);
         Assert.True((await db.Products.FindAsync(child.Id))!.IsActive);
         Assert.Equal(oldUpdatedAt, (await db.Products.FindAsync(ComboId))!.UpdatedAt);
     }

@@ -749,7 +749,7 @@ public class Service : IService
             if (combo.IsActive)
             {
                 await transaction.CommitAsync();
-                return "Combo đã được công khai trước đó.";
+                return "Combo đã được mở bán trước đó.";
             }
  
             // ---- 2. Lấy danh sách combo con (size variants) để công khai cùng lúc ----
@@ -786,12 +786,12 @@ public class Service : IService
         catch (DbUpdateException)
         {
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("Công khai combo thất bại, vui lòng thử lại");
+            throw new ConflictException("Mở bán combo thất bại, vui lòng thử lại");
         }
         catch (DbException)
         {
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("Công khai combo thất bại, vui lòng thử lại");
+            throw new ConflictException("Mở bán combo thất bại, vui lòng thử lại");
         }
         // Exception nghiệp vụ (BadRequest/NotFound/Conflict) không bị bắt ở đây;
         // thoát ra ngoài, transaction tự rollback khi `await using` dispose.
@@ -814,7 +814,7 @@ public class Service : IService
             if (!combo.IsActive)
             {
                 await transaction.CommitAsync();
-                return "Combo đang ở trạng thái chưa công khai.";
+                return "Combo đang ở trạng thái chưa mở bán.";
             }
  
             // ---- 2. Ngừng công khai combo cha (ALT-02 bước 2, AC-005) ----
@@ -846,12 +846,12 @@ public class Service : IService
         catch (DbUpdateException)
         {
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("Ngừng công khai combo thất bại, vui lòng thử lại");
+            throw new ConflictException("Ngừng mở bán combo thất bại, vui lòng thử lại");
         }
         catch (DbException)
         {
             await SafeRollbackAsync(transaction);
-            throw new ConflictException("Ngừng công khai combo thất bại, vui lòng thử lại");
+            throw new ConflictException("Ngừng mở bán combo thất bại, vui lòng thử lại");
         }
     }
 }
