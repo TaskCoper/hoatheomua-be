@@ -181,6 +181,7 @@ public class Response
         public string? SubId { get; set; }
         public string? ProductCode { get; set; }
         public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
         public List<MaterialItemResponse> Materials { get; set; } = new();
     }
 
@@ -188,6 +189,7 @@ public class Response
     {
         public string? MaterialId { get; set; }
         public string? MaterialName { get; set; }
+        public string? CoverImage { get; set; }
         public bool? IsCore { get; set; }
         public decimal? QuantityPerCombo { get; set; }
         public string? Unit { get; set; }

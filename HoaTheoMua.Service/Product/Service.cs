@@ -1106,10 +1106,12 @@ public class Service : IService
             SubId = comboSpec.Sub.Id.ToString(),  
             ProductCode = comboSpec.Sub.ProductCode,  
             ProductName = comboSpec.Sub.ProductName,  
+            CoverImage = comboSpec.Sub.CoverImage,
             Materials = materialSpecs.Select(c => new Response.MaterialItemResponse  
                 {  
                     MaterialId = c.Mat.Id.ToString(),  
                     MaterialName = c.Mat.ProductName,  
+                    CoverImage = c.Mat.CoverImage,
                     IsCore = c.IsCore, 
                     QuantityPerCombo = c.Quantity,  
                     Unit = c.Mat.Unit,  

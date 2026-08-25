@@ -237,7 +237,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
         }
 
         /// <summary>
-        /// Test: Kiểm tra mapping đầy đủ các trường thông tin bao gồm IsCore, MaterialId, MaterialName, Unit, AvailableForSale, QuantityPerCombo.
+        /// Test: Kiểm tra mapping đầy đủ các trường thông tin bao gồm CoverImage, IsCore, MaterialId, MaterialName, Unit, AvailableForSale, QuantityPerCombo.
         /// </summary>
         [Fact]
         public async Task GetComboSpecification_FieldMapping_ReturnsExpectedFields()
@@ -249,6 +249,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                 Id = comboId,
                 ProductCode = "COMBO-FLOWER-01",
                 ProductName = "Bó Hoa Tình Yêu",
+                CoverImage = "https://cdn.example.com/combo.jpg",
                 IsDeleted = false
             };
             var matId = Guid.NewGuid();
@@ -257,6 +258,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                 Id = matId,
                 ProductName = "Hoa Hồng Đỏ",
                 Unit = "Cành",
+                CoverImage = "https://cdn.example.com/rose.jpg",
                 AvailableForSale = 100,
                 IsDeleted = false
             };
@@ -288,11 +290,13 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Equal(comboId.ToString(), result.SubId);
             Assert.Equal("COMBO-FLOWER-01", result.ProductCode);
             Assert.Equal("Bó Hoa Tình Yêu", result.ProductName);
+            Assert.Equal("https://cdn.example.com/combo.jpg", result.CoverImage);
             Assert.Single(result.Materials);
 
             var matItem = result.Materials[0];
             Assert.Equal(matId.ToString(), matItem.MaterialId);
             Assert.Equal("Hoa Hồng Đỏ", matItem.MaterialName);
+            Assert.Equal("https://cdn.example.com/rose.jpg", matItem.CoverImage);
             Assert.True(matItem.IsCore);
             Assert.Equal(10, matItem.QuantityPerCombo);
             Assert.Equal("Cành", matItem.Unit);
