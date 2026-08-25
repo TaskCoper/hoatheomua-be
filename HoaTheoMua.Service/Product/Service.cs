@@ -1110,7 +1110,7 @@ public class Service : IService
                 {  
                     MaterialId = c.Mat.Id.ToString(),  
                     MaterialName = c.Mat.ProductName,  
-                    Role = c.IsCore,  
+                    IsCore = c.IsCore, 
                     QuantityPerCombo = c.Quantity,  
                     Unit = c.Mat.Unit,  
                     AvailableForSale = c.Mat.AvailableForSale ?? 0,  
@@ -1118,7 +1118,7 @@ public class Service : IService
                         ? Math.Floor((decimal)((c.Mat.AvailableForSale ?? 0) / c.Quantity))  
                         : 0  
                 })  
-                .OrderByDescending(x => x.Role)  
+                .OrderByDescending(x => x.IsCore)  
                 .ToList()  
         };    return response;  
     }
@@ -1128,16 +1128,19 @@ public class Service : IService
         request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
+        var allowedLabels = new[] { "thành phần", "phụ liệu" };
         var query = _dbContext.Products
             .AsNoTracking()
-            .Where(product => !product.IsDeleted);
+            .Where(product => !product.IsDeleted &&
+                              product.ProductLabel != null &&
+                              allowedLabels.Contains(product.ProductLabel.ToLower()));
 
         if (!string.IsNullOrWhiteSpace(request.ProductLabel))
         {
             var normalizedLabel = request.ProductLabel.Trim().ToLower();
             query = query.Where(product =>
                 product.ProductLabel != null &&
-                product.ProductLabel.Trim().ToLower() == normalizedLabel);
+                product.ProductLabel.ToLower() == normalizedLabel);
         }
         
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -1153,6 +1156,7 @@ public class Service : IService
         var totalItems = await query.CountAsync();
 
         var items = await query
+            .OrderByDescending(x => x.CreatedAt)
             .Skip((request.PageIndex - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(product => new Response.MaterialResponse

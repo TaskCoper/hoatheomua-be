@@ -188,7 +188,7 @@ public class Response
     {
         public string? MaterialId { get; set; }
         public string? MaterialName { get; set; }
-        public bool? Role { get; set; }
+        public bool? IsCore { get; set; }
         public decimal? QuantityPerCombo { get; set; }
         public string? Unit { get; set; }
         public decimal AvailableForSale { get; set; }
