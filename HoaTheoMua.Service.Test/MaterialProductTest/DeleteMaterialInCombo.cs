@@ -110,7 +110,7 @@ public class DeleteMaterialInCombo
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.DeleteMaterialInCombo(ComboId, request));
 
-        Assert.Equal("Không thể xóa vì sẽ làm mất vật liệu chính (core) cuối cùng của công thức", ex.Message);
+        Assert.Equal("Không thể xóa vì công thức phải chứa ít nhất một vật liệu core", ex.Message);
         Assert.All(dbContext.ComboSpecifications, x => Assert.False(x.IsDeleted));
     }
 
@@ -161,7 +161,7 @@ public class DeleteMaterialInCombo
                 ComboId,
                 new MaterialRequest.DeleteMaterial { Materials = [MatCoreId] }));
 
-        Assert.Equal("Không thể xóa vì sẽ làm mất vật liệu chính (core) cuối cùng của công thức", exception.Message);
+        Assert.Equal("Không thể xóa vì công thức phải chứa ít nhất một vật liệu core", exception.Message);
         Assert.False((await dbContext.ComboSpecifications.SingleAsync()).IsDeleted);
     }
 
