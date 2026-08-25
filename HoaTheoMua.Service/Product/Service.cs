@@ -1137,6 +1137,11 @@ public class Service : IService
                               product.ProductLabel != null &&
                               allowedLabels.Contains(product.ProductLabel.ToLower()));
 
+        if (request.ExistingMaterials != null && request.ExistingMaterials.Any())
+        {
+            query = query.Where(product => !request.ExistingMaterials.Contains(product.Id));
+        }
+
         if (!string.IsNullOrWhiteSpace(request.ProductLabel))
         {
             var normalizedLabel = request.ProductLabel.Trim().ToLower();
