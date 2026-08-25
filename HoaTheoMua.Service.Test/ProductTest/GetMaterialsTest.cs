@@ -391,5 +391,78 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
             Assert.Empty(items);
         }
+
+        /// Test: Khi truyền ExistingMaterials, API loại trừ các nguyên vật liệu có ID nằm trong danh sách ExistingMaterials.
+        [Fact]
+        public async Task GetMaterialsAsync_WithExistingMaterials_ExcludesSpecifiedMaterials()
+        {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var id3 = Guid.NewGuid();
+            var id4 = Guid.NewGuid();
+
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity { Id = id1, ProductName = "Hoa Hồng Đỏ", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = id2, ProductName = "Hoa Cúc Trắng", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = id3, ProductName = "Giấy Gói Hàn Quốc", ProductLabel = "Phụ liệu", IsDeleted = false },
+                new ProductEntity { Id = id4, ProductName = "Ruy Băng Satin", ProductLabel = "Phụ liệu", IsDeleted = false }
+            };
+
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            // Loại trừ id1 và id3
+            var request = new Request.GetMaterialsRequest
+            {
+                PageIndex = 1,
+                PageSize = 10,
+                ExistingMaterials = new List<Guid> { id1, id3 }
+            };
+
+            var result = await service.GetMaterialsAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal(2, result.Value.TotalCount);
+
+            var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
+            Assert.Equal(2, items.Count);
+            Assert.DoesNotContain(items, item => item.MaterialId == id1.ToString());
+            Assert.DoesNotContain(items, item => item.MaterialId == id3.ToString());
+            Assert.Contains(items, item => item.MaterialId == id2.ToString());
+            Assert.Contains(items, item => item.MaterialId == id4.ToString());
+        }
+
+        /// Test: Khi truyền ExistingMaterials rỗng hoặc null, API trả về đầy đủ các nguyên vật liệu.
+        [Fact]
+        public async Task GetMaterialsAsync_WithExistingMaterialsEmpty_ReturnsAllMaterials()
+        {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity { Id = id1, ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
+                new ProductEntity { Id = id2, ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false }
+            };
+
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            var request = new Request.GetMaterialsRequest
+            {
+                PageIndex = 1,
+                PageSize = 10,
+                ExistingMaterials = new List<Guid>()
+            };
+
+            var result = await service.GetMaterialsAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal(2, result.Value.TotalCount);
+
+            var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
+            Assert.Equal(2, items.Count);
+        }
     }
 }
