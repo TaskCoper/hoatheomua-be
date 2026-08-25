@@ -57,10 +57,9 @@ namespace HoaTheoMua.Service.Test.ProductTest
             );
         }
 
-        /// Test: Khi không truyền ProductLabel, API trả về tất cả product chưa xóa,
-        /// không phân biệt Thành phần, Phụ liệu, Combo hay Sản phẩm thường.
+        /// Test: Khi không truyền ProductLabel, API mặc định trả về tất cả nguyên vật liệu (Thành phần và Phụ liệu) chưa xóa.
         [Fact]
-        public async Task GetMaterialsAsync_NoProductLabelProvided_ReturnsAllNonDeletedProducts()
+        public async Task GetMaterialsAsync_NoProductLabelProvided_ReturnsAllNonDeletedMaterials()
         {
             var products = new List<ProductEntity>
             {
@@ -83,12 +82,12 @@ namespace HoaTheoMua.Service.Test.ProductTest
 
             Assert.NotNull(result);
             Assert.Equal(1, result.Value.PageIndex);
-            Assert.Equal(6, result.Value.TotalCount);
-            Assert.Equal(6, result.Value.Items.Count);
+            Assert.Equal(4, result.Value.TotalCount);
+            Assert.Equal(4, result.Value.Items.Count);
 
             var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
-            Assert.Contains(items, item => item.ProductLabel == "Combo");
-            Assert.Contains(items, item => item.ProductLabel == "Sản phẩm");
+            Assert.DoesNotContain(items, item => item.ProductLabel == "Combo");
+            Assert.DoesNotContain(items, item => item.ProductLabel == "Sản phẩm");
             Assert.DoesNotContain(items, item => item.MaterialName == "Deleted Material");
             Assert.DoesNotContain(items, item => item.MaterialName == "Deleted Accessory");
         }
