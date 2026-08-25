@@ -1110,7 +1110,7 @@ public class Service : IService
                 {  
                     MaterialId = c.Mat.Id.ToString(),  
                     MaterialName = c.Mat.ProductName,  
-                    Role = c.IsCore,  
+                    IsCore = c.IsCore, 
                     QuantityPerCombo = c.Quantity,  
                     Unit = c.Mat.Unit,  
                     AvailableForSale = c.Mat.AvailableForSale ?? 0,  
@@ -1118,7 +1118,7 @@ public class Service : IService
                         ? Math.Floor((decimal)((c.Mat.AvailableForSale ?? 0) / c.Quantity))  
                         : 0  
                 })  
-                .OrderByDescending(x => x.Role)  
+                .OrderByDescending(x => x.IsCore)  
                 .ToList()  
         };    return response;  
     }
