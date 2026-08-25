@@ -488,7 +488,7 @@ public class Service : IService
             // 5b. Chặn cả lô nếu lô xóa làm mất dòng CORE cuối cùng (EXC-03 / AC-008).
             //     Không xóa một phần: người dùng chọn một lô là chọn một ý định.
             if (activeCoreMatIds.All(id => matIds.Contains(id)))
-                throw new BadRequestException("Không thể xóa vì sẽ làm mất vật liệu chính (core) cuối cùng của công thức");
+                throw new BadRequestException("Không thể xóa vì công thức phải chứa ít nhất một vật liệu core");
 
             // ---- 6. Xóa mềm ở combo cha và toàn bộ combo con --------------------
             var now = DateTimeOffset.UtcNow;
