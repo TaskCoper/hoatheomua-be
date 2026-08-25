@@ -59,7 +59,7 @@ Không có timer nào. Escalation do `Fault<T>` mà MassTransit tự publish khi
 **Test case 02: NhanhVn hỏng sau khi Ahamove đã đặt xe**
 - **Điều kiện:** `POST /v3/orders` thành công, `POST /order/add` trả 5xx tới khi hết retry.
 - **Kết quả:** saga sang `Compensating`, gọi `DELETE /v3/orders/{ahamoveOrderId}` để hủy đúng chuyến
-  đã đặt, rồi sang `Failed`. `Order.Status = "FulfillmentFailed"`, `CompensationAttempts = 1`.
+  đã đặt, rồi sang `Failed`. `Order.Status = "FulfillmentFailed"`, `CompensationAttempts = 1` (đúng 1 chân phải hoàn tác).
   Ghi `LogCritical` kèm `AhamoveOrderId` — **tiền đã thu, hoàn tiền phải làm thủ công**.
 
 **Test case 03: Đơn hẹn giờ, NhanhVn hỏng**
@@ -88,3 +88,35 @@ Không có timer nào. Escalation do `Fault<T>` mà MassTransit tự publish khi
 
 > ⚠️ NhanhVn dùng `POST /order/cancelcarrier`, endpoint này chỉ hủy **vận đơn với hãng vận chuyển**,
 > không hủy bản ghi đơn hàng bên NhanhVn. Đơn POS vẫn còn và phải hủy thủ công.
+
+#### Ghi chú: CompensationAttempts
+
+Đếm **số vòng bù trừ mà saga đã phát ra**, không phải số lần gọi API.
+
+| Giá trị | Nghĩa |
+|---|---|
+| `0` | Không có gì để hoàn tác — lỗi xảy ra trước khi đặt Ahamove, hoặc đơn hẹn giờ nên Ahamove chưa từng được gọi |
+| `1` | Phát lệnh bù trừ một lần và nó chạy xong |
+| `2`, `3` | Vòng trước đã dùng hết retry của endpoint và saga phát lại lệnh |
+
+Hai tầng retry lồng nhau, tổng tối đa **9 lần gọi API hủy**:
+
+```
+vòng 1:  CompensateFulfillment  →  3 lần gọi (1s, 5s)  →  Fault
+             ↓  CompensationAttempts = 2
+vòng 2:  CompensateFulfillment  →  3 lần gọi           →  Fault
+             ↓  CompensationAttempts = 3
+vòng 3:  CompensateFulfillment  →  3 lần gọi           →  Fault
+             ↓  chạm cap MaxCompensationRounds = 3
+          Failed  +  LogCritical  →  ops dọn tay
+```
+
+Vì sao có tầng saga trong khi endpoint đã retry: bộ đếm của endpoint chỉ nằm trong RAM, process
+chết là mất; `CompensationAttempts` nằm trong Postgres nên vòng lặp sống sót qua restart.
+
+Cap là tuyệt đối: chạm `MaxCompensationRounds` luôn chuyển sang `Failed`, và `Failed` `Ignore` mọi
+fault sau đó — không có đường nào lặp vô hạn. Test `CompensationKeepsFaulting_StopsAtTheRoundCap`
+khoá đúng tính chất này.
+
+Endpoint `compensate-fulfillment` cố ý retry ít hơn các endpoint khác (3 lần thay vì 6) để tổng số
+lần gọi API hủy của đối tác không vượt 9.

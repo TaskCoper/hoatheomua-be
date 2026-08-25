@@ -35,6 +35,12 @@ public class OrderFulfillmentState : SagaStateMachineInstance, IAuditableEntity
 
     public string? FailedStep { get; set; }
     public string? FailureReason { get; set; }
+    /// <summary>
+    /// How many saga-level compensation rounds have been issued. 1 = compensation ran once; higher
+    /// means an earlier round exhausted the compensate-fulfillment endpoint's own retries and the
+    /// saga reissued the command. 0 = nothing was compensated at all, because nothing had been
+    /// booked yet (the failure hit before Ahamove, or the order was scheduled so it was never called).
+    /// </summary>
     public int CompensationAttempts { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }

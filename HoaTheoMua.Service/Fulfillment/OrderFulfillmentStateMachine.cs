@@ -17,6 +17,14 @@ namespace HoaTheoMua.Service.Fulfillment;
 /// </remarks>
 public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<OrderFulfillmentState>
 {
+    /// <summary>
+    /// Hard cap on saga-level compensation rounds. Each round is itself retried by the
+    /// compensate-fulfillment endpoint, so the real ceiling on outbound cancel calls is
+    /// MaxCompensationRounds x that endpoint's attempt count. Reaching the cap always transitions to
+    /// Failed, which ignores further faults - there is no path that loops forever.
+    /// </summary>
+    private const int MaxCompensationRounds = 3;
+
     // Kept well under the 64-char CurrentState column.
     public State DispatchingDelivery { get; private set; } = null!;
     public State CreatingPosOrder { get; private set; } = null!;
@@ -127,9 +135,10 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
                         {
                             OrderId = context.Saga.CorrelationId,
                             AhamoveOrderId = context.Saga.AhamoveOrderId,
-                            // Normally null here - CreatePosOrder is the step that just failed - but
-                            // set if an earlier attempt created a POS order and then died before
-                            // persisting it. Passing it through means that orphan gets cleaned too.
+                            // Always null on this branch today: NhanhOrderId is only ever set by the
+                            // PosOrderCreated handler, which moves the saga to Revalidating, where
+                            // CreatePosOrderFaulted is no longer handled. Passed through anyway so a
+                            // future step added AFTER the POS step compensates both legs unchanged.
                             NhanhOrderId = context.Saga.NhanhOrderId,
                             Reason = context.Saga.FailureReason ?? "POS order creation failed"
                         })
@@ -162,19 +171,44 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
                 .Publish(context => ToMarkFailed(context.Saga))
                 .TransitionTo(Failed),
 
+            // The endpoint retry policy has already given up by the time this arrives. Reissuing the
+            // command starts a fresh round with its own retries, and survives a process restart -
+            // the round counter lives in Postgres, the endpoint's does not.
             When(CompensateFulfillmentFaulted)
                 .Then(context =>
                 {
                     context.Saga.UpdatedAt = DateTimeOffset.UtcNow;
                     context.Saga.FailureReason = Truncate(
-                        $"{context.Saga.FailureReason} | compensation faulted: {Describe(context.Message.Exceptions)}");
-                    logger.LogCritical(
-                        "Compensation faulted for order {OrderId} (ahamoveOrderId={AhamoveOrderId} "
-                        + "nhanhOrderId={NhanhOrderId}). Manual cleanup required.",
-                        context.Saga.CorrelationId, context.Saga.AhamoveOrderId, context.Saga.NhanhOrderId);
+                        $"{context.Saga.FailureReason} | compensation round {context.Saga.CompensationAttempts} "
+                        + $"faulted: {Describe(context.Message.Exceptions)}");
                 })
-                .Publish(context => ToMarkFailed(context.Saga))
-                .TransitionTo(Failed));
+                .IfElse(
+                    context => context.Saga.CompensationAttempts < MaxCompensationRounds,
+                    retry => retry
+                        .Then(context =>
+                        {
+                            context.Saga.CompensationAttempts++;
+                            logger.LogWarning(
+                                "Compensation round {Round}/{Max} for order {OrderId} after a fault",
+                                context.Saga.CompensationAttempts, MaxCompensationRounds, context.Saga.CorrelationId);
+                        })
+                        .Publish(context => new CompensateFulfillment
+                        {
+                            OrderId = context.Saga.CorrelationId,
+                            AhamoveOrderId = context.Saga.AhamoveOrderId,
+                            NhanhOrderId = context.Saga.NhanhOrderId,
+                            Reason = context.Saga.FailureReason ?? "compensation retry"
+                        }),
+                    // Stays in Compensating implicitly - no TransitionTo, so no self-transition.
+
+                    giveUp => giveUp
+                        .Then(context => logger.LogCritical(
+                            "Compensation gave up after {Max} rounds for order {OrderId} "
+                            + "(ahamoveOrderId={AhamoveOrderId} nhanhOrderId={NhanhOrderId}). Manual cleanup required.",
+                            MaxCompensationRounds, context.Saga.CorrelationId,
+                            context.Saga.AhamoveOrderId, context.Saga.NhanhOrderId))
+                        .Publish(context => ToMarkFailed(context.Saga))
+                        .TransitionTo(Failed)));
 
         During(Revalidating,
             When(CacheRevalidated)

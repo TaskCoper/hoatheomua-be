@@ -51,9 +51,15 @@ public static class ServiceCollectionExtensions
             // Retry chỉ cho lỗi transient; lỗi nghiệp vụ fault ngay để saga bù trừ sớm.
             cfg.AddConfigureEndpointsCallback((context, name, cfg) =>
             {
+                // Bù trừ được saga phát lại tối đa MaxCompensationRounds vòng, nên endpoint này
+                // retry ít hơn: 3 lần gọi/vòng × 3 vòng = tối đa 9 lần gọi API hủy, thay vì 18.
+                var intervals = name == "compensate-fulfillment"
+                    ? new[] { 1000, 5000 }
+                    : new[] { 1000, 5000, 15000, 30000, 60000 };
+
                 cfg.UseMessageRetry(r =>
                 {
-                    r.Intervals(1000, 5000, 15000, 30000, 60000);
+                    r.Intervals(intervals);
                     r.Ignore<FulfillmentPermanentException>();
                     /*
                     FulfillmentTransientException (502) — HTTP 5xx, HttpRequestException, TaskCanceledException/timeout → có retry

@@ -125,6 +125,7 @@ public class OrderFulfillmentSagaTest
 
         var instance = saga.Sagas.Contains(orderId);
         Assert.Equal(nameof(CreatePosOrder), instance.FailedStep);
+        // Đúng 1 vòng bù trừ: phát lệnh một lần và nó chạy xong ngay, không phải phát lại.
         Assert.Equal(1, instance.CompensationAttempts);
     }
 
@@ -148,6 +149,9 @@ public class OrderFulfillmentSagaTest
 
         Assert.False(await harness.Published.Any<CompensateFulfillment>());
         fulfillment.Verify(x => x.CompensateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        // Không có vòng bù trừ nào được phát -> 0, phân biệt rõ với trường hợp có bù trừ.
+        Assert.Equal(0, saga.Sagas.Contains(orderId).CompensationAttempts);
     }
 
     // TC04: Ahamove hỏng ngay bước đầu -> chưa tạo gì bên ngoài nên không bù trừ
@@ -192,7 +196,35 @@ public class OrderFulfillmentSagaTest
         Assert.False(await harness.Published.Any<CompensateFulfillment>());
     }
 
-    // TC06: OrderPaid gửi lại lần hai chỉ tương quan vào saga cũ, không chạy fulfilment lần nữa
+    // TC06: bù trừ fault liên tục -> saga phát lại đúng 3 vòng rồi bỏ cuộc, KHÔNG spin vô hạn
+    [Fact]
+    public async Task CompensationKeepsFaulting_StopsAtTheRoundCap()
+    {
+        var fulfillment = HappyFulfillment();
+        fulfillment.Setup(x => x.CreatePosOrderAsync(It.IsAny<Guid>(), It.IsAny<DeliveryDispatchResult>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new FulfillmentPermanentException("NhanhVn rejected the order"));
+        fulfillment.Setup(x => x.CompensateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new FulfillmentTransientException("Ahamove unreachable"));
+
+        await using var provider = BuildProvider(fulfillment);
+        var harness = provider.GetRequiredService<ITestHarness>();
+        await harness.Start();
+
+        var orderId = Guid.NewGuid();
+        await harness.Bus.Publish(PaidFor(orderId));
+
+        var saga = harness.GetSagaStateMachineHarness<OrderFulfillmentStateMachine, OrderFulfillmentState>();
+
+        // Vẫn phải tới được Failed - bù trừ hỏng không được phép treo đơn ở Compensating mãi.
+        Assert.NotNull(await saga.Exists(orderId, x => x.Failed));
+
+        var instance = saga.Sagas.Contains(orderId);
+        Assert.Equal(3, instance.CompensationAttempts);
+        Assert.Equal(3, await harness.Published.SelectAsync<CompensateFulfillment>().Count());
+        Assert.Contains("compensation round", instance.FailureReason);
+    }
+
+    // TC07: OrderPaid gửi lại lần hai chỉ tương quan vào saga cũ, không chạy fulfilment lần nữa
     [Fact]
     public async Task DuplicateOrderPaid_DoesNotRunFulfilmentTwice()
     {
