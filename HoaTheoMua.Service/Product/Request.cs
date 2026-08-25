@@ -202,6 +202,6 @@ public class Request
         public int PageSize { get; set; } = 20;
         public string? ProductLabel { get; set; }
         public string? Search { get; set; }
-        public List<Guid>? ExistingMaterials { get; set; }
+        public List<Guid>? ExcludeIds { get; set; }
     }
 }

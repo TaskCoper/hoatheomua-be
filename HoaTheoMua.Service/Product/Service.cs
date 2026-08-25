@@ -1137,9 +1137,9 @@ public class Service : IService
                               product.ProductLabel != null &&
                               allowedLabels.Contains(product.ProductLabel.ToLower()));
 
-        if (request.ExistingMaterials != null && request.ExistingMaterials.Any())
+        if (request.ExcludeIds != null && request.ExcludeIds.Any())
         {
-            query = query.Where(product => !request.ExistingMaterials.Contains(product.Id));
+            query = query.Where(product => !request.ExcludeIds.Contains(product.Id));
         }
 
         if (!string.IsNullOrWhiteSpace(request.ProductLabel))
