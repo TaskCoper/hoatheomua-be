@@ -62,7 +62,7 @@ public class DeleteMaterialInCombo
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.DeleteMaterialInCombo(ComboId, request));
 
-        Assert.Equal("INVALID_INPUT", ex.Message);
+        Assert.Equal("Danh sách vật liệu cần xóa không được để trống", ex.Message);
         Assert.All(dbContext.ComboSpecifications, x => Assert.False(x.IsDeleted));
     }
 
@@ -82,7 +82,7 @@ public class DeleteMaterialInCombo
         var ex = await Assert.ThrowsAsync<ConflictException>(
             () => service.DeleteMaterialInCombo(ComboId, request));
 
-        Assert.Equal($"RECIPE_CHANGED:{MissingMatId}", ex.Message);
+        Assert.Equal($"Công thức đã bị thay đổi, vui lòng tải lại trang: {MissingMatId}", ex.Message);
         Assert.All(dbContext.ComboSpecifications, x => Assert.False(x.IsDeleted));
     }
 
@@ -110,7 +110,7 @@ public class DeleteMaterialInCombo
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.DeleteMaterialInCombo(ComboId, request));
 
-        Assert.Equal("CORE_MATERIAL_REQUIRED", ex.Message);
+        Assert.Equal("Không thể xóa vì sẽ làm mất vật liệu chính (core) cuối cùng của công thức", ex.Message);
         Assert.All(dbContext.ComboSpecifications, x => Assert.False(x.IsDeleted));
     }
 
@@ -161,7 +161,7 @@ public class DeleteMaterialInCombo
                 ComboId,
                 new MaterialRequest.DeleteMaterial { Materials = [MatCoreId] }));
 
-        Assert.Equal("CORE_MATERIAL_REQUIRED", exception.Message);
+        Assert.Equal("Không thể xóa vì sẽ làm mất vật liệu chính (core) cuối cùng của công thức", exception.Message);
         Assert.False((await dbContext.ComboSpecifications.SingleAsync()).IsDeleted);
     }
 

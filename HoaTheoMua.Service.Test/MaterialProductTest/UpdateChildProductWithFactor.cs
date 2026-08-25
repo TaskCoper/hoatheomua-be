@@ -167,7 +167,7 @@ public class UpdateChildProductWithFactor
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.UpdateChildProductWithFactor(request));
 
-        Assert.Equal("INVALID_FACTOR", ex.Message);
+        Assert.Equal("Hệ số phải lớn hơn 0", ex.Message);
         Assert.Empty(dbContext.Products);
     }
 
@@ -188,7 +188,7 @@ public class UpdateChildProductWithFactor
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.UpdateChildProductWithFactor(request));
 
-        Assert.Equal("PARENT_PRODUCT_REQUIRED", ex.Message);
+        Assert.Equal("Sản phẩm không phải là combo con (không có sản phẩm cha)", ex.Message);
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public class UpdateChildProductWithFactor
         var ex = await Assert.ThrowsAsync<NotFoundException>(
             () => service.UpdateChildProductWithFactor(request));
 
-        Assert.Equal("PARENT_COMBO_SPECIFICATION_NOT_FOUND", ex.Message);
+        Assert.Equal("Không tìm thấy công thức combo cha", ex.Message);
     }
 
     [Fact]
@@ -280,7 +280,7 @@ public class UpdateChildProductWithFactor
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.UpdateChildProductWithFactor(request));
 
-        Assert.Equal($"INVALID_QUANTITY:Material {MatCoreId:N}", ex.Message);
+        Assert.Equal($"Số lượng vật liệu sau khi nhân hệ số bị giảm về 0, vui lòng kiểm tra lại hệ số: Material {MatCoreId:N}", ex.Message);
     }
 
     private static void SeedParentAndChildRecipe(AppDbContext dbContext)
