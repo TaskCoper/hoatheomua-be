@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AutoMapper;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
@@ -362,6 +363,53 @@ public class Service : IService
             if (request.isPin.HasValue)
             {
                 query = query.Where(x => x.IsPin == request.isPin.Value);
+            }
+        }
+        
+        if (request.productType.HasValue)
+        {
+            switch (request.productType.Value)
+            {
+                case ProductType.Material:
+                    query = query.Where(x =>
+                        x.ProductLabel != null &&
+                        x.ProductLabel.Trim().ToLower() == "thành phần");
+                    break;
+                
+                case ProductType.Combo:
+                    query = query.Where(x =>
+                        // Combo độc lập: không có product con và chính nó có type Combo.
+                        (x.ProductType == "Combo" &&
+                          !_dbContext.Products.Any(child =>
+                              !child.IsDeleted &&
+                              child.ParentProductId == x.NhanhProductId))
+                        ||
+                        // Combo cha: parent có type Sản phẩm, có con và tất cả con đều có type Combo.
+                        (x.ProductType == "Sản phẩm" &&
+                         _dbContext.Products.Any(child =>
+                             !child.IsDeleted &&
+                             child.ParentProductId == x.NhanhProductId) &&
+                         !_dbContext.Products.Any(child =>
+                             !child.IsDeleted &&
+                             child.ParentProductId == x.NhanhProductId &&
+                             child.ProductType != "Combo")));
+                    break;
+                
+                case ProductType.Product:
+                    query = query.Where(x =>
+                        x.ProductType == "Sản phẩm" &&
+                        (
+                            // Sản phẩm độc lập
+                            !_dbContext.Products.Any(child =>
+                                !child.IsDeleted &&
+                                child.ParentProductId == x.NhanhProductId) ||
+                            // Sản phẩm có con nhưng không phải full combo
+                            _dbContext.Products.Any(child =>
+                                !child.IsDeleted &&
+                                child.ParentProductId == x.NhanhProductId &&
+                                child.ProductType != "Combo")
+                        ));
+                    break;
             }
         }
 
@@ -953,7 +1001,7 @@ public class Service : IService
                     !x.CategoryProduct.IsDeleted &&
                     !x.Product.IsDeleted &&
                     (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty))
-                .OrderBy(x => x.Position) //
+                .OrderBy(x => x.Position)
                 .ThenBy(x => x.Product.ProductName);
 
             var result = await categoryPinnedQuery
@@ -978,7 +1026,7 @@ public class Service : IService
                 !x.IsDeleted &&
                 x.IsPin &&
                 x.ParentProductId == null)
-            .OrderBy(x => x.Position) //
+            .OrderBy(x => x.Position)
             .ThenBy(x => x.ProductName);
 
         var pinnedProducts = await pinnedProductQuery
@@ -1032,6 +1080,104 @@ public class Service : IService
         
         return result;
     }
+
+    public async Task<Response.ComboSpecificationResponse?> GetComboSpecificationAsync(Guid id)  
+    {  
+        var comboSpec = await _dbContext.ComboSpecifications  
+            .AsNoTracking()  
+            .Include(c => c.Sub)  
+            .FirstOrDefaultAsync(c => c.SubId == id  
+                                      && !c.IsDeleted  
+                                      && !c.Sub.IsDeleted);  
+  
+        if (comboSpec == null)  
+            return null;  
+  
+        var materialSpecs = await _dbContext.ComboSpecifications
+            .AsNoTracking()  
+            .Include(c => c.Mat)  
+            .Where(c => c.SubId == id  
+                        && !c.IsDeleted  
+                        && !c.Mat.IsDeleted)  
+            .ToListAsync();  
+  
+        var response = new Response.ComboSpecificationResponse  
+        {  
+            SubId = comboSpec.Sub.Id.ToString(),  
+            ProductCode = comboSpec.Sub.ProductCode,  
+            ProductName = comboSpec.Sub.ProductName,  
+            CoverImage = comboSpec.Sub.CoverImage,
+            Materials = materialSpecs.Select(c => new Response.MaterialItemResponse  
+                {  
+                    MaterialId = c.Mat.Id.ToString(),  
+                    MaterialName = c.Mat.ProductName,  
+                    CoverImage = c.Mat.CoverImage,
+                    IsCore = c.IsCore, 
+                    QuantityPerCombo = c.Quantity,  
+                    Unit = c.Mat.Unit,  
+                    AvailableForSale = c.Mat.AvailableForSale ?? 0,  
+                    MaxComboPossible = (c.Mat.AvailableForSale ?? 0) > 0 && c.Quantity > 0  
+                        ? Math.Floor((decimal)((c.Mat.AvailableForSale ?? 0) / c.Quantity))  
+                        : 0  
+                })  
+                .OrderByDescending(x => x.IsCore)  
+                .ToList()  
+        };    return response;  
+    }
+
+    public async Task<BasePaginationResponse> GetMaterialsAsync(Request.GetMaterialsRequest request)
+    {
+        request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
+        request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
+
+        var allowedLabels = new[] { "thành phần", "phụ liệu" };
+        var query = _dbContext.Products
+            .AsNoTracking()
+            .Where(product => !product.IsDeleted &&
+                              product.ProductLabel != null &&
+                              allowedLabels.Contains(product.ProductLabel.ToLower()));
+
+        if (request.ExistingMaterials != null && request.ExistingMaterials.Any())
+        {
+            query = query.Where(product => !request.ExistingMaterials.Contains(product.Id));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ProductLabel))
+        {
+            var normalizedLabel = request.ProductLabel.Trim().ToLower();
+            query = query.Where(product =>
+                product.ProductLabel != null &&
+                product.ProductLabel.ToLower() == normalizedLabel);
+        }
+        
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var normalizedSearch = request.Search.Trim().ToLower();
+            query = query.Where(product =>
+                (product.ProductName != null &&
+                 product.ProductName.ToLower().Contains(normalizedSearch)) ||
+                (product.ProductCode != null &&
+                 product.ProductCode.ToLower().Contains(normalizedSearch)));
+        }
+        
+        var totalItems = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((request.PageIndex - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(product => new Response.MaterialResponse
+            {
+                MaterialId = product.Id.ToString(),
+                MaterialCode = product.ProductCode,
+                MaterialName = product.ProductName,
+                Unit = product.Unit,
+                AvailableForSale = product.AvailableForSale ?? 0,
+                CoverImage = product.CoverImage,
+                ProductLabel = product.ProductLabel
+            })
+            .ToListAsync();
+
+        return ApiResponseFactory.BasePagination(items, request.PageIndex, request.PageSize, totalItems);
+    }
 }
-
-

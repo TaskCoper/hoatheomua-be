@@ -30,6 +30,7 @@ public class Order : BaseEntity<Guid>, IAuditableEntity
     public required long OrderTime { get; set; } = 0;
     // public Guid? AddressId { get; set; }
     public required string PhoneReceiver { get; set; }
+    public required string FullNameReceiver { get; set; }
     // public string? Email { get; set; }
     // public string? PhoneNumber { get; set; }
 

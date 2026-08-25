@@ -111,6 +111,7 @@ public class Response
         public string? FullName { get; set; } = string.Empty;
         public string? Phone { get; set; } = string.Empty;
         public Guid? UserId { get; set; }
+        public string FullNameReceiver { get; set; } = string.Empty;
         
         
         public OrderTransactionResponse? Transaction { get; set; }
@@ -133,6 +134,8 @@ public class Response
         
         public Guid? ProductId { get; set; }
         public string? CoverImage { get; set; }
+        public Guid? ParentProductId { get; set; }
+        public string? ParentProductName { get; set; }
         
         public int ItemId { get; set; }
         public int Number { get; set; }
