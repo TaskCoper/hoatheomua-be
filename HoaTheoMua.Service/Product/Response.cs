@@ -176,6 +176,36 @@ public class Response
     public List<LocalProductDetailResponse> Children { get; set; } = new();  
 }
 
+    public class ComboSpecificationResponse 
+    {
+        public string? SubId { get; set; }
+        public string? ProductCode { get; set; }
+        public string? ProductName { get; set; }
+        public List<MaterialItemResponse> Materials { get; set; } = new();
+    }
+
+    public class MaterialItemResponse
+    {
+        public string? MaterialId { get; set; }
+        public string? MaterialName { get; set; }
+        public bool? Role { get; set; }
+        public decimal? QuantityPerCombo { get; set; }
+        public string? Unit { get; set; }
+        public decimal AvailableForSale { get; set; }
+        public decimal? MaxComboPossible { get; set; }
+    }
+
+    public class MaterialResponse
+    {
+        public string? MaterialId { get; set; }
+        public string? MaterialCode { get; set; }
+        public string? MaterialName { get; set; }
+        public string? Unit { get; set; }
+        public decimal? AvailableForSale { get; set; }
+        public string? CoverImage { get; set; }
+        public string? ProductLabel { get; set; }
+    }
+    
     public class ProductResponseWithList
     {
         public Guid Id { get; set; }

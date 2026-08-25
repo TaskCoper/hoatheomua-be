@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -32,5 +33,8 @@ public class ComboSpecificationConfiguration: IEntityTypeConfiguration<ComboSpec
         builder.HasIndex(x => new { x.SubId, x.MatId })
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");
+        
+        builder.SeedComboSpecification();
     }
+
 }

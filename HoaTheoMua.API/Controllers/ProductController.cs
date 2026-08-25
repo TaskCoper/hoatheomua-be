@@ -1,9 +1,10 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Product;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace HoaTheoMua.Controllers;
 
@@ -66,7 +67,7 @@ public class ProductController: ControllerBase
         var result = await _productService.GetLocalProductDetail(id);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
-    
+
     [HttpPut("/api/v1/products/{id:guid}/move")]
     [Authorize (Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> MoveProduct(Guid id, Request.MoveProductRequest request)
@@ -110,5 +111,18 @@ public class ProductController: ControllerBase
         var result = await _productService.UpdateProduct(id, request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
-    
+
+    [HttpGet("/api/v1/products/{id}/combo-specification")]
+    public async Task<IActionResult> GetComboSpecification(Guid id)
+    {
+        var result = await _productService.GetComboSpecificationAsync(id);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
+    [HttpGet("/api/v1/materials")]
+    public async Task<IActionResult> GetMaterials([FromQuery] Request.GetMaterialsRequest request)
+    {
+        var result = await _productService.GetMaterialsAsync(request);
+        return Ok(result);
+    }
 }
