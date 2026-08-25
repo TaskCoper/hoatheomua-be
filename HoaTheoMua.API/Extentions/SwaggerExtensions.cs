@@ -10,7 +10,12 @@ public static class SwaggerExtensions
         services.AddSwaggerGen(options =>
         {
             options.SwaggerDoc("v1", new OpenApiInfo() { Title = "HoaTheoMua APIs", Version = "v1" });
-            // options
+
+            // DTO trong project thường là nested class. Dùng FullName (đổi ký tự đặc biệt thành _)
+            // giúp schema ID duy nhất nếu những module khác vẫn có DTO trùng tên trong tương lai.
+            options.CustomSchemaIds(type => (type.FullName ?? type.Name)
+                .Replace('.', '_')
+                .Replace('+', '_'));
 
             // Define the security scheme for JWT Bearer
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

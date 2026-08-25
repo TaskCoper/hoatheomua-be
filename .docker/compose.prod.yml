@@ -44,6 +44,17 @@ services:
       AhamoveOption__Token: ${AHAMOVE_TOKEN}
       AhamoveOption__BaseUrl: ${AHAMOVE_BASE_URL}
 
+      # Xanh SM Delivery Configuration
+      XanhSmOption__BaseUrl: ${XANH_SM_BASE_URL}
+      XanhSmOption__TokenUrl: ${XANH_SM_TOKEN_URL}
+      XanhSmOption__ClientId: ${XANH_SM_CLIENT_ID}
+      XanhSmOption__ClientSecret: ${XANH_SM_CLIENT_SECRET}
+      XanhSmOption__Scope: ${XANH_SM_SCOPE}
+      XanhSmOption__GrantType: ${XANH_SM_GRANT_TYPE}
+      XanhSmOption__AcceptLanguage: ${XANH_SM_ACCEPT_LANGUAGE}
+      XanhSmOption__TokenRefreshBufferSeconds: ${XANH_SM_TOKEN_REFRESH_BUFFER_SECONDS}
+      XanhSmOption__TimeoutSeconds: ${XANH_SM_TIMEOUT_SECONDS}
+
       # NhanhVn Configuration
       NhanhVnOption__Token: ${NHANHVN_TOKEN}
       NhanhVnOption__AppId: ${NHANHVN_APP_ID}

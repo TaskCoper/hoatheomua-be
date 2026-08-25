@@ -22,6 +22,7 @@ using ProductImportService = HoaTheoMua.Service.ProductImport;
 using BaoKimService = HoaTheoMua.Service.BaoKim;
 using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 using RevalidateService = HoaTheoMua.Service.Revalidate;
+using XanhSmService = HoaTheoMua.Service.XanhSmService;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,6 +53,8 @@ builder.Services.ConfigureRateLimiter();
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
 builder.Services.AddHttpContextAccessor();
+// Xanh SM keeps its OAuth token in this in-process cache; the token provider refreshes it before expiry.
+builder.Services.AddMemoryCache();
 
 builder.Services.AddScoped<HoaTheoMua.Service.Common.ICurrentUserService, HoaTheoMua.Service.Common.CurrentUserService>();
 builder.Services.AddScoped<CategoryNewsService.IService, CategoryNewsService.Service>();
@@ -63,6 +66,12 @@ builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>("AhamoveService");
+builder.Services.AddHttpClient<XanhSmService.IXanhSmTokenProvider, XanhSmService.XanhSmTokenProvider>("XanhSmToken");
+builder.Services.AddHttpClient<XanhSmService.IService, XanhSmService.Service>("XanhSmService", client =>
+{
+    // Timeout mặc định cho HttpClient Xanh SM. Cấu hình chi tiết được service đọc khi endpoint được gọi.
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddHttpClient<BaoKimService.IService, BaoKimService.Service>("BaoKimService");
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();

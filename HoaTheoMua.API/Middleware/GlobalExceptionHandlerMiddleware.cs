@@ -1,5 +1,6 @@
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
+using HoaTheoMua.Service.XanhSmService;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace HoaTheoMua.Middleware;
@@ -46,10 +47,13 @@ public class GlobalExceptionHandlerMiddleware : IMiddleware
             
             context.Response.StatusCode = appEx.StatusCode;
             
+            // XanhSmException chỉ chứa message do backend tự tạo, không chứa secret/raw body upstream.
+            // Vì vậy có thể trả detail này để FE biết lỗi credential, whitelist, rate-limit... thay vì chỉ thấy 502.
+            var isSafeIntegrationError = appEx is XanhSmException;
             var response = ApiResponseFactory.Error(
                 title: appEx.Title,
                 status: appEx.StatusCode,
-                detail: appEx.StatusCode >= 500 ? "An unexpected error occurred." : ex.Message,
+                detail: appEx.StatusCode >= 500 && !isSafeIntegrationError ? "An unexpected error occurred." : ex.Message,
                 messageCode: appEx.MessageCode,
                 errors: _environment.IsDevelopment() ? new { detail = ex.Message } : null, 
                 traceId: context.TraceIdentifier
