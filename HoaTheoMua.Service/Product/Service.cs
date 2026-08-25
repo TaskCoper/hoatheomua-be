@@ -1081,7 +1081,7 @@ public class Service : IService
         return result;
     }
 
-    public async Task<Response.ComboSpecificationResponse> GetComboSpecificationAsync(Guid id)  
+    public async Task<Response.ComboSpecificationResponse?> GetComboSpecificationAsync(Guid id)  
     {  
         var comboSpec = await _dbContext.ComboSpecifications  
             .AsNoTracking()  
@@ -1091,7 +1091,7 @@ public class Service : IService
                                       && !c.Sub.IsDeleted);  
   
         if (comboSpec == null)  
-            throw new NotFoundException($"Không tìm thấy combo với ID: {id}");  
+            return null;  
   
         var materialSpecs = await _dbContext.ComboSpecifications
             .AsNoTracking()  

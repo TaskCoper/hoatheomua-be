@@ -67,24 +67,27 @@ namespace HoaTheoMua.Service.Test.ProductTest
         }
 
         /// <summary>
-        /// Test: Khi không tìm thấy combo với ID truyền vào, hàm ném ra NotFoundException.
+        /// Test: Khi không tìm thấy combo với ID truyền vào, hàm trả về null.
         /// </summary>
         [Fact]
-        public async Task GetComboSpecification_ComboNotFound_ThrowsNotFoundException()
+        public async Task GetComboSpecification_ComboNotFound_ReturnsNull()
         {
             // Arrange
             var dbContext = CreateMockDbContext(new List<ProductEntity>(), new List<ComboSpecEntity>());
             var service = CreateService(dbContext);
 
-            // Act & Assert
-            await Assert.ThrowsAsync<NotFoundException>(() => service.GetComboSpecificationAsync(Guid.NewGuid()));
+            // Act
+            var result = await service.GetComboSpecificationAsync(Guid.NewGuid());
+
+            // Assert
+            Assert.Null(result);
         }
 
         /// <summary>
-        /// Test: Khi combo đã bị xóa (IsDeleted = true), hàm ném ra NotFoundException.
+        /// Test: Khi combo đã bị xóa (IsDeleted = true), hàm trả về null.
         /// </summary>
         [Fact]
-        public async Task GetComboSpecification_DeletedCombo_ThrowsNotFoundException()
+        public async Task GetComboSpecification_DeletedCombo_ReturnsNull()
         {
             // Arrange
             var comboId = Guid.NewGuid();
@@ -118,8 +121,11 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var dbContext = CreateMockDbContext(products, comboSpecs);
             var service = CreateService(dbContext);
 
-            // Act & Assert
-            await Assert.ThrowsAsync<NotFoundException>(() => service.GetComboSpecificationAsync(comboId));
+            // Act
+            var result = await service.GetComboSpecificationAsync(comboId);
+
+            // Assert
+            Assert.Null(result);
         }
 
         /// <summary>
