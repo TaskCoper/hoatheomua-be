@@ -340,45 +340,59 @@ public class Service : IService
     // Verifies every requested item has enough stock in the target depot.
     private async Task EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
     {
+        var productIds = items
+            .Select(x => x.ProductId)
+            .ToHashSet();
+
+        var specifications = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(x =>
+                productIds.Contains(x.SubId) &&
+                !x.IsDeleted)
+            .Select(x => new
+            {
+                x.SubId,
+                x.MatId,
+                x.IsCore,
+                x.IsActive,
+                MaterialIsDeleted = x.Mat.IsDeleted,
+                Quantity = x.Quantity ?? 0m,
+                x.Mat.NhanhProductId
+            })
+            .ToListAsync();
+
+        var comboIds = specifications
+            .Select(x => x.SubId)
+            .ToHashSet();
+
+        var coreSpecificationsByCombo = specifications
+            .Where(x =>
+                x.IsCore &&
+                x.IsActive &&
+                !x.MaterialIsDeleted &&
+                x.Quantity > 0)
+            .ToLookup(x => x.SubId);
 
         var stockItems = new List<(int ItemId, decimal Number)>();
 
         foreach (var item in items)
         {
-            var productId = await _dbContext.Products
-                .AsNoTracking()
-                .Where(x =>
-                    !x.IsDeleted &&
-                    x.NhanhProductId == item.ItemId.ToString())
-                .Select(x => x.Id)
-                .SingleOrDefaultAsync();
-            
-            var isCombo = await _dbContext.ComboSpecifications
-                .AsNoTracking()
-                .AnyAsync(x =>
-                    x.SubId == productId &&
-                    x.IsActive &&
-                    !x.IsDeleted &&
-                    !x.Mat.IsDeleted);
-            
-            if (!isCombo)
+            if (!comboIds.Contains(item.ProductId))
             {
                 stockItems.Add((item.ItemId, item.Number));
 
                 continue;
             }
-            
-            var comboResult = await GetLimitCoreProduct(productId);
 
-            if (item.Number > comboResult.SellableQuantityCombo)
+            var coreMaterials = coreSpecificationsByCombo[item.ProductId]
+                .ToList();
+
+            if (coreMaterials.Count == 0)
             {
                 throw new BadRequestException(
-                    $"Combo Id={item.ItemId} chỉ có thể đặt tối đa " +
-                    $"{comboResult.SellableQuantityCombo} sản phẩm");
+                    $"Combo ProductId={item.ProductId} không có vật liệu core hợp lệ");
             }
 
-            var coreMaterials = comboResult.Materials.Where(x => x.IsCore);
-            
             foreach (var material in coreMaterials)
             {
                 if (!int.TryParse(material.NhanhProductId, out var materialItemId))
@@ -387,21 +401,20 @@ public class Service : IService
                         $"Vật liệu MatId={material.MatId} không có NhanhProductId hợp lệ");
                 }
 
-                var materialNumber = item.Number * material.Quantity;
-
-                stockItems.Add((materialItemId, materialNumber));
+                stockItems.Add((
+                    materialItemId,
+                    item.Number * material.Quantity));
             }
         }
 
-
-        var mergedItems = stockItems.GroupBy(x => x.ItemId);
-
-        var itemRequest = mergedItems.Select(x => new
-        {
-            ItemId = x.Key,
-            Number = x.Sum(item => item.Number)
-        }).ToList();
-           
+        var itemRequest = stockItems
+            .GroupBy(x => x.ItemId)
+            .Select(x => new
+            {
+                ItemId = x.Key,
+                Number = x.Sum(item => item.Number)
+            })
+            .ToList();
 
         foreach (var item in itemRequest)
         {
@@ -437,45 +450,6 @@ public class Service : IService
         }
     }
 
-    public async Task<Response.ComboResult> GetLimitCoreProduct(Guid subId)
-    {
-        var query  = _dbContext.ComboSpecifications
-            .AsNoTracking()
-            .Where(x => 
-                x.SubId == subId &&
-                x.IsActive &&
-                !x.IsDeleted &&
-                !x.Mat.IsDeleted);//Product Mat
-
-        var specifications = await query
-            .Select(x => new Response.ComboResponse
-        {
-            MatId = x.MatId,
-            NhanhProductId = x.Mat.NhanhProductId,
-            IsCore = x.IsCore,
-            Quantity = x.Quantity ?? 0m,
-            AvailableForSaleMaterial = x.Mat.AvailableForSale ?? 0m,
-        }).ToListAsync();
-
-        var coreSpecifications = specifications
-            .Where(x => x.IsCore).ToList();
-
-        if (coreSpecifications.Count == 0 ||
-            coreSpecifications.Any(x => x.Quantity <= 0))
-        {
-            throw new BadRequestException("Tồn tại vật liệu core với số lượng <= 0");
-        }
-        
-        var result = coreSpecifications.Min(x => Math.Floor(x.AvailableForSaleMaterial / x.Quantity));
-        
-        return new Response.ComboResult()
-        {
-            SellableQuantityCombo = result,
-            Materials = specifications
-        };
-    }
-    
-    
     // Calls Ahamove to estimate the shipping fee from the shop's warehouse to the buyer.
     private async Task<decimal> EstimateShippingFeeAsync(
         Request.CreateOrderRequest request,

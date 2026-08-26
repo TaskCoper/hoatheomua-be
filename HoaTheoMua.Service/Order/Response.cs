@@ -8,21 +8,6 @@ namespace HoaTheoMua.Service.Order;
 public class Response
 {
 
-    public class ComboResult
-    {
-        public decimal SellableQuantityCombo { get; set; }
-        public List<ComboResponse> Materials { get; set; } = new ();
-    }
-    
-    public class ComboResponse
-    {
-        public Guid MatId { get; set; }
-        public string? NhanhProductId { get; set; }
-        public bool IsCore { get; set; }
-        public decimal Quantity { get; set; }
-        public decimal AvailableForSaleMaterial { get; set; }
-    }
-    
     public class GetOrderResponse
     {
         public Guid OrderId { get; set; }
