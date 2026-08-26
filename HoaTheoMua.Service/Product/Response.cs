@@ -176,6 +176,10 @@ public class Response
     public string? Size { get; set; }  
     public string? Color { get; set; }  
     public string? Origin { get; set; }  
+    public double? Position { get; set; }
+    public decimal? Factor { get; set; }
+    public bool IsActive { get; set; }
+    public bool IsDeleted { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
 

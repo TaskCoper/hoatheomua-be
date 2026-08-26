@@ -671,6 +671,10 @@ public class Service : IService
             Size = product.Size,
             Color = product.Color,
             Origin = product.Origin,
+            Position = product.Position,
+            Factor = product.Factor,
+            IsActive = product.IsActive,
+            IsDeleted = product.IsDeleted,
             CreatedAt = product.CreatedAt,
             UpdatedAt = product.UpdatedAt,
             Categories = product.CategoryProductDetails

@@ -955,7 +955,16 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 15, IsDeleted = false };
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Sản phẩm",
+            Stock = 15,
+            Position = 3.5,
+            Factor = 1.25m,
+            IsActive = true,
+            IsDeleted = false
+        };
         await dbContext.Products.AddAsync(product);
         await dbContext.SaveChangesAsync();
 
@@ -965,6 +974,10 @@ public class CalculateAvailableQtyTests
         Assert.Equal(15, result.SellableQuantity);
         Assert.Equal("Còn hàng", result.StockStatus);
         Assert.Null(result.UnavailableReason);
+        Assert.Equal(3.5, result.Position);
+        Assert.Equal(1.25m, result.Factor);
+        Assert.True(result.IsActive);
+        Assert.False(result.IsDeleted);
     }
 
     /// <summary>
