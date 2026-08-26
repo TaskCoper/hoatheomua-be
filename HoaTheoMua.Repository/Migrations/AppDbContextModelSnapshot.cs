@@ -1685,6 +1685,13 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsUnique()
                         .HasFilter("\"NhanhProductId\" IS NOT NULL");
 
+                    b.HasIndex("ParentProductId", "ProductType")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("Position", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasFilter("\"IsDeleted\" = false");
+
                     b.ToTable("Products");
 
                     b.HasData(

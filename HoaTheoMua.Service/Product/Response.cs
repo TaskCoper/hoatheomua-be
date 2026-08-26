@@ -81,6 +81,14 @@ public class Response
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
 
+        public int? SellableQuantity { get; set; }
+        public string? StockStatus { get; set; }
+        /// <summary>
+        /// Lý do không thể bán (null nếu còn hàng hoặc đang tính lỗi).
+        /// Giá trị: "no_formula" | "no_core" | "calculation_error"
+        /// </summary>
+        public string? UnavailableReason { get; set; }
+
         public List<CategoryProductResponse> Categories { get; set; } = new List<CategoryProductResponse>();
     }
 
@@ -168,12 +176,20 @@ public class Response
     public string? Size { get; set; }  
     public string? Color { get; set; }  
     public string? Origin { get; set; }  
-    public DateTimeOffset CreatedAt { get; set; }  
-    public DateTimeOffset? UpdatedAt { get; set; }  
-  
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+
+    public int? SellableQuantity { get; set; }
+    public string? StockStatus { get; set; }
+    /// <summary>
+    /// Lý do không thể bán (null nếu còn hàng hoặc đang tính lỗi).
+    /// Giá trị: "no_formula" | "no_core" | "calculation_error"
+    /// </summary>
+    public string? UnavailableReason { get; set; }
+
     public List<CategoryProductResponse> Categories { get; set; } = new();
-    public LocalProductDetailResponse? Parent { get; set; }
-    public List<LocalProductDetailResponse> Children { get; set; } = new();  
+    public Guid? ParentId { get; set; }
+    public List<LocalProductDetailResponse> Children { get; set; } = new();
 }
 
     public class ComboSpecificationResponse 

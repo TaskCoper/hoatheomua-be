@@ -392,9 +392,9 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Empty(items);
         }
 
-        /// Test: Khi truyền ExistingMaterials, API loại trừ các nguyên vật liệu có ID nằm trong danh sách ExistingMaterials.
+        /// Test: Khi truyền ExcludeIds, API loại trừ các nguyên vật liệu có ID nằm trong danh sách ExcludeIds.
         [Fact]
-        public async Task GetMaterialsAsync_WithExistingMaterials_ExcludesSpecifiedMaterials()
+        public async Task GetMaterialsAsync_WithExcludeIds_ExcludesSpecifiedMaterials()
         {
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
@@ -417,7 +417,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             {
                 PageIndex = 1,
                 PageSize = 10,
-                ExistingMaterials = new List<Guid> { id1, id3 }
+                ExcludeIds = new List<Guid> { id1, id3 }
             };
 
             var result = await service.GetMaterialsAsync(request);
@@ -433,9 +433,9 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Contains(items, item => item.MaterialId == id4.ToString());
         }
 
-        /// Test: Khi truyền ExistingMaterials rỗng hoặc null, API trả về đầy đủ các nguyên vật liệu.
+        /// Test: Khi truyền ExcludeIds rỗng hoặc null, API trả về đầy đủ các nguyên vật liệu.
         [Fact]
-        public async Task GetMaterialsAsync_WithExistingMaterialsEmpty_ReturnsAllMaterials()
+        public async Task GetMaterialsAsync_WithExcludeIdsEmpty_ReturnsAllMaterials()
         {
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
@@ -453,7 +453,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             {
                 PageIndex = 1,
                 PageSize = 10,
-                ExistingMaterials = new List<Guid>()
+                ExcludeIds = new List<Guid>()
             };
 
             var result = await service.GetMaterialsAsync(request);
