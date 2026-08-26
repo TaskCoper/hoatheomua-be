@@ -1022,15 +1022,19 @@ public class Service : IService
                 .Select(spec => spec.MatId)
                 .ToHashSet();
 
-            // Tồn kho âm được clamp về 0 ngay khi nạp inventory.
-            var inventories = new Dictionary<Guid, int>();
+            // Số lượng bán được của combo phải dựa trên AvailableForSale của nguyên liệu.
+            // Với dữ liệu cũ chưa đồng bộ field này, fallback về Stock để không làm mất
+            // khả năng bán của các sản phẩm lịch sử. Giá trị âm luôn được coi là 0.
+            var inventories = new Dictionary<Guid, decimal>();
             if (materialIds.Count > 0)
             {
                 inventories = await _dbContext.Products
                     .AsNoTracking()
                     .Where(p => materialIds.Contains(p.Id) && !p.IsDeleted)
-                    .Select(p => new { p.Id, Stock = Math.Max(0, (int)(p.Stock ?? 0)) })
-                    .ToDictionaryAsync(p => p.Id, p => p.Stock);
+                    .Select(p => new { p.Id, p.AvailableForSale, p.Stock })
+                    .ToDictionaryAsync(
+                        p => p.Id,
+                        p => Math.Max(0m, p.AvailableForSale ?? p.Stock ?? 0m));
             }
 
             // Giai đoạn 5: Tính số combo bán được theo vật liệu CORE giới hạn nhất.
@@ -1057,9 +1061,9 @@ public class Service : IService
 
                     foreach (var spec in coreSpecsList)
                     {
-                        // Bảo vệ bổ sung: tồn kho vật liệu âm được coi là 0.
-                        var stock = Math.Max(0, inventories.TryGetValue(spec.MatId, out var s) ? s : 0);
-                        var availableCombos = decimal.Floor(stock / spec.Quantity);
+                        // Bảo vệ bổ sung: lượng khả dụng của vật liệu âm được coi là 0.
+                        var availableForSale = Math.Max(0m, inventories.TryGetValue(spec.MatId, out var s) ? s : 0m);
+                        var availableCombos = decimal.Floor(availableForSale / spec.Quantity);
                         var availableCombosAsInt = availableCombos >= int.MaxValue
                             ? int.MaxValue
                             : (int)availableCombos;
