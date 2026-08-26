@@ -677,7 +677,6 @@ public class Service : IService
             IsDeleted = product.IsDeleted,
             CreatedAt = product.CreatedAt,
             UpdatedAt = product.UpdatedAt,
-            IsActive = product.IsActive,
             Categories = product.CategoryProductDetails
             .Where(cpd =>
                 !cpd.IsDeleted &&
