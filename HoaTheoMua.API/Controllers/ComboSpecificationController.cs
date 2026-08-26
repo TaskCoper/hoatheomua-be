@@ -44,6 +44,7 @@ public class ComboSpecificationController : ControllerBase
             entity = "product", //{entity:"product", id:[comboId]}
             id = new[] { comboId }
         });
+        await _revalidateService.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 
@@ -57,6 +58,7 @@ public class ComboSpecificationController : ControllerBase
             entity = "product", //{entity:"product", id:[comboId]}
             id = new[] { comboId }
         });
+        await _revalidateService.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 
@@ -72,6 +74,7 @@ public class ComboSpecificationController : ControllerBase
             entity = "product", //{entity:"product", id:[comboId]}
             id = new[] { request.ProductId }
         });
+        await _revalidateService.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 
@@ -85,6 +88,7 @@ public class ComboSpecificationController : ControllerBase
             entity = "product", //{entity:"product", id:[comboId]}
             id = new[] { productId }
         });
+        await _revalidateService.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
     
@@ -98,6 +102,7 @@ public class ComboSpecificationController : ControllerBase
             entity = "product", //{entity:"product", id:[comboId]}
             id = new[] { productId }
         });
+        await _revalidateService.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 }
