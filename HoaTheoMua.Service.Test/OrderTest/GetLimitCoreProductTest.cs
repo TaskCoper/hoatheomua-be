@@ -26,7 +26,7 @@ public class GetLimitCoreProductTest
     }
 
     private ComboSpecification CreateComboSpecification(
-        Guid comboId, Repository.Entity.Product material, int quantity, bool isCore, bool isActive)
+        Guid comboId, Repository.Entity.Product material, decimal quantity, bool isCore, bool isActive)
     {
         return new ComboSpecification()
         {

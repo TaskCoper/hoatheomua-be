@@ -24,10 +24,11 @@ public partial class Service : IService
     private readonly SepayOption _sepayOption;
     private readonly Config.IService _configService;
     private readonly AhamoveService.IService _ahaMoveService;
+    private readonly Revalidate.IService _revalidateService;
 
     public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration,
         HoaTheoMua.Service.Order.IService orderService, Config.IService configService,
-        AhamoveService.IService ahaMoveService)
+        AhamoveService.IService ahaMoveService, Revalidate.IService revalidateService)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
@@ -37,6 +38,7 @@ public partial class Service : IService
         _sepayOption = new SepayOption();
         _configService = configService;
         _ahaMoveService = ahaMoveService;
+        _revalidateService = revalidateService;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
         configuration.GetSection(nameof(SepayOption)).Bind(_sepayOption);
@@ -359,10 +361,11 @@ public partial class Service : IService
         //     .FirstOrDefaultAsync(x => x.Id == order.AddressId);
 
         // var phoneReceiver = address?.PhoneNumber; //cột này required
-        var phoneReceiver = order.Phone; //cột này required
+        var phoneReceiver = order.PhoneReceiver; //cột này required
+        var fullNameReceiver = order.FullNameReceiver;
         
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
-        privateDescription += $"\n-------------------------\nNN: {phoneReceiver}";
+        privateDescription += $"\n-------------------------\nNN: {fullNameReceiver} - {phoneReceiver}";
 
         var vnDt = new DateTimeOffset();
         if (order.OrderTime > 0)
@@ -748,6 +751,50 @@ public partial class Service : IService
         _dbContext.Transactions.Add(transaction);
 
         await _dbContext.SaveChangesAsync();
+
+        var nhanhProductIds = order.OrderDetails
+            .Select(x => x.ItemId.ToString())
+            .Distinct()
+            .ToList();
+
+        var orderedProducts = await _dbContext.Products
+            .Where(x => !x.IsDeleted
+                        && x.NhanhProductId != null
+                        && nhanhProductIds.Contains(x.NhanhProductId))
+            .Select(x => new
+            {
+                x.Id,
+                x.ParentProductId
+            })
+            .ToListAsync();
+
+        var parentNhanhProductIds = orderedProducts
+            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
+            .Select(x => x.ParentProductId!)
+            .Distinct()
+            .ToList();
+
+        var parentProductIds = await _dbContext.Products
+            .Where(x => !x.IsDeleted
+                        && x.NhanhProductId != null
+                        && parentNhanhProductIds.Contains(x.NhanhProductId))
+            .Select(x => x.Id)
+            .ToListAsync();
+
+        var productIds = orderedProducts
+            .Select(x => x.Id)
+            .Concat(parentProductIds)
+            .Distinct()
+            .Select(x => x.ToString())
+            .ToList();
+        
+        var revalidateBody = JsonSerializer.SerializeToElement(new
+        {
+            entity = "product",
+            id = productIds
+        });
+
+        await _revalidateService.RevalidateApi(revalidateBody);
     }
 
     private async Task<string> ConvertTimeDelivery(Repository.Entity.Order order)

@@ -53,6 +53,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullName = "Test Full Name",
                 Phone = "0987654321",
                 PhoneReceiver = "0987654321",
+                FullNameReceiver = "Test Receiver",
                 OrderDetails = new List<OrderDetailEntity>()
             };
         }

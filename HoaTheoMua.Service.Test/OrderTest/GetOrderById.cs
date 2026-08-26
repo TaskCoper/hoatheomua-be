@@ -41,6 +41,11 @@ namespace HoaTheoMua.Service.Test.OrderTest
             List<TransactionEntity>? transactions = null)
         {
             var orderId = id ?? Guid.NewGuid();
+            var orderDetails = details ?? new List<OrderDetailEntity>();
+            foreach (var detail in orderDetails)
+            {
+                detail.OrderId = orderId;
+            }
 
             return new OrderEntity
             {
@@ -59,8 +64,9 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullName = "Test Full Name",
                 Phone = "0987654321",
                 PhoneReceiver = "0987654321",
+                FullNameReceiver = "Test Receiver",
                 TotalFee = totalFee,
-                OrderDetails = details ?? new List<OrderDetailEntity>(),
+                OrderDetails = orderDetails,
                 Transactions = transactions ?? new List<TransactionEntity>(),
                 PaymentUrl = $"https://qr.sepay.vn/img?acc=96247BENTRAN&bank=BIDV&amount=782000&des=HTM-{orderId}&template=qronly"
             };

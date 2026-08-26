@@ -172,7 +172,8 @@ public class Service : IService
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
             PhoneReceiver = request.PhoneReceiver,
-
+            FullNameReceiver = request.FullNameReceiver, //số điện thoại người nhận
+            
             TagIds = request.TagIds,
             TaxCode = request.TaxCode,
             IdentityNumber = request.IdentityNumber,
@@ -340,7 +341,7 @@ public class Service : IService
     private async Task EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
     {
 
-        var stockItems = new List<AhaMoveRequest.Items>();
+        var stockItems = new List<(int ItemId, decimal Number)>();
 
         foreach (var item in items)
         {
@@ -362,11 +363,7 @@ public class Service : IService
             
             if (!isCombo)
             {
-                stockItems.Add(new AhaMoveRequest.Items()
-                {
-                    ItemId = item.ItemId,
-                    Number = item.Number,
-                });
+                stockItems.Add((item.ItemId, item.Number));
 
                 continue;
             }
@@ -392,18 +389,14 @@ public class Service : IService
 
                 var materialNumber = item.Number * material.Quantity;
 
-                stockItems.Add(new AhaMoveRequest.Items()
-                {
-                    ItemId = materialItemId,
-                    Number = materialNumber,
-                });
+                stockItems.Add((materialItemId, materialNumber));
             }
         }
 
 
         var mergedItems = stockItems.GroupBy(x => x.ItemId);
 
-        var itemRequest = mergedItems.Select(x => new AhaMoveRequest.Items()
+        var itemRequest = mergedItems.Select(x => new
         {
             ItemId = x.Key,
             Number = x.Sum(item => item.Number)
@@ -436,7 +429,7 @@ public class Service : IService
                 throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot {depotId}");
             }
 
-            double available = (double?)targetDepot["Available"] ?? 0;
+            var available = (decimal?)targetDepot["Available"] ?? 0m;
             if (item.Number > available)
             {
                 throw new BadRequestException($"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {available})");
@@ -460,7 +453,7 @@ public class Service : IService
             MatId = x.MatId,
             NhanhProductId = x.Mat.NhanhProductId,
             IsCore = x.IsCore,
-            Quantity = x.Quantity,
+            Quantity = x.Quantity ?? 0m,
             AvailableForSaleMaterial = x.Mat.AvailableForSale ?? 0m,
         }).ToListAsync();
 
@@ -603,16 +596,34 @@ public class Service : IService
             .FirstOrDefault();
 
         var nhanhProductIds = _dbContext.OrderDetails
+            .AsNoTracking()
+            .Where(x => x.OrderId == id)
             .Select(x => x.ItemId.ToString())
-            .Distinct()
-            .ToList();
+            .Distinct();
 
         var findProduct = await _dbContext.Products
+            .AsNoTracking()
             .Where(x => !x.IsDeleted
                         && x.NhanhProductId != null
                         && nhanhProductIds.Contains(x.NhanhProductId))
-            .Select(x => new { x.Id, x.CoverImage, x.NhanhProductId})
+            .Select(x => new 
+                { x.Id, x.CoverImage, x.NhanhProductId, x.ParentProductId})
             .ToDictionaryAsync(x => x.NhanhProductId!);
+
+        var parentNhanhProductIds = findProduct.Values
+            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
+            .Select(x => x.ParentProductId!)
+            .Distinct()
+            .ToList();
+        
+        var productParents = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted
+                        && x.NhanhProductId != null
+                        && parentNhanhProductIds.Contains(x.NhanhProductId))
+            .Select(x => new { x.Id, x.NhanhProductId, x.ProductName })
+            .ToDictionaryAsync(x => x.NhanhProductId!);
+
         
         var orderDetails = new Response.GetOrderByIdResponse
         {
@@ -642,6 +653,7 @@ public class Service : IService
             Remark = orders.Remarks,
             OrderTime = orders.OrderTime,
             PhoneReceiver = orders.PhoneReceiver,
+            FullNameReceiver = orders.FullNameReceiver,
             CreateAt = orders.CreatedAt,
             Address = orders.Address,
             ShortAddress = orders.ShortAddress,
@@ -656,11 +668,24 @@ public class Service : IService
             Details = orders.OrderDetails.Select(x =>
             {
                 findProduct.TryGetValue(x.ItemId.ToString(), out var product);
+
+                Guid? parentProductId = null;
+                string? parentProductName = null;
+
+                if (!string.IsNullOrWhiteSpace(product?.ParentProductId)
+                    && productParents.TryGetValue(product.ParentProductId, out var parentProduct))
+                {
+                    parentProductId = parentProduct.Id;
+                    parentProductName = parentProduct.ProductName;
+                }
+
                 return new Response.OrderDetailsResponse()
                 {
                     OrderDetailsId = x.Id,
                     ProductId = product?.Id,
                     CoverImage = product?.CoverImage,
+                    ParentProductId = parentProductId,
+                    ParentProductName = parentProductName,
                     Name = x.Name,
                     ItemId = x.ItemId,
                     Number = x.Number,
@@ -845,9 +870,17 @@ public class Service : IService
 
     public async Task<string> CancelOrder(Guid id)
     {
+        //nếu người dùng đó đặt hàng thì mới cho người dùng đó hủy đơn hàng
+        var userId = _currentUser.GetRequiredUserId();
+        
+        if (!_currentUser.IsVerified)
+        {
+            throw new UnauthorizedException("User is not verified");
+        }
+        
         var isExistPendingOrder = await _dbContext.Orders.
             FirstOrDefaultAsync(x =>
-                x.Id == id && x.Status == "Pending");
+                x.Id == id && x.Status == "Pending" && x.UserId == userId);
 
         if (isExistPendingOrder == null)
         {

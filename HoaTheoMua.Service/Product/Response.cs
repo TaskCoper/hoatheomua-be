@@ -81,6 +81,14 @@ public class Response
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
 
+        public int? SellableQuantity { get; set; }
+        public string? StockStatus { get; set; }
+        /// <summary>
+        /// Lý do không thể bán (null nếu còn hàng hoặc đang tính lỗi).
+        /// Giá trị: "no_formula" | "no_core" | "calculation_error"
+        /// </summary>
+        public string? UnavailableReason { get; set; }
+
         public List<CategoryProductResponse> Categories { get; set; } = new List<CategoryProductResponse>();
     }
 
@@ -168,11 +176,62 @@ public class Response
     public string? Size { get; set; }  
     public string? Color { get; set; }  
     public string? Origin { get; set; }  
-    public DateTimeOffset CreatedAt { get; set; }  
-    public DateTimeOffset? UpdatedAt { get; set; }  
-  
+    public double? Position { get; set; }
+    public decimal? Factor { get; set; }
+    public bool IsActive { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+
+    public int? SellableQuantity { get; set; }
+    public string? StockStatus { get; set; }
+    /// <summary>
+    /// Lý do không thể bán (null nếu còn hàng hoặc đang tính lỗi).
+    /// Giá trị: "no_formula" | "no_core" | "calculation_error"
+    /// </summary>
+    public string? UnavailableReason { get; set; }
+
     public List<CategoryProductResponse> Categories { get; set; } = new();
-    public LocalProductDetailResponse? Parent { get; set; }
-    public List<LocalProductDetailResponse> Children { get; set; } = new();  
+    public Guid? ParentId { get; set; }
+    public List<LocalProductDetailResponse> Children { get; set; } = new();
 }
+
+    public class ComboSpecificationResponse 
+    {
+        public string? SubId { get; set; }
+        public string? ProductCode { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+        public List<MaterialItemResponse> Materials { get; set; } = new();
+    }
+
+    public class MaterialItemResponse
+    {
+        public string? MaterialId { get; set; }
+        public string? MaterialName { get; set; }
+        public string? CoverImage { get; set; }
+        public bool? IsCore { get; set; }
+        public decimal? QuantityPerCombo { get; set; }
+        public string? Unit { get; set; }
+        public decimal AvailableForSale { get; set; }
+        public decimal? MaxComboPossible { get; set; }
+    }
+
+    public class MaterialResponse
+    {
+        public string? MaterialId { get; set; }
+        public string? MaterialCode { get; set; }
+        public string? MaterialName { get; set; }
+        public string? Unit { get; set; }
+        public decimal? AvailableForSale { get; set; }
+        public string? CoverImage { get; set; }
+        public string? ProductLabel { get; set; }
+    }
+    
+    public class ProductResponseWithList
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+    }
 }

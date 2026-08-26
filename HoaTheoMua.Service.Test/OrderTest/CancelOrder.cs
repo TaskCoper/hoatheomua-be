@@ -18,13 +18,14 @@ namespace HoaTheoMua.Service.Test.OrderTest
 {
     public class CancelOrder
     {
+        private static readonly Guid TestUserId = Guid.Parse("cba7c21c-d6f2-4b30-9b4e-8c7c10b4f0b2");
 
         private static OrderEntity CreateOrderEntity(Guid id, string status = "Pending")
         {
             return new OrderEntity
             {
                 Id = id,
-                UserId = Guid.NewGuid(),
+                UserId = TestUserId,
                 Ward = 1,
                 City = 1,
                 Address = "123 Duong Test",
@@ -32,6 +33,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullName = "Nguyen Van A",
                 Phone = "0987654321",
                 PhoneReceiver = "0987654321",
+                FullNameReceiver = "Nguyen Van A",
                 Remarks = "Giao gio hanh chinh",
                 Status = status,
                 TrackNumber = "TRACK-001",
@@ -78,10 +80,12 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK });
             var httpClient = new HttpClient(handler.Object);
 
-            var currentUser = new Mock<ICurrentUserService>().Object;
+            var currentUserMock = new Mock<ICurrentUserService>();
+            currentUserMock.Setup(x => x.GetRequiredUserId()).Returns(TestUserId);
+            currentUserMock.Setup(x => x.IsVerified).Returns(true);
             var productService = new Mock<ProductService>().Object;
 
-            return new OrderServiceImpl(dbContext, currentUser, httpClient, productService, mockConfig.Object, new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
+            return new OrderServiceImpl(dbContext, currentUserMock.Object, httpClient, productService, mockConfig.Object, new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
         }
 
         // HAPPY CASE: Đơn đang Pending => hủy thành công, status đổi thành Cancelled

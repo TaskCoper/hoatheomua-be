@@ -184,6 +184,8 @@ public class Service: IService
 
         List<ServiceResponse>? ahamoveResult = null;
         
+        string ahamoveErrorContent = await ahamoveResponse.Content.ReadAsStringAsync();
+        
         if (ahamoveResponse.IsSuccessStatusCode)
         {
             ahamoveResult = await ahamoveResponse.Content.ReadFromJsonAsync<List<ServiceResponse>>();
@@ -192,10 +194,15 @@ public class Service: IService
             // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
             throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
         }
-        
+
         if (ahamoveResult == null || ahamoveResult.Any() == false)
         {
             throw new BadRequestException("Ahamove returned null or empty data");
+        }
+
+        if (ahamoveResult[0].Data == null)
+        {
+            throw new AhamoveException();
         }
         
         return new { ahamoveResult, productNhanhResult};

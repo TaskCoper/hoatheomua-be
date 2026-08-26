@@ -46,6 +46,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
         private static readonly Guid TestUserId = Guid.Parse("cba7c21c-d6f2-4b30-9b4e-8c7c10b4f0b2");
         private static readonly Guid TestAddressId = Guid.Parse("a32c276b-74f0-48fe-97b8-f3c66b42f103");
         private const string TestPhoneReceiver = "0901234567";
+        private const string TestFullNameReceiver = "Nguyen Van A";
 
         // ---------------------------------------------------------------------
         // Helpers
@@ -88,6 +89,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullName = "Nguyen Van A",
                 Phone = "0987654321",
                 PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver,
                 Remarks = "Giao gio hanh chinh",
                 Status = status,
                 TrackNumber = "TRACK-001",
@@ -323,7 +325,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             };
         }
 
-        private static ComboSpecification CreateComboSpecification(Guid comboId, ProductEntity material, int quantity, bool isCore)
+        private static ComboSpecification CreateComboSpecification(Guid comboId, ProductEntity material, decimal quantity, bool isCore)
         {
             return new ComboSpecification
             {
@@ -403,6 +405,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Gateway = "BaoKim",
                 PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver,
                 Items = items.ToList()
             };
         }
@@ -473,7 +476,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Remarks = "Ghi chu",
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -509,7 +513,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest()
             {
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -534,7 +539,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest()
             {
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             }; ;
 
             // Act
@@ -569,7 +575,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -608,7 +615,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -646,7 +654,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -684,7 +693,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -725,7 +735,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -765,7 +776,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -804,7 +816,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -853,7 +866,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 TaxCode = "123456789", // Để tính VatFee
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             // Act
@@ -928,7 +942,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Remarks = "Ghi chu",
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             //
@@ -997,7 +1012,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Remarks = "Ghi chu",
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
-                PhoneReceiver = TestPhoneReceiver
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
             };
 
             //
