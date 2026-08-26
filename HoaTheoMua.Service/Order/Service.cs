@@ -249,6 +249,55 @@ public class Service : IService
         throw new BadRequestException("Not support other gateway");
     }
 
+    public async Task<Response.LimitCoreProductResponse> GetLimitCoreProduct(Guid comboId)
+    {
+        var specifications = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(x =>
+                x.SubId == comboId &&
+                !x.IsDeleted &&
+                x.IsActive &&
+                !x.Mat.IsDeleted)
+            .Select(x => new
+            {
+                x.MatId,
+                Quantity = x.Quantity ?? 0m,
+                x.IsCore,
+                x.IsActive,
+                AvailableForSale = x.Mat.AvailableForSale ?? 0m
+            })
+            .ToListAsync();
+
+        var activeCoreSpecifications = specifications
+            .Where(x => x.IsCore && x.IsActive)
+            .ToList();
+
+        if (activeCoreSpecifications.Count == 0 ||
+            activeCoreSpecifications.Any(x => x.Quantity <= 0))
+        {
+            throw new BadRequestException("Tồn tại vật liệu core với số lượng <= 0");
+        }
+
+        var sellableQuantity = activeCoreSpecifications
+            .Select(x => Math.Floor(x.AvailableForSale / x.Quantity))
+            .Min();
+
+        return new Response.LimitCoreProductResponse
+        {
+            SellableQuantityCombo = sellableQuantity,
+            Materials = specifications
+                .Select(x => new Response.LimitCoreMaterialResponse
+                {
+                    MatId = x.MatId,
+                    Quantity = x.Quantity,
+                    IsCore = x.IsCore,
+                    IsActive = x.IsActive,
+                    AvailableForSale = x.AvailableForSale
+                })
+                .ToList()
+        };
+    }
+
     // public async Task<CreateOrderResponse> CreateDefaultOrder()
     // {
     //     var request = new Request.CreateOrderRequest
@@ -340,10 +389,23 @@ public class Service : IService
     // Verifies every requested item has enough stock in the target depot.
     private async Task EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
     {
-        var productIds = items
-            .Select(x => x.ProductId)
+        // The order request carries Nhanh.vn's integer item id, while combo
+        // specifications reference the internal Product Guid. Resolve the
+        // external ids before querying ComboSpecifications.
+        var nhanhProductIds = items
+            .Select(x => x.ItemId.ToString())
             .ToHashSet();
 
+        var productsByNhanhId = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.NhanhProductId != null &&
+                nhanhProductIds.Contains(x.NhanhProductId))
+            .Select(x => new { x.Id, x.NhanhProductId })
+            .ToDictionaryAsync(x => x.NhanhProductId!, x => x.Id);
+
+        var productIds = productsByNhanhId.Values.ToHashSet();
         var specifications = await _dbContext.ComboSpecifications
             .AsNoTracking()
             .Where(x =>
@@ -377,20 +439,22 @@ public class Service : IService
 
         foreach (var item in items)
         {
-            if (!comboIds.Contains(item.ProductId))
+            var nhanhProductId = item.ItemId.ToString();
+            if (!productsByNhanhId.TryGetValue(nhanhProductId, out var productId) ||
+                !comboIds.Contains(productId))
             {
                 stockItems.Add((item.ItemId, item.Number));
 
                 continue;
             }
 
-            var coreMaterials = coreSpecificationsByCombo[item.ProductId]
+            var coreMaterials = coreSpecificationsByCombo[productId]
                 .ToList();
 
             if (coreMaterials.Count == 0)
             {
                 throw new BadRequestException(
-                    $"Combo ProductId={item.ProductId} không có vật liệu core hợp lệ");
+                    $"Combo ProductId={item.ItemId} không có vật liệu core hợp lệ");
             }
 
             foreach (var material in coreMaterials)
