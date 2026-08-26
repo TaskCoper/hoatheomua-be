@@ -224,7 +224,7 @@ public class Service : IService
             .ThenInclude(cpd => cpd.CategoryProduct)
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
+        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty) && x.IsActive);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -599,6 +599,7 @@ public class Service : IService
         Origin = product.Origin,
         CreatedAt = product.CreatedAt,
         UpdatedAt = product.UpdatedAt,
+        IsActive = product.IsActive,
         Categories = product.CategoryProductDetails
             .Where(cpd =>
                 !cpd.IsDeleted &&
@@ -744,6 +745,7 @@ public class Service : IService
             Origin = product.Origin,
             CreatedAt = product.CreatedAt,
             UpdatedAt = product.UpdatedAt,
+            IsActive = product.IsActive,
             Categories = product.CategoryProductDetails?
                 .Where(cpd => !cpd.IsDeleted && cpd.CategoryProduct != null && !cpd.CategoryProduct.IsDeleted)
                 .Select(cpd => new HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse

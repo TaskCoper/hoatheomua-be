@@ -69,6 +69,7 @@ public class Response
         public decimal? Width { get; set; }
         public decimal? Height { get; set; }
         public int? WebOrder { get; set; }
+        public bool IsActive { get; set; }
         public DateTimeOffset? NhanhCreatedAt { get; set; }
         public DateTimeOffset? NhanhUpdatedAt { get; set; }
         public string? ProductLabel { get; set; }
@@ -170,6 +171,7 @@ public class Response
     public string? Origin { get; set; }  
     public DateTimeOffset CreatedAt { get; set; }  
     public DateTimeOffset? UpdatedAt { get; set; }  
+    public bool IsActive { get; set; }
   
     public List<CategoryProductResponse> Categories { get; set; } = new();
     public LocalProductDetailResponse? Parent { get; set; }
