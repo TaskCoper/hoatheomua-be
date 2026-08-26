@@ -67,6 +67,50 @@ public class DeleteMaterialInCombo
     }
 
     [Fact]
+    public async Task DeleteMaterialInCombo_EmptyMaterialId_ThrowsBadRequestBeforeOpeningTransaction()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).DeleteMaterialInCombo(
+                ComboId,
+                new MaterialRequest.DeleteMaterial { Materials = [Guid.Empty] }));
+
+        Assert.Equal("Mã vật liệu không được để trống", exception.Message);
+        Assert.Empty(dbContext.ComboSpecifications);
+    }
+
+    [Fact]
+    public async Task DeleteMaterialInCombo_ComboNotFound_ThrowsNotFound()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => CreateService(dbContext).DeleteMaterialInCombo(
+                ComboId,
+                new MaterialRequest.DeleteMaterial { Materials = [MatSupportId] }));
+
+        Assert.Equal("Không tìm thấy combo", exception.Message);
+    }
+
+    [Fact]
+    public async Task DeleteMaterialInCombo_UnsyncedCombo_ThrowsBadRequest()
+    {
+        await using var dbContext = CreateDbContext();
+        var combo = CreateParentCombo();
+        combo.NhanhProductId = null;
+        dbContext.Products.Add(combo);
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).DeleteMaterialInCombo(
+                ComboId,
+                new MaterialRequest.DeleteMaterial { Materials = [MatSupportId] }));
+
+        Assert.Equal("Combo chưa đồng bộ", exception.Message);
+    }
+
+    [Fact]
     public async Task DeleteMaterialInCombo_MaterialNotInParentRecipe_ThrowsConflict()
     {
         await using var dbContext = CreateDbContext();
@@ -112,6 +156,23 @@ public class DeleteMaterialInCombo
 
         Assert.Equal("Không thể xóa vì công thức phải chứa ít nhất một vật liệu core", ex.Message);
         Assert.All(dbContext.ComboSpecifications, x => Assert.False(x.IsDeleted));
+    }
+
+    [Fact]
+    public async Task DeleteMaterialInCombo_RecipeWithoutActiveCore_ThrowsBadRequestWithoutDeleting()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(CreateParentCombo(), CreateMaterial(MatSupportId));
+        dbContext.ComboSpecifications.Add(CreateSpecification(ComboId, MatSupportId, quantity: 2, isCore: false));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).DeleteMaterialInCombo(
+                ComboId,
+                new MaterialRequest.DeleteMaterial { Materials = [MatSupportId] }));
+
+        Assert.Equal("Công thức hiện tại không còn vật liệu chính (core) đang hoạt động", exception.Message);
+        Assert.False((await dbContext.ComboSpecifications.SingleAsync()).IsDeleted);
     }
 
     [Fact]

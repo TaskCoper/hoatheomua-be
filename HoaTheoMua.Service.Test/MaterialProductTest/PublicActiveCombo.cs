@@ -13,7 +13,7 @@ public class PublicActiveCombo
     private static readonly Guid ComboId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [Fact]
-    public async Task PublicActiveCombo_InactiveCombo_PublishesParentAndAllNonDeletedChildren()
+    public async Task PublicActiveCombo_InactiveProduct_PublishesOnlyRequestedProduct()
     {
         await using var db = CreateDbContext();
         db.Products.AddRange(
@@ -26,10 +26,10 @@ public class PublicActiveCombo
 
         var result = await CreateService(db).PublicActiveCombo(ComboId);
 
-        Assert.Equal("Mở bán combo thành công.", result);
+        Assert.Equal("Mở bán thành công.", result);
         Assert.True((await db.Products.FindAsync(ComboId))!.IsActive);
-        Assert.All(await db.Products.Where(x => x.ParentProductId == "COMBO-1" && !x.IsDeleted).ToListAsync(),
-            x => Assert.True(x.IsActive));
+        Assert.False((await db.Products.SingleAsync(x => x.NhanhProductId == "CHILD-1")).IsActive);
+        Assert.True((await db.Products.SingleAsync(x => x.NhanhProductId == "CHILD-2")).IsActive);
         Assert.False((await db.Products.IgnoreQueryFilters().SingleAsync(x => x.NhanhProductId == "DELETED")).IsActive);
         Assert.False((await db.Products.SingleAsync(x => x.ParentProductId == "OTHER-COMBO")).IsActive);
     }
@@ -47,7 +47,7 @@ public class PublicActiveCombo
 
         var result = await CreateService(db).PublicActiveCombo(ComboId);
 
-        Assert.Equal("Combo đã được mở bán trước đó.", result);
+        Assert.Equal("Sản phẩm đã được mở bán trước đó.", result);
         Assert.False((await db.Products.FindAsync(child.Id))!.IsActive);
         Assert.Equal(oldUpdatedAt, (await db.Products.FindAsync(ComboId))!.UpdatedAt);
     }
@@ -58,7 +58,7 @@ public class PublicActiveCombo
         await using var db = CreateDbContext();
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => CreateService(db).PublicActiveCombo(ComboId));
-        Assert.Equal("Không tìm thấy combo", exception.Message);
+        Assert.Equal("Không tìm thấy sản phẩm", exception.Message);
     }
 
     [Fact]
@@ -71,14 +71,15 @@ public class PublicActiveCombo
     }
 
     [Fact]
-    public async Task PublicActiveCombo_UnsyncedCombo_ThrowsBadRequest()
+    public async Task PublicActiveCombo_UnsyncedProduct_PublishesSuccessfully()
     {
         await using var db = CreateDbContext();
         db.Products.Add(Product(ComboId, null, false));
         await db.SaveChangesAsync();
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => CreateService(db).PublicActiveCombo(ComboId));
-        Assert.Equal("Combo chưa đồng bộ", exception.Message);
+        var result = await CreateService(db).PublicActiveCombo(ComboId);
+
+        Assert.Equal("Mở bán thành công.", result);
+        Assert.True((await db.Products.FindAsync(ComboId))!.IsActive);
     }
 
     private static ProductEntity Product(Guid id, string? nhanhProductId, bool isActive,

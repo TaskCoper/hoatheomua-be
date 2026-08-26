@@ -69,6 +69,7 @@ public class Response
         public decimal? Width { get; set; }
         public decimal? Height { get; set; }
         public int? WebOrder { get; set; }
+        public bool IsActive { get; set; }
         public DateTimeOffset? NhanhCreatedAt { get; set; }
         public DateTimeOffset? NhanhUpdatedAt { get; set; }
         public string? ProductLabel { get; set; }
