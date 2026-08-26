@@ -7,6 +7,7 @@ namespace HoaTheoMua.Service.Order;
 
 public class Response
 {
+
     public class GetOrderResponse
     {
         public Guid OrderId { get; set; }

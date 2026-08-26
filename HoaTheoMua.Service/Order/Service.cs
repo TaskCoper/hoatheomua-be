@@ -340,7 +340,83 @@ public class Service : IService
     // Verifies every requested item has enough stock in the target depot.
     private async Task EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
     {
+        var productIds = items
+            .Select(x => x.ProductId)
+            .ToHashSet();
+
+        var specifications = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(x =>
+                productIds.Contains(x.SubId) &&
+                !x.IsDeleted)
+            .Select(x => new
+            {
+                x.SubId,
+                x.MatId,
+                x.IsCore,
+                x.IsActive,
+                MaterialIsDeleted = x.Mat.IsDeleted,
+                Quantity = x.Quantity ?? 0m,
+                x.Mat.NhanhProductId
+            })
+            .ToListAsync();
+
+        var comboIds = specifications
+            .Select(x => x.SubId)
+            .ToHashSet();
+
+        var coreSpecificationsByCombo = specifications
+            .Where(x =>
+                x.IsCore &&
+                x.IsActive &&
+                !x.MaterialIsDeleted &&
+                x.Quantity > 0)
+            .ToLookup(x => x.SubId);
+
+        var stockItems = new List<(int ItemId, decimal Number)>();
+
         foreach (var item in items)
+        {
+            if (!comboIds.Contains(item.ProductId))
+            {
+                stockItems.Add((item.ItemId, item.Number));
+
+                continue;
+            }
+
+            var coreMaterials = coreSpecificationsByCombo[item.ProductId]
+                .ToList();
+
+            if (coreMaterials.Count == 0)
+            {
+                throw new BadRequestException(
+                    $"Combo ProductId={item.ProductId} không có vật liệu core hợp lệ");
+            }
+
+            foreach (var material in coreMaterials)
+            {
+                if (!int.TryParse(material.NhanhProductId, out var materialItemId))
+                {
+                    throw new BadRequestException(
+                        $"Vật liệu MatId={material.MatId} không có NhanhProductId hợp lệ");
+                }
+
+                stockItems.Add((
+                    materialItemId,
+                    item.Number * material.Quantity));
+            }
+        }
+
+        var itemRequest = stockItems
+            .GroupBy(x => x.ItemId)
+            .Select(x => new
+            {
+                ItemId = x.Key,
+                Number = x.Sum(item => item.Number)
+            })
+            .ToList();
+
+        foreach (var item in itemRequest)
         {
             var productDetailRequest = new HoaTheoMua.Service.Product.Request.ProductDetailRequest
             {
@@ -366,7 +442,7 @@ public class Service : IService
                 throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot {depotId}");
             }
 
-            double available = (double?)targetDepot["Available"] ?? 0;
+            var available = (decimal?)targetDepot["Available"] ?? 0m;
             if (item.Number > available)
             {
                 throw new BadRequestException($"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {available})");
