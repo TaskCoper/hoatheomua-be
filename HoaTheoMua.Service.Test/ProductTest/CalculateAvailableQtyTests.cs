@@ -1,11 +1,13 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
 using ProductEntity = HoaTheoMua.Repository.Entity.Product;
+using CategoryProductEntity = HoaTheoMua.Repository.Entity.CategoryProduct;
 using HoaTheoMua.Service.Product;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
@@ -89,17 +91,17 @@ public class CalculateAvailableQtyTests
     }
 
     /// <summary>
-    /// UT-005-02: Cha combo lấy MIN SellableQuantity của các biến thể con.
+    /// UT-005-02: Cha combo lấy MAX SellableQuantity của các biến thể con.
     /// variant1: qty = floor(100/2) = 50
     /// variant2: qty = floor(100/5) = 20
-    /// → parent = MIN(50, 20) = 20
+    /// → parent = MAX(50, 20) = 50
     ///
     /// NOTE: Phải truyền cả parent.Id VÀ variant IDs để code tìm được variants.
     ///
-    /// **Rationale:** Xác nhận parent lấy MIN từ các variant con
+    /// **Rationale:** Xác nhận parent không cộng trùng kho nguyên liệu dùng chung giữa các variant
     /// </summary>
     [Fact]
-    public async Task UT_005_02_ComboParent_CalculatesMinOfChildVariants()
+    public async Task UT_005_02_ComboParent_CalculatesMaxOfChildVariants()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -121,7 +123,7 @@ public class CalculateAvailableQtyTests
         var result = await service.CalculateAvailableQty(new List<Guid> { parent.Id, variant1.Id, variant2.Id });
 
         Assert.True(result.ContainsKey(parent.Id));
-        Assert.Equal(20, result[parent.Id].SellableQuantity);
+        Assert.Equal(50, result[parent.Id].SellableQuantity);
         Assert.Equal("Còn hàng", result[parent.Id].StockStatus);
         Assert.Null(result[parent.Id].UnavailableReason);
     }
@@ -430,9 +432,9 @@ public class CalculateAvailableQtyTests
         var result = await service.CalculateAvailableQty(new List<Guid> { parent.Id });
 
         Assert.True(result.ContainsKey(parent.Id));
-        // variant1: qty=50, variant2: qty=0 ("no_formula")
-        Assert.Equal(0, result[parent.Id].SellableQuantity); // MIN(50, 0)
-        // Mixed reasons → UnavailableReason = null
+        // variant1: qty=50, variant2: qty=0 ("no_formula") → MAX = 50.
+        Assert.Equal(50, result[parent.Id].SellableQuantity);
+        // Còn ít nhất một variant bán được nên không trả lý do unavailable ở cấp cha.
         Assert.Null(result[parent.Id].UnavailableReason);
     }
 
@@ -466,6 +468,107 @@ public class CalculateAvailableQtyTests
         Assert.Equal(0, result[parent.Id].SellableQuantity);
         // Cả 2 variants đều có cùng reason (null) → lấy null
         Assert.Null(result[parent.Id].UnavailableReason);
+        Assert.Null(result[parent.Id].StockStatus);
+    }
+
+
+    /// <summary>
+    /// UT-005-19: Các biến thể dùng cùng tập CORE nhưng khác định mức thì cha lấy MAX.
+    /// variantSmall: flower 2, leaf 3 → MIN(100/2, 60/3) = 20
+    /// variantLarge: flower 5, leaf 6 → MIN(100/5, 60/6) = 10
+    /// → parent = MAX(20, 10) = 20.
+    ///
+    /// **Rationale:** Xác nhận invariant các variant cùng thành phần và không cộng trùng tồn kho.
+    /// </summary>
+    [Fact]
+    public async Task UT_005_19_ComboParentWithSameCoreMaterials_ReturnsMaxVariantQuantity()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", NhanhProductId = "parent-1", IsDeleted = false };
+        var variantSmall = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
+        var variantLarge = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
+
+        var flower = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, IsDeleted = false };
+        var leaf = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 60, IsDeleted = false };
+
+        var smallFlower = new ComboSpecification { Id = Guid.NewGuid(), SubId = variantSmall.Id, MatId = flower.Id, Quantity = 2, IsCore = true, IsActive = true, IsDeleted = false };
+        var smallLeaf = new ComboSpecification { Id = Guid.NewGuid(), SubId = variantSmall.Id, MatId = leaf.Id, Quantity = 3, IsCore = true, IsActive = true, IsDeleted = false };
+        var largeFlower = new ComboSpecification { Id = Guid.NewGuid(), SubId = variantLarge.Id, MatId = flower.Id, Quantity = 5, IsCore = true, IsActive = true, IsDeleted = false };
+        var largeLeaf = new ComboSpecification { Id = Guid.NewGuid(), SubId = variantLarge.Id, MatId = leaf.Id, Quantity = 6, IsCore = true, IsActive = true, IsDeleted = false };
+
+        await dbContext.Products.AddRangeAsync(parent, variantSmall, variantLarge, flower, leaf);
+        await dbContext.ComboSpecifications.AddRangeAsync(smallFlower, smallLeaf, largeFlower, largeLeaf);
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.CalculateAvailableQty(new List<Guid> { parent.Id });
+
+        Assert.Equal(20, result[parent.Id].SellableQuantity);
+        Assert.Equal("Còn hàng", result[parent.Id].StockStatus);
+        Assert.Null(result[parent.Id].UnavailableReason);
+    }
+
+    /// <summary>
+    /// UT-005-20: Một biến thể còn hàng và một biến thể hết hàng thì cha vẫn còn hàng.
+    /// variantSmall: stock 2 / định mức 1 = 2
+    /// variantLarge: stock 2 / định mức 3 = 0
+    /// → parent = MAX(2, 0) = 2.
+    ///
+    /// **Rationale:** Xác nhận trạng thái cha dựa trên biến thể bán được nhiều nhất.
+    /// </summary>
+    [Fact]
+    public async Task UT_005_20_ComboParentWithOneSellableVariant_ReturnsAvailable()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", NhanhProductId = "parent-1", IsDeleted = false };
+        var variantSmall = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
+        var variantLarge = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
+
+        var material = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 2, IsDeleted = false };
+
+        var smallSpec = new ComboSpecification { Id = Guid.NewGuid(), SubId = variantSmall.Id, MatId = material.Id, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
+        var largeSpec = new ComboSpecification { Id = Guid.NewGuid(), SubId = variantLarge.Id, MatId = material.Id, Quantity = 3, IsCore = true, IsActive = true, IsDeleted = false };
+
+        await dbContext.Products.AddRangeAsync(parent, variantSmall, variantLarge, material);
+        await dbContext.ComboSpecifications.AddRangeAsync(smallSpec, largeSpec);
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.CalculateAvailableQty(new List<Guid> { parent.Id });
+
+        Assert.Equal(2, result[parent.Id].SellableQuantity);
+        Assert.Equal("Còn hàng", result[parent.Id].StockStatus);
+        Assert.Null(result[parent.Id].UnavailableReason);
+    }
+
+    /// <summary>
+    /// UT-005-21: Nguyên liệu dùng chung không có bản ghi tồn kho được coi như stock = 0 ở cấp cha.
+    ///
+    /// **Rationale:** Bản sao ở cấp cha của UT-005-10.
+    /// </summary>
+    [Fact]
+    public async Task UT_005_21_ComboParentWithMissingMaterial_TreatedAsZeroStock()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", NhanhProductId = "parent-1", IsDeleted = false };
+        var variantSmall = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
+        var variantLarge = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsDeleted = false };
+        var missingMaterialId = Guid.NewGuid();
+
+        var smallSpec = new ComboSpecification { Id = Guid.NewGuid(), SubId = variantSmall.Id, MatId = missingMaterialId, Quantity = 1, IsCore = true, IsActive = true, IsDeleted = false };
+        var largeSpec = new ComboSpecification { Id = Guid.NewGuid(), SubId = variantLarge.Id, MatId = missingMaterialId, Quantity = 2, IsCore = true, IsActive = true, IsDeleted = false };
+
+        await dbContext.Products.AddRangeAsync(parent, variantSmall, variantLarge);
+        await dbContext.ComboSpecifications.AddRangeAsync(smallSpec, largeSpec);
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.CalculateAvailableQty(new List<Guid> { parent.Id });
+
+        Assert.Equal(0, result[parent.Id].SellableQuantity);
         Assert.Null(result[parent.Id].StockStatus);
     }
 
@@ -504,12 +607,12 @@ public class CalculateAvailableQtyTests
     }
 
     /// <summary>
-    /// UT-004-02: Cha combo có biến thể lấy MIN variant.
+    /// UT-004-02: Cha combo có biến thể lấy MAX quantity của các variant.
     ///
-    /// **Rationale:** Xác nhận parent combo lấy MIN từ các variant con
+    /// **Rationale:** Xác nhận parent combo không cộng trùng tồn kho dùng chung
     /// </summary>
     [Fact]
-    public async Task UT_004_02_GetLocalProductsV2_ComboParent_HasSellableQuantityAsMinOfVariants()
+    public async Task UT_004_02_GetLocalProductsV2_ComboParent_HasSellableQuantityAsMaxOfVariants()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -532,7 +635,7 @@ public class CalculateAvailableQtyTests
         var mappedParent = items.FirstOrDefault(i => i.Id == parent.Id);
 
         Assert.NotNull(mappedParent);
-        Assert.Equal(20, mappedParent.SellableQuantity);
+        Assert.Equal(50, mappedParent.SellableQuantity);
         Assert.Equal("Còn hàng", mappedParent.StockStatus);
         Assert.Null(mappedParent.UnavailableReason);
     }
@@ -756,144 +859,46 @@ public class CalculateAvailableQtyTests
     }
 
     /// <summary>
-    /// UT-004-10: AC-010 - soldOutOnly=true filter đúng.
+    /// UT-004-20: Nhánh nhanh (không lọc tồn kho) phải trả kèm Categories.
     ///
-    /// **Rationale:** Xác nhận soldOutOnly=true chỉ trả items qty=0
+    /// **Rationale:** Regression cho việc V2 thiếu Include nên Categories luôn rỗng.
     /// </summary>
     [Fact]
-    public async Task UT_004_10_AC_010_GetLocalProductsV2_SoldOutOnly_ReturnsOnlyOutOfStockItems()
+    public async Task UT_004_20_GetLocalProductsV2_FastPath_PopulatesCategories()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var item1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 1", Stock = 0, IsDeleted = false };
-        var item2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 2", Stock = 3, IsDeleted = false };
-        var item3 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 3", Stock = 12, IsDeleted = false };
-
-        await dbContext.Products.AddRangeAsync(item1, item2, item3);
-        await dbContext.SaveChangesAsync();
-
-        var request = new Request.LocalProductQueryRequest { soldOutOnly = true };
-        var result = await service.GetLocalProductsV2(request);
-
-        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Single(items);
-        Assert.Equal(0, items[0].SellableQuantity);
-        Assert.Equal("Hết hàng", items[0].StockStatus);
-    }
-
-    /// <summary>
-    /// UT-004-11: AC-011 - sort sellableQuantity tăng dần.
-    ///
-    /// **Rationale:** Xác nhận sort asc theo SellableQuantity đúng
-    /// </summary>
-    [Fact]
-    public async Task UT_004_11_AC_011_GetLocalProductsV2_SortBySellableQuantityAscending()
-    {
-        using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
-
-        var item1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 1", Stock = 12, IsDeleted = false };
-        var item2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 2", Stock = 0, IsDeleted = false };
-        var item3 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 3", Stock = 3, IsDeleted = false };
-
-        await dbContext.Products.AddRangeAsync(item1, item2, item3);
-        await dbContext.SaveChangesAsync();
-
-        var request = new Request.LocalProductQueryRequest { sortBy = new List<string> { "+sellableQuantity" } };
-        var result = await service.GetLocalProductsV2(request);
-
-        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Equal(3, items.Count);
-        // Order: qty=0, qty=3, qty=12
-        Assert.Equal(0, items[0].SellableQuantity);
-        Assert.Equal(3, items[1].SellableQuantity);
-        Assert.Equal(12, items[2].SellableQuantity);
-    }
-
-    /// <summary>
-    /// UT-004-12: inStockOnly=true filter đúng.
-    ///
-    /// **Rationale:** Xác nhận inStockOnly=true chỉ trả items qty>0
-    /// </summary>
-    [Fact]
-    public async Task UT_004_12_GetLocalProductsV2_InStockOnly_ReturnsOnlyInStockItems()
-    {
-        using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
-
-        var item1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 1", Stock = 0, IsDeleted = false };
-        var item2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 2", Stock = 3, IsDeleted = false };
-        var item3 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 3", Stock = 12, IsDeleted = false };
-
-        await dbContext.Products.AddRangeAsync(item1, item2, item3);
-        await dbContext.SaveChangesAsync();
-
-        var request = new Request.LocalProductQueryRequest { inStockOnly = true };
-        var result = await service.GetLocalProductsV2(request);
-
-        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Equal(2, items.Count);
-        Assert.All(items, i => Assert.True(i.SellableQuantity > 0));
-    }
-
-    /// <summary>
-    /// UT-004-13: soldOutOnly + sortBy kết hợp.
-    ///
-    /// **Rationale:** Xác nhận filter và sort kết hợp đúng
-    /// </summary>
-    [Fact]
-    public async Task UT_004_13_GetLocalProductsV2_SoldOutOnlyWithSort_CombinesCorrectly()
-    {
-        using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
-
-        var item1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 1", Stock = 5, IsDeleted = false };
-        var item2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 2", Stock = 0, IsDeleted = false };
-        var item3 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 3", Stock = 0, IsDeleted = false };
-
-        await dbContext.Products.AddRangeAsync(item1, item2, item3);
-        await dbContext.SaveChangesAsync();
-
-        var request = new Request.LocalProductQueryRequest
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Có danh mục", Stock = 5, IsDeleted = false };
+        var category = new CategoryProductEntity
         {
-            soldOutOnly = true,
-            sortBy = new List<string> { "+sellableQuantity" }
+            Id = Guid.NewGuid(),
+            Name = "Hoa cưới",
+            Name_En = "Wedding flowers",
+            Type = CategoryProductType.Fix,
+            IsActive = true,
+            IsDeleted = false
         };
-        var result = await service.GetLocalProductsV2(request);
 
-        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Equal(2, items.Count);
-        Assert.All(items, i => Assert.Equal(0, i.SellableQuantity));
-    }
-
-    /// <summary>
-    /// UT-004-14: sortBy=-sellableQuantity giảm dần.
-    ///
-    /// **Rationale:** Xác nhận sort desc theo SellableQuantity đúng
-    /// </summary>
-    [Fact]
-    public async Task UT_004_14_GetLocalProductsV2_SortBySellableQuantityDescending()
-    {
-        using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
-
-        var item1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 1", Stock = 0, IsDeleted = false };
-        var item2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 2", Stock = 3, IsDeleted = false };
-        var item3 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Item 3", Stock = 12, IsDeleted = false };
-
-        await dbContext.Products.AddRangeAsync(item1, item2, item3);
+        await dbContext.Products.AddAsync(product);
+        await dbContext.CategoryProducts.AddAsync(category);
+        await dbContext.CategoryProductDetails.AddAsync(new CategoryProductDetail
+        {
+            Id = Guid.NewGuid(),
+            ProductId = product.Id,
+            CategoryProductId = category.Id,
+            IsPin = true,
+            IsDeleted = false
+        });
         await dbContext.SaveChangesAsync();
 
-        var request = new Request.LocalProductQueryRequest { sortBy = new List<string> { "-sellableQuantity" } };
-        var result = await service.GetLocalProductsV2(request);
+        var result = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest());
 
         var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Equal(3, items.Count);
-        // Order: qty=12, qty=3, qty=0
-        Assert.Equal(12, items[0].SellableQuantity);
-        Assert.Equal(3, items[1].SellableQuantity);
-        Assert.Equal(0, items[2].SellableQuantity);
+        var mapped = Assert.Single(items.Where(i => i.Id == product.Id));
+        var mappedCategory = Assert.Single(mapped.Categories);
+        Assert.Equal(category.Id, mappedCategory.categoryId);
+        Assert.True(mappedCategory.isPinned);
     }
 
     #endregion
@@ -951,12 +956,12 @@ public class CalculateAvailableQtyTests
     }
 
     /// <summary>
-    /// UT-013-03: Cha combo lấy MIN variant.
+    /// UT-013-03: Cha combo lấy MAX quantity của các variant.
     ///
-    /// **Rationale:** Xác nhận parent lấy MIN từ các variant con
+    /// **Rationale:** Xác nhận parent không cộng trùng tồn kho dùng chung
     /// </summary>
     [Fact]
-    public async Task UT_013_03_GetLocalProductDetail_ComboParent_HasSellableQuantityAsMinOfVariants()
+    public async Task UT_013_03_GetLocalProductDetail_ComboParent_HasSellableQuantityAsMaxOfVariants()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -976,7 +981,7 @@ public class CalculateAvailableQtyTests
         var result = await service.GetLocalProductDetail(parent.Id);
 
         Assert.Equal(parent.Id, result.Id);
-        Assert.Equal(20, result.SellableQuantity);
+        Assert.Equal(50, result.SellableQuantity);
         Assert.Equal("Còn hàng", result.StockStatus);
         Assert.Null(result.UnavailableReason);
     }
@@ -1321,63 +1326,6 @@ public class CalculateAvailableQtyTests
     }
 
     /// <summary>
-    /// UT-004-16: Lọc tồn kho xảy ra trước phân trang nên trang chỉ chứa item phù hợp.
-    ///
-    /// **Rationale:** Xác nhận filter được áp dụng TRƯỚC phân trang
-    /// </summary>
-    [Fact]
-    public async Task UT_004_16_GetLocalProductsV2_SoldOutFilterIsAppliedBeforePagination()
-    {
-        using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
-
-        var soldOut1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Sold out 1", Stock = 0, Position = 1, IsDeleted = false };
-        var inStock = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "In stock", Stock = 5, Position = 2, IsDeleted = false };
-        var soldOut2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Sold out 2", Stock = 0, Position = 3, IsDeleted = false };
-        var soldOut3 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Sold out 3", Stock = 0, Position = 4, IsDeleted = false };
-        await dbContext.Products.AddRangeAsync(soldOut1, inStock, soldOut2, soldOut3);
-        await dbContext.SaveChangesAsync();
-
-        var result = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest
-        {
-            soldOutOnly = true,
-            pageIndex = 2,
-            pageSize = 2
-        });
-        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-
-        Assert.Single(items);
-        Assert.Equal(soldOut3.Id, items[0].Id);
-        Assert.Equal(3, result.Value.TotalCount);
-    }
-
-    /// <summary>
-    /// UT-004-17: Khi cả hai cờ tồn kho cùng true, hai filter tuần tự cho kết quả rỗng.
-    ///
-    /// **Rationale:** Xác nhận soldOutOnly + inStockOnly loại trừ nhau
-    /// </summary>
-    [Fact]
-    public async Task UT_004_17_GetLocalProductsV2_BothStockFilters_ReturnsNoItems()
-    {
-        using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
-
-        await dbContext.Products.AddRangeAsync(
-            new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 0, IsDeleted = false },
-            new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 1, IsDeleted = false });
-        await dbContext.SaveChangesAsync();
-
-        var result = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest
-        {
-            soldOutOnly = true,
-            inStockOnly = true
-        });
-
-        Assert.Empty(result.Value.Items);
-        Assert.Equal(0, result.Value.TotalCount);
-    }
-
-    /// <summary>
     /// UT-013-13: Biến thể con resolve đúng ParentId và không có children riêng.
     ///
     /// **Rationale:** Xác nhận variant combo resolve đúng ParentId
@@ -1427,7 +1375,8 @@ public class CalculateAvailableQtyTests
 
         var result = await service.GetLocalProductDetail(parent.Id);
 
-        Assert.Equal(4, result.SellableQuantity);
+        // MAX(10, 4) = 10 vì hai variants dùng chung material.
+        Assert.Equal(10, result.SellableQuantity);
         Assert.Equal(2, result.Children.Count);
         Assert.Equal(10, result.Children.Single(x => x.Id == variant1.Id).SellableQuantity);
         Assert.Equal(4, result.Children.Single(x => x.Id == variant2.Id).SellableQuantity);

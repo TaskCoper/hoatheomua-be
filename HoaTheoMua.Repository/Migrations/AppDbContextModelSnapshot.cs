@@ -366,7 +366,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("SubId", "MatId")
                         .IsUnique();
 
-                    b.ToTable("ComboSpecification");
+                    b.ToTable("ComboSpecification", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
@@ -1537,6 +1537,13 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("NhanhProductId")
                         .IsUnique()
                         .HasFilter("\"NhanhProductId\" IS NOT NULL");
+
+                    b.HasIndex("ParentProductId", "ProductType")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("Position", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("Products");
                 });

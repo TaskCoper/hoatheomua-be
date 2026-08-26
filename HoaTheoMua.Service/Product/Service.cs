@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -24,7 +24,7 @@ public class Service : IService
     public Service(AppDbContext dbContext,
         IHttpContextAccessor httpContext,
         HttpClient httpClient,
-        IConfiguration configuration, IMapper  mapper)
+        IConfiguration configuration, IMapper mapper)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
@@ -410,57 +410,45 @@ public class Service : IService
             orderedQuery = orderedQuery.ThenByDescending(x => x.CreatedAt);
         }
 
-        // Giai đoạn 5: Lấy tập dữ liệu cần tính vì filter/sort theo SellableQuantity phải chạy trước phân trang.
-        var allItems = await orderedQuery.ToListAsync();
+        // Giai đoạn 5: Đếm và phân trang ngay tại DB, chỉ nạp đúng một trang entity.
+        var totalCount = await query.CountAsync();
 
-        // Giai đoạn 6: Tính số lượng khả dụng cho toàn bộ tập kết quả.
-        var quantities = allItems.Count == 0
-            ? new Dictionary<Guid, (int? SellableQuantity, string? StockStatus, string? UnavailableReason)>()
-            : await CalculateAvailableQty(allItems.Select(product => new ProductQtyProjection
+        var pageItems = await orderedQuery
+            .Include(p => p.CategoryProductDetails)
+                .ThenInclude(cpd => cpd.CategoryProduct)
+                .ThenInclude(c => c.ParentCategoryProduct)
+            .Include(p => p.CategoryProductDetails)
+                .ThenInclude(cpd => cpd.CategoryProduct)
+                .ThenInclude(c => c.ChildCategoryProducts)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        // Giai đoạn 6: Chỉ tính tồn kho khả dụng cho các sản phẩm thực sự được trả về.
+        var quantities = await CalculateAvailableQty(pageItems
+            .Select(product => new ProductQtyProjection
             {
                 Id = product.Id,
                 ProductType = product.ProductType,
                 ParentProductId = product.ParentProductId,
                 NhanhProductId = product.NhanhProductId,
                 Stock = product.Stock
-            }).ToList());
+            })
+            .ToList());
 
-        // Giai đoạn 7: Lọc entity trước khi map để chỉ tạo response DTO cho trang được yêu cầu.
-        var filteredItems = new List<HoaTheoMua.Repository.Entity.Product>(allItems.Count);
-        foreach (var product in allItems)
-        {
-            var quantityInfo = GetQuantityInfo(product, quantities);
-            if (request.soldOutOnly == true && quantityInfo.SellableQuantity != 0)
-                continue;
-            if (request.inStockOnly == true && quantityInfo.SellableQuantity <= 0)
-                continue;
-
-            filteredItems.Add(product);
-        }
-
-        var sellableQuantitySort = request.sortBy?
-            .FirstOrDefault(s => s?.ToLower().Contains("sellablequantity") == true);
-        if (sellableQuantitySort != null)
-        {
-            var isAsc = !sellableQuantitySort.StartsWith("-");
-            filteredItems = isAsc
-                ? filteredItems.OrderBy(product => GetQuantityInfo(product, quantities).SellableQuantity ?? int.MaxValue).ToList()
-                : filteredItems.OrderByDescending(product => GetQuantityInfo(product, quantities).SellableQuantity ?? int.MinValue).ToList();
-        }
-
-        // Giai đoạn 8: Phân trang, map response và gán thông tin tồn kho khả dụng.
-        var paginatedItems = new List<Response.ProductDetailResponse>(Math.Min(pageSize, filteredItems.Count));
-        foreach (var product in filteredItems.Skip((pageIndex - 1) * pageSize).Take(pageSize))
+        // Giai đoạn 7: Map response và gán thông tin tồn kho khả dụng.
+        var items = new List<Response.ProductDetailResponse>(pageItems.Count);
+        foreach (var product in pageItems)
         {
             var response = MapToProductDetailResponse(product);
             var quantityInfo = GetQuantityInfo(product, quantities);
             response.SellableQuantity = quantityInfo.SellableQuantity;
             response.StockStatus = quantityInfo.StockStatus;
             response.UnavailableReason = quantityInfo.UnavailableReason;
-            paginatedItems.Add(response);
+            items.Add(response);
         }
 
-        return ApiResponseFactory.BasePagination(paginatedItems, pageIndex, pageSize, filteredItems.Count);
+        return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
 
     public async Task<Response.LocalProductDetailResponse> GetLocalProductDetail(Guid id)
@@ -561,83 +549,83 @@ public class Service : IService
 
         return response;
     }
-    
-    private static readonly Expression<Func<HoaTheoMua.Repository.Entity.Product, Response.LocalProductDetailResponse>> 
+
+    private static readonly Expression<Func<HoaTheoMua.Repository.Entity.Product, Response.LocalProductDetailResponse>>
         LocalProductDetailSelector = product => new Response.LocalProductDetailResponse
-    {
-        Id = product.Id,
-        IsPinned = product.IsPin,
-        SourceRowNumber = product.SourceRowNumber,
-        NhanhProductId = product.NhanhProductId,
-        ParentProductId = product.ParentProductId,
-        ParentProductCode = product.ParentProductCode,
-        ParentProductName = product.ParentProductName,
-        Barcode = product.Barcode,
-        ProductType = product.ProductType,
-        ProductCode = product.ProductCode,
-        ProductName = product.ProductName,
-        OtherName = product.OtherName,
-        Unit = product.Unit,
-        CoverImage = product.CoverImage,
-        OtherImages = product.OtherImages,
-        WarrantyMonths = product.WarrantyMonths,
-        Weight = product.Weight,
-        ImportPrice = product.ImportPrice,
-        ImportVat = product.ImportVat,
-        ImportPriceWithVat = product.ImportPriceWithVat,
-        ImportVatMode = product.ImportVatMode,
-        Price = product.Price,
-        PriceWithVat = product.PriceWithVat,
-        BranchPrice = product.BranchPrice,
-        BranchPriceWithVat = product.BranchPriceWithVat,
-        SaleVatMode = product.SaleVatMode,
-        OldPrice = product.OldPrice,
-        Vat = product.Vat,
-        ProfitPercentage = product.ProfitPercentage,
-        CostPrice = product.CostPrice,
-        WholesalePrice = product.WholesalePrice,
-        WholesalePriceWithVat = product.WholesalePriceWithVat,
-        WholesaleBranchPrice = product.WholesaleBranchPrice,
-        WholesaleBranchPriceWithVat = product.WholesaleBranchPriceWithVat,
-        TotalStock = product.TotalStock,
-        StockTransferring = product.StockTransferring,
-        Stock = product.Stock,
-        DeliveringStock = product.DeliveringStock,
-        WarehouseStock = product.WarehouseStock,
-        StockError = product.StockError,
-        Held = product.Held,
-        AvailableForSale = product.AvailableForSale,
-        WarrantyStock = product.WarrantyStock,
-        HeldComponents = product.HeldComponents,
-        PendingImportStock = product.PendingImportStock,
-        PreOrder = product.PreOrder,
-        Status = product.Status,
-        CategoryCode = product.CategoryCode,
-        CategoryName = product.CategoryName,
-        InternalCategoryCode = product.InternalCategoryCode,
-        Brand = product.Brand,
-        NhanhCategoryId = product.NhanhCategoryId,
-        NhanhBrandId = product.NhanhBrandId,
-        NhanhTypeId = product.NhanhTypeId,
-        Supplier = product.Supplier,
-        WarrantyAddress = product.WarrantyAddress,
-        Slug = product.Slug,
-        Length = product.Length,
-        Width = product.Width,
-        Height = product.Height,
-        WebOrder = product.WebOrder,
-        NhanhCreatedAt = product.NhanhCreatedAt,
-        NhanhUpdatedAt = product.NhanhUpdatedAt,
-        ProductLabel = product.ProductLabel,
-        BranchPriceDuplicate = product.BranchPriceDuplicate,
-        WholesaleBranchPriceDuplicate = product.WholesaleBranchPriceDuplicate,
-        PriceLabel = product.PriceLabel,
-        Size = product.Size,
-        Color = product.Color,
-        Origin = product.Origin,
-        CreatedAt = product.CreatedAt,
-        UpdatedAt = product.UpdatedAt,
-        Categories = product.CategoryProductDetails
+        {
+            Id = product.Id,
+            IsPinned = product.IsPin,
+            SourceRowNumber = product.SourceRowNumber,
+            NhanhProductId = product.NhanhProductId,
+            ParentProductId = product.ParentProductId,
+            ParentProductCode = product.ParentProductCode,
+            ParentProductName = product.ParentProductName,
+            Barcode = product.Barcode,
+            ProductType = product.ProductType,
+            ProductCode = product.ProductCode,
+            ProductName = product.ProductName,
+            OtherName = product.OtherName,
+            Unit = product.Unit,
+            CoverImage = product.CoverImage,
+            OtherImages = product.OtherImages,
+            WarrantyMonths = product.WarrantyMonths,
+            Weight = product.Weight,
+            ImportPrice = product.ImportPrice,
+            ImportVat = product.ImportVat,
+            ImportPriceWithVat = product.ImportPriceWithVat,
+            ImportVatMode = product.ImportVatMode,
+            Price = product.Price,
+            PriceWithVat = product.PriceWithVat,
+            BranchPrice = product.BranchPrice,
+            BranchPriceWithVat = product.BranchPriceWithVat,
+            SaleVatMode = product.SaleVatMode,
+            OldPrice = product.OldPrice,
+            Vat = product.Vat,
+            ProfitPercentage = product.ProfitPercentage,
+            CostPrice = product.CostPrice,
+            WholesalePrice = product.WholesalePrice,
+            WholesalePriceWithVat = product.WholesalePriceWithVat,
+            WholesaleBranchPrice = product.WholesaleBranchPrice,
+            WholesaleBranchPriceWithVat = product.WholesaleBranchPriceWithVat,
+            TotalStock = product.TotalStock,
+            StockTransferring = product.StockTransferring,
+            Stock = product.Stock,
+            DeliveringStock = product.DeliveringStock,
+            WarehouseStock = product.WarehouseStock,
+            StockError = product.StockError,
+            Held = product.Held,
+            AvailableForSale = product.AvailableForSale,
+            WarrantyStock = product.WarrantyStock,
+            HeldComponents = product.HeldComponents,
+            PendingImportStock = product.PendingImportStock,
+            PreOrder = product.PreOrder,
+            Status = product.Status,
+            CategoryCode = product.CategoryCode,
+            CategoryName = product.CategoryName,
+            InternalCategoryCode = product.InternalCategoryCode,
+            Brand = product.Brand,
+            NhanhCategoryId = product.NhanhCategoryId,
+            NhanhBrandId = product.NhanhBrandId,
+            NhanhTypeId = product.NhanhTypeId,
+            Supplier = product.Supplier,
+            WarrantyAddress = product.WarrantyAddress,
+            Slug = product.Slug,
+            Length = product.Length,
+            Width = product.Width,
+            Height = product.Height,
+            WebOrder = product.WebOrder,
+            NhanhCreatedAt = product.NhanhCreatedAt,
+            NhanhUpdatedAt = product.NhanhUpdatedAt,
+            ProductLabel = product.ProductLabel,
+            BranchPriceDuplicate = product.BranchPriceDuplicate,
+            WholesaleBranchPriceDuplicate = product.WholesaleBranchPriceDuplicate,
+            PriceLabel = product.PriceLabel,
+            Size = product.Size,
+            Color = product.Color,
+            Origin = product.Origin,
+            CreatedAt = product.CreatedAt,
+            UpdatedAt = product.UpdatedAt,
+            Categories = product.CategoryProductDetails
             .Where(cpd =>
                 !cpd.IsDeleted &&
                 !cpd.CategoryProduct.IsDeleted)
@@ -703,15 +691,15 @@ public class Service : IService
                     .ToList()
             })
             .ToList()
-    };
-    
+        };
 
-     private static Response.ProductDetailResponse MapToProductDetailResponse(HoaTheoMua.Repository.Entity.Product product)
+
+    private static Response.ProductDetailResponse MapToProductDetailResponse(HoaTheoMua.Repository.Entity.Product product)
     {
         return new Response.ProductDetailResponse
         {
             Id = product.Id,
-            IsPinned =  product.IsPin,
+            IsPinned = product.IsPin,
             SourceRowNumber = product.SourceRowNumber,
             NhanhProductId = product.NhanhProductId,
             ParentProductId = product.ParentProductId,
@@ -880,7 +868,7 @@ public class Service : IService
         var distinctProductIds = productIds.Distinct().ToList();
         var products = await _dbContext.Products
             .AsNoTracking()
-            .Where(p => distinctProductIds.Contains(p.Id))
+            .Where(p => distinctProductIds.Contains(p.Id) && !p.IsDeleted)
             .Select(p => new ProductQtyProjection
             {
                 Id = p.Id,
@@ -968,29 +956,40 @@ public class Service : IService
             // Nhóm toàn bộ công thức theo combo để xác định combo có công thức hay không.
             var hasAnySpecsByCombo = allSpecs.ToLookup(s => s.SubId);
 
-            // Nhóm CORE specs mà không tạo thêm list trung gian.
-            var specificationsByCombo = allSpecs.Where(s => s.IsCore).ToLookup(s => s.SubId);
+            // Chỉ giữ CORE spec có định mức dương; spec định mức <= 0 không ràng buộc được số lượng bán.
+            var coreSpecsByCombo = new Dictionary<Guid, List<(Guid MatId, int Quantity)>>();
+            foreach (var spec in allSpecs.Where(s => s.IsCore && s.Quantity > 0))
+            {
+                if (!coreSpecsByCombo.TryGetValue(spec.SubId, out var specs))
+                {
+                    specs = new List<(Guid MatId, int Quantity)>();
+                    coreSpecsByCombo[spec.SubId] = specs;
+                }
 
-            // Quantity không dương sẽ bị bỏ qua ở dưới nên không cần truy vấn tồn kho.
-            var materialIds = allSpecs
-                .Where(s => s.IsCore && s.Quantity > 0)
-                .Select(s => s.MatId)
+                specs.Add((spec.MatId, spec.Quantity));
+            }
+
+            var materialIds = coreSpecsByCombo.Values
+                .SelectMany(specs => specs)
+                .Select(spec => spec.MatId)
                 .ToHashSet();
+
             // Tồn kho âm được clamp về 0 ngay khi nạp inventory.
-            var inventories = materialIds.Count == 0
-                ? new Dictionary<Guid, int>()
-                : await _dbContext.Products
+            var inventories = new Dictionary<Guid, int>();
+            if (materialIds.Count > 0)
+            {
+                inventories = await _dbContext.Products
                     .AsNoTracking()
                     .Where(p => materialIds.Contains(p.Id) && !p.IsDeleted)
                     .Select(p => new { p.Id, Stock = Math.Max(0, (int)(p.Stock ?? 0)) })
                     .ToDictionaryAsync(p => p.Id, p => p.Stock);
+            }
 
             // Giai đoạn 5: Tính số combo bán được theo vật liệu CORE giới hạn nhất.
             foreach (var comboId in comboIdsToCalculate)
             {
                 try
                 {
-                    var coreSpecsList = specificationsByCombo[comboId];
                     var hasAnySpecs = hasAnySpecsByCombo[comboId].Any();
 
                     if (!hasAnySpecs)
@@ -999,31 +998,23 @@ public class Service : IService
                         continue;
                     }
 
-                    if (!coreSpecsList.Any())
+                    // coreSpecsByCombo chỉ chứa CORE spec định mức dương nên thiếu key nghĩa là không có CORE dùng được.
+                    if (!coreSpecsByCombo.TryGetValue(comboId, out var coreSpecsList) || coreSpecsList.Count == 0)
                     {
                         comboQuantities[comboId] = (0, "no_core");
                         continue;
                     }
 
-                    int minQty = int.MaxValue;
-                    bool hasValidCore = false;
+                    var minQty = int.MaxValue;
 
                     foreach (var spec in coreSpecsList)
                     {
-                        if (spec.Quantity <= 0)
-                            continue;
-
                         // Bảo vệ bổ sung: tồn kho vật liệu âm được coi là 0.
                         var stock = Math.Max(0, inventories.TryGetValue(spec.MatId, out var s) ? s : 0);
-                        int availableCombos = stock / spec.Quantity;
-                        minQty = Math.Min(minQty, availableCombos);
-                        hasValidCore = true;
+                        minQty = Math.Min(minQty, stock / spec.Quantity);
                     }
 
-                    // Có ít nhất một CORE hợp lệ thì dùng quantity nhỏ nhất đã tính.
-                    comboQuantities[comboId] = hasValidCore
-                        ? (Math.Max(0, minQty), null)
-                        : (0, "no_core");
+                    comboQuantities[comboId] = (Math.Max(0, minQty), null);
                 }
                 catch
                 {
@@ -1066,27 +1057,31 @@ public class Service : IService
                 var variants = comboVariantsByParent[product.NhanhProductId];
                 if (variants.Any())
                 {
-                    var minQuantity = int.MaxValue;
-                    var reasons = new HashSet<string?>();
-                    var hasCalculationError = false;
-                    foreach (var v in variants)
+                    // Các biến thể dùng cùng một tập nguyên liệu và chỉ khác định mức. Không cộng
+                    // quantity vì như vậy sẽ đếm cùng một kho nhiều lần. Quantity của cha biểu diễn
+                    // số lượng tối đa nếu chọn biến thể tiết kiệm nguyên liệu nhất.
+                    var variantQuantities = variants
+                        .Select(v => comboQuantities.GetValueOrDefault(v.Id))
+                        .ToList();
+
+                    quantity = variantQuantities.Max(combo => combo.Quantity);
+
+                    if (quantity > 0)
                     {
-                        var combo = comboQuantities.GetValueOrDefault(v.Id);
-                        minQuantity = Math.Min(minQuantity, combo.Quantity);
-                        reasons.Add(combo.UnavailableReason);
-                        hasCalculationError |= combo.UnavailableReason == "calculation_error";
-                    }
-
-                    quantity = minQuantity;
-                    // Chỉ giữ mã lý do khi toàn bộ biến thể có cùng một lý do.
-                    unavailableReason = reasons.Count == 1 ? reasons.First() : null;
-
-                    if (hasCalculationError)
-                        stockStatus = null;
-                    else if (quantity > 0)
                         stockStatus = "Còn hàng";
+                        unavailableReason = null;
+                    }
                     else
+                    {
                         stockStatus = null;
+
+                        // Chỉ giữ mã lý do khi mọi biến thể đều không bán được và có cùng lý do.
+                        var reasons = variantQuantities
+                            .Select(combo => combo.UnavailableReason)
+                            .Distinct()
+                            .ToList();
+                        unavailableReason = reasons.Count == 1 ? reasons[0] : null;
+                    }
                 }
                 else
                 {
@@ -1202,7 +1197,7 @@ public class Service : IService
         {
             throw new BadRequestException("Category ID cannot be empty.");
         }
-        
+
         var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
                                                                     x.Id == request.ProductId &&
                                                                     !x.IsDeleted &&
@@ -1351,17 +1346,14 @@ public class Service : IService
         {
             throw new BadRequestException("Product does not exist.");
         }
-        
+
         _mapper.Map(request, product);
         product.UpdatedAt = DateTimeOffset.UtcNow;
-        
+
         _dbContext.Products.Update(product);
         await _dbContext.SaveChangesAsync();
 
         return "Cập nhật thành công";
     }
-    
-    
 }
-
 
