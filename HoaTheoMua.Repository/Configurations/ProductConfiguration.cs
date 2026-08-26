@@ -21,6 +21,15 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.ParentProductId)
             .HasMaxLength(100);
 
+        // Tra biến thể combo theo sản phẩm cha: !IsDeleted && ProductType == "Combo" && ParentProductId IN (...).
+        builder.HasIndex(p => new { p.ParentProductId, p.ProductType })
+            .HasFilter("\"IsDeleted\" = false");
+
+        // Thứ tự mặc định của listing sản phẩm: ORDER BY "Position", "CreatedAt" DESC.
+        builder.HasIndex(p => new { p.Position, p.CreatedAt })
+            .IsDescending(false, true)
+            .HasFilter("\"IsDeleted\" = false");
+
         builder.Property(p => p.ParentProductCode)
             .HasMaxLength(200);
 

@@ -379,13 +379,11 @@ public class LocalProductSearchTest
         Assert.Equal(2, result.Children.Count);
         Assert.Contains(result.Children, child => child.Id == firstChild.Id);
         Assert.Contains(result.Children, child => child.Id == secondChild.Id);
-        Assert.Null(result.Parent);
+        Assert.Null(result.ParentId);
 
         var childResult = await service.GetLocalProductDetail(firstChild.Id);
 
-        Assert.NotNull(childResult.Parent);
-        Assert.Equal(parent.Id, childResult.Parent.Id);
-        Assert.Equal(parent.NhanhProductId, childResult.Parent.NhanhProductId);
+        Assert.Equal(parent.Id, childResult.ParentId);
     }
 
     [Fact]
