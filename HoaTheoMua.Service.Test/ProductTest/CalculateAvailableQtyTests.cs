@@ -1000,7 +1000,7 @@ public class CalculateAvailableQtyTests
         var nonExistentId = Guid.NewGuid();
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(() => service.GetLocalProductDetail(nonExistentId));
-        Assert.Equal("Không tìm thấy sản phẩm.", ex.Message);
+        Assert.Equal("PRODUCT_NOT_FOUND", ex.Message);
     }
 
     /// <summary>
@@ -1069,7 +1069,7 @@ public class CalculateAvailableQtyTests
         await dbContext.SaveChangesAsync();
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(() => service.GetLocalProductDetail(product.Id));
-        Assert.Equal("Không tìm thấy sản phẩm.", ex.Message);
+        Assert.Equal("PRODUCT_NOT_FOUND", ex.Message);
     }
 
     /// <summary>
