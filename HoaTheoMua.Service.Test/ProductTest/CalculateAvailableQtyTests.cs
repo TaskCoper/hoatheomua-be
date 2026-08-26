@@ -91,6 +91,45 @@ public class CalculateAvailableQtyTests
     }
 
     /// <summary>
+    /// Combo phải dùng AvailableForSale của nguyên liệu, thay vì Stock tổng.
+    /// </summary>
+    [Fact]
+    public async Task CalculateAvailableQty_UsesMaterialAvailableForSale_WhenItDiffersFromStock()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", IsDeleted = false };
+        var material = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Sản phẩm",
+            Stock = 0,
+            AvailableForSale = 10,
+            IsDeleted = false
+        };
+        var spec = new ComboSpecification
+        {
+            Id = Guid.NewGuid(),
+            SubId = combo.Id,
+            MatId = material.Id,
+            Quantity = 2,
+            IsCore = true,
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(combo, material);
+        await dbContext.ComboSpecifications.AddAsync(spec);
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.CalculateAvailableQty(new List<Guid> { combo.Id });
+
+        Assert.Equal(5, result[combo.Id].SellableQuantity);
+        Assert.Equal("Còn hàng", result[combo.Id].StockStatus);
+    }
+
+    /// <summary>
     /// UT-005-02: Cha combo lấy MAX SellableQuantity của các biến thể con.
     /// variant1: qty = floor(100/2) = 50
     /// variant2: qty = floor(100/5) = 20
@@ -916,7 +955,16 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 15, IsDeleted = false };
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Sản phẩm",
+            Stock = 15,
+            Position = 3.5,
+            Factor = 1.25m,
+            IsActive = true,
+            IsDeleted = false
+        };
         await dbContext.Products.AddAsync(product);
         await dbContext.SaveChangesAsync();
 
@@ -926,6 +974,10 @@ public class CalculateAvailableQtyTests
         Assert.Equal(15, result.SellableQuantity);
         Assert.Equal("Còn hàng", result.StockStatus);
         Assert.Null(result.UnavailableReason);
+        Assert.Equal(3.5, result.Position);
+        Assert.Equal(1.25m, result.Factor);
+        Assert.True(result.IsActive);
+        Assert.False(result.IsDeleted);
     }
 
     /// <summary>
