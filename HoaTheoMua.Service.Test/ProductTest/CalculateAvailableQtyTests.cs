@@ -615,6 +615,45 @@ public class CalculateAvailableQtyTests
 
     #region UT-004: GetLocalProductsV2 Integration Tests
 
+    [Fact]
+    public async Task GetLocalProducts_StandaloneCombo_HasSellableQuantity()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ProductName = "Combo V1", IsDeleted = false };
+        var material = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Sản phẩm",
+            Stock = 0,
+            AvailableForSale = 12,
+            IsDeleted = false
+        };
+        var spec = new ComboSpecification
+        {
+            Id = Guid.NewGuid(),
+            SubId = combo.Id,
+            MatId = material.Id,
+            Quantity = 3,
+            IsCore = true,
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(combo, material);
+        await dbContext.ComboSpecifications.AddAsync(spec);
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.GetLocalProducts(new Request.LocalProductQueryRequest());
+        var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
+        var mappedCombo = Assert.Single(items.Where(item => item.Id == combo.Id));
+
+        Assert.Equal(4, mappedCombo.SellableQuantity);
+        Assert.Equal("Còn hàng", mappedCombo.StockStatus);
+        Assert.Null(mappedCombo.UnavailableReason);
+    }
+
     /// <summary>
     /// UT-004-01: Combo không biến thể có SellableQuantity.
     ///

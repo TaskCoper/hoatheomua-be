@@ -301,7 +301,28 @@ public class Service : IService
             .Take(pageSize)
             .ToListAsync();
 
-        var mappedItems = items.Select(MapToProductDetailResponse).ToList();
+        // Tính tồn kho khả dụng cho đúng các sản phẩm của trang hiện tại, giống V2.
+        var quantities = await CalculateAvailableQty(items
+            .Select(product => new ProductQtyProjection
+            {
+                Id = product.Id,
+                ProductType = product.ProductType,
+                ParentProductId = product.ParentProductId,
+                NhanhProductId = product.NhanhProductId,
+                Stock = product.Stock
+            })
+            .ToList());
+
+        var mappedItems = new List<Response.ProductDetailResponse>(items.Count);
+        foreach (var product in items)
+        {
+            var response = MapToProductDetailResponse(product);
+            var quantityInfo = GetQuantityInfo(product, quantities);
+            response.SellableQuantity = quantityInfo.SellableQuantity;
+            response.StockStatus = quantityInfo.StockStatus;
+            response.UnavailableReason = quantityInfo.UnavailableReason;
+            mappedItems.Add(response);
+        }
 
         return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
     }
