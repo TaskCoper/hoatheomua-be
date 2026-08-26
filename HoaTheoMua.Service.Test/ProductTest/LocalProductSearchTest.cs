@@ -194,6 +194,7 @@ public class LocalProductSearchTest
             NhanhBrandId = 202,
             NhanhTypeId = 303,
             NhanhUpdatedAt = new DateTimeOffset(2026, 8, 3, 10, 30, 0, TimeSpan.Zero),
+            IsActive = true,
             IsDeleted = false
         };
 
@@ -256,6 +257,7 @@ public class LocalProductSearchTest
         {
             Id = Guid.NewGuid(),
             ProductName = "Product",
+            IsActive = true,
             IsDeleted = false
         };
         var parentCategory = new CategoryProductEntity
@@ -325,6 +327,7 @@ public class LocalProductSearchTest
             Id = Guid.NewGuid(),
             NhanhProductId = "1000",
             ProductName = "Parent",
+            IsActive = true,
             IsDeleted = false
         };
         var firstChild = new ProductEntity
@@ -334,6 +337,7 @@ public class LocalProductSearchTest
             ParentProductId = "1000",
             ProductName = "First child",
             Position = 1,
+            IsActive = true,
             IsDeleted = false
         };
         var secondChild = new ProductEntity
@@ -343,6 +347,7 @@ public class LocalProductSearchTest
             ParentProductId = "1000",
             ProductName = "Second child",
             Position = 2,
+            IsActive = true,
             IsDeleted = false
         };
         var deletedChild = new ProductEntity

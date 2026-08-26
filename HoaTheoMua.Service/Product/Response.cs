@@ -235,4 +235,11 @@ public class Response
         public string? ProductName { get; set; }
         public string? CoverImage { get; set; }
     }
+
+    public class GetProductByIdsResponse
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public int? SellableQuantity { get; set; }
+    }
 }

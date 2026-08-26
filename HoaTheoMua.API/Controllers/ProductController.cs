@@ -67,6 +67,13 @@ public class ProductController: ControllerBase
         var result = await _productService.GetLocalProductDetail(id);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
+    
+    [HttpPost("/api/v1/products/filter")]
+    public async Task<IActionResult> GetProductByIds([FromBody] Request.GetProductByIds request)
+    {
+        var result = await _productService.GetProductByIds(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
 
     [HttpPut("/api/v1/products/{id:guid}/move")]
     [Authorize (Policy = JwtExtensions.AdminPolicy)]
@@ -125,4 +132,7 @@ public class ProductController: ControllerBase
         var result = await _productService.GetMaterialsAsync(request);
         return Ok(result);
     }
+
+    
 }
+//api: mảng productId GUID --> response: obj[id, productName, selleableQuantity] (post: body)
