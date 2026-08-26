@@ -350,8 +350,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("MatId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal?>("Quantity")
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("SubId")
                         .HasColumnType("uuid");
@@ -364,9 +364,144 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("MatId");
 
                     b.HasIndex("SubId", "MatId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
-                    b.ToTable("ComboSpecification", (string)null);
+                    b.ToTable("ComboSpecifications");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("7a93d6e1-5b42-4f8c-a017-6e29c4b581d3"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = true,
+                            IsDeleted = false,
+                            MatId = new Guid("0c629e7a-4d13-48b5-a967-f21d80537c94"),
+                            Quantity = 10m,
+                            SubId = new Guid("5d7c48f1-2e63-4a9b-8f14-cb7291d63805")
+                        },
+                        new
+                        {
+                            Id = new Guid("c2184f75-9a36-47ed-b082-51f63d0a9c24"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = false,
+                            IsDeleted = false,
+                            MatId = new Guid("b7523a9d-81e6-457c-93f0-6ad4182ce705"),
+                            Quantity = 2m,
+                            SubId = new Guid("5d7c48f1-2e63-4a9b-8f14-cb7291d63805")
+                        },
+                        new
+                        {
+                            Id = new Guid("34e9a107-68d2-4c5f-91b7-a8032d6e4f59"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = false,
+                            IsDeleted = false,
+                            MatId = new Guid("d80416c3-27a9-4fb1-85e6-39c7502ad184"),
+                            Quantity = 1m,
+                            SubId = new Guid("5d7c48f1-2e63-4a9b-8f14-cb7291d63805")
+                        },
+                        new
+                        {
+                            Id = new Guid("9b61e2d8-3f74-49a5-8c20-e7164d93b052"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = false,
+                            IsDeleted = false,
+                            MatId = new Guid("46fa8b21-c953-41de-a607-128d7e3c95b4"),
+                            Quantity = 3m,
+                            SubId = new Guid("5d7c48f1-2e63-4a9b-8f14-cb7291d63805")
+                        },
+                        new
+                        {
+                            Id = new Guid("e5c82a49-17d6-43fb-9a35-70b4d2618e93"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = true,
+                            IsDeleted = false,
+                            MatId = new Guid("6e19d4b7-52c8-469a-b031-f8472d5e16c3"),
+                            Quantity = 6m,
+                            SubId = new Guid("a31f762c-9b48-4e05-bd67-285cf194a730")
+                        },
+                        new
+                        {
+                            Id = new Guid("1f47b6c2-8d59-4ea3-a716-95c30b2f684d"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = true,
+                            IsDeleted = false,
+                            MatId = new Guid("83c5f920-1a74-4d6e-98b3-2f617c4a5d80"),
+                            Quantity = 4m,
+                            SubId = new Guid("a31f762c-9b48-4e05-bd67-285cf194a730")
+                        },
+                        new
+                        {
+                            Id = new Guid("b03d98e6-64a1-45cf-87e2-319ab750d426"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = false,
+                            IsDeleted = false,
+                            MatId = new Guid("b7523a9d-81e6-457c-93f0-6ad4182ce705"),
+                            Quantity = 2m,
+                            SubId = new Guid("a31f762c-9b48-4e05-bd67-285cf194a730")
+                        },
+                        new
+                        {
+                            Id = new Guid("65a7c134-2e89-4bd0-b563-d918f40c7a26"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = false,
+                            IsDeleted = false,
+                            MatId = new Guid("f24a7d18-93b6-40ce-a852-7c105e4d9b63"),
+                            Quantity = 1m,
+                            SubId = new Guid("a31f762c-9b48-4e05-bd67-285cf194a730")
+                        },
+                        new
+                        {
+                            Id = new Guid("d7412b8f-30c5-46ea-9d17-84f6932b0c51"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = true,
+                            IsDeleted = false,
+                            MatId = new Guid("a9682f4c-75d1-438b-90e6-3c517d8a2f49"),
+                            Quantity = 8m,
+                            SubId = new Guid("e84b15d9-6c27-4fa3-91de-73b5082ac649")
+                        },
+                        new
+                        {
+                            Id = new Guid("28f6c913-b45e-4d72-a801-69e3f25c7b04"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = false,
+                            IsDeleted = false,
+                            MatId = new Guid("d80416c3-27a9-4fb1-85e6-39c7502ad184"),
+                            Quantity = 2m,
+                            SubId = new Guid("e84b15d9-6c27-4fa3-91de-73b5082ac649")
+                        },
+                        new
+                        {
+                            Id = new Guid("8c35e7a2-61f9-42bd-b470-15d8a3e69c24"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = false,
+                            IsDeleted = false,
+                            MatId = new Guid("46fa8b21-c953-41de-a607-128d7e3c95b4"),
+                            Quantity = 2m,
+                            SubId = new Guid("e84b15d9-6c27-4fa3-91de-73b5082ac649")
+                        },
+                        new
+                        {
+                            Id = new Guid("f9124d68-7b30-4ce5-93a1-2d846f5b7c09"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsCore = false,
+                            IsDeleted = false,
+                            MatId = new Guid("f24a7d18-93b6-40ce-a852-7c105e4d9b63"),
+                            Quantity = 1m,
+                            SubId = new Guid("e84b15d9-6c27-4fa3-91de-73b5082ac649")
+                        });
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
@@ -645,6 +780,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FullNameReceiver")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -1330,6 +1469,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("DeliveringStock")
                         .HasColumnType("numeric");
 
+                    b.Property<decimal?>("Factor")
+                        .HasColumnType("numeric");
+
                     b.Property<decimal?>("Height")
                         .HasColumnType("numeric");
 
@@ -1355,6 +1497,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("InternalCategoryCode")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -1546,6 +1693,181 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("Products");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("5d7c48f1-2e63-4a9b-8f14-cb7291d63805"),
+                            AvailableForSale = 0m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-COMBO-001",
+                            ProductCode = "CB-ROSE-001",
+                            ProductLabel = "Combo",
+                            ProductName = "Bó hoa hồng Julibee",
+                            ProductType = "Combo",
+                            SourceRowNumber = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("a31f762c-9b48-4e05-bd67-285cf194a730"),
+                            AvailableForSale = 0m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-COMBO-002",
+                            ProductCode = "CB-LILY-001",
+                            ProductLabel = "Combo",
+                            ProductName = "Giỏ hoa Lily thanh lịch",
+                            ProductType = "Combo",
+                            SourceRowNumber = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("e84b15d9-6c27-4fa3-91de-73b5082ac649"),
+                            AvailableForSale = 0m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-COMBO-003",
+                            ProductCode = "CB-SUNFLOWER-001",
+                            ProductLabel = "Combo",
+                            ProductName = "Bó hoa hướng dương",
+                            ProductType = "Combo",
+                            SourceRowNumber = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("0c629e7a-4d13-48b5-a967-f21d80537c94"),
+                            AvailableForSale = 50m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-MAT-001",
+                            ProductCode = "MAT-ROSE-001",
+                            ProductLabel = "Thành phần",
+                            ProductName = "Hoa hồng Julibee",
+                            ProductType = "Thành phần",
+                            SourceRowNumber = 0,
+                            Unit = "Cành"
+                        },
+                        new
+                        {
+                            Id = new Guid("b7523a9d-81e6-457c-93f0-6ad4182ce705"),
+                            AvailableForSale = 30m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-MAT-002",
+                            ProductCode = "MAT-PAPER-001",
+                            ProductLabel = "Phụ liệu",
+                            ProductName = "Giấy gói hoa Hàn Quốc",
+                            ProductType = "Phụ liệu",
+                            SourceRowNumber = 0,
+                            Unit = "Tờ"
+                        },
+                        new
+                        {
+                            Id = new Guid("d80416c3-27a9-4fb1-85e6-39c7502ad184"),
+                            AvailableForSale = 100m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-MAT-003",
+                            ProductCode = "MAT-RIBBON-001",
+                            ProductLabel = "Phụ liệu",
+                            ProductName = "Ruy băng satin",
+                            ProductType = "Phụ liệu",
+                            SourceRowNumber = 0,
+                            Unit = "Mét"
+                        },
+                        new
+                        {
+                            Id = new Guid("46fa8b21-c953-41de-a607-128d7e3c95b4"),
+                            AvailableForSale = 60m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-MAT-004",
+                            ProductCode = "MAT-FOAM-001",
+                            ProductLabel = "Phụ liệu",
+                            ProductName = "Xốp cắm hoa",
+                            ProductType = "Phụ liệu",
+                            SourceRowNumber = 0,
+                            Unit = "Miếng"
+                        },
+                        new
+                        {
+                            Id = new Guid("6e19d4b7-52c8-469a-b031-f8472d5e16c3"),
+                            AvailableForSale = 48m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-MAT-005",
+                            ProductCode = "MAT-LILY-001",
+                            ProductLabel = "Thành phần",
+                            ProductName = "Hoa Lily trắng",
+                            ProductType = "Thành phần",
+                            SourceRowNumber = 0,
+                            Unit = "Cành"
+                        },
+                        new
+                        {
+                            Id = new Guid("83c5f920-1a74-4d6e-98b3-2f617c4a5d80"),
+                            AvailableForSale = 40m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-MAT-006",
+                            ProductCode = "MAT-CARNATION-001",
+                            ProductLabel = "Thành phần",
+                            ProductName = "Hoa lá phụ cẩm chướng",
+                            ProductType = "Thành phần",
+                            SourceRowNumber = 0,
+                            Unit = "Cành"
+                        },
+                        new
+                        {
+                            Id = new Guid("f24a7d18-93b6-40ce-a852-7c105e4d9b63"),
+                            AvailableForSale = 20m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-MAT-007",
+                            ProductCode = "MAT-BASKET-001",
+                            ProductLabel = "Phụ liệu",
+                            ProductName = "Giỏ mây cắm hoa",
+                            ProductType = "Phụ liệu",
+                            SourceRowNumber = 0,
+                            Unit = "Cái"
+                        },
+                        new
+                        {
+                            Id = new Guid("a9682f4c-75d1-438b-90e6-3c517d8a2f49"),
+                            AvailableForSale = 64m,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 8, 24, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsPin = false,
+                            NhanhProductId = "SEED-MAT-008",
+                            ProductCode = "MAT-SUNFLOWER-001",
+                            ProductLabel = "Thành phần",
+                            ProductName = "Hoa hướng dương",
+                            ProductType = "Thành phần",
+                            SourceRowNumber = 0,
+                            Unit = "Cành"
+                        });
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>

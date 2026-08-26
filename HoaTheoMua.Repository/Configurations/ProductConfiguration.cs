@@ -1,6 +1,7 @@
 using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using HoaTheoMua.Repository.Configurations.Seeds;
 
 namespace HoaTheoMua.Repository.Configurations;
 
@@ -103,8 +104,13 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         
         builder.Property(x => x.IsPin)
             .HasDefaultValue(false);
+        
+        builder.Property(x => x.IsActive)
+            .HasDefaultValue(false);
 
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("now()");
+
+        builder.SeedComboProducts();
     }
 }
