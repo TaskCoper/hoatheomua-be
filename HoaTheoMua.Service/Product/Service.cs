@@ -525,7 +525,7 @@ public class Service : IService
         // Giai đoạn 1: Lấy thông tin sản phẩm chính.
         var response = await _dbContext.Products
             .AsNoTracking()
-            .Where(p => p.Id == id && !p.IsDeleted)
+            .Where(p => p.Id == id && !p.IsDeleted && p.IsActive)
             .Select(LocalProductDetailSelector)
             .FirstOrDefaultAsync();
 
@@ -1452,6 +1452,59 @@ public class Service : IService
         var result = await selectedQuery.ToListAsync();
         
         return result;
+    }
+
+    public async Task<List<Response.GetProductByIdsResponse>> GetProductByIds(Request.GetProductByIds request)
+    {
+        var productIds = request?.ProductIds?
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (productIds == null || productIds.Count == 0)
+        {
+            throw new BadRequestException("Product IDs are required");
+        }
+
+        var products = await _dbContext.Products
+            .AsNoTracking()
+            .Where(p => productIds.Contains(p.Id) && !p.IsDeleted)
+            .Select(p => new { p.Id, p.ProductName, p.ProductType, p.ParentProductId, p.NhanhProductId, p.Stock, p.AvailableForSale })
+            .ToListAsync();
+
+        if (products.Count == 0)
+        {
+            return new List<Response.GetProductByIdsResponse>();
+        }
+
+        var quantities = await CalculateAvailableQty(products.Select(p => new ProductQtyProjection
+        {
+            Id = p.Id,
+            ProductType = p.ProductType,
+            ParentProductId = p.ParentProductId,
+            NhanhProductId = p.NhanhProductId,
+            Stock = p.Stock
+        }).ToList());
+
+        var productsById = products.ToDictionary(p => p.Id);
+
+        return productIds
+            .Where(productsById.ContainsKey)
+            .Select(productId =>
+            {
+                var product = productsById[productId];
+                var sellableQty = quantities.TryGetValue(productId, out var qtyInfo)
+                    ? qtyInfo.SellableQuantity
+                    : Math.Max(0, (int)(product.AvailableForSale ?? 0));
+
+                return new Response.GetProductByIdsResponse
+                {
+                    Id = product.Id,
+                    ProductName = product.ProductName,
+                    SellableQuantity = sellableQty
+                };
+            })
+            .ToList();
     }
 
     public async Task<Response.ComboSpecificationResponse?> GetComboSpecificationAsync(Guid id)  

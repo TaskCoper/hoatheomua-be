@@ -209,4 +209,9 @@ public class Request
         public string? Search { get; set; }
         public List<Guid>? ExcludeIds { get; set; }
     }
+
+    public class GetProductByIds
+    {
+        public List<Guid> ProductIds { get; set; } = new();
+    }
 }
