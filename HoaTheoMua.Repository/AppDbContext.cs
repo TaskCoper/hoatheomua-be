@@ -31,6 +31,17 @@ public class AppDbContext : DbContext
     public virtual DbSet<CategoryProduct> CategoryProducts { get; set; }
     public virtual DbSet<CategoryProductDetail> CategoryProductDetails { get; set; }
     public virtual DbSet<ComboSpecification> ComboSpecifications { get; set; }
+    public virtual DbSet<SystemPrompt> SystemPrompts { get; set; }
+    public virtual DbSet<PlatformStandard> PlatformStandards { get; set; }
+    public virtual DbSet<CardTemplate> CardTemplates { get; set; }
+    public virtual DbSet<BasePost> BasePosts { get; set; }
+    public virtual DbSet<GeneratedPost> GeneratedPosts { get; set; }
+    public virtual DbSet<GeneratedFlower> GeneratedFlowers { get; set; }
+    public virtual DbSet<GeneratedCard> GeneratedCards { get; set; }
+    public virtual DbSet<PostHistory> PostHistories { get; set; }
+    public virtual DbSet<Mockup> Mockups { get; set; }
+    public virtual DbSet<ClientHistory> ClientHistories { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // base.OnModelCreating(modelBuilder);
