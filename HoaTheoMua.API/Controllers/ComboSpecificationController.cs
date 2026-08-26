@@ -51,19 +51,19 @@ public class ComboSpecificationController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 
-    [HttpPost("{comboId:guid}/publish")]
+    [HttpPost("{productId:guid}/publish")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
-    public async Task<IActionResult> PublishActiveCombo(Guid comboId)
+    public async Task<IActionResult> PublishActiveCombo(Guid productId)
     {
-        var result = await _materialComboService.PublicActiveCombo(comboId);
+        var result = await _materialComboService.PublicActiveCombo(productId);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
     
-    [HttpPost("{comboId:guid}/unpublish")]
+    [HttpPost("{productId:guid}/unpublish")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
-    public async Task<IActionResult> UnPublishActiveCombo(Guid comboId)
+    public async Task<IActionResult> UnPublishActiveCombo(Guid productId)
     {
-        var result = await _materialComboService.UnPublicActiveCombo(comboId);
+        var result = await _materialComboService.UnPublicActiveCombo(productId);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 }

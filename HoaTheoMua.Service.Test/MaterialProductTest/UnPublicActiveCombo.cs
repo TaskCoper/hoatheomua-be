@@ -13,7 +13,7 @@ public class UnPublicActiveCombo
     private static readonly Guid ComboId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
     [Fact]
-    public async Task UnPublicActiveCombo_ActiveCombo_UnpublishesParentAndAllNonDeletedChildren()
+    public async Task UnPublicActiveCombo_ActiveProduct_UnpublishesOnlyRequestedProduct()
     {
         await using var db = CreateDbContext();
         db.Products.AddRange(
@@ -26,10 +26,10 @@ public class UnPublicActiveCombo
 
         var result = await CreateService(db).UnPublicActiveCombo(ComboId);
 
-        Assert.Equal("Ngừng mở bán combo thành công.", result);
+        Assert.Equal("Ngừng mở bán thành công.", result);
         Assert.False((await db.Products.FindAsync(ComboId))!.IsActive);
-        Assert.All(await db.Products.Where(x => x.ParentProductId == "COMBO-2" && !x.IsDeleted).ToListAsync(),
-            x => Assert.False(x.IsActive));
+        Assert.True((await db.Products.SingleAsync(x => x.NhanhProductId == "CHILD-1")).IsActive);
+        Assert.False((await db.Products.SingleAsync(x => x.NhanhProductId == "CHILD-2")).IsActive);
         Assert.True((await db.Products.IgnoreQueryFilters().SingleAsync(x => x.NhanhProductId == "DELETED")).IsActive);
         Assert.True((await db.Products.SingleAsync(x => x.ParentProductId == "OTHER-COMBO")).IsActive);
     }
@@ -47,7 +47,7 @@ public class UnPublicActiveCombo
 
         var result = await CreateService(db).UnPublicActiveCombo(ComboId);
 
-        Assert.Equal("Combo đang ở trạng thái chưa mở bán.", result);
+        Assert.Equal("Sản phẩm đang ở trạng thái chưa mở bán.", result);
         Assert.True((await db.Products.FindAsync(child.Id))!.IsActive);
         Assert.Equal(oldUpdatedAt, (await db.Products.FindAsync(ComboId))!.UpdatedAt);
     }
@@ -58,7 +58,7 @@ public class UnPublicActiveCombo
         await using var db = CreateDbContext();
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => CreateService(db).UnPublicActiveCombo(ComboId));
-        Assert.Equal("Không tìm thấy combo", exception.Message);
+        Assert.Equal("Không tìm thấy sản phẩm", exception.Message);
     }
 
     [Fact]
