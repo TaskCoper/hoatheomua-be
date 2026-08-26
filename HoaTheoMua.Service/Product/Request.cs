@@ -92,6 +92,11 @@ public class Request
         public string? search { get; set; }
         public decimal? priceFrom { get; set; }
         public decimal? priceTo { get; set; }
+        /// <summary>
+        /// Sắp xếp bổ sung sau thứ tự Position. Chỉ nhận "price" và "name",
+        /// tiền tố "-" là giảm dần. Giá trị không nhận diện được sẽ sắp theo CreatedAt.
+        /// Không hỗ trợ sắp xếp theo SellableQuantity vì đây là giá trị tính toán, không có trong DB.
+        /// </summary>
         public List<string>? sortBy { get; set; }
         public List<Guid>? categoryIds { get; set; }
         public ProductType? productType  { get; set; }
