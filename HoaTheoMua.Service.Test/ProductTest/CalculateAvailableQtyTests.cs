@@ -621,7 +621,7 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ProductName = "Combo V1", IsDeleted = false };
+        var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ProductName = "Combo V1", IsActive = true, IsDeleted = false };
         var material = new ProductEntity
         {
             Id = Guid.NewGuid(),
