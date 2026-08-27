@@ -387,6 +387,15 @@ public class Service : IService
                 query = query.Where(x => x.IsPin == request.isPin.Value);
             }
         }
+
+        if (request.IsActive.HasValue)
+        {
+            query = query.Where(x => x.IsActive == request.IsActive.Value);
+        }
+        else
+        {
+            query = query.Where(x => x.IsActive == false);
+        }
         
         if (request.productType.HasValue)
         {
