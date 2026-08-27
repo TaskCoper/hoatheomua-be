@@ -522,10 +522,12 @@ public class Service : IService
 
     public async Task<Response.LocalProductDetailResponse> GetLocalProductDetail(Guid id)
     {
+        var isAdmin = _httpContext.HttpContext?.User.IsInRole("Admin") == true;
+
         // Giai đoạn 1: Lấy thông tin sản phẩm chính.
         var response = await _dbContext.Products
             .AsNoTracking()
-            .Where(p => p.Id == id && !p.IsDeleted) //&& p.IsActive
+            .Where(p => p.Id == id && !p.IsDeleted && (isAdmin || p.IsActive))
             .Select(LocalProductDetailSelector)
             .FirstOrDefaultAsync();
 
