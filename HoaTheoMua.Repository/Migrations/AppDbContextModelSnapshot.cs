@@ -367,7 +367,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false");
 
-                    b.ToTable("ComboSpecifications");
+                    b.ToTable("ComboSpecifications", (string)null);
 
                     b.HasData(
                         new
@@ -924,6 +924,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

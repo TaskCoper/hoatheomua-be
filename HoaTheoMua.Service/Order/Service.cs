@@ -118,7 +118,7 @@ public class Service : IService
             throw new BadRequestException("Đơn hàng không tồn tại trong hệ thống");
         }
 
-        await EnsureItemsInStockAsync(request.Items, depotId);
+        var comboSnapshots = await EnsureItemsInStockAsync(request.Items, depotId);
 
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
@@ -185,20 +185,30 @@ public class Service : IService
             InvoiceType = request.InvoiceType,
         };
 
-        var newOrderDetails = products.Select(x => new OrderDetails
+        var newOrderDetails = products.Select(x =>
         {
-            Id = Guid.NewGuid(),
-            OrderId = newOrder.Id,
-            Name = x.Name,
-            ItemId = x.Id,
-            Price = (int)x.Prices.Retail,
-            Number = quantityByItemId[x.Id],
-            Height = x.Shipping.Height,
-            Weight = x.Shipping.Weight,
-            Length = x.Shipping.Length,
-            Width = x.Shipping.Width,
-            CreatedAt = DateTime.UtcNow,
-        });
+            comboSnapshots.TryGetValue(x.Id, out var metadata);
+           return new OrderDetails
+            {
+                Id = Guid.NewGuid(),
+                OrderId = newOrder.Id,
+                Name = x.Name,
+                ItemId = x.Id,
+                Price = (int)x.Prices.Retail,
+                Number = quantityByItemId[x.Id],
+                Height = x.Shipping.Height,
+                Weight = x.Shipping.Weight,
+                Length = x.Shipping.Length,
+                Width = x.Shipping.Width,
+                Metadata = 
+                    metadata == null
+                    ? null
+                    : JsonConvert.SerializeObject(metadata),
+
+                CreatedAt = DateTime.UtcNow,
+            };
+        }).ToList();
+            
 
         if (request.Gateway == "BaoKim")
         {
@@ -387,25 +397,12 @@ public class Service : IService
     }
 
     // Verifies every requested item has enough stock in the target depot.
-    private async Task EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
+    private async Task<Dictionary<int, Request.OrderDetailMetadata>> EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
     {
-        // The order request carries Nhanh.vn's integer item id, while combo
-        // specifications reference the internal Product Guid. Resolve the
-        // external ids before querying ComboSpecifications.
-        var nhanhProductIds = items
-            .Select(x => x.ItemId.ToString())
+        var productIds = items
+            .Select(x => x.ProductId)
             .ToHashSet();
 
-        var productsByNhanhId = await _dbContext.Products
-            .AsNoTracking()
-            .Where(x =>
-                !x.IsDeleted &&
-                x.NhanhProductId != null &&
-                nhanhProductIds.Contains(x.NhanhProductId))
-            .Select(x => new { x.Id, x.NhanhProductId })
-            .ToDictionaryAsync(x => x.NhanhProductId!, x => x.Id);
-
-        var productIds = productsByNhanhId.Values.ToHashSet();
         var specifications = await _dbContext.ComboSpecifications
             .AsNoTracking()
             .Where(x =>
@@ -418,6 +415,7 @@ public class Service : IService
                 x.IsCore,
                 x.IsActive,
                 MaterialIsDeleted = x.Mat.IsDeleted,
+                MaterialName = x.Mat.ProductName,
                 Quantity = x.Quantity ?? 0m,
                 x.Mat.NhanhProductId
             })
@@ -434,29 +432,61 @@ public class Service : IService
                 !x.MaterialIsDeleted &&
                 x.Quantity > 0)
             .ToLookup(x => x.SubId);
-
+        
+        var materialSpecifications = specifications
+            .Where(x =>
+                x.IsActive &&
+                !x.MaterialIsDeleted &&
+                x.Quantity > 0)
+            .ToLookup(x => x.SubId);
+        
+        var comboSnapshots = new Dictionary<int, Request.OrderDetailMetadata>();
+        
+        
         var stockItems = new List<(int ItemId, decimal Number)>();
 
         foreach (var item in items)
         {
-            var nhanhProductId = item.ItemId.ToString();
-            if (!productsByNhanhId.TryGetValue(nhanhProductId, out var productId) ||
-                !comboIds.Contains(productId))
+            if (!comboIds.Contains(item.ProductId))
             {
                 stockItems.Add((item.ItemId, item.Number));
 
                 continue;
             }
-
-            var coreMaterials = coreSpecificationsByCombo[productId]
+            
+            var coreMaterials = coreSpecificationsByCombo[item.ProductId]
                 .ToList();
-
+            
             if (coreMaterials.Count == 0)
             {
                 throw new BadRequestException(
                     $"Combo ProductId={item.ItemId} không có vật liệu core hợp lệ");
             }
+            
+            var comboMaterials = materialSpecifications[item.ProductId]
+                .ToList();
 
+            if (comboMaterials.Count == 0)
+            {
+                throw new BadRequestException(
+                    $"Combo ProductId={item.ItemId} không có vật liệu hợp lệ");
+            }
+
+            
+            comboSnapshots[item.ItemId] = new Request.OrderDetailMetadata()
+            {
+                SubId = item.ProductId,
+                Materials = comboMaterials
+                    .Select(x => new Request.MaterialSnapshot()
+                    {
+                        MatId = x.MatId,
+                        Quantity = x.Quantity,
+                        Name = x.MaterialName ?? string.Empty
+                    })
+                    .ToList()
+            };
+
+            
             foreach (var material in coreMaterials)
             {
                 if (!int.TryParse(material.NhanhProductId, out var materialItemId))
@@ -512,6 +542,8 @@ public class Service : IService
                 throw new BadRequestException($"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {available})");
             }
         }
+
+        return comboSnapshots;
     }
 
     // Calls Ahamove to estimate the shipping fee from the shop's warehouse to the buyer.

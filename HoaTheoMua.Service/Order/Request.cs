@@ -7,12 +7,19 @@ namespace HoaTheoMua.Service.Order;
 public class Request
 {
 
-    public class ItemRequest
+    public class OrderDetailMetadata
     {
-        public string ItemId { get; set; } = string.Empty;
-        public string Number { get; set; } = string.Empty;
-        public bool? IsCore { get; set; }
+        public Guid SubId { get; set; }
+        public List<MaterialSnapshot> Materials { get; set; } = new();
     }
+
+    public class MaterialSnapshot
+    {
+        public Guid MatId { get; set; }
+        public decimal Quantity { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
     
     public class CreateOrderRequest : AhaMoveRequest.EstimateShippingFeeRequest
     {
