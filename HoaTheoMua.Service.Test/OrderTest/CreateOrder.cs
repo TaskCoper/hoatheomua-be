@@ -1040,8 +1040,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var specifications = new List<ComboSpecification>
             {
-                CreateComboSpecification(comboA.Id, hoaMai, quantity: 6, isCore: true),
-                CreateComboSpecification(comboA.Id, hoaDao, quantity: 2, isCore: true)
+                CreateComboSpecification(comboA.Id, hoaMai, quantity: 6, isCore: true),//6
+                CreateComboSpecification(comboA.Id, hoaDao, quantity: 2, isCore: true)//2
             };
 
             var dbContext = CreateMockDbContext(
@@ -1061,8 +1061,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 productService);
 
             var request = CreateStockOrderRequest(
-                new AhaMoveRequest.Items { ItemId = comboAItemId, Number = 2 },
-                new AhaMoveRequest.Items { ItemId = hoaDaoItemId, Number = 1 });
+                new AhaMoveRequest.Items { ItemId = comboAItemId, ProductId = comboA.Id, Number = 2 },
+                new AhaMoveRequest.Items { ItemId = hoaDaoItemId, ProductId = hoaDao.Id, Number = 1 });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => service.CreateOrder(request));
@@ -1105,8 +1105,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 productService);
 
             var request = CreateStockOrderRequest(
-                new AhaMoveRequest.Items { ItemId = comboAItemId, Number = 2 },
-                new AhaMoveRequest.Items { ItemId = hoaDaoItemId, Number = 1 });
+                new AhaMoveRequest.Items { ItemId = comboAItemId, ProductId = comboA.Id, Number = 2 },
+                new AhaMoveRequest.Items { ItemId = hoaDaoItemId, ProductId = hoaDao.Id, Number = 1 });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => service.CreateOrder(request));
@@ -1160,9 +1160,9 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 productService);
 
             var request = CreateStockOrderRequest(
-                new AhaMoveRequest.Items { ItemId = comboBItemId, Number = 1 },
-                new AhaMoveRequest.Items { ItemId = comboAItemId, Number = 1 },
-                new AhaMoveRequest.Items { ItemId = hoaVangItemId, Number = 2 });
+                new AhaMoveRequest.Items { ItemId = comboBItemId, ProductId = comboB.Id, Number = 1 },
+                new AhaMoveRequest.Items { ItemId = comboAItemId, ProductId = comboA.Id, Number = 1 },
+                new AhaMoveRequest.Items { ItemId = hoaVangItemId, ProductId = hoaVang.Id, Number = 2 });
 
             var exception = await Assert.ThrowsAsync<BadRequestException>(
                 () => service.CreateOrder(request));
