@@ -532,7 +532,10 @@ public class Service : IService
         // Giai đoạn 1: Lấy thông tin sản phẩm chính.
         var response = await _dbContext.Products
             .AsNoTracking()
-            .Where(p => p.Id == id && !p.IsDeleted && (isAdmin || p.IsActive))
+            .Where(p => p.Id == id &&
+                        !p.IsDeleted &&//nếu nó là con, ko phải là admin thì không cho xem details
+                        (isAdmin || (p.IsActive &&
+                                     (p.ParentProductId == null || p.ParentProductId == string.Empty))))
             .Select(LocalProductDetailSelector)
             .FirstOrDefaultAsync();
 

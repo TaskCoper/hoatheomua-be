@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
@@ -37,9 +38,16 @@ public class CalculateAvailableQtyTests
         return new AppDbContext(options);
     }
 
-    private static ProductService CreateService(AppDbContext dbContext)
+    private static ProductService CreateService(AppDbContext dbContext, bool isAdmin = false)
     {
         var httpContextMock = new Mock<IHttpContextAccessor>();
+        var claims = isAdmin
+            ? new[] { new Claim(ClaimTypes.Role, "Admin") }
+            : Array.Empty<Claim>();
+        httpContextMock.SetupGet(x => x.HttpContext).Returns(new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuthentication"))
+        });
         var httpClient = new HttpClient();
 
         var myConfiguration = new Dictionary<string, string?>
@@ -1203,7 +1211,7 @@ public class CalculateAvailableQtyTests
     public async Task UT_013_09_GetLocalProductDetail_ChildVariantComboDirectQuery_ReturnsIndividualQty()
     {
         using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
+        var service = CreateService(dbContext, isAdmin: true);
 
         var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", NhanhProductId = "parent-1", IsActive = true, IsDeleted = false };
         var variant = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsActive = true, IsDeleted = false };
@@ -1425,7 +1433,7 @@ public class CalculateAvailableQtyTests
     public async Task UT_013_13_GetLocalProductDetail_ChildVariant_ResolvesParentId()
     {
         using var dbContext = CreateInMemoryDbContext();
-        var service = CreateService(dbContext);
+        var service = CreateService(dbContext, isAdmin: true);
 
         var parent = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", NhanhProductId = "parent-1", IsActive = true, IsDeleted = false };
         var variant = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ParentProductId = "parent-1", IsActive = true, IsDeleted = false };
