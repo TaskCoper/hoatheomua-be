@@ -119,7 +119,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return mockDbContext;
         }
 
-        private static OrderServiceImpl CreateService(AppDbContext dbContext, ICurrentUserService currentUser)
+        private static OrderServiceImpl CreateService(
+            AppDbContext dbContext,
+            ICurrentUserService currentUser,
+            bool isAdmin = false)
         {
             var mockConfig = new Mock<IConfiguration>();
             var mockConfigSection = new Mock<IConfigurationSection>();
@@ -127,9 +130,23 @@ namespace HoaTheoMua.Service.Test.OrderTest
             mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(mockConfigSection.Object);
 
             var mockProductService = new Mock<ProductService>();
+            var claims = isAdmin
+                ? new[] { new Claim(ClaimTypes.Role, "Admin") }
+                : Array.Empty<Claim>();
+            var httpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    claims,
+                    "Test",
+                    ClaimTypes.Name,
+                    ClaimTypes.Role))
+            };
+            var httpContextAccessor = new HttpContextAccessor { HttpContext = httpContext };
+
             return new OrderServiceImpl(
                 dbContext,
                 currentUser,
+                httpContextAccessor,
                 new HttpClient(),
                 mockProductService.Object,
                 mockConfig.Object,
@@ -194,8 +211,51 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(productId, orderResult.Details[0].ProductId);
             Assert.Equal("https://cdn.test/product-a.jpg", orderResult.Details[0].CoverImage);
             Assert.Equal(101, orderResult.Details[0].ItemId);
+            Assert.Null(orderResult.Details[0].Snapshot);
             Assert.NotNull(orderResult.Transaction);
             Assert.Equal(100000m, orderResult.Transaction.TransferAmount);
+        }
+
+        [Fact]
+        public async Task GetOrderById_AdminCanViewOtherUsersOrderAndReceivesSnapshot()
+        {
+            // Arrange
+            var orderId = Guid.NewGuid();
+            var subId = Guid.NewGuid();
+            var materialId = Guid.NewGuid();
+            var details = new List<OrderDetailEntity>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Combo A",
+                    ItemId = 101,
+                    Number = 1,
+                    Price = 50000m,
+                    Metadata = $"{{\"SubId\":\"{subId}\",\"Materials\":[{{\"MatId\":\"{materialId}\",\"Quantity\":2,\"Name\":\"Rose\",\"Price\":10000}}]}}"
+                }
+            };
+            var order = CreateOrder(
+                id: orderId,
+                userId: Guid.NewGuid(),
+                details: details);
+            var dbContext = CreateMockDbContext(new List<OrderEntity> { order }).Object;
+            var currentUser = CreateMockCurrentUserService(TestUserId);
+            var service = CreateService(dbContext, currentUser, isAdmin: true);
+
+            // Act
+            var response = await service.GetOrderById(orderId);
+
+            // Assert
+            var orderResult = Assert.IsType<HoaTheoMua.Service.Order.Response.GetOrderByIdResponse>(response.Value);
+            var snapshot = Assert.IsType<HoaTheoMua.Service.Order.Request.OrderDetailMetadata>(
+                Assert.Single(orderResult.Details).Snapshot);
+            Assert.Equal(subId, snapshot.SubId);
+            var material = Assert.Single(snapshot.Materials);
+            Assert.Equal(materialId, material.MatId);
+            Assert.Equal(2m, material.Quantity);
+            Assert.Equal("Rose", material.Name);
+            Assert.Equal(10000m, material.Price);
         }
 
         // Test case 02: Không tìm thấy UserId trong token

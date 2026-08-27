@@ -9,6 +9,7 @@ using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Webhook;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -20,6 +21,7 @@ public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
+    private readonly IHttpContextAccessor _httpContext;
     private readonly HttpClient _httpClient;
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly HoaTheoMua.Service.BaoKim.IService _baoKimService;
@@ -28,12 +30,14 @@ public class Service : IService
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
+        IHttpContextAccessor httpContext,
         HttpClient httpClient,
         HoaTheoMua.Service.Product.IService serviceProduct,
         IConfiguration configuration, BaoKim.IService baoKimService)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
+        _httpContext = httpContext;
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
         _baoKimService = baoKimService;
@@ -644,14 +648,15 @@ public class Service : IService
 
     public async Task<BaseResponse> GetOrderById(Guid id)
     {
-        var userId = _currentUser.GetRequiredUserId();
+        var isAdmin = _httpContext.HttpContext?.User.IsInRole("Admin") == true;
+        var userId = isAdmin ? (Guid?)null : _currentUser.GetRequiredUserId();
 
         var orders = await _dbContext.Orders
             .Include(x => x.OrderDetails)
             .Include(x => x.Transactions)
             .FirstOrDefaultAsync(x =>
                 x.IsDeleted == false &&
-                x.UserId == userId &&
+                (isAdmin || x.UserId == userId) &&
                 x.Id == id);
         if (orders == null)
         {
@@ -762,6 +767,9 @@ public class Service : IService
                     Length = x.Length,
                     Width = x.Width,
                     Height = x.Height,
+                    Snapshot = isAdmin && !string.IsNullOrWhiteSpace(x.Metadata)
+                        ? JsonConvert.DeserializeObject<Request.OrderDetailMetadata>(x.Metadata)
+                        : null,
 
                 };
             }).ToList(),

@@ -218,6 +218,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return new OrderServiceImpl(
                 dbContext,
                 currentUser,
+                new Microsoft.AspNetCore.Http.HttpContextAccessor(),
                 httpClient,
                 productService,
                 mockConfig.Object,
