@@ -69,7 +69,7 @@ public class ProductController: ControllerBase
     }
 
     [HttpGet("/api/v1/products/{id:guid}/detail")]
-    // [Authorize (Policy = JwtExtensions.CustomerPolicy)]
+    [Authorize (Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> GetProductDetailByCustomer(Guid id)
     {
         var result = await _productService.GetProductDetailByCustomer(id);
