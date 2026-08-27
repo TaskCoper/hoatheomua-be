@@ -1479,7 +1479,7 @@ public class Service : IService
         var products = await _dbContext.Products
             .AsNoTracking()
             .Where(p => productIds.Contains(p.Id) && !p.IsDeleted)
-            .Select(p => new { p.Id, p.ProductName, p.ProductType, p.ParentProductId, p.NhanhProductId, p.Stock, p.AvailableForSale })
+            .Select(p => new { p.Id, p.ProductName, p.ProductType, p.ParentProductId, p.NhanhProductId, p.Stock, p.AvailableForSale, p.IsActive })
             .ToListAsync();
 
         if (products.Count == 0)
@@ -1511,7 +1511,8 @@ public class Service : IService
                 {
                     Id = product.Id,
                     ProductName = product.ProductName,
-                    SellableQuantity = sellableQty
+                    SellableQuantity = sellableQty,
+                    IsActive = product.IsActive
                 };
             })
             .ToList();

@@ -241,6 +241,7 @@ public class Response
         public Guid Id { get; set; }
         public string? ProductName { get; set; }
         public int? SellableQuantity { get; set; }
+        public bool IsActive { get; set; }
     }
     
     public class GetProductDetailByCustomerResponse
