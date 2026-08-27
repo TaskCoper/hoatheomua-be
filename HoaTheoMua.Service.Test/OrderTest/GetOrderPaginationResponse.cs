@@ -78,6 +78,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return new OrderServiceImpl(
                 dbContext,
                 currentUser,
+                new HttpContextAccessor(),
                 new HttpClient(),
                 mockProductService.Object,
                 mockConfig.Object,

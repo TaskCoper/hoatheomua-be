@@ -50,7 +50,7 @@ public class OrderController : ControllerBase
     }
 
     [HttpGet("/api/v1/orders/{id}")]
-    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
     public async Task<IActionResult> GetOrderById(Guid id)
     {
         var result = await _orderService.GetOrderById(id);

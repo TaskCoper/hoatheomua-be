@@ -85,7 +85,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             currentUserMock.Setup(x => x.IsVerified).Returns(true);
             var productService = new Mock<ProductService>().Object;
 
-            return new OrderServiceImpl(dbContext, currentUserMock.Object, httpClient, productService, mockConfig.Object, new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
+            return new OrderServiceImpl(dbContext, currentUserMock.Object, new Microsoft.AspNetCore.Http.HttpContextAccessor(), httpClient, productService, mockConfig.Object, new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
         }
 
         // HAPPY CASE: Đơn đang Pending => hủy thành công, status đổi thành Cancelled
