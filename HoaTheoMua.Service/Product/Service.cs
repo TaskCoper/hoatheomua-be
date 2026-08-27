@@ -619,6 +619,105 @@ public class Service : IService
         return response;
     }
 
+    public async Task<Response.LocalProductDetailResponse> GetLocalProductDetailV2(Guid id)
+    {
+        // Giai đoạn 1: Lấy thông tin sản phẩm chính.
+        var response = await _dbContext.Products
+            .AsNoTracking()
+            .Where(p => p.Id == id && !p.IsDeleted && p.IsActive) //&& p.IsActive
+            .Select(LocalProductDetailSelector)
+            .FirstOrDefaultAsync();
+
+        if (response == null)
+        {
+            throw new NotFoundException("PRODUCT_NOT_FOUND");
+        }
+
+        // Giai đoạn 2: Xác định sản phẩm cha nếu sản phẩm hiện tại là biến thể.
+        var isParentProduct = string.IsNullOrWhiteSpace(response.ParentProductId);
+
+        if (!isParentProduct)
+        {
+            var parentId = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted && p.NhanhProductId == response.ParentProductId)
+                .Select(p => p.Id)
+                .FirstOrDefaultAsync();
+
+            response.ParentId = parentId == Guid.Empty ? null : parentId;
+        }
+        else
+        {
+            response.ParentId = null;
+        }
+
+        // Giai đoạn 3: Lấy các biến thể con của sản phẩm gốc.
+        response.Children = !isParentProduct || string.IsNullOrWhiteSpace(response.NhanhProductId)
+            ? new List<Response.LocalProductDetailResponse>()
+            : await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted && p.ParentProductId == response.NhanhProductId)
+                .Select(LocalProductDetailSelector)
+                .ToListAsync();
+
+        // Giai đoạn 4: Chuẩn bị sản phẩm chính và biến thể để tính tồn kho khả dụng.
+        var productsToCalculate = new List<ProductQtyProjection>
+        {
+            new()
+            {
+                Id = response.Id,
+                ProductType = response.ProductType,
+                ParentProductId = response.ParentProductId,
+                NhanhProductId = response.NhanhProductId,
+                Stock = response.Stock
+            }
+        };
+        productsToCalculate.AddRange(response.Children.Select(c => new ProductQtyProjection
+        {
+            Id = c.Id,
+            ProductType = c.ProductType,
+            ParentProductId = c.ParentProductId,
+            NhanhProductId = c.NhanhProductId,
+            Stock = c.Stock
+        }));
+
+        // Giai đoạn 5: Tính và gán số lượng khả dụng cho sản phẩm chính và từng biến thể.
+        var quantities = await CalculateAvailableQty(
+            productsToCalculate,
+            variantsArePreloaded: isParentProduct && !string.IsNullOrWhiteSpace(response.NhanhProductId));
+
+        if (quantities.TryGetValue(response.Id, out var mainInfo))
+        {
+            response.SellableQuantity = mainInfo.SellableQuantity;
+            response.StockStatus = mainInfo.StockStatus;
+            response.UnavailableReason = mainInfo.UnavailableReason;
+        }
+        else
+        {
+            response.SellableQuantity = 0;
+            response.StockStatus = "Hết hàng";
+            response.UnavailableReason = null;
+        }
+
+        foreach (var child in response.Children)
+        {
+            if (quantities.TryGetValue(child.Id, out var childInfo))
+            {
+                child.SellableQuantity = childInfo.SellableQuantity;
+                child.StockStatus = childInfo.StockStatus;
+                child.UnavailableReason = childInfo.UnavailableReason;
+            }
+            else
+            {
+                child.SellableQuantity = 0;
+                child.StockStatus = "Hết hàng";
+                child.UnavailableReason = null;
+            }
+        }
+
+        return response;
+    }
+
     private static readonly Expression<Func<HoaTheoMua.Repository.Entity.Product, Response.LocalProductDetailResponse>>
         LocalProductDetailSelector = product => new Response.LocalProductDetailResponse
         {

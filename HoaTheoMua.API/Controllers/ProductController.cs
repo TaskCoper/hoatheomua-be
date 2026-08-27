@@ -62,9 +62,17 @@ public class ProductController: ControllerBase
     }
 
     [HttpGet("/api/v1/products/{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetLocalProductDetail(Guid id)
     {
         var result = await _productService.GetLocalProductDetail(id);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpGet("/api/v2/products/{id:guid}")]
+    public async Task<IActionResult> GetLocalProductDetailV2(Guid id)
+    {
+        var result = await _productService.GetLocalProductDetailV2(id);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     

@@ -23,6 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\HoaTheoMua.API\HoaTheoMua.API.csproj" />
       <ProjectReference Include="..\HoaTheoMua.Service\HoaTheoMua.Service.csproj" />
       <ProjectReference Include="..\HoaTheoMua.Repository\HoaTheoMua.Repository.csproj" />
     </ItemGroup>
