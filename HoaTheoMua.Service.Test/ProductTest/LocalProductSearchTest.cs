@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
@@ -33,9 +34,16 @@ public class LocalProductSearchTest
         return new AppDbContext(options);
     }
 
-    private static ProductService CreateService(AppDbContext dbContext)
+    private static ProductService CreateService(AppDbContext dbContext, bool isAdmin = false)
     {
         var httpContextMock = new Mock<IHttpContextAccessor>();
+        var claims = isAdmin
+            ? new[] { new Claim(ClaimTypes.Role, "Admin") }
+            : Array.Empty<Claim>();
+        httpContextMock.SetupGet(x => x.HttpContext).Returns(new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuthentication"))
+        });
         var httpClient = new HttpClient();
 
         var myConfiguration = new Dictionary<string, string>
@@ -386,9 +394,32 @@ public class LocalProductSearchTest
         Assert.Contains(result.Children, child => child.Id == secondChild.Id);
         Assert.Null(result.ParentId);
 
-        var childResult = await service.GetLocalProductDetail(firstChild.Id);
+        var adminService = CreateService(dbContext, isAdmin: true);
+        var childResult = await adminService.GetLocalProductDetail(firstChild.Id);
 
         Assert.Equal(parent.Id, childResult.ParentId);
+    }
+
+    [Fact]
+    public async Task GetLocalProductDetail_ChildForNonAdmin_ThrowsNotFoundException()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+        var child = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ParentProductId = "parent-1",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddAsync(child);
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => service.GetLocalProductDetail(child.Id));
+
+        Assert.Equal("PRODUCT_NOT_FOUND", exception.Message);
     }
 
     [Fact]
