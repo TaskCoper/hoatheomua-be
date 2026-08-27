@@ -388,6 +388,11 @@ public class Service : IService
             }
         }
         
+        if (request.IsActive.HasValue)
+        {
+            query = query.Where(x => x.IsActive == request.IsActive.Value);
+        }
+        
         if (request.productType.HasValue)
         {
             switch (request.productType.Value)
