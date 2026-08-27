@@ -912,6 +912,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<double>("Length")
                         .HasColumnType("double precision");
 
+                    b.Property<string>("Metadata")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");

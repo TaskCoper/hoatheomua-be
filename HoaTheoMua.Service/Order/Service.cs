@@ -110,6 +110,7 @@ public class Service : IService
 
         // Requested quantity keyed by product id — reused for pricing and order details.
         var quantityByItemId = request.Items.ToDictionary(x => x.ItemId, x => x.Number);
+        var productIdByItemId = request.Items.ToDictionary(x => x.ItemId, x => x.ProductId);
 
         // Every requested item must exist in the catalog before we check stock or shipping.
         var catalogIds = products.Select(x => x.Id).ToHashSet();
@@ -192,6 +193,7 @@ public class Service : IService
             {
                 Id = Guid.NewGuid(),
                 OrderId = newOrder.Id,
+                ProductId = productIdByItemId[x.Id],
                 Name = x.Name,
                 ItemId = x.Id,
                 Price = (int)x.Prices.Retail,

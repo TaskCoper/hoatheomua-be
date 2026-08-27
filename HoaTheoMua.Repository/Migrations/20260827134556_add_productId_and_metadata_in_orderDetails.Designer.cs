@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260827113647_add_field_guid_product_in_order_details")]
-    partial class add_field_guid_product_in_order_details
+    [Migration("20260827134556_add_productId_and_metadata_in_orderDetails")]
+    partial class add_productId_and_metadata_in_orderDetails
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -914,6 +914,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<double>("Length")
                         .HasColumnType("double precision");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("Name")
                         .IsRequired()
