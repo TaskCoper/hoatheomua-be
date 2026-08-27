@@ -1552,7 +1552,8 @@ public class Service : IService
                 .Select(p => new Response.ParentProductInfo
                 {
                     Id = p.Id,
-                    ProductName = p.ProductName
+                    ProductName = p.ProductName,
+                    NhanhProductId = p.NhanhProductId
                 })
                 .FirstOrDefaultAsync();
         }
@@ -1580,6 +1581,7 @@ public class Service : IService
             CoverImage = product.CoverImage,
             Price = product.Price,
             OldPrice = product.OldPrice,
+            NhanhProductId = product.NhanhProductId,
             SellableQuantity = sellableQuantity,
             Parent = parent
         };
