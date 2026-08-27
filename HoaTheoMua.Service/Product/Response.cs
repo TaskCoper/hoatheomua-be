@@ -242,4 +242,22 @@ public class Response
         public string? ProductName { get; set; }
         public int? SellableQuantity { get; set; }
     }
+    
+    public class GetProductDetailByCustomerResponse
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+        public decimal? Price { get; set; }
+        public decimal? OldPrice { get; set; }
+        public int? SellableQuantity { get; set; }
+
+        public ParentProductInfo? Parent { get; set; } // null nếu không có cha
+    }
+
+    public class ParentProductInfo
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+    }
 }

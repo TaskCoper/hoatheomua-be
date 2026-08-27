@@ -67,6 +67,14 @@ public class ProductController: ControllerBase
         var result = await _productService.GetLocalProductDetail(id);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
+
+    [HttpGet("/api/v1/products/{id:guid}/detail")]
+    [Authorize (Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> GetProductDetailByCustomer(Guid id)
+    {
+        var result = await _productService.GetProductDetailByCustomer(id);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
     
     [HttpPost("/api/v1/products/filter")]
     public async Task<IActionResult> GetProductByIds([FromBody] Request.GetProductByIds request)
