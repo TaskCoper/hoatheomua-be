@@ -225,6 +225,8 @@ public class Service : IService
             .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty) && x.IsActive);
+        
+        //sort theo sellableQuantiy giảm dần
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -295,23 +297,62 @@ public class Service : IService
             orderedQuery = orderedQuery.ThenByDescending(x => x.CreatedAt);
         }
 
-        var totalCount = await query.CountAsync();
-        var items = await orderedQuery
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        var sellableQuantitySortItem = request.sortBy?
+            .FirstOrDefault(sortItem =>
+                !string.IsNullOrWhiteSpace(sortItem) &&
+                sortItem.TrimStart('+', '-').Trim()
+                    .Equals("sellablequantity", StringComparison.OrdinalIgnoreCase));
+        var sortBySellableQuantity = sellableQuantitySortItem != null;
+        var sortSellableQuantityDescending = sortBySellableQuantity &&
+            sellableQuantitySortItem!.TrimStart().StartsWith("-", StringComparison.Ordinal);
 
-        // Tính tồn kho khả dụng cho đúng các sản phẩm của trang hiện tại, giống V2.
-        var quantities = await CalculateAvailableQty(items
-            .Select(product => new ProductQtyProjection
-            {
-                Id = product.Id,
-                ProductType = product.ProductType,
-                ParentProductId = product.ParentProductId,
-                NhanhProductId = product.NhanhProductId,
-                Stock = product.Stock
-            })
-            .ToList());
+        var totalCount = await query.CountAsync();
+        List<HoaTheoMua.Repository.Entity.Product> items;
+        Dictionary<Guid, (int? SellableQuantity, string? StockStatus, string? UnavailableReason)> quantities;
+
+        if (sortBySellableQuantity)
+        {
+            // SellableQuantity là giá trị tính toán, nên phải tính trước khi phân trang.
+            var allItems = await query.ToListAsync();
+            quantities = await CalculateAvailableQty(allItems
+                .Select(product => new ProductQtyProjection
+                {
+                    Id = product.Id,
+                    ProductType = product.ProductType,
+                    ParentProductId = product.ParentProductId,
+                    NhanhProductId = product.NhanhProductId,
+                    Stock = product.Stock
+                })
+                .ToList());
+
+            var sortedItems = sortSellableQuantityDescending
+                ? allItems.OrderByDescending(product => GetQuantityInfo(product, quantities).SellableQuantity ?? 0)
+                : allItems.OrderBy(product => GetQuantityInfo(product, quantities).SellableQuantity ?? 0);
+
+            items = sortedItems
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+        }
+        else
+        {
+            items = await orderedQuery
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            // Tính tồn kho khả dụng cho đúng các sản phẩm của trang hiện tại, giống V2.
+            quantities = await CalculateAvailableQty(items
+                .Select(product => new ProductQtyProjection
+                {
+                    Id = product.Id,
+                    ProductType = product.ProductType,
+                    ParentProductId = product.ParentProductId,
+                    NhanhProductId = product.NhanhProductId,
+                    Stock = product.Stock
+                })
+                .ToList());
+        }
 
         var mappedItems = new List<Response.ProductDetailResponse>(items.Count);
         foreach (var product in items)

@@ -678,52 +678,47 @@ public class Service : IService
     {
         var categoryIds = request.CategoryProductLists
             .Select(x => x.CategoryProductId)
-            .ToHashSet();
+            .ToList();
 
-        var query = _dbContext.CategoryProductDetails.Where(x =>
-                                                                                        categoryIds.Contains(x.CategoryProductId) &&
-                                                                                        x.ProductId == request.ProductId &&
-                                                                                        !x.IsDeleted);
+        // Lấy tất cả records cần update trong 1 query
+        var existingDetails = await _dbContext.CategoryProductDetails
+            .Where(x => x.ProductId == request.ProductId
+                        && !x.IsDeleted
+                        && categoryIds.Contains(x.CategoryProductId))
+            .ToListAsync();
 
-        var categoryExists = await query.AnyAsync();
-        
-        if (!categoryExists)
+        if (!existingDetails.Any())
         {
             throw new BadRequestException("Category product not found.");
         }
         
         foreach (var categoryItem in request.CategoryProductLists)
         {
-            var cate = await _dbContext.CategoryProductDetails.Where(x =>
-                    x.CategoryProductId == categoryItem.CategoryProductId &&
-                    x.ProductId == request.ProductId &&
-                    !x.IsDeleted)
-                .FirstOrDefaultAsync();
+            var cate = existingDetails
+                .FirstOrDefault(x => x.CategoryProductId == categoryItem.CategoryProductId);
 
-            if (cate == null)
+            if (cate != null)
             {
-                throw new BadRequestException("Category product not found.");
-            }
-            
-            if (categoryItem.IsPin && !cate.IsPin)
-            {
-                var pinQuery = _dbContext.CategoryProductDetails
-                    .Where(x => !x.IsDeleted
-                                && x.CategoryProductId == categoryItem.CategoryProductId
-                                && x.IsPin
-                                && x.ProductId != request.ProductId);
-
-                var pinnedProductCount = await pinQuery.CountAsync();
-
-                if (pinnedProductCount >= 32)
+                // Pin limit check - chỉ check khi đang bật pin VÀ chưa được pin
+                if (categoryItem.IsPin && !cate.IsPin)
                 {
-                    throw new BadRequestException("Only 32 products can be pinned in this category.");
+                    var pinnedCount = await _dbContext.CategoryProductDetails
+                        .Where(x => !x.IsDeleted
+                                    && x.CategoryProductId == categoryItem.CategoryProductId
+                                    && x.IsPin
+                                    && x.ProductId != request.ProductId)
+                        .CountAsync();
+
+                    if (pinnedCount >= 32)
+                    {
+                        throw new BadRequestException("Only 32 products can be pinned in this category");
+                    }
                 }
+
+                cate.IsPin = categoryItem.IsPin;
+                cate.Position = categoryItem.Position;
+                cate.UpdatedAt = DateTimeOffset.UtcNow;
             }
-            
-            cate.IsPin = categoryItem.IsPin;
-            cate.Position = categoryItem.Position;
-            cate.UpdatedAt = DateTimeOffset.UtcNow;
         }
         
         await _dbContext.SaveChangesAsync();

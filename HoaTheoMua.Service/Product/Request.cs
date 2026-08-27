@@ -97,7 +97,7 @@ public class Request
         /// tiền tố "-" là giảm dần. Giá trị không nhận diện được sẽ sắp theo CreatedAt.
         /// Không hỗ trợ sắp xếp theo SellableQuantity vì đây là giá trị tính toán, không có trong DB.
         /// </summary>
-        public List<string>? sortBy { get; set; }
+        public List<string>? sortBy { get; set; } //sellablequantity: số lượng có thể bán giảm dần
         public List<Guid>? categoryIds { get; set; }
         public ProductType? productType  { get; set; }
         public bool? isPin { get; set; }
