@@ -484,6 +484,7 @@ public class Service : IService
                         Quantity = x.Quantity,
                         Name = x.MaterialName ?? string.Empty,
                         Price = x.PriceMat,
+                        IsCore = x.IsCore
                     })
                     .ToList()
             };
