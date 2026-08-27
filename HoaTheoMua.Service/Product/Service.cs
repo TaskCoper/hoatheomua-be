@@ -1519,7 +1519,7 @@ public class Service : IService
     {
         var product = await _dbContext.Products
             .AsNoTracking()
-            .Where(p => p.Id == id && p.IsActive && !p.IsDeleted)
+            .Where(p => p.Id == id && !p.IsDeleted)
             .Select(p => new
             {
                 p.Id,
@@ -1531,7 +1531,8 @@ public class Service : IService
                 p.ParentProductId,
                 p.NhanhProductId,
                 p.Stock,
-                p.AvailableForSale
+                p.AvailableForSale,
+                p.IsActive
             })
             .FirstOrDefaultAsync();
 
@@ -1554,7 +1555,8 @@ public class Service : IService
                 {
                     Id = p.Id,
                     ProductName = p.ProductName,
-                    NhanhProductId = p.NhanhProductId
+                    NhanhProductId = p.NhanhProductId,
+                    IsActive = p.IsActive
                 })
                 .FirstOrDefaultAsync();
         }
@@ -1584,6 +1586,7 @@ public class Service : IService
             OldPrice = product.OldPrice,
             NhanhProductId = product.NhanhProductId,
             SellableQuantity = sellableQuantity,
+            IsActive = product.IsActive,
             Parent = parent
         };
     }
