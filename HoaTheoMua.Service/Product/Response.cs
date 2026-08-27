@@ -253,6 +253,7 @@ public class Response
         public decimal? OldPrice { get; set; }
         public int? SellableQuantity { get; set; }
         public string? NhanhProductId { get; set; }
+        public bool IsActive { get; set; }
 
         public ParentProductInfo? Parent { get; set; } // null nếu không có cha
     }
@@ -262,5 +263,6 @@ public class Response
         public Guid Id { get; set; }
         public string? ProductName { get; set; }
         public string? NhanhProductId { get; set; }
+        public bool IsActive { get; set; }
     }
 }
