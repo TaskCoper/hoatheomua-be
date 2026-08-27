@@ -73,7 +73,8 @@ public class Service : IService
         bool IsCore,
         bool IsActive,
         decimal? AvailableForSale);
-
+    
+    //Nếu combo ở trạng thái mở bán thì ko đc thêm, ko được chỉnh sửa
     public async Task<string> AddMaterialInCombo(Guid comboId, Request.MaterialComboRequest request)
     {
         if (request.Items is null || request.Items.Count == 0)
@@ -99,9 +100,14 @@ public class Service : IService
         var combo = await _dbContext.Products
                         .AsNoTracking()
                         .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
-                        .Select(x => new { x.Id, x.NhanhProductId, x.ProductType })
+                        .Select(x => new { x.Id, x.NhanhProductId, x.ProductType, x.IsActive })
                         .FirstOrDefaultAsync()
                     ?? throw new NotFoundException("Không tìm thấy combo");
+
+        if (combo.IsActive)
+        {
+            throw new ConflictException("Combo đang ở trạng thái mở bán, không thể thêm vật liệu");
+        }
 
         if (string.IsNullOrWhiteSpace(combo.NhanhProductId))
             throw new BadRequestException("Combo chưa đồng bộ");
@@ -258,9 +264,14 @@ public class Service : IService
         var combo = await _dbContext.Products
                         .AsNoTracking()
                         .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
-                        .Select(x => new { x.Id, x.NhanhProductId })
+                        .Select(x => new { x.Id, x.NhanhProductId, x.IsActive })
                         .FirstOrDefaultAsync()
                     ?? throw new NotFoundException("Không tìm thấy combo");
+
+        if (combo.IsActive)
+        {
+            throw new ConflictException("Combo đang ở trạng thái mở bán, không thể chỉnh sửa");
+        }
 
         if (string.IsNullOrWhiteSpace(combo.NhanhProductId))
             throw new BadRequestException("Combo chưa đồng bộ");
@@ -445,10 +456,15 @@ public class Service : IService
                             .Where(x => x.Id == comboId
                                         && x.ParentProductId == null
                                         && !x.IsDeleted)
-                            .Select(x => new { x.NhanhProductId })
+                            .Select(x => new { x.NhanhProductId, x.IsActive })
                             .FirstOrDefaultAsync()
                         ?? throw new NotFoundException("Không tìm thấy combo");
             var nhanhProductId = combo.NhanhProductId;
+
+            if (combo.IsActive)
+            {
+                throw new ConflictException("Combo đang mở bán, không thể xóa");
+            }
 
             if (string.IsNullOrWhiteSpace(nhanhProductId))
                 throw new BadRequestException("Combo chưa đồng bộ");
@@ -554,6 +570,11 @@ public class Service : IService
                                .FirstOrDefaultAsync(x => x.Id == request.ProductId && !x.IsDeleted)
                            ?? throw new NotFoundException("Không tìm thấy sản phẩm");
 
+        if (childProduct.IsActive)
+        {
+            throw new ConflictException("Sản phẩm đang mở bán, không thể cập nhật hệ số");
+        }
+
         if (childProduct.ParentProductId == null)
             throw new BadRequestException("Sản phẩm không phải là combo con (không có sản phẩm cha)");
 
@@ -562,9 +583,14 @@ public class Service : IService
                                 .Where(x => x.NhanhProductId == childProduct.ParentProductId
                                             && x.ParentProductId == null
                                             && !x.IsDeleted)
-                                .Select(x => new { x.Id })
+                                .Select(x => new { x.Id, x.IsActive })
                                 .FirstOrDefaultAsync()
                             ?? throw new NotFoundException("Không tìm thấy sản phẩm cha");
+
+        // if (parentProduct.IsActive)
+        // {
+        //     throw new ConflictException("Combo đang mở bán, không thể cập nhật hệ số");
+        // }
 
         // ---- 3. Load công thức cha (chỉ dòng còn hiệu lực) ----------------------
         var parentSpecifications = await _dbContext.ComboSpecifications
