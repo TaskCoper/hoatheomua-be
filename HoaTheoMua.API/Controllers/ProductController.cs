@@ -68,7 +68,7 @@ public class ProductController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
-    [HttpGet("/api/v1/products/{id:guid}/detail")]
+    [HttpGet("/api/v2/products/{id:guid}/detail")]
     [Authorize (Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> GetProductDetailByCustomer(Guid id)
     {
