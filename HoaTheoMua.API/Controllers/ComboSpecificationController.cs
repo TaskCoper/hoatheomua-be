@@ -21,7 +21,7 @@ public class ComboSpecificationController : ControllerBase
     }
 
     [HttpPost("{comboId:guid}")]
-    // [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> AddMaterialInCombo(Guid comboId, [FromBody] Request.MaterialComboRequest request)
     {
         var result = await _materialComboService.AddMaterialInCombo(comboId, request);
@@ -35,7 +35,7 @@ public class ComboSpecificationController : ControllerBase
     }
 
     [HttpPut("{comboId:guid}")]
-    // [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UpdateMaterialInCombo(Guid comboId, [FromBody] Request.MaterialComboRequest request)
     {
         var result = await _materialComboService.UpdateMaterialInCombo(comboId, request);
@@ -49,7 +49,7 @@ public class ComboSpecificationController : ControllerBase
     }
 
     [HttpDelete("{comboId:guid}")]
-    // [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> DeleteMaterialInCombo(Guid comboId, [FromBody] Request.DeleteMaterial request)
     {
         var result = await _materialComboService.DeleteMaterialInCombo(comboId, request);
@@ -65,7 +65,7 @@ public class ComboSpecificationController : ControllerBase
     [HttpPut("child-quantity")]
     //4. Hệ thống tính định lượng dự kiến của từng thành phần trong combo con đó bằng định lượng chuẩn của combo cha nhân với hệ số mới,
     // làm tròn theo đơn vị tính của thành phần.
-    // [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UpdateChildQuantity(Request.UpdateMaterialChildRequest request)
     {
         var result = await _materialComboService.UpdateChildProductWithFactor(request);
@@ -79,7 +79,7 @@ public class ComboSpecificationController : ControllerBase
     }
 
     [HttpPost("{productId:guid}/publish")]
-    // [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> PublishActiveCombo(Guid productId)
     {
         var result = await _materialComboService.PublicActiveCombo(productId);
@@ -93,7 +93,7 @@ public class ComboSpecificationController : ControllerBase
     }
     
     [HttpPost("{productId:guid}/unpublish")]
-    // [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UnPublishActiveCombo(Guid productId)
     {
         var result = await _materialComboService.UnPublicActiveCombo(productId);
