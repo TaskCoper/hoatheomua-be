@@ -1514,6 +1514,77 @@ public class Service : IService
             .ToList();
     }
 
+    public async Task<Response.GetProductDetailByCustomerResponse> GetProductDetailByCustomer(Guid id)
+    {
+        var product = await _dbContext.Products
+            .AsNoTracking()
+            .Where(p => p.Id == id && p.IsActive && !p.IsDeleted)
+            .Select(p => new
+            {
+                p.Id,
+                p.ProductName,
+                p.CoverImage,
+                p.Price,
+                p.OldPrice,
+                p.ProductType,
+                p.ParentProductId,
+                p.NhanhProductId,
+                p.Stock,
+                p.AvailableForSale
+            })
+            .FirstOrDefaultAsync();
+
+        if (product == null)
+        {
+            throw new NotFoundException("PRODUCT_NOT_FOUND");
+        }
+
+        // ParentProductId của Nhanh.vn là NhanhProductId của sản phẩm cha,
+        // không phải Id (Guid) của entity Product.
+        Response.ParentProductInfo? parent = null;
+        if (!string.IsNullOrWhiteSpace(product.ParentProductId))
+        {
+            parent = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => p.NhanhProductId == product.ParentProductId &&
+                            p.IsActive &&
+                            !p.IsDeleted)
+                .Select(p => new Response.ParentProductInfo
+                {
+                    Id = p.Id,
+                    ProductName = p.ProductName
+                })
+                .FirstOrDefaultAsync();
+        }
+
+        var quantities = await CalculateAvailableQty(new List<ProductQtyProjection>
+        {
+            new()
+            {
+                Id = product.Id,
+                ProductType = product.ProductType,
+                ParentProductId = product.ParentProductId,
+                NhanhProductId = product.NhanhProductId,
+                Stock = product.Stock
+            }
+        });
+
+        var sellableQuantity = quantities.TryGetValue(product.Id, out var quantityInfo)
+            ? quantityInfo.SellableQuantity
+            : Math.Max(0, (int)(product.AvailableForSale ?? 0));
+
+        return new Response.GetProductDetailByCustomerResponse
+        {
+            Id = product.Id,
+            ProductName = product.ProductName,
+            CoverImage = product.CoverImage,
+            Price = product.Price,
+            OldPrice = product.OldPrice,
+            SellableQuantity = sellableQuantity,
+            Parent = parent
+        };
+    }
+
     public async Task<Response.ComboSpecificationResponse?> GetComboSpecificationAsync(Guid id)  
     {  
         var comboSpec = await _dbContext.ComboSpecifications  
