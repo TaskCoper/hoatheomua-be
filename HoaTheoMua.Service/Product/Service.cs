@@ -525,7 +525,7 @@ public class Service : IService
         // Giai đoạn 1: Lấy thông tin sản phẩm chính.
         var response = await _dbContext.Products
             .AsNoTracking()
-            .Where(p => p.Id == id && !p.IsDeleted && p.IsActive)
+            .Where(p => p.Id == id && !p.IsDeleted) //&& p.IsActive
             .Select(LocalProductDetailSelector)
             .FirstOrDefaultAsync();
 
