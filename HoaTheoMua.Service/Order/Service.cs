@@ -418,6 +418,7 @@ public class Service : IService
                 x.IsActive,
                 MaterialIsDeleted = x.Mat.IsDeleted,
                 MaterialName = x.Mat.ProductName,
+                PriceMat = x.Mat.Price,
                 Quantity = x.Quantity ?? 0m,
                 x.Mat.NhanhProductId
             })
@@ -426,14 +427,7 @@ public class Service : IService
         var comboIds = specifications
             .Select(x => x.SubId)
             .ToHashSet();
-
-        var coreSpecificationsByCombo = specifications
-            .Where(x =>
-                x.IsCore &&
-                x.IsActive &&
-                !x.MaterialIsDeleted &&
-                x.Quantity > 0)
-            .ToLookup(x => x.SubId);
+    
         
         var materialSpecifications = specifications
             .Where(x =>
@@ -456,7 +450,8 @@ public class Service : IService
                 continue;
             }
             
-            var coreMaterials = coreSpecificationsByCombo[item.ProductId]
+            var coreMaterials = materialSpecifications[item.ProductId]
+                .Where(x => x.IsCore)
                 .ToList();
             
             if (coreMaterials.Count == 0)
@@ -483,7 +478,8 @@ public class Service : IService
                     {
                         MatId = x.MatId,
                         Quantity = x.Quantity,
-                        Name = x.MaterialName ?? string.Empty
+                        Name = x.MaterialName ?? string.Empty,
+                        Price = x.PriceMat,
                     })
                     .ToList()
             };
