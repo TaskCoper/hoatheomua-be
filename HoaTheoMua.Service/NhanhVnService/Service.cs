@@ -269,7 +269,7 @@ public class Service: IService
 
             if (product == null)
             {
-               return $"Sản phẩm với id: {itemId} không tồn tại trong hệ thống";
+               continue;
             }
             
             // Parent.NhanhProductId == Child.ParentProductId.
@@ -907,21 +907,14 @@ public class Service: IService
         var productsToDelete = await _appDbContext.Products
             .Where(x => !x.IsDeleted && deletedIds.Contains(x.NhanhProductId!))
             .ToListAsync();
-
-        if (productsToDelete.Any())
+        
+        foreach (var p in productsToDelete)
         {
-            foreach (var p in productsToDelete)
-            {
-                p.IsDeleted = true;
-                p.UpdatedAt = DateTimeOffset.UtcNow;
-            }
+            p.IsDeleted = true;
+            p.UpdatedAt = DateTimeOffset.UtcNow;
+        }
 
-            await _appDbContext.SaveChangesAsync();
-        }
-        else
-        {
-            return "Sản phẩm không tồn tại";
-        }
+        await _appDbContext.SaveChangesAsync();
 
         return $"Xóa thành công {productsToDelete.Count} sản phẩm từ Nhanh.vn.";
     }
