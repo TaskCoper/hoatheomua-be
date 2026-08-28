@@ -31,6 +31,9 @@ public class Service : IService
         HasLabel(productType, ComponentLabel) ||
         HasLabel(productType, AuxiliaryLabel);
 
+    private static bool HasSameProductType(string? left, string? right) =>
+        string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
+
     private static string? ResolveMaterialLabel(string? productLabel, string? productType)
     {
         if (HasLabel(productLabel, ComponentLabel) || HasLabel(productLabel, AuxiliaryLabel))
@@ -278,7 +281,7 @@ public class Service : IService
         var combo = await _dbContext.Products
                         .AsNoTracking()
                         .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
-                        .Select(x => new { x.Id, x.NhanhProductId, x.IsActive })
+                        .Select(x => new { x.Id, x.NhanhProductId, x.ProductType, x.IsActive })
                         .FirstOrDefaultAsync()
                     ?? throw new NotFoundException("Không tìm thấy combo");
 
@@ -297,8 +300,11 @@ public class Service : IService
             .Select(x => new MaterialInfo(x.Id, x.ProductLabel, x.ProductType, x.Unit))
             .ToListAsync();
 
+        // Update chỉ sửa vật liệu đã có trong công thức (kiểm tra ở bước 6).
+        // Vật liệu có ProductType khác ProductType của combo, ví dụ "Sản phẩm có
+        // nhiều thành phần", vẫn là một dòng công thức hợp lệ và phải được cập nhật.
         if (materials.Count != matIds.Count ||
-            materials.Any(x => !IsMaterial(x.ProductLabel, x.ProductType)))
+            materials.Any(x => HasSameProductType(x.ProductType, combo.ProductType)))
             throw new NotFoundException("Vật liệu không tồn tại hoặc không hợp lệ");
 
         var materialMap = materials.ToDictionary(x => x.Id);
