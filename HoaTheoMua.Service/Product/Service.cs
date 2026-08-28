@@ -1912,7 +1912,7 @@ public class Service : IService
 
         // Giai đoạn 4: Tính tổng định lượng cần thiết cho mỗi nguyên liệu (mỗi product = 1 cái)
         var materialRequirements = new Dictionary<Guid, decimal>();
-        var requestedQuantities = productIds.ToDictionary(id => id, _ => 1);
+        var requestedQuantities = comboIdsToCheck.ToDictionary(id => id, _ => 1);
 
         foreach (var spec in coreSpecs)
         {
