@@ -394,7 +394,8 @@ public class Service : IService
             query = query.Where(x =>
                 (x.ProductName != null && x.ProductName.ToLower().Contains(normalizedSearch)) ||
                 (x.Barcode != null && x.Barcode.ToLower().Contains(normalizedSearch)) ||
-                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
+                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)) || 
+                (x.ProductCode != null && x.ProductCode.ToLower().Contains(normalizedSearch)));
         }
 
         if (request.priceFrom.HasValue)
