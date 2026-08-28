@@ -7,6 +7,7 @@ namespace HoaTheoMua.Service.Order;
 
 public class Response
 {
+
     public class GetOrderResponse
     {
         public Guid OrderId { get; set; }
@@ -144,6 +145,22 @@ public class Response
         public double Length { get; set; }
         public double Width { get; set; }
         public double Height { get; set; }
+        public Request.OrderDetailMetadata? Snapshot { get; set; }
+    }
+
+    public class LimitCoreProductResponse
+    {
+        public decimal SellableQuantityCombo { get; set; }
+        public List<LimitCoreMaterialResponse> Materials { get; set; } = new();
+    }
+
+    public class LimitCoreMaterialResponse
+    {
+        public Guid MatId { get; set; }
+        public decimal Quantity { get; set; }
+        public bool IsCore { get; set; }
+        public bool IsActive { get; set; }
+        public decimal AvailableForSale { get; set; }
     }
 
     public class NhanhVnLocationResponse

@@ -6,6 +6,23 @@ namespace HoaTheoMua.Service.Order;
 
 public class Request
 {
+
+    public class OrderDetailMetadata
+    {
+        public Guid SubId { get; set; }
+        public List<MaterialSnapshot> Materials { get; set; } = new();
+    }
+
+    public class MaterialSnapshot
+    {
+        public Guid MatId { get; set; }
+        public decimal Quantity { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal? Price { get; set; }
+        public bool IsCore { get; set; }
+    }
+
+    
     public class CreateOrderRequest : AhaMoveRequest.EstimateShippingFeeRequest
     {
         public required string Gateway { get; set; }

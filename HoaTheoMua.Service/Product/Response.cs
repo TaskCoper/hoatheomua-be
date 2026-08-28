@@ -69,6 +69,7 @@ public class Response
         public decimal? Width { get; set; }
         public decimal? Height { get; set; }
         public int? WebOrder { get; set; }
+        public bool IsActive { get; set; }
         public DateTimeOffset? NhanhCreatedAt { get; set; }
         public DateTimeOffset? NhanhUpdatedAt { get; set; }
         public string? ProductLabel { get; set; }
@@ -176,6 +177,10 @@ public class Response
     public string? Size { get; set; }  
     public string? Color { get; set; }  
     public string? Origin { get; set; }  
+    public double? Position { get; set; }
+    public decimal? Factor { get; set; }
+    public bool IsActive { get; set; }
+    public bool IsDeleted { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
 
@@ -229,5 +234,50 @@ public class Response
         public Guid Id { get; set; }
         public string? ProductName { get; set; }
         public string? CoverImage { get; set; }
+    }
+
+    public class GetProductByIdsResponse
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public int? SellableQuantity { get; set; }
+        public bool IsActive { get; set; } //trả ra linh hoạt giữa cha và con
+    }
+    
+    public class GetProductDetailByCustomerResponse
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+        public decimal? Price { get; set; }
+        public decimal? OldPrice { get; set; }
+        public int? SellableQuantity { get; set; }
+        public string? NhanhProductId { get; set; }
+        public bool IsActive { get; set; }
+
+        public ParentProductInfo? Parent { get; set; } // null nếu không có cha
+    }
+
+    public class ParentProductInfo
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? NhanhProductId { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    public class InventoryCheckError
+    {
+        public Guid MaterialId { get; set; }
+        public string? MaterialName { get; set; }
+        public decimal RequiredQuantity { get; set; }
+        public decimal AvailableQuantity { get; set; }
+        public List<AffectedProductInfo> AffectedProducts { get; set; } = new();
+    }
+
+    public class AffectedProductInfo
+    {
+        public Guid ProductId { get; set; }
+        public string? ProductName { get; set; }
     }
 }

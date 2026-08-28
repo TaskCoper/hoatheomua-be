@@ -44,6 +44,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return new OrderServiceImpl(
                 CreateMockDbContext(),
                 new Mock<ICurrentUserService>().Object,
+                new Microsoft.AspNetCore.Http.HttpContextAccessor(),
                 httpClient,
                 new Mock<HoaTheoMua.Service.Product.IService>().Object,
                 mockConfig.Object,

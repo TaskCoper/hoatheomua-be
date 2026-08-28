@@ -17,4 +17,7 @@ public interface IService
     Task<Response.ComboSpecificationResponse?> GetComboSpecificationAsync(Guid id);
     Task<BasePaginationResponse> GetMaterialsAsync(Request.GetMaterialsRequest request);
     Task<List<Response.ProductResponseWithList>> GetProductWithList(Request.GetProductWithList request);
+    Task<List<Response.GetProductByIdsResponse>> GetProductByIds(Request.GetProductByIds request);
+    Task<Response.GetProductDetailByCustomerResponse> GetProductDetailByCustomer(Guid id);
+    Task CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request);
 }

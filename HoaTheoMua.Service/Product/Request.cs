@@ -97,10 +97,11 @@ public class Request
         /// tiền tố "-" là giảm dần. Giá trị không nhận diện được sẽ sắp theo CreatedAt.
         /// Không hỗ trợ sắp xếp theo SellableQuantity vì đây là giá trị tính toán, không có trong DB.
         /// </summary>
-        public List<string>? sortBy { get; set; }
+        public List<string>? sortBy { get; set; } //sellablequantity: số lượng có thể bán giảm dần
         public List<Guid>? categoryIds { get; set; }
         public ProductType? productType  { get; set; }
         public bool? isPin { get; set; }
+        public bool? IsActive { get; set; }
     }
     
     public class MoveProductRequest
@@ -208,5 +209,15 @@ public class Request
         public string? ProductLabel { get; set; }
         public string? Search { get; set; }
         public List<Guid>? ExcludeIds { get; set; }
+    }
+
+    public class GetProductByIds
+    {
+        public List<Guid> ProductIds { get; set; } = new();
+    }
+
+    public class CheckInventoryAvailabilityRequest
+    {
+        public List<Guid> ProductIds { get; set; } = new();
     }
 }

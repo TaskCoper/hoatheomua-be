@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
@@ -33,9 +34,16 @@ public class LocalProductSearchTest
         return new AppDbContext(options);
     }
 
-    private static ProductService CreateService(AppDbContext dbContext)
+    private static ProductService CreateService(AppDbContext dbContext, bool isAdmin = false)
     {
         var httpContextMock = new Mock<IHttpContextAccessor>();
+        var claims = isAdmin
+            ? new[] { new Claim(ClaimTypes.Role, "Admin") }
+            : Array.Empty<Claim>();
+        httpContextMock.SetupGet(x => x.HttpContext).Returns(new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuthentication"))
+        });
         var httpClient = new HttpClient();
 
         var myConfiguration = new Dictionary<string, string>
@@ -60,9 +68,9 @@ public class LocalProductSearchTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", Price = 50, IsDeleted = false };
-        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", Price = 100, IsDeleted = false };
-        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", Price = 150, IsDeleted = false };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", Price = 50, IsActive = true, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", Price = 100, IsActive = true, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", Price = 150, IsActive = true, IsDeleted = false };
 
         await dbContext.Products.AddRangeAsync(p1, p2, p3);
         await dbContext.SaveChangesAsync();
@@ -84,6 +92,34 @@ public class LocalProductSearchTest
         Assert.Contains(items, x => x.ProductName == "P3");
     }
 
+    [Fact]
+    public async Task GetLocalProducts_InactiveProduct_ExcludesItFromResults()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+        dbContext.Products.AddRange(
+            new ProductEntity
+            {
+                Id = Guid.NewGuid(),
+                ProductName = "Active product",
+                IsActive = true,
+                IsDeleted = false
+            },
+            new ProductEntity
+            {
+                Id = Guid.NewGuid(),
+                ProductName = "Inactive product",
+                IsActive = false,
+                IsDeleted = false
+            });
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.GetLocalProducts(new Request.LocalProductQueryRequest());
+
+        var item = Assert.Single(result.Value.Items.Cast<Response.ProductDetailResponse>());
+        Assert.Equal("Active product", item.ProductName);
+    }
+
     [Theory]
     [InlineData("+price", new[] { "P1", "P2", "P3" })]
     [InlineData("-price", new[] { "P3", "P2", "P1" })]
@@ -95,9 +131,9 @@ public class LocalProductSearchTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", Price = 50, IsDeleted = false, CreatedAt = DateTimeOffset.UtcNow };
-        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", Price = 100, IsDeleted = false, CreatedAt = DateTimeOffset.UtcNow.AddMinutes(1) };
-        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", Price = 150, IsDeleted = false, CreatedAt = DateTimeOffset.UtcNow.AddMinutes(2) };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", Price = 50, IsActive = true, IsDeleted = false, CreatedAt = DateTimeOffset.UtcNow };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", Price = 100, IsActive = true, IsDeleted = false, CreatedAt = DateTimeOffset.UtcNow.AddMinutes(1) };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", Price = 150, IsActive = true, IsDeleted = false, CreatedAt = DateTimeOffset.UtcNow.AddMinutes(2) };
 
         await dbContext.Products.AddRangeAsync(p1, p2, p3);
         await dbContext.SaveChangesAsync();
@@ -127,9 +163,9 @@ public class LocalProductSearchTest
         var service = CreateService(dbContext);
 
         // p1 and p2 have same price, so second order by Name will settle
-        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "B_Product", Price = 100, IsDeleted = false };
-        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "A_Product", Price = 100, IsDeleted = false };
-        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "C_Product", Price = 200, IsDeleted = false };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "B_Product", Price = 100, IsActive = true, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "A_Product", Price = 100, IsActive = true, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "C_Product", Price = 200, IsActive = true, IsDeleted = false };
 
         await dbContext.Products.AddRangeAsync(p1, p2, p3);
         await dbContext.SaveChangesAsync();
@@ -166,6 +202,7 @@ public class LocalProductSearchTest
             NhanhBrandId = 202,
             NhanhTypeId = 303,
             NhanhUpdatedAt = new DateTimeOffset(2026, 8, 3, 10, 30, 0, TimeSpan.Zero),
+            IsActive = true,
             IsDeleted = false
         };
 
@@ -228,6 +265,7 @@ public class LocalProductSearchTest
         {
             Id = Guid.NewGuid(),
             ProductName = "Product",
+            IsActive = true,
             IsDeleted = false
         };
         var parentCategory = new CategoryProductEntity
@@ -297,6 +335,7 @@ public class LocalProductSearchTest
             Id = Guid.NewGuid(),
             NhanhProductId = "1000",
             ProductName = "Parent",
+            IsActive = true,
             IsDeleted = false
         };
         var firstChild = new ProductEntity
@@ -306,6 +345,7 @@ public class LocalProductSearchTest
             ParentProductId = "1000",
             ProductName = "First child",
             Position = 1,
+            IsActive = true,
             IsDeleted = false
         };
         var secondChild = new ProductEntity
@@ -315,6 +355,7 @@ public class LocalProductSearchTest
             ParentProductId = "1000",
             ProductName = "Second child",
             Position = 2,
+            IsActive = true,
             IsDeleted = false
         };
         var deletedChild = new ProductEntity
@@ -353,9 +394,32 @@ public class LocalProductSearchTest
         Assert.Contains(result.Children, child => child.Id == secondChild.Id);
         Assert.Null(result.ParentId);
 
-        var childResult = await service.GetLocalProductDetail(firstChild.Id);
+        var adminService = CreateService(dbContext, isAdmin: true);
+        var childResult = await adminService.GetLocalProductDetail(firstChild.Id);
 
         Assert.Equal(parent.Id, childResult.ParentId);
+    }
+
+    [Fact]
+    public async Task GetLocalProductDetail_ChildForNonAdmin_ThrowsNotFoundException()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+        var child = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ParentProductId = "parent-1",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddAsync(child);
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => service.GetLocalProductDetail(child.Id));
+
+        Assert.Equal("PRODUCT_NOT_FOUND", exception.Message);
     }
 
     [Fact]
@@ -368,9 +432,9 @@ public class LocalProductSearchTest
         var c1 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cate 1", Name_En = "Cate 1", Description = "Cate 1", Description_En = "Cate 1", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
         var c2 = new CategoryProductEntity { Id = Guid.NewGuid(), Name = "Cate 2", Name_En = "Cate 2", Description = "Cate 2", Description_En = "Cate 2", Type = CategoryProductType.Fix, IsActive = true, IsDeleted = false };
 
-        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", IsDeleted = false };
-        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", IsDeleted = false };
-        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", IsDeleted = false };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", IsActive = true, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", IsActive = true, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", IsActive = true, IsDeleted = false };
 
         var j1 = new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c1.Id, ProductId = p1.Id, IsDeleted = false };
         var j2 = new CategoryProductDetail { Id = Guid.NewGuid(), CategoryProductId = c2.Id, ProductId = p2.Id, IsDeleted = false };
@@ -412,9 +476,9 @@ public class LocalProductSearchTest
             IsActive = true,
             IsDeleted = false
         };
-        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "A", IsPin = true, Position = 1, IsDeleted = false };
-        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "B", IsPin = false, Position = 3, IsDeleted = false };
-        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "C", IsPin = false, Position = 2, IsDeleted = false };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "A", IsPin = true, Position = 1, IsActive = true, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "B", IsPin = false, Position = 3, IsActive = true, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "C", IsPin = false, Position = 2, IsActive = true, IsDeleted = false };
 
         await dbContext.CategoryProducts.AddAsync(category);
         await dbContext.Products.AddRangeAsync(p1, p2, p3);
@@ -466,9 +530,9 @@ public class LocalProductSearchTest
             IsActive = true,
             IsDeleted = false
         };
-        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "A", IsPin = false, Position = 1, IsDeleted = false };
-        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "B", IsPin = true, Position = 2, IsDeleted = false };
-        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "C", IsPin = true, Position = 1, IsDeleted = false };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "A", IsPin = false, Position = 1, IsActive = true, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "B", IsPin = true, Position = 2, IsActive = true, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "C", IsPin = true, Position = 1, IsActive = true, IsDeleted = false };
 
         await dbContext.CategoryProducts.AddRangeAsync(c1, c2);
         await dbContext.Products.AddRangeAsync(p1, p2, p3);

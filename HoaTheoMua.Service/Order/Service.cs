@@ -9,6 +9,7 @@ using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Webhook;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -20,6 +21,7 @@ public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
+    private readonly IHttpContextAccessor _httpContext;
     private readonly HttpClient _httpClient;
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly HoaTheoMua.Service.BaoKim.IService _baoKimService;
@@ -28,12 +30,14 @@ public class Service : IService
 
     public Service(AppDbContext dbContext,
         ICurrentUserService currentUser,
+        IHttpContextAccessor httpContext,
         HttpClient httpClient,
         HoaTheoMua.Service.Product.IService serviceProduct,
         IConfiguration configuration, BaoKim.IService baoKimService)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
+        _httpContext = httpContext;
         _httpClient = httpClient;
         _serviceProduct = serviceProduct;
         _baoKimService = baoKimService;
@@ -110,6 +114,7 @@ public class Service : IService
 
         // Requested quantity keyed by product id — reused for pricing and order details.
         var quantityByItemId = request.Items.ToDictionary(x => x.ItemId, x => x.Number);
+        var productIdByItemId = request.Items.ToDictionary(x => x.ItemId, x => x.ProductId);
 
         // Every requested item must exist in the catalog before we check stock or shipping.
         var catalogIds = products.Select(x => x.Id).ToHashSet();
@@ -118,7 +123,7 @@ public class Service : IService
             throw new BadRequestException("Đơn hàng không tồn tại trong hệ thống");
         }
 
-        await EnsureItemsInStockAsync(request.Items, depotId);
+        var comboSnapshots = await EnsureItemsInStockAsync(request.Items, depotId);
 
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
@@ -185,20 +190,31 @@ public class Service : IService
             InvoiceType = request.InvoiceType,
         };
 
-        var newOrderDetails = products.Select(x => new OrderDetails
+        var newOrderDetails = products.Select(x =>
         {
-            Id = Guid.NewGuid(),
-            OrderId = newOrder.Id,
-            Name = x.Name,
-            ItemId = x.Id,
-            Price = (int)x.Prices.Retail,
-            Number = quantityByItemId[x.Id],
-            Height = x.Shipping.Height,
-            Weight = x.Shipping.Weight,
-            Length = x.Shipping.Length,
-            Width = x.Shipping.Width,
-            CreatedAt = DateTime.UtcNow,
-        });
+            comboSnapshots.TryGetValue(x.Id, out var metadata);
+           return new OrderDetails
+            {
+                Id = Guid.NewGuid(),
+                OrderId = newOrder.Id,
+                ProductId = productIdByItemId[x.Id],
+                Name = x.Name,
+                ItemId = x.Id,
+                Price = (int)x.Prices.Retail,
+                Number = quantityByItemId[x.Id],
+                Height = x.Shipping.Height,
+                Weight = x.Shipping.Weight,
+                Length = x.Shipping.Length,
+                Width = x.Shipping.Width,
+                Metadata = 
+                    metadata == null
+                    ? null
+                    : JsonConvert.SerializeObject(metadata),
+
+                CreatedAt = DateTime.UtcNow,
+            };
+        }).ToList();
+            
 
         if (request.Gateway == "BaoKim")
         {
@@ -247,6 +263,55 @@ public class Service : IService
         }
 
         throw new BadRequestException("Not support other gateway");
+    }
+
+    public async Task<Response.LimitCoreProductResponse> GetLimitCoreProduct(Guid comboId)
+    {
+        var specifications = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(x =>
+                x.SubId == comboId &&
+                !x.IsDeleted &&
+                x.IsActive &&
+                !x.Mat.IsDeleted)
+            .Select(x => new
+            {
+                x.MatId,
+                Quantity = x.Quantity ?? 0m,
+                x.IsCore,
+                x.IsActive,
+                AvailableForSale = x.Mat.AvailableForSale ?? 0m
+            })
+            .ToListAsync();
+
+        var activeCoreSpecifications = specifications
+            .Where(x => x.IsCore && x.IsActive)
+            .ToList();
+
+        if (activeCoreSpecifications.Count == 0 ||
+            activeCoreSpecifications.Any(x => x.Quantity <= 0))
+        {
+            throw new BadRequestException("Tồn tại vật liệu core với số lượng <= 0");
+        }
+
+        var sellableQuantity = activeCoreSpecifications
+            .Select(x => Math.Floor(x.AvailableForSale / x.Quantity))
+            .Min();
+
+        return new Response.LimitCoreProductResponse
+        {
+            SellableQuantityCombo = sellableQuantity,
+            Materials = specifications
+                .Select(x => new Response.LimitCoreMaterialResponse
+                {
+                    MatId = x.MatId,
+                    Quantity = x.Quantity,
+                    IsCore = x.IsCore,
+                    IsActive = x.IsActive,
+                    AvailableForSale = x.AvailableForSale
+                })
+                .ToList()
+        };
     }
 
     // public async Task<CreateOrderResponse> CreateDefaultOrder()
@@ -338,9 +403,117 @@ public class Service : IService
     }
 
     // Verifies every requested item has enough stock in the target depot.
-    private async Task EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
+    private async Task<Dictionary<int, Request.OrderDetailMetadata>> EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
     {
+        var productIds = items
+            .Select(x => x.ProductId)
+            .ToHashSet();
+
+        var specifications = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(x =>
+                productIds.Contains(x.SubId) &&
+                !x.IsDeleted)
+            .Select(x => new
+            {
+                x.SubId,
+                x.MatId,
+                x.IsCore,
+                x.IsActive,
+                MaterialIsDeleted = x.Mat.IsDeleted,
+                MaterialName = x.Mat.ProductName,
+                PriceMat = x.Mat.Price,
+                Quantity = x.Quantity ?? 0m,
+                x.Mat.NhanhProductId
+            })
+            .ToListAsync();
+
+        var comboIds = specifications
+            .Select(x => x.SubId)
+            .ToHashSet();
+    
+        
+        var materialSpecifications = specifications
+            .Where(x =>
+                x.IsActive &&
+                !x.MaterialIsDeleted &&
+                x.Quantity > 0)
+            .ToLookup(x => x.SubId);
+        
+        var comboSnapshots = new Dictionary<int, Request.OrderDetailMetadata>();
+        
+        
+        var stockItems = new List<(int ItemId, decimal Number)>();
+
         foreach (var item in items)
+        {
+            if (!comboIds.Contains(item.ProductId))
+            {
+                stockItems.Add((item.ItemId, item.Number));
+
+                continue;
+            }
+            
+            var coreMaterials = materialSpecifications[item.ProductId]
+                .Where(x => x.IsCore)
+                .ToList();
+            
+            if (coreMaterials.Count == 0)
+            {
+                throw new BadRequestException(
+                    $"Combo ProductId={item.ItemId} không có vật liệu core hợp lệ");
+            }
+            
+            var comboMaterials = materialSpecifications[item.ProductId]
+                .ToList();
+
+            if (comboMaterials.Count == 0)
+            {
+                throw new BadRequestException(
+                    $"Combo ProductId={item.ItemId} không có vật liệu hợp lệ");
+            }
+
+            
+            comboSnapshots[item.ItemId] = new Request.OrderDetailMetadata()
+            {
+                SubId = item.ProductId,
+                Materials = comboMaterials
+                    .Select(x => new Request.MaterialSnapshot()
+                    {
+                        MatId = x.MatId,
+                        Quantity = x.Quantity,
+                        Name = x.MaterialName ?? string.Empty,
+                        Price = x.PriceMat,
+                        IsCore = x.IsCore
+                    })
+                    .ToList()
+            };
+
+            
+            foreach (var material in coreMaterials)
+            {
+                if (!int.TryParse(material.NhanhProductId, out var materialItemId))
+                {
+                    throw new BadRequestException(
+                        $"Vật liệu MatId={material.MatId} không có NhanhProductId hợp lệ");
+                }
+
+                stockItems.Add((
+                    materialItemId,
+                    item.Number * material.Quantity));
+            }
+        }
+
+        var itemRequest = stockItems
+            .GroupBy(x => x.ItemId)
+            .Select(x => new
+            {
+                ItemId = x.Key,
+                Number = x.Sum(item => item.Number)
+            })
+            .ToList();
+
+        foreach (var item in itemRequest)
         {
             var productDetailRequest = new HoaTheoMua.Service.Product.Request.ProductDetailRequest
             {
@@ -366,12 +539,14 @@ public class Service : IService
                 throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot {depotId}");
             }
 
-            double available = (double?)targetDepot["Available"] ?? 0;
+            var available = (decimal?)targetDepot["Available"] ?? 0m;
             if (item.Number > available)
             {
                 throw new BadRequestException($"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {available})");
             }
         }
+
+        return comboSnapshots;
     }
 
     // Calls Ahamove to estimate the shipping fee from the shop's warehouse to the buyer.
@@ -474,14 +649,15 @@ public class Service : IService
 
     public async Task<BaseResponse> GetOrderById(Guid id)
     {
-        var userId = _currentUser.GetRequiredUserId();
+        var isAdmin = _httpContext.HttpContext?.User.IsInRole("Admin") == true;
+        var userId = isAdmin ? (Guid?)null : _currentUser.GetRequiredUserId();
 
         var orders = await _dbContext.Orders
             .Include(x => x.OrderDetails)
             .Include(x => x.Transactions)
             .FirstOrDefaultAsync(x =>
                 x.IsDeleted == false &&
-                x.UserId == userId &&
+                (isAdmin || x.UserId == userId) &&
                 x.Id == id);
         if (orders == null)
         {
@@ -592,6 +768,9 @@ public class Service : IService
                     Length = x.Length,
                     Width = x.Width,
                     Height = x.Height,
+                    Snapshot = isAdmin && !string.IsNullOrWhiteSpace(x.Metadata)
+                        ? JsonConvert.DeserializeObject<Request.OrderDetailMetadata>(x.Metadata)
+                        : null,
 
                 };
             }).ToList(),

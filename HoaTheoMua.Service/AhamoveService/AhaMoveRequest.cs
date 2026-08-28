@@ -22,6 +22,7 @@ public class AhaMoveRequest
    public class Items
    {
       public int ItemId { get; set; }
+      public Guid ProductId { get; set; }
       public int Number { get; set; }
    }
 

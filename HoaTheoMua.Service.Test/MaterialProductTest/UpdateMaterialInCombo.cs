@@ -55,6 +55,26 @@ public class UpdateMaterialInCombo
     }
 
     [Fact]
+    public async Task UpdateMaterialInCombo_ComboWithoutChildren_UpdatesParentSpecification()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(CreateParentCombo(), CreateMaterial(MatCoreId));
+        dbContext.ComboSpecifications.Add(CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true));
+        await dbContext.SaveChangesAsync();
+
+        var result = await CreateService(dbContext).UpdateMaterialInCombo(
+            ComboId,
+            CreateRequest(MatCoreId, quantity: 8, isCore: true));
+
+        Assert.Equal("Cập nhật vật liệu trong công thức thành công.", result);
+        var specification = await dbContext.ComboSpecifications.SingleAsync();
+        Assert.Equal(8m, specification.Quantity);
+        Assert.True(specification.IsCore);
+        Assert.True(specification.IsActive);
+        Assert.NotNull(specification.UpdatedAt);
+    }
+
+    [Fact]
     public async Task UpdateMaterialInCombo_EmptyItems_ThrowsBadRequest()
     {
         await using var dbContext = CreateDbContext();
@@ -68,6 +88,19 @@ public class UpdateMaterialInCombo
             () => service.UpdateMaterialInCombo(ComboId, request));
 
         Assert.Equal("Danh sách vật liệu không được để trống", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateMaterialInCombo_ComboNotFound_ThrowsNotFound()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => CreateService(dbContext).UpdateMaterialInCombo(
+                ComboId,
+                CreateRequest(MatCoreId, quantity: 1, isCore: true)));
+
+        Assert.Equal("Không tìm thấy combo", exception.Message);
     }
 
     [Fact]
@@ -132,6 +165,31 @@ public class UpdateMaterialInCombo
         Assert.Null(childSpecification.Quantity);
         Assert.True(childSpecification.IsCore);
         Assert.True(childSpecification.IsActive);
+    }
+
+    [Fact]
+    public async Task UpdateMaterialInCombo_SoftDeletedChildSpecification_CreatesNewActiveRow()
+    {
+        await using var dbContext = CreateDbContext();
+        SeedParentChildrenAndMaterials(dbContext);
+        var deletedChildSpecification = CreateSpecification(ChildSmallId, MatCoreId, quantity: 99, isCore: false);
+        deletedChildSpecification.IsDeleted = true;
+        dbContext.ComboSpecifications.AddRange(
+            CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true),
+            deletedChildSpecification);
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).UpdateMaterialInCombo(
+            ComboId,
+            CreateRequest(MatCoreId, quantity: 10, isCore: true));
+
+        var activeChildSpecification = await dbContext.ComboSpecifications.SingleAsync(
+            x => x.SubId == ChildSmallId && x.MatId == MatCoreId && !x.IsDeleted);
+        Assert.NotEqual(deletedChildSpecification.Id, activeChildSpecification.Id);
+        Assert.Null(activeChildSpecification.Quantity);
+        Assert.True(activeChildSpecification.IsCore);
+        Assert.True(activeChildSpecification.IsActive);
+        Assert.True((await dbContext.ComboSpecifications.FindAsync(deletedChildSpecification.Id))!.IsDeleted);
     }
 
     [Fact]

@@ -172,6 +172,22 @@ public class UpdateChildProductWithFactor
     }
 
     [Fact]
+    public async Task UpdateChildProductWithFactor_ChildProductNotFound_ThrowsNotFound()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => CreateService(dbContext).UpdateChildProductWithFactor(
+                new MaterialRequest.UpdateMaterialChildRequest
+                {
+                    ProductId = ChildLargeId,
+                    Factor = 1m
+                }));
+
+        Assert.Equal("Không tìm thấy sản phẩm", exception.Message);
+    }
+
+    [Fact]
     public async Task UpdateChildProductWithFactor_ParentComboProduct_ThrowsBadRequest()
     {
         await using var dbContext = CreateDbContext();
@@ -189,6 +205,24 @@ public class UpdateChildProductWithFactor
             () => service.UpdateChildProductWithFactor(request));
 
         Assert.Equal("Sản phẩm không phải là combo con (không có sản phẩm cha)", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateChildProductWithFactor_ParentProductNotFound_ThrowsNotFound()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.Add(CreateChildProduct(ChildLargeId, "combo-a-l"));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => CreateService(dbContext).UpdateChildProductWithFactor(
+                new MaterialRequest.UpdateMaterialChildRequest
+                {
+                    ProductId = ChildLargeId,
+                    Factor = 1m
+                }));
+
+        Assert.Equal("Không tìm thấy sản phẩm cha", exception.Message);
     }
 
     [Fact]
@@ -215,6 +249,68 @@ public class UpdateChildProductWithFactor
             () => service.UpdateChildProductWithFactor(request));
 
         Assert.Equal("Không tìm thấy công thức combo cha", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateChildProductWithFactor_InvalidParentQuantity_ThrowsBadRequestWithoutChangingChild()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildLargeId, "combo-a-l"),
+            CreateMaterial(MatCoreId));
+        dbContext.ComboSpecifications.AddRange(
+            new ComboSpecEntity
+            {
+                Id = Guid.NewGuid(),
+                SubId = ComboId,
+                MatId = MatCoreId,
+                Quantity = null,
+                IsCore = true,
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            CreateSpecification(ChildLargeId, MatCoreId, quantity: 5, isCore: true));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).UpdateChildProductWithFactor(
+                new MaterialRequest.UpdateMaterialChildRequest
+                {
+                    ProductId = ChildLargeId,
+                    Factor = 2m
+                }));
+
+        Assert.Equal(
+            $"Công thức của combo cha có số lượng không hợp lệ: Material {MatCoreId:N}",
+            exception.Message);
+        Assert.Null((await dbContext.Products.FindAsync(ChildLargeId))!.Factor);
+        Assert.Equal(
+            5m,
+            (await dbContext.ComboSpecifications.SingleAsync(x => x.SubId == ChildLargeId)).Quantity);
+    }
+
+    [Fact]
+    public async Task UpdateChildProductWithFactor_ParentRecipeWithoutActiveCore_ThrowsBadRequest()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildLargeId, "combo-a-l"),
+            CreateMaterial(MatCoreId));
+        dbContext.ComboSpecifications.Add(CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: false));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => CreateService(dbContext).UpdateChildProductWithFactor(
+                new MaterialRequest.UpdateMaterialChildRequest
+                {
+                    ProductId = ChildLargeId,
+                    Factor = 2m
+                }));
+
+        Assert.Equal("Công thức của combo cha không còn vật liệu chính (core) đang hoạt động", exception.Message);
+        Assert.Null((await dbContext.Products.FindAsync(ChildLargeId))!.Factor);
     }
 
     [Fact]
@@ -254,6 +350,35 @@ public class UpdateChildProductWithFactor
         Assert.True(childCore.IsCore);
         Assert.False(childSupport.IsCore);
         Assert.True(childSupport.IsActive);
+    }
+
+    [Fact]
+    public async Task UpdateChildProductWithFactor_SoftDeletedChildSpecification_CreatesNewActiveRow()
+    {
+        await using var dbContext = CreateDbContext();
+        SeedParentAndChildRecipe(dbContext);
+        await dbContext.SaveChangesAsync();
+
+        var deletedSpecification = await dbContext.ComboSpecifications.SingleAsync(
+            x => x.SubId == ChildLargeId && x.MatId == MatCoreId);
+        deletedSpecification.IsDeleted = true;
+        await dbContext.SaveChangesAsync();
+
+        await CreateService(dbContext).UpdateChildProductWithFactor(
+            new MaterialRequest.UpdateMaterialChildRequest
+            {
+                ProductId = ChildLargeId,
+                Factor = 2m
+            });
+
+        var specifications = await dbContext.ComboSpecifications
+            .Where(x => x.SubId == ChildLargeId && x.MatId == MatCoreId)
+            .ToListAsync();
+        Assert.Equal(2, specifications.Count);
+        Assert.True(specifications.Single(x => x.Id == deletedSpecification.Id).IsDeleted);
+        var activeSpecification = specifications.Single(x => !x.IsDeleted);
+        Assert.NotEqual(deletedSpecification.Id, activeSpecification.Id);
+        Assert.Equal(10m, activeSpecification.Quantity);
     }
 
     [Fact]
