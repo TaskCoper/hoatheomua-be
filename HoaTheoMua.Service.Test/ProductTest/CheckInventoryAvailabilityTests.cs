@@ -48,15 +48,15 @@ public class CheckInventoryAvailabilityTests
     }
 
     [Fact]
-    public async Task CheckInventoryAvailability_EmptyProductIds_ThrowsBadRequestException()
+    public async Task CheckInventoryAvailability_EmptyItems_ThrowsBadRequestException()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.CheckInventoryAvailability(new Request.CheckInventoryAvailabilityRequest()));
 
-        Assert.Contains("ProductIds are required", exception.Message);
+        Assert.Contains("Items are required", ex.Message);
     }
 
     [Fact]
@@ -67,13 +67,16 @@ public class CheckInventoryAvailabilityTests
 
         var request = new Request.CheckInventoryAvailabilityRequest
         {
-            ProductIds = new List<Guid> { Guid.NewGuid() }
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = Guid.NewGuid(), Quantity = 1 }
+            }
         };
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.CheckInventoryAvailability(request));
 
-        Assert.Contains("Products not found", exception.Message);
+        Assert.Contains("Products not found", ex.Message);
     }
 
     [Fact]
@@ -96,11 +99,15 @@ public class CheckInventoryAvailabilityTests
 
         var request = new Request.CheckInventoryAvailabilityRequest
         {
-            ProductIds = new List<Guid> { product.Id }
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = product.Id, Quantity = 1 }
+            }
         };
 
-        // Should not throw
-        await service.CheckInventoryAvailability(request);
+        var result = await service.CheckInventoryAvailability(request);
+
+        Assert.Null(result);
     }
 
     [Fact]
@@ -172,13 +179,17 @@ public class CheckInventoryAvailabilityTests
         // Request: 1 Hoa Hồng + 1 Hoa Lan = cần 3 Hoa Lan, chỉ có 2
         var request = new Request.CheckInventoryAvailabilityRequest
         {
-            ProductIds = new List<Guid> { combo1.Id, combo2.Id }
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = combo1.Id, Quantity = 1 },
+                new() { ProductId = combo2.Id, Quantity = 1 }
+            }
         };
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.CheckInventoryAvailability(request));
+        var result = await service.CheckInventoryAvailability(request);
 
-        Assert.Contains("INVENTORY_INSUFFICIENT", exception.Message);
+        Assert.NotNull(result);
+        Assert.NotNull(result.MaterialId);
     }
 
     [Fact]
@@ -228,11 +239,15 @@ public class CheckInventoryAvailabilityTests
         // Request: 1 Hoa Hồng = cần 2 Hoa Lan, có 10 -> OK
         var request = new Request.CheckInventoryAvailabilityRequest
         {
-            ProductIds = new List<Guid> { combo.Id }
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = combo.Id, Quantity = 1 }
+            }
         };
 
-        // Should not throw
-        await service.CheckInventoryAvailability(request);
+        var result = await service.CheckInventoryAvailability(request);
+
+        Assert.Null(result);
     }
 
     [Fact]
@@ -281,7 +296,10 @@ public class CheckInventoryAvailabilityTests
 
         var request = new Request.CheckInventoryAvailabilityRequest
         {
-            ProductIds = new List<Guid> { combo.Id }
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = combo.Id, Quantity = 1 }
+            }
         };
 
         // Should not throw vì spec không phải CORE
@@ -357,7 +375,11 @@ public class CheckInventoryAvailabilityTests
         // Request: 1 Hoa Hồng (2 ruy) + 1 Hoa Tulip (3 ruy) = cần 5 Ruy băng, có 5 -> OK
         var request = new Request.CheckInventoryAvailabilityRequest
         {
-            ProductIds = new List<Guid> { combo1.Id, combo2.Id }
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = combo1.Id, Quantity = 1 },
+                new() { ProductId = combo2.Id, Quantity = 1 }
+            }
         };
 
         // Should not throw
@@ -449,13 +471,16 @@ public class CheckInventoryAvailabilityTests
         // Tổng cần: 2 + 1 = 3 Hoa Lan, có 1 -> FAIL
         var request = new Request.CheckInventoryAvailabilityRequest
         {
-            ProductIds = new List<Guid> { parent.Id }
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = parent.Id, Quantity = 1 }
+            }
         };
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.CheckInventoryAvailability(request));
+        var result = await service.CheckInventoryAvailability(request);
 
-        Assert.Contains("INVENTORY_INSUFFICIENT", exception.Message);
+        Assert.NotNull(result);
+        Assert.NotNull(result.MaterialId);
     }
 
     [Fact]
@@ -508,13 +533,16 @@ public class CheckInventoryAvailabilityTests
         // Request: Bó Hoa Đơn cần 2 Hoa Hồng, có 1 -> FAIL
         var request = new Request.CheckInventoryAvailabilityRequest
         {
-            ProductIds = new List<Guid> { combo.Id }
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = combo.Id, Quantity = 1 }
+            }
         };
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.CheckInventoryAvailability(request));
+        var result = await service.CheckInventoryAvailability(request);
 
-        Assert.Contains("INVENTORY_INSUFFICIENT", exception.Message);
+        Assert.NotNull(result);
+        Assert.NotNull(result.MaterialId);
     }
 
     [Fact]
@@ -602,12 +630,267 @@ public class CheckInventoryAvailabilityTests
         // Tổng cần: 2 + 2 = 4 Ruy băng, có 2 -> FAIL
         var request = new Request.CheckInventoryAvailabilityRequest
         {
-            ProductIds = new List<Guid> { parentCombo.Id }
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = parentCombo.Id, Quantity = 1 }
+            }
         };
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
+        var result = await service.CheckInventoryAvailability(request);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.MaterialId);
+    }
+
+    [Fact]
+    public async Task CheckInventoryAvailability_DuplicateItemsInRequest_CombinesQuantities()
+    {
+        // Test rằng 2 dòng cùng ProductId sẽ được gộp lại
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        // Material - có 5 cái
+        var material = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Sản phẩm",
+            ProductName = "Hoa Hồng",
+            AvailableForSale = 5,
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        // Combo - cần 2 Hoa Hồng mỗi lần mua
+        var combo = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Combo",
+            ProductName = "Bó Hoa",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(material, combo);
+        await dbContext.SaveChangesAsync();
+
+        // Combo cần 2 Hoa Hồng
+        await dbContext.ComboSpecifications.AddAsync(new Repository.Entity.ComboSpecification
+        {
+            Id = Guid.NewGuid(),
+            SubId = combo.Id,
+            MatId = material.Id,
+            Quantity = 2,
+            IsCore = true,
+            IsActive = true,
+            IsDeleted = false
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        // Request với 2 dòng cùng ProductId: 2 + 1 = 3 lần mua
+        // Cần: 3 * 2 = 6 Hoa Hồng, có 5 -> FAIL
+        var request = new Request.CheckInventoryAvailabilityRequest
+        {
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = combo.Id, Quantity = 2 },
+                new() { ProductId = combo.Id, Quantity = 1 }
+            }
+        };
+
+        var result = await service.CheckInventoryAvailability(request);
+
+        Assert.NotNull(result);
+        var inventoryError = result;
+        Assert.Equal(material.Id, inventoryError.MaterialId);
+        Assert.Equal(6, inventoryError.RequiredQuantity);
+        Assert.Equal(5, inventoryError.AvailableQuantity);
+    }
+
+    [Fact]
+    public async Task CheckInventoryAvailability_QuantityIsZero_ThrowsBadRequestException()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var request = new Request.CheckInventoryAvailabilityRequest
+        {
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = Guid.NewGuid(), Quantity = 0 }
+            }
+        };
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => service.CheckInventoryAvailability(request));
 
-        Assert.Contains("INVENTORY_INSUFFICIENT", exception.Message);
+        Assert.Contains("Quantity greater than 0", ex.Message);
+    }
+
+    [Fact]
+    public async Task CheckInventoryAvailability_InactiveRequestedProduct_ThrowsBadRequestException()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Combo",
+            ProductName = "Combo ngừng bán",
+            IsActive = false,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddAsync(product);
+        await dbContext.SaveChangesAsync();
+
+        var request = new Request.CheckInventoryAvailabilityRequest
+        {
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = product.Id, Quantity = 1 }
+            }
+        };
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => service.CheckInventoryAvailability(request));
+
+        Assert.Equal("One or more products are inactive", ex.Message);
+    }
+
+    [Fact]
+    public async Task CheckInventoryAvailability_InactiveChildCombo_IsNotIncludedInCalculation()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var material = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Sản phẩm",
+            ProductName = "Hoa Hồng",
+            AvailableForSale = 1,
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        var parent = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            NhanhProductId = "PARENT-ACTIVE-COMBO",
+            ProductType = "Combo",
+            ProductName = "Combo cha",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        var activeChild = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ParentProductId = parent.NhanhProductId,
+            ProductType = "Combo",
+            ProductName = "Combo con active",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        var inactiveChild = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ParentProductId = parent.NhanhProductId,
+            ProductType = "Combo",
+            ProductName = "Combo con inactive",
+            IsActive = false,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(material, parent, activeChild, inactiveChild);
+        await dbContext.ComboSpecifications.AddRangeAsync(
+            new ComboSpecification
+            {
+                Id = Guid.NewGuid(),
+                SubId = activeChild.Id,
+                MatId = material.Id,
+                Quantity = 1,
+                IsCore = true,
+                IsActive = true,
+                IsDeleted = false
+            },
+            new ComboSpecification
+            {
+                Id = Guid.NewGuid(),
+                SubId = inactiveChild.Id,
+                MatId = material.Id,
+                Quantity = 100,
+                IsCore = true,
+                IsActive = true,
+                IsDeleted = false
+            });
+        await dbContext.SaveChangesAsync();
+
+        var request = new Request.CheckInventoryAvailabilityRequest
+        {
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = parent.Id, Quantity = 1 }
+            }
+        };
+
+        await service.CheckInventoryAvailability(request);
+    }
+
+    [Fact]
+    public async Task CheckInventoryAvailability_InactiveMaterial_IsTreatedAsUnavailable()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var material = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Sản phẩm",
+            ProductName = "Hoa Lan ngừng bán",
+            AvailableForSale = 100,
+            IsActive = false,
+            IsDeleted = false
+        };
+
+        var combo = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Combo",
+            ProductName = "Combo đang bán",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(material, combo);
+        await dbContext.ComboSpecifications.AddAsync(new ComboSpecification
+        {
+            Id = Guid.NewGuid(),
+            SubId = combo.Id,
+            MatId = material.Id,
+            Quantity = 1,
+            IsCore = true,
+            IsActive = true,
+            IsDeleted = false
+        });
+        await dbContext.SaveChangesAsync();
+
+        var request = new Request.CheckInventoryAvailabilityRequest
+        {
+            Items = new List<Request.CartItem>
+            {
+                new() { ProductId = combo.Id, Quantity = 1 }
+            }
+        };
+
+        var result = await service.CheckInventoryAvailability(request);
+
+        Assert.NotNull(result);
+        var inventoryError = result;
+        Assert.Equal(material.Id, inventoryError.MaterialId);
+        Assert.Equal(0, inventoryError.AvailableQuantity);
     }
 }
