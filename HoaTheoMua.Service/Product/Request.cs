@@ -215,4 +215,9 @@ public class Request
     {
         public List<Guid> ProductIds { get; set; } = new();
     }
+
+    public class CheckInventoryAvailabilityRequest
+    {
+        public List<Guid> ProductIds { get; set; } = new();
+    }
 }

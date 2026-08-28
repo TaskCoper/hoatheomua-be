@@ -141,6 +141,10 @@ public class ProductController: ControllerBase
         return Ok(result);
     }
 
-    
+    [HttpPost("/api/v1/products/check-core")]
+    public async Task<IActionResult> CheckInventoryAvailability([FromBody] Request.CheckInventoryAvailabilityRequest request)
+    {
+        await _productService.CheckInventoryAvailability(request);
+        return Ok(ApiResponseFactory.Base("OK", true, "Inventory check passed", HttpContext.TraceIdentifier));
+    }
 }
-//api: mảng productId GUID --> response: obj[id, productName, selleableQuantity] (post: body)

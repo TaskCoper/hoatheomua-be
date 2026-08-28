@@ -241,7 +241,7 @@ public class Response
         public Guid Id { get; set; }
         public string? ProductName { get; set; }
         public int? SellableQuantity { get; set; }
-        public bool IsActive { get; set; }
+        public bool IsActive { get; set; } //trả ra linh hoạt giữa cha và con
     }
     
     public class GetProductDetailByCustomerResponse
@@ -264,5 +264,20 @@ public class Response
         public string? ProductName { get; set; }
         public string? NhanhProductId { get; set; }
         public bool IsActive { get; set; }
+    }
+
+    public class InventoryCheckError
+    {
+        public Guid MaterialId { get; set; }
+        public string? MaterialName { get; set; }
+        public decimal RequiredQuantity { get; set; }
+        public decimal AvailableQuantity { get; set; }
+        public List<AffectedProductInfo> AffectedProducts { get; set; } = new();
+    }
+
+    public class AffectedProductInfo
+    {
+        public Guid ProductId { get; set; }
+        public string? ProductName { get; set; }
     }
 }
