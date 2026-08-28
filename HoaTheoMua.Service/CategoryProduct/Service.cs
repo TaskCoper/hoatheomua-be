@@ -720,20 +720,17 @@ public class Service : IService
 
         var existingDetails = await _dbContext.CategoryProductDetails
             .Where(x => x.ProductId == request.ProductId
-                        && !x.IsDeleted
                         && categoryIds.Contains(x.CategoryProductId))
             .ToListAsync();
 
         var detailsByCategoryId = existingDetails
-            .ToDictionary(x => x.CategoryProductId);
-
-        if (detailsByCategoryId.Count != categoryIds.Count)
-        {
-            throw new BadRequestException("Category product detail not found.");
-        }
+            .GroupBy(x => x.CategoryProductId)
+            .ToDictionary(group => group.Key, group => group.ToList());
 
         var categoryIdsToPin = categoryItems
-            .Where(item => item.IsPin && !detailsByCategoryId[item.CategoryProductId].IsPin)
+            .Where(item => item.IsPin &&
+                           (!detailsByCategoryId.TryGetValue(item.CategoryProductId, out var details) ||
+                            details.Any(detail => !detail.IsDeleted && !detail.IsPin)))
             .Select(item => item.CategoryProductId)
             .ToList();
 
@@ -760,12 +757,35 @@ public class Service : IService
         }
 
         var now = DateTimeOffset.UtcNow;
+        var newDetails = new List<CategoryProductDetail>();
+        // Chỉ thêm khi chưa có bất kỳ CategoryProductDetail nào cho product và category này.
         foreach (var categoryItem in categoryItems)
         {
-            var detail = detailsByCategoryId[categoryItem.CategoryProductId];
-            detail.IsPin = categoryItem.IsPin;
-            detail.Position = categoryItem.Position;
-            detail.UpdatedAt = now;
+            if (detailsByCategoryId.TryGetValue(categoryItem.CategoryProductId, out var details))
+            {
+                foreach (var detail in details)
+                {
+                    detail.IsPin = categoryItem.IsPin;
+                    detail.Position = categoryItem.Position;
+                    detail.UpdatedAt = now;
+                }
+                continue;
+            }
+
+            newDetails.Add(new CategoryProductDetail
+            {
+                Id = Guid.NewGuid(),
+                ProductId = request.ProductId,
+                CategoryProductId = categoryItem.CategoryProductId,
+                IsPin = categoryItem.IsPin,
+                Position = categoryItem.Position,
+                CreatedAt = now,
+            });
+        }
+
+        if (newDetails.Count > 0)
+        {
+            await _dbContext.CategoryProductDetails.AddRangeAsync(newDetails);
         }
         
         await _dbContext.SaveChangesAsync();
