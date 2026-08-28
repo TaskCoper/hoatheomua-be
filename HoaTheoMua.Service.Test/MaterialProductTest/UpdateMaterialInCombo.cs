@@ -75,6 +75,27 @@ public class UpdateMaterialInCombo
     }
 
     [Fact]
+    public async Task UpdateMaterialInCombo_MaterialClassifiedByProductType_UpdatesStandaloneCombo()
+    {
+        await using var dbContext = CreateDbContext();
+        var material = CreateMaterial(MatCoreId);
+        material.ProductLabel = null;
+        material.ProductType = MaterialLabel;
+        dbContext.Products.AddRange(CreateParentCombo(), material);
+        dbContext.ComboSpecifications.Add(CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true));
+        await dbContext.SaveChangesAsync();
+
+        var result = await CreateService(dbContext).UpdateMaterialInCombo(
+            ComboId,
+            CreateRequest(MatCoreId, quantity: 8, isCore: true));
+
+        Assert.Equal("Cập nhật vật liệu trong công thức thành công.", result);
+        var specification = await dbContext.ComboSpecifications.SingleAsync();
+        Assert.Equal(8m, specification.Quantity);
+        Assert.NotNull(specification.UpdatedAt);
+    }
+
+    [Fact]
     public async Task UpdateMaterialInCombo_EmptyItems_ThrowsBadRequest()
     {
         await using var dbContext = CreateDbContext();
@@ -302,6 +323,7 @@ public class UpdateMaterialInCombo
             Id = ComboId,
             NhanhProductId = ParentNhanhProductId,
             ParentProductId = null,
+            ProductType = "Combo",
             ProductName = "Combo A",
             CreatedAt = DateTimeOffset.UtcNow
         };
