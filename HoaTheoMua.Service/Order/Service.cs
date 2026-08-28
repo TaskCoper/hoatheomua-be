@@ -107,7 +107,20 @@ public class Service : IService
         {
             throw new UnauthorizedException("User is not verified");
         }
+        
+        var itemIds = request.Items
+            .Select(x => x.ItemId.ToString())
+            .Distinct()
+            .ToList();
 
+        var hasInactiveProduct = await _dbContext.Products
+            .AnyAsync(x => itemIds.Contains(x.NhanhProductId!) && (!x.IsActive || x.IsDeleted));
+
+        if (hasInactiveProduct)
+        {
+            throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
+        }
+        
         var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
         var depotId = nhanhConfigs.GetValue("nhanhvn.default_depot", DefaultDepotId);
         var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
