@@ -324,6 +324,11 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Id = Guid.NewGuid(),
                 NhanhProductId = nhanhProductId.ToString(),
                 ProductName = name,
+                Price = 50000m,
+                Height = 10m,
+                Weight = 1m,
+                Length = 10m,
+                Width = 10m,
                 AvailableForSale = availableForSale,
                 IsActive = true,
                 IsDeleted = false
@@ -557,10 +562,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
         }
 
         // ---------------------------------------------------------------------
-        // TEST CASE 05: NhanhVn API trả về lỗi HTTP -> BadRequestException
+        // TEST CASE 05: Lỗi HTTP từ AhaMove vẫn được trả về sau khi catalog chuyển sang DB.
         // ---------------------------------------------------------------------
         [Fact]
-        public async Task CreateOrder_NhanhVnHttpError_ThrowsBadRequestException()
+        public async Task CreateOrder_AhamoveHttpErrorAfterLocalCatalog_ThrowsBadRequestException()
         {
             // Arrange
             var dbContext = CreateMockDbContext(companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() }).Object;
@@ -589,14 +594,14 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             // Assert
             var exception = await Assert.ThrowsAsync<BadRequestException>(act);
-            Assert.Contains("NhanhVn API HTTP Error", exception.Message);
+            Assert.Contains("Ahamove API HTTP Error", exception.Message);
         }
 
         // ---------------------------------------------------------------------
-        // TEST CASE 06: NhanhVn response null hoặc không có Data -> BadRequestException
+        // TEST CASE 06: AhaMove response null hoặc không có Data -> BadRequestException.
         // ---------------------------------------------------------------------
         [Fact]
-        public async Task CreateOrder_NhanhVnNullOrEmptyData_ThrowsBadRequestException()
+        public async Task CreateOrder_AhamoveNullOrEmptyDataAfterLocalCatalog_ThrowsBadRequestException()
         {
             // Arrange
             var dbContext = CreateMockDbContext(companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() }).Object;
@@ -629,7 +634,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             // Assert
             var exception = await Assert.ThrowsAsync<BadRequestException>(act);
-            Assert.Equal("NhanhVnResponse returned null or empty data", exception.Message);
+            Assert.Equal("Ahamove returned null or empty data", exception.Message);
         }
 
         // ---------------------------------------------------------------------
@@ -661,7 +666,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             // Assert
             var exception = await Assert.ThrowsAsync<BadRequestException>(act);
-            Assert.Equal("Sản phẩm Id=101 không tồn tại hoặc đã ngừng hoạt động", exception.Message);
+            Assert.Equal("Đơn hàng có sản phẩm không tồn tại hoặc đã ngừng hoạt động", exception.Message);
         }
 
         // ---------------------------------------------------------------------

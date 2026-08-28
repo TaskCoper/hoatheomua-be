@@ -364,9 +364,7 @@ public class Service : IService
 
         var productRows = await _dbContext.Products
             .AsNoTracking()
-            .Where(x => !x.IsDeleted &&
-                        x.IsActive &&
-                        x.NhanhProductId != null &&
+            .Where(x => x.NhanhProductId != null &&
                         itemIds.Contains(x.NhanhProductId))
             .Select(x => new
             {
@@ -376,9 +374,16 @@ public class Service : IService
                 x.Height,
                 x.Weight,
                 x.Length,
-                x.Width
+                x.Width,
+                x.IsActive,
+                x.IsDeleted
             })
             .ToListAsync();
+
+        if (productRows.Any(x => !x.IsActive || x.IsDeleted))
+        {
+            throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
+        }
 
         if (productRows.Count != itemIds.Count)
         {

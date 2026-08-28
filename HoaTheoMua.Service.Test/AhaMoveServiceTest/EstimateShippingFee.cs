@@ -36,11 +36,27 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             };
         }
 
-        private AppDbContext CreateMockDbContext(List<CompanyAddressEntity> companyAddresses)
+        private AppDbContext CreateMockDbContext(
+            List<CompanyAddressEntity> companyAddresses,
+            List<HoaTheoMua.Repository.Entity.Product>? products = null)
         {
             var mockDbSet = companyAddresses.BuildMockDbSet();
-            var mockProducts = new List<HoaTheoMua.Repository.Entity.Product>()
-                .BuildMockDbSet();
+            var mockProducts = (products ?? new List<HoaTheoMua.Repository.Entity.Product>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    NhanhProductId = "1",
+                    ProductName = "Sản phẩm A",
+                    Price = 100000m,
+                    Height = 10m,
+                    Weight = 1m,
+                    Length = 10m,
+                    Width = 10m,
+                    IsActive = true,
+                    IsDeleted = false
+                }
+            }).BuildMockDbSet();
             
             var configs = new List<HoaTheoMua.Repository.Entity.Config>
             {
@@ -105,11 +121,13 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
         
         // EDGE CASE 2: Response của nhanhvn trả về code == 0
         [Fact]
-        public async Task EstimateShippingFee_NhanhVnReturnsCodeZero_ThrowsBadRequestException()
+        public async Task EstimateShippingFee_ProductMissingFromDb_ThrowsBadRequestException()
         {
             // Arrange
             var companyAddress = CreateAddress();
-            var dbContext = CreateMockDbContext(new List<CompanyAddressEntity> { companyAddress });
+            var dbContext = CreateMockDbContext(
+                new List<CompanyAddressEntity> { companyAddress },
+                new List<HoaTheoMua.Repository.Entity.Product>());
 
             var mockConfig = new Mock<IConfiguration>();
             var mockConfigSection = new Mock<IConfigurationSection>();
@@ -152,16 +170,18 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
 
             // Assert
             var exception = await Assert.ThrowsAsync<BadRequestException>(act);
-            Assert.Equal("ERR_INVALID_FORM_FIELDS", exception.Message);
+            Assert.Equal("Có sản phẩm không tồn tại hoặc đã ngừng hoạt động", exception.Message);
         }
         
         // EDGE CASE 3: ItemId truyền vô không tồn tại dẫn đến lỗi bị crash
         [Fact]
-            public async Task EstimateShippingFee_ItemIdNotFoundInNhanhVn_ThrowsInvalidOperationException()
+            public async Task EstimateShippingFee_ItemIdNotFoundInDb_ThrowsBadRequestException()
             {
                 // Arrange
                 var companyAddress = CreateAddress();
-                var dbContext = CreateMockDbContext(new List<CompanyAddressEntity> { companyAddress });
+                var dbContext = CreateMockDbContext(
+                    new List<CompanyAddressEntity> { companyAddress },
+                    new List<HoaTheoMua.Repository.Entity.Product>());
 
                 var mockConfig = new Mock<IConfiguration>();
                 var mockConfigSection = new Mock<IConfigurationSection>();
@@ -211,7 +231,8 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
                 var act = async () => await service.EstimateShippingFee(request);
 
                 // Assert
-                await Assert.ThrowsAsync<InvalidOperationException>(act); 
+                var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+                Assert.Equal("Có sản phẩm không tồn tại hoặc đã ngừng hoạt động", exception.Message);
             }
         
         // EDGE CASE 4: Kiểm tra logic OrderTime và IdleUntil khi gọi AhaMove
@@ -455,12 +476,11 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             // Assert: the method returns both upstream results...
             Assert.NotNull(result);
             var ahamoveResult = result.GetType().GetProperty("ahamoveResult")!.GetValue(result) as List<ServiceResponse>;
-            var productNhanhResult = result.GetType().GetProperty("productNhanhResult")!.GetValue(result) as NhanhProductListResponse;
+            var products = result.GetType().GetProperty("products")!.GetValue(result);
             Assert.NotNull(ahamoveResult);
             Assert.Single(ahamoveResult!);
             Assert.Equal("SGN-BIKE", ahamoveResult![0].ServiceId);
-            Assert.NotNull(productNhanhResult);
-            Assert.Equal(1, productNhanhResult!.Code);
+            Assert.NotNull(products);
 
             // ...and the outgoing Ahamove request maps the NhanhVn product data correctly:
             // price from Prices.Retail, num from the requested quantity, and PaymentMethod "CASH".
