@@ -35,7 +35,7 @@ public class ComboSpecificationConfiguration: IEntityTypeConfiguration<ComboSpec
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");
         
-        // builder.SeedComboSpecification();
+        builder.SeedComboSpecification();
     }
 
 }
