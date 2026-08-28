@@ -104,21 +104,11 @@ public class Service : IService
             throw new UnauthorizedException("User is not verified");
         }
         
-        var itemIds = request.Items
-            .Select(x => x.ItemId.ToString())
-            .Distinct()
-            .ToList();
 
-        var hasInactiveProduct = await _dbContext.Products
-            .AnyAsync(x => itemIds.Contains(x.NhanhProductId!) && (!x.IsActive || x.IsDeleted));
+        // var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        // var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
 
-        if (hasInactiveProduct)
-        {
-            throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
-        }
-        
-        var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
+        var products = await FetchLocalProductsAsync(request.Items);
 
         // Requested quantity keyed by product id — reused for pricing and order details.
         var quantityByItemId = request.Items.ToDictionary(x => x.ItemId, x => x.Number);
@@ -365,7 +355,62 @@ public class Service : IService
     //     return result;
     // }
 
-    // Fetches the catalog rows for the requested items from Nhanh.vn.
+    private async Task<List<NhanhProductData>> FetchLocalProductsAsync(List<AhaMoveRequest.Items> items)
+    {
+        var itemIds = items
+            .Select(x => x.ItemId.ToString())
+            .Distinct()
+            .ToList();
+
+        var productRows = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted &&
+                        x.IsActive &&
+                        x.NhanhProductId != null &&
+                        itemIds.Contains(x.NhanhProductId))
+            .Select(x => new
+            {
+                x.NhanhProductId,
+                x.ProductName,
+                x.Price,
+                x.Height,
+                x.Weight,
+                x.Length,
+                x.Width
+            })
+            .ToListAsync();
+
+        if (productRows.Count != itemIds.Count)
+        {
+            throw new BadRequestException("Đơn hàng có sản phẩm không tồn tại hoặc đã ngừng hoạt động");
+        }
+
+        var productRowsByNhanhId = productRows.ToDictionary(x => x.NhanhProductId!);
+
+        return itemIds.Select(itemId =>
+        {
+            var product = productRowsByNhanhId[itemId];
+
+            return new NhanhProductData
+            {
+                Id = int.Parse(product.NhanhProductId!),
+                Name = product.ProductName ?? string.Empty,
+                Prices = new NhanhPrices
+                {
+                    Retail = product.Price ?? 0m
+                },
+                Shipping = new NhanhShipping
+                {
+                    Height = (double)(product.Height ?? 0m),
+                    Weight = (double)(product.Weight ?? 0m),
+                    Length = (double)(product.Length ?? 0m),
+                    Width = (double)(product.Width ?? 0m)
+                }
+            };
+        }).ToList();
+    }
+
+    // Legacy fallback: fetches the catalog rows for the requested items from Nhanh.vn.
     private async Task<List<NhanhProductData>> FetchNhanhProductsAsync(
         List<AhaMoveRequest.Items> items,
         GroupConfig configs)
