@@ -158,7 +158,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var mockOrderDetails = orderDetailsList.BuildMockDbSet();
             var mockCompany = (companyAddresses ?? new List<CompanyAddressEntity>()).BuildMockDbSet();
             var mockAddresses = (addresses ?? new List<AddressEntity> { CreateAddress() }).BuildMockDbSet();
-            var mockProducts = (products ?? new List<ProductEntity>()).BuildMockDbSet();
+            var mockProducts = (products ?? new List<ProductEntity>
+            {
+                CreateStockProduct(101, "Test Product", 10m)
+            }).BuildMockDbSet();
             var mockComboSpecifications = (comboSpecifications ?? new List<ComboSpecification>()).BuildMockDbSet();
 
             mockOrderDetails.Setup(x => x.AddRangeAsync(It.IsAny<IEnumerable<OrderDetailEntity>>(), It.IsAny<CancellationToken>()))
@@ -630,24 +633,17 @@ namespace HoaTheoMua.Service.Test.OrderTest
         }
 
         // ---------------------------------------------------------------------
-        // TEST CASE 07: Sản phẩm không có dữ liệu tồn kho (GetProductDetails trả về Depot rỗng/null)
+        // TEST CASE 07: Sản phẩm không tồn tại trong dữ liệu Products local.
         // ---------------------------------------------------------------------
         [Fact]
-        public async Task CreateOrder_ProductNoDepotInventory_ThrowsBadRequestException()
+        public async Task CreateOrder_ProductMissingFromLocalInventory_ThrowsBadRequestException()
         {
             // Arrange
-            var dbContext = CreateMockDbContext(companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() }).Object;
+            var dbContext = CreateMockDbContext(
+                companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
+                products: new List<ProductEntity>()).Object;
             var currentUser = CreateMockCurrentUserService(TestUserId);
-            var productService = CreateMockProductService(productDetail: new ProductDetailResponse.NhanhVnProductDetailResponse
-            {
-                Code = 1,
-                Data = new ProductDetailResponse.ProductDetailData
-                {
-                    Id = 101,
-                    Inventory = new ProductDetailResponse.ProductInventory
-                    { Depots = new List<ProductDetailResponse.DepotInventoryDetail>() }
-                }
-            });
+            var productService = CreateMockProductService();
 
             var handler = CreateHttpHandler(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = JsonContent.Create(new NhanhProductListResponse { Code = 1, Data = new List<NhanhProductData> { new NhanhProductData { Id = 101 } } }) });
             var service = CreateService(dbContext, new HttpClient(handler.Object), currentUser, productService);
@@ -665,28 +661,23 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             // Assert
             var exception = await Assert.ThrowsAsync<BadRequestException>(act);
-            Assert.Equal("Sản phẩm Id=101 không có dữ liệu tồn kho", exception.Message);
+            Assert.Equal("Sản phẩm Id=101 không tồn tại hoặc đã ngừng hoạt động", exception.Message);
         }
 
         // ---------------------------------------------------------------------
-        // TEST CASE 08: Sản phẩm không có tồn kho tại depot 129255
+        // TEST CASE 08: Sản phẩm local đã ngừng hoạt động.
         // ---------------------------------------------------------------------
         [Fact]
-        public async Task CreateOrder_ProductNoInventoryAtDefaultDepot_ThrowsBadRequestException()
+        public async Task CreateOrder_InactiveLocalProduct_ThrowsBadRequestException()
         {
             // Arrange
-            var dbContext = CreateMockDbContext(companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() }).Object;
+            var inactiveProduct = CreateStockProduct(101, "Test Product", 5m);
+            inactiveProduct.IsActive = false;
+            var dbContext = CreateMockDbContext(
+                companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
+                products: new List<ProductEntity> { inactiveProduct }).Object;
             var currentUser = CreateMockCurrentUserService(TestUserId);
-            var productService = CreateMockProductService(productDetail: new ProductDetailResponse.NhanhVnProductDetailResponse
-            {
-                Code = 1,
-                Data = new ProductDetailResponse.ProductDetailData
-                {
-                    Id = 101,
-                    Inventory = new ProductDetailResponse.ProductInventory
-                    { Depots = new List<ProductDetailResponse.DepotInventoryDetail> { new ProductDetailResponse.DepotInventoryDetail { Id = 999, Available = 5 } } }
-                }
-            });
+            var productService = CreateMockProductService();
 
             var handler = CreateHttpHandler(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = JsonContent.Create(new NhanhProductListResponse { Code = 1, Data = new List<NhanhProductData> { new NhanhProductData { Id = 101 } } }) });
             var service = CreateService(dbContext, new HttpClient(handler.Object), currentUser, productService);
@@ -704,7 +695,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             // Assert
             var exception = await Assert.ThrowsAsync<BadRequestException>(act);
-            Assert.Equal("Sản phẩm Id=101 không có dữ liệu tồn kho tại depot 129255", exception.Message);
+            Assert.Equal("Đơn hàng có sản phẩm đã ngừng hoạt động", exception.Message);
         }
 
         // ---------------------------------------------------------------------
@@ -714,21 +705,14 @@ namespace HoaTheoMua.Service.Test.OrderTest
         public async Task CreateOrder_QuantityExceedsAvailable_ThrowsBadRequestException()
         {
             // Arrange
-            var dbContext = CreateMockDbContext(companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() }).Object;
-            var currentUser = CreateMockCurrentUserService(TestUserId);
-            var productService = CreateMockProductService(productDetail: new ProductDetailResponse.NhanhVnProductDetailResponse
-            {
-                Code = 1,
-                Data = new ProductDetailResponse.ProductDetailData
+            var dbContext = CreateMockDbContext(
+                companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
+                products: new List<ProductEntity>
                 {
-                    Id = 101,
-                    Inventory = new ProductDetailResponse.ProductInventory
-                    {
-                        Depots = new List<ProductDetailResponse.DepotInventoryDetail>
-                        { new ProductDetailResponse.DepotInventoryDetail { Id = 129255, Available = 1 } }
-                    }
-                }
-            });
+                    CreateStockProduct(101, "Test Product", 1m)
+                }).Object;
+            var currentUser = CreateMockCurrentUserService(TestUserId);
+            var productService = CreateMockProductService();
 
             var handler = CreateHttpHandler(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = JsonContent.Create(new NhanhProductListResponse { Code = 1, Data = new List<NhanhProductData> { new NhanhProductData { Id = 101 } } }) });
             var service = CreateService(dbContext, new HttpClient(handler.Object), currentUser, productService);
@@ -1082,7 +1066,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var comboA = CreateStockProduct(comboAItemId, "ComboA", 0m);
             var hoaMai = CreateStockProduct(hoaMaiItemId, "Hoa Mai", 37m);
-            var hoaDao = CreateStockProduct(hoaDaoItemId, "Hoa Đào", 4m);
+            var hoaDao = CreateStockProduct(hoaDaoItemId, "Hoa Đào", 0m);
 
             var specifications = new List<ComboSpecification>
             {
@@ -1129,9 +1113,9 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var comboA = CreateStockProduct(comboAItemId, "ComboA", 0m);
             var comboB = CreateStockProduct(comboBItemId, "ComboB", 0m);
-            var hoaDao = CreateStockProduct(hoaDaoItemId, "Hoa Đào", 4m);
+            var hoaDao = CreateStockProduct(hoaDaoItemId, "Hoa Đào", 0m);
             var hoaCuc = CreateStockProduct(hoaCucItemId, "Hoa Cúc", 3m);
-            var hoaVang = CreateStockProduct(hoaVangItemId, "Hoa Vàng", 5m);
+            var hoaVang = CreateStockProduct(hoaVangItemId, "Hoa Vàng", 3m);
 
             var specifications = new List<ComboSpecification>
             {

@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Order;
 
@@ -92,9 +91,6 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
 
-    // Nhanh.vn depot the shop ships from, used when the config value is absent.
-    private const int DefaultDepotId = 129255;
-
     // VAT applied to the product subtotal when the buyer requests an invoice.
     private const decimal VatRate = 0.08m;
 
@@ -122,7 +118,6 @@ public class Service : IService
         }
         
         var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var depotId = nhanhConfigs.GetValue("nhanhvn.default_depot", DefaultDepotId);
         var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
 
         // Requested quantity keyed by product id — reused for pricing and order details.
@@ -136,7 +131,7 @@ public class Service : IService
             throw new BadRequestException("Đơn hàng không tồn tại trong hệ thống");
         }
 
-        var comboSnapshots = await EnsureItemsInStockAsync(request.Items, depotId);
+        var comboSnapshots = await EnsureItemsInStockAsync(request.Items);
 
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
@@ -415,8 +410,8 @@ public class Service : IService
         return result.Data;
     }
 
-    // Verifies every requested item has enough stock in the target depot.
-    private async Task<Dictionary<int, Request.OrderDetailMetadata>> EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
+    // Verifies every requested item has enough locally synchronized stock.
+    private async Task<Dictionary<int, Request.OrderDetailMetadata>> EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items)
     {
         var productIds = items
             .Select(x => x.ProductId)
@@ -516,7 +511,7 @@ public class Service : IService
                     item.Number * material.Quantity));
             }
         }
-
+        //step này: đã có được các ItemtId và số lượng cần mua của Item đó 
         var itemRequest = stockItems
             .GroupBy(x => x.ItemId)
             .Select(x => new
@@ -525,37 +520,43 @@ public class Service : IService
                 Number = x.Sum(item => item.Number)
             })
             .ToList();
+        //map ra nó ItemId để vào product lấy ra được số lượng có thể bán
+        // => map ra nhanhproductId với số lượng có thể bán của của ItemId đó
+        // => Từ đó tạo ra thành một cái Dictionary vơi
+        var nhanhProductIds = itemRequest
+            .Select(x => x.ItemId.ToString())
+            .ToList();
+
+        var availableForSaleByItemId = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.IsActive &&
+                x.NhanhProductId != null &&
+                nhanhProductIds.Contains(x.NhanhProductId))
+            .Select(x => new
+            {
+                x.NhanhProductId,
+                AvailableForSale = x.AvailableForSale ?? 0m
+            })
+            .ToDictionaryAsync(
+                x => x.NhanhProductId!,
+                x => x.AvailableForSale);
 
         foreach (var item in itemRequest)
         {
-            var productDetailRequest = new HoaTheoMua.Service.Product.Request.ProductDetailRequest
+            if (!availableForSaleByItemId.TryGetValue(
+                    item.ItemId.ToString(),
+                    out var availableForSale))
             {
-                Filters = new HoaTheoMua.Service.Product.Request.ProductDetailFilters
-                {
-                    Id = item.ItemId.ToString()
-                }
-            };
-
-            var detail = await _serviceProduct.GetProductDetails(productDetailRequest);
-
-            var json = JsonConvert.SerializeObject(detail);
-            var depots = JObject.Parse(json)["Data"]?["Inventory"]?["Depots"] as JArray;
-
-            if (depots == null || depots.Count == 0)
-            {
-                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho");
+                throw new BadRequestException(
+                    $"Sản phẩm Id={item.ItemId} không tồn tại hoặc đã ngừng hoạt động");
             }
 
-            var targetDepot = depots.FirstOrDefault(d => (int?)d["Id"] == depotId);
-            if (targetDepot == null)
+            if (item.Number > availableForSale)
             {
-                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot {depotId}");
-            }
-
-            var available = (decimal?)targetDepot["Available"] ?? 0m;
-            if (item.Number > available)
-            {
-                throw new BadRequestException($"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {available})");
+                throw new BadRequestException(
+                    $"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {availableForSale})");
             }
         }
 
