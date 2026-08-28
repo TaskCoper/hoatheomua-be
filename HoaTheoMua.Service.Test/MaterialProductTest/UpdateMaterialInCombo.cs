@@ -95,13 +95,15 @@ public class UpdateMaterialInCombo
         Assert.NotNull(specification.UpdatedAt);
     }
 
-    [Fact]
-    public async Task UpdateMaterialInCombo_MaterialWithDifferentProductTypeFromCombo_UpdatesSpecification()
+    [Theory]
+    [InlineData("Sản phẩm")]
+    [InlineData("Sản phẩm có nhiều đơn vị")]
+    public async Task UpdateMaterialInCombo_NonComboProductType_UpdatesSpecification(string productType)
     {
         await using var dbContext = CreateDbContext();
         var material = CreateMaterial(MatCoreId);
-        material.ProductLabel = "Sản phẩm có nhiều thành phần";
-        material.ProductType = "Sản phẩm có nhiều thành phần";
+        material.ProductLabel = productType;
+        material.ProductType = productType;
         dbContext.Products.AddRange(CreateParentCombo(), material);
         dbContext.ComboSpecifications.Add(CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true));
         await dbContext.SaveChangesAsync();
@@ -114,6 +116,24 @@ public class UpdateMaterialInCombo
         var specification = await dbContext.ComboSpecifications.SingleAsync();
         Assert.Equal(8m, specification.Quantity);
         Assert.NotNull(specification.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task UpdateMaterialInCombo_ComboProductType_ThrowsNotFound()
+    {
+        await using var dbContext = CreateDbContext();
+        var material = CreateMaterial(MatCoreId);
+        material.ProductType = " Combo ";
+        dbContext.Products.AddRange(CreateParentCombo(), material);
+        dbContext.ComboSpecifications.Add(CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
+            CreateService(dbContext).UpdateMaterialInCombo(
+                ComboId,
+                CreateRequest(MatCoreId, quantity: 8, isCore: true)));
+
+        Assert.Equal("Vật liệu không tồn tại hoặc không hợp lệ", exception.Message);
     }
 
     [Fact]

@@ -18,6 +18,7 @@ public class Service : IService
 
     private const string ComponentLabel = "Thành phần";
     private const string AuxiliaryLabel = "Phụ liệu";
+    private const string ComboProductType = "Combo";
 
     private sealed record MaterialInfo(Guid Id, string? ProductLabel, string? ProductType, string? Unit);
     private sealed record AddMaterialInfo(Guid Id, string? ProductLabel, string? Unit);
@@ -299,12 +300,9 @@ public class Service : IService
             .Where(x => matIds.Contains(x.Id) && !x.IsDeleted)
             .Select(x => new MaterialInfo(x.Id, x.ProductLabel, x.ProductType, x.Unit))
             .ToListAsync();
-
-        // Update chỉ sửa vật liệu đã có trong công thức (kiểm tra ở bước 6).
-        // Vật liệu có ProductType khác ProductType của combo, ví dụ "Sản phẩm có
-        // nhiều thành phần", vẫn là một dòng công thức hợp lệ và phải được cập nhật.
+        
         if (materials.Count != matIds.Count ||
-            materials.Any(x => HasSameProductType(x.ProductType, combo.ProductType)))
+            materials.Any(x => HasSameProductType(x.ProductType, ComboProductType)))
             throw new NotFoundException("Vật liệu không tồn tại hoặc không hợp lệ");
 
         var materialMap = materials.ToDictionary(x => x.Id);
