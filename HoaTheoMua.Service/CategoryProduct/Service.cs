@@ -708,17 +708,26 @@ public class Service : IService
             throw new BadRequestException("Product not found.");
         }
 
+        var activeCategoryIds = await _dbContext.CategoryProducts
+            .Where(x => !x.IsDeleted && categoryIds.Contains(x.Id))
+            .Select(x => x.Id)
+            .ToListAsync();
+
+        if (activeCategoryIds.Count != categoryIds.Count)
+        {
+            throw new BadRequestException("Category product not found.");
+        }
+
         var existingDetails = await _dbContext.CategoryProductDetails
             .Where(x => x.ProductId == request.ProductId
                         && !x.IsDeleted
-                        && categoryIds.Contains(x.CategoryProductId)
-                        && !x.CategoryProduct.IsDeleted)
+                        && categoryIds.Contains(x.CategoryProductId))
             .ToListAsync();
 
         var detailsByCategoryId = existingDetails
             .ToDictionary(x => x.CategoryProductId);
 
-        if (categoryIds.Any(categoryId => !detailsByCategoryId.ContainsKey(categoryId)))
+        if (detailsByCategoryId.Count != categoryIds.Count)
         {
             throw new BadRequestException("Category product detail not found.");
         }

@@ -1000,7 +1000,7 @@ public class CategoryProductTest
     }
 
     [Fact]
-    public async Task UpdateCategoryProductDetail_CategoryNotAssignedToProduct_ThrowsBadRequestException()
+    public async Task UpdateCategoryProductDetail_ProductHasNoCategoryDetails_ThrowsBadRequestException()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -1021,6 +1021,38 @@ public class CategoryProductTest
             }));
 
         Assert.Equal("Category product detail not found.", exception.Message);
+        Assert.Empty(await dbContext.CategoryProductDetails.ToListAsync());
+    }
+
+    [Fact]
+    public async Task UpdateCategoryProductDetail_CategoryNotAssignedToProduct_ThrowsBadRequestException()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Rose" };
+        var assignedCategory = CreateCategory("Assigned");
+        var unassignedCategory = CreateCategory("Unassigned");
+
+        await dbContext.AddRangeAsync(product, assignedCategory, unassignedCategory);
+        await dbContext.CategoryProductDetails.AddAsync(CreateDetail(product.Id, assignedCategory.Id));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+            {
+                ProductId = product.Id,
+                CategoryProductLists = new List<Request.CategoryList>
+                {
+                    new() { CategoryProductId = unassignedCategory.Id, IsPin = true, Position = 1 }
+                }
+            }));
+
+        var details = await dbContext.CategoryProductDetails
+            .Where(x => x.ProductId == product.Id)
+            .ToDictionaryAsync(x => x.CategoryProductId);
+        Assert.Equal("Category product detail not found.", exception.Message);
+        Assert.Single(details);
+        Assert.DoesNotContain(unassignedCategory.Id, details.Keys);
     }
 
     [Fact]
