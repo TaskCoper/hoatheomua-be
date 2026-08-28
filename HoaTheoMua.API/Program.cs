@@ -23,6 +23,7 @@ using BaoKimService = HoaTheoMua.Service.BaoKim;
 using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 using RevalidateService = HoaTheoMua.Service.Revalidate;
 using MaterialService = HoaTheoMua.Service.Material;
+using XanhSmService = HoaTheoMua.Service.XanhSm;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -64,6 +65,10 @@ builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>("AhamoveService");
+builder.Services.AddHttpClient<XanhSmService.IService, XanhSmService.Service>("XanhSmService", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddHttpClient<BaoKimService.IService, BaoKimService.Service>("BaoKimService");
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();

@@ -22,7 +22,7 @@ public class Request
         public bool IsCore { get; set; }
     }
 
-    
+
     public class CreateOrderRequest : AhaMoveRequest.EstimateShippingFeeRequest
     {
         public required string Gateway { get; set; }
@@ -30,6 +30,8 @@ public class Request
         public List<long>? TagIds { get; set; }
 
         public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.VA;
+        public required PaymentGateway PaymentGateway { get; set; }
+        public required ShippingGateway ShippingGateway { get; set; }
 
         public string? IdentityNumber { get; set; }
 
@@ -74,9 +76,9 @@ public class Request
     public class UpdateAhamoveRequest
     {
         public required string OrderId { get; set; }
-        public string? AhaMoveTrackingUrl { get; set; }
+        public string? ShippingTrackingUrl { get; set; }
         public string? TrackingNumber { get; set; }
-        public decimal? ShippingFee  { get; set; }
+        public decimal? ShippingFee { get; set; }
     }
 
 }

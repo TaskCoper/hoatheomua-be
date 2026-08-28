@@ -82,6 +82,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Id = id ?? Guid.NewGuid(),
                 UserId = userId ?? TestUserId,
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 Ward = 1,
                 City = 1,
                 Address = "123 Duong Test",
@@ -406,6 +408,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return new OrderRequest.CreateOrderRequest
             {
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver,
                 Items = items.ToList()
@@ -478,6 +482,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Remarks = "Ghi chu",
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -515,6 +521,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest()
             {
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -541,6 +549,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var request = new OrderRequest.CreateOrderRequest()
             {
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             }; ;
@@ -577,6 +587,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -617,6 +629,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -656,6 +670,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -695,6 +711,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -737,6 +755,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -778,6 +798,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -818,6 +840,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -868,6 +892,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 TaxCode = "123456789", // Để tính VatFee
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -944,6 +970,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Remarks = "Ghi chu",
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1014,6 +1042,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Remarks = "Ghi chu",
                 Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
                 Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.Ahamove,
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };

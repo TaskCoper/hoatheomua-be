@@ -72,14 +72,16 @@ public class Service : IService
             TrackNumber = x.TrackNumber,
             // NhanhOrderId = x.NhanhOrderId!,
             // NhanhTrackingUrl = x.NhanhTrackingUrl!,
-            AhahaMoveOrderId = x.AhahaMoveOrderId!,
-            AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl!,
+            ShippingPartyOrderId = x.ShippingPartyOrderId!,
+            ShippingTrackingUrl = x.ShippingTrackingUrl!,
             Remark = x.Remarks,
             OrderTime = x.OrderTime,
             Taxcode = x.TaxCode,
             TagsId = x.TagIds,
             IdentityNumber = x.IdentityNumber!,
             InvoiceType = x.InvoiceType!,
+            PaymentGateway = x.PaymentGateway,
+            ShippingGateway = x.ShippingGateway,
             IsExportInvoice = x.IsExportInvoice,
             ReceiptAddress = x.ReceiptAddress!,
             ReceiptEmail = x.ReceiptEmail!,
@@ -189,6 +191,8 @@ public class Service : IService
             TotalFee = totalProductFee + totalShippingFee + vatFee,
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
+            PaymentGateway = request.PaymentGateway,
+            ShippingGateway = request.ShippingGateway,
             PhoneReceiver = request.PhoneReceiver,
             FullNameReceiver = request.FullNameReceiver, //số điện thoại người nhận
             
@@ -229,7 +233,7 @@ public class Service : IService
         }).ToList();
             
 
-        if (request.Gateway == "BaoKim")
+        if (request.PaymentGateway == PaymentGateway.BaoKim)
         {
             var baoKimTokenResponse = await _baoKimService.CreateAccessToken();
 
@@ -244,7 +248,7 @@ public class Service : IService
 
             return createBaoKimOrderResponse.Data;
         }
-        else if (request.Gateway == "Sepay")
+        else if (request.PaymentGateway == PaymentGateway.Sepay)
         {
             decimal totalAmount = newOrder.TotalFee;
             string description = $"HTM-{newOrder.Id.ToString()}";
@@ -721,10 +725,12 @@ public class Service : IService
             PaymentUrl = orders.PaymentUrl,
             SepayUrl = orders.QrUrl,
             PaymentMethod = orders.PaymentMethod,
+            PaymentGateway = orders.PaymentGateway,
+            ShippingGateway = orders.ShippingGateway,
             //NhanhOrderId = orders.NhanhOrderId,
             //NhanhTrackingUrl = orders.NhanhTrackingUrl,
-            AhahaMoveOrderId = orders.AhahaMoveOrderId,
-            AhahaMoveTrackingUrl = orders.AhahaMoveTrackingUrl,
+            ShippingPartyOrderId = orders.ShippingPartyOrderId,
+            ShippingTrackingUrl = orders.ShippingTrackingUrl,
             TagsId = orders.TagIds,
             IdentityNumber = orders.IdentityNumber!,
             ReceiptFullName = orders.ReceiptFullName!,
@@ -1000,9 +1006,9 @@ public class Service : IService
             order.TrackNumber = request.TrackingNumber;
         }
 
-        if (request.AhaMoveTrackingUrl != null)
+        if (request.ShippingTrackingUrl != null)
         {
-            order.AhahaMoveTrackingUrl = request.AhaMoveTrackingUrl;
+            order.ShippingTrackingUrl = request.ShippingTrackingUrl;
         }
 
         if (request.ShippingFee != null)
@@ -1029,7 +1035,7 @@ public class Service : IService
         if (!string.IsNullOrWhiteSpace(normalizedSearch))
         {
             // NhanhOrderId là int? nên chỉ khớp chính xác sau khi parse được số;
-            // TrackNumber và AhahaMoveOrderId là chuỗi nên cho khớp một phần.
+            // TrackNumber và ShippingPartyOrderId là chuỗi nên cho khớp một phần.
             var nhanhOrderId = int.TryParse(normalizedSearch, out var parsedNhanhOrderId)
                 ? parsedNhanhOrderId
                 : (int?)null;
@@ -1039,7 +1045,7 @@ public class Service : IService
                 
             orders = orders.Where(x =>
                 x.TrackNumber.ToLower().Contains(normalizedSearch) ||
-                (x.AhahaMoveOrderId != null && x.AhahaMoveOrderId.ToLower().Contains(normalizedSearch)) ||
+                (x.ShippingPartyOrderId != null && x.ShippingPartyOrderId.ToLower().Contains(normalizedSearch)) ||
                 (nhanhOrderId != null && x.NhanhOrderId == nhanhOrderId) ||
                 (isPaymentMethod && x.PaymentMethod == paymentMethod ) ||
                 ( x.Phone.Contains(normalizedSearch)));
@@ -1069,8 +1075,8 @@ public class Service : IService
             TrackNumber = x.TrackNumber,
             NhanhOrderId = x.NhanhOrderId,
             NhanhTrackingUrl = x.NhanhTrackingUrl,
-            AhahaMoveOrderId = x.AhahaMoveOrderId,
-            AhahaMoveTrackingUrl = x.AhahaMoveTrackingUrl,
+            ShippingPartyOrderId = x.ShippingPartyOrderId,
+            ShippingTrackingUrl = x.ShippingTrackingUrl,
             PaymentUrl = x.PaymentUrl,
             QrUrl = x.QrUrl,
             ShippingFee = x.ShippingFee,
@@ -1088,6 +1094,8 @@ public class Service : IService
             Vat = x.Vat,
             InvoiceType = x.InvoiceType,
             PaymentMethod = x.PaymentMethod,
+            PaymentGateway = x.PaymentGateway,
+            ShippingGateway = x.ShippingGateway,
             CreateAt = x.CreatedAt,
             UpdateAt = x.UpdatedAt,
         }).ToList();
@@ -1095,4 +1103,3 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
 }
-

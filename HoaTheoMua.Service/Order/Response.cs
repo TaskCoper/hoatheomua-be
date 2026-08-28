@@ -15,14 +15,16 @@ public class Response
         public string TrackNumber { get; set; } = null!;
         //public int? NhanhOrderId { get; set; } 
         //public string NhanhTrackingUrl { get; set; } = string.Empty;
-        public string AhahaMoveOrderId { get; set; } = string.Empty;
-        public string AhahaMoveTrackingUrl { get; set; } = string.Empty;
+        public string ShippingPartyOrderId { get; set; } = string.Empty;
+        public string ShippingTrackingUrl { get; set; } = string.Empty;
         public string? Remark { get; set; }
         public long OrderTime { get; set; }
         public string? Taxcode { get; set; }
         public List<long>? TagsId { get; set; }
         public string IdentityNumber { get; set; } = string.Empty;
         public InvoiceType? InvoiceType { get; set; }
+        public PaymentGateway PaymentGateway { get; set; }
+        public ShippingGateway ShippingGateway { get; set; }
         public bool? IsExportInvoice { get; set; }
         public string ReceiptAddress { get; set; } = string.Empty;
         public string ReceiptEmail { get; set; } = string.Empty;
@@ -49,8 +51,8 @@ public class Response
         public required string TrackNumber { get; set; }
         public int? NhanhOrderId { get; set; }
         public string? NhanhTrackingUrl { get; set; }
-        public string? AhahaMoveOrderId { get; set; }
-        public string? AhahaMoveTrackingUrl { get; set; }
+        public string? ShippingPartyOrderId { get; set; }
+        public string? ShippingTrackingUrl { get; set; }
         public string? PaymentUrl { get; set; }
         public string? QrUrl { get; set; }
         public decimal ShippingFee { get; set; }
@@ -68,6 +70,8 @@ public class Response
         public decimal? Vat { get; set; } = 1.08m;
         public InvoiceType? InvoiceType { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
+        public PaymentGateway PaymentGateway { get; set; }
+        public ShippingGateway ShippingGateway { get; set; }
         public DateTimeOffset CreateAt { get; set; }
         public DateTimeOffset? UpdateAt { get; set; }
         public Guid UserId { get; set; }
@@ -81,8 +85,8 @@ public class Response
         public required string PhoneReceiver { get; set; }
         // public int? NhanhOrderId { get; set; } 
         // public string? NhanhTrackingUrl { get; set; } = string.Empty;
-        public string? AhahaMoveOrderId { get; set; } = string.Empty;
-        public string? AhahaMoveTrackingUrl { get; set; } = string.Empty;
+        public string? ShippingPartyOrderId { get; set; } = string.Empty;
+        public string? ShippingTrackingUrl { get; set; } = string.Empty;
         public string? Remark { get; set; }
         public string? TaxCode { get; set; }
         public long OrderTime { get; set; }
@@ -102,6 +106,8 @@ public class Response
         public string? PaymentUrl { get; set; }
         public string? SepayUrl { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
+        public PaymentGateway PaymentGateway { get; set; }
+        public ShippingGateway ShippingGateway { get; set; }
         
         public string? Address { get; set; } = string.Empty;
         public string? ShortAddress { get; set; } = string.Empty;

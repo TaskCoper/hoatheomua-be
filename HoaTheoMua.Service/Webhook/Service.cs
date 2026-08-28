@@ -193,6 +193,11 @@ public partial class Service : IService
             throw new NotFoundException("Order not found in description");
         }
 
+        if (order.PaymentGateway != PaymentGateway.Sepay)
+        {
+            throw new ConflictException("Payment gateway does not match SePay webhook");
+        }
+
         if (order.Status != "Pending")
         {
             throw new NotFoundException("Order not on Pending");
@@ -257,6 +262,11 @@ public partial class Service : IService
         if (order == null)
         {
             throw new NotFoundException("Order not found for mrc_order_id");
+        }
+
+        if (order.PaymentGateway != PaymentGateway.BaoKim)
+        {
+            throw new ConflictException("Payment gateway does not match BaoKim webhook");
         }
 
         // Anything that isn't a completed payment (failed, cancelled, still pending at the gateway)
@@ -341,10 +351,15 @@ public partial class Service : IService
             ? DateTime.SpecifyKind(completedAt, DateTimeKind.Utc)
             : DateTime.UtcNow;
 
-    // Shared tail for both gateways: flip the order to Paid, dispatch it to Ahamove and NhanhVn,
+    // Shared tail for both gateways: flip the order to Paid, dispatch it to the shipping party and NhanhVn,
     // then persist the order and its gateway transaction in one SaveChanges.
     private async Task FulfillPaidOrder(Repository.Entity.Order order, Transaction transaction)
     {
+        if (order.ShippingGateway != ShippingGateway.Ahamove)
+        {
+            throw new BadRequestException($"Shipping gateway {order.ShippingGateway} is not supported");
+        }
+
         order.Status = "Paid";
 
         //  var newOrders = await AhaMoveCreateOrder();
@@ -529,8 +544,8 @@ public partial class Service : IService
                 throw new BadRequestException("Ahamove returned null or empty data");
             }
 
-            order.AhahaMoveOrderId = createAhamoveOrderResult.OrderId;
-            order.AhahaMoveTrackingUrl = createAhamoveOrderResult.SharedLink;
+            order.ShippingPartyOrderId = createAhamoveOrderResult.OrderId;
+            order.ShippingTrackingUrl = createAhamoveOrderResult.SharedLink;
         }
 
         var productNhanhVnRequest = new List<Product>();

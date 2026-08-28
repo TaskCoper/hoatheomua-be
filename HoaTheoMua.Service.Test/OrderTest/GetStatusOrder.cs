@@ -44,6 +44,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Id = id ?? Guid.NewGuid(),
                 UserId = userId ?? TestUserId,
+                PaymentGateway = HoaTheoMua.Repository.Enum.PaymentGateway.BaoKim,
+                ShippingGateway = HoaTheoMua.Repository.Enum.ShippingGateway.Ahamove,
                 Status = status,
                 CreatedAt = DateTimeOffset.UtcNow,
                 IsDeleted = false,

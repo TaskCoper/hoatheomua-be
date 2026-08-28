@@ -1,6 +1,10 @@
 #### Request
 ```Json
 {
+  "gateway": "BaoKim",
+  "paymentGateway": 1,
+  "shippingGateway": 1,
+  "paymentMethod": 1,
   "latitude": 0,
   "longitude": 0,
   "ward": 0,
@@ -14,11 +18,19 @@
   "items": [
     {
       "itemId": 0,
+      "productId": "00000000-0000-0000-0000-000000000000",
       "number": 0
     }
-  ]
+  ],
+  "phoneReceiver": "0901234567",
+  "fullNameReceiver": "Nguyen Van A"
 }
 ```
+
+- `paymentGateway`: `1 = BaoKim`, `2 = Sepay`.
+- `shippingGateway`: `1 = Ahamove`, `2 = XanhSm`. Hiện tại chỉ Ahamove được bật; Xanh SM trả lỗi `SHIPPING_GATEWAY_NOT_SUPPORTED` cho đến khi hoàn tất tích hợp.
+- `gateway` là field tương thích cũ và phải khớp tên của `paymentGateway`.
+
 #### Response
 ```json
 {
@@ -80,4 +92,3 @@
 **Test case 14: OrderDetails được tạo đúng**
 - **Điều kiện:** Tạo order với nhiều item.
 - **Kết quả:** Hệ thống tạo `OrderDetails` tương ứng với từng sản phẩm, gồm `ItemId`, `Name`, `Price`, `Number`, `Height`, `Weight`, `Length`, `Width`.
-

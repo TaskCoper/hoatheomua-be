@@ -22,6 +22,21 @@ public class CreateOrderRequestValidator: AbstractValidator<Request.CreateOrderR
         RuleFor(x => x.ReceiptEmail).OptionalEmail();
         // RuleFor(x => x.AddressId).NotEmpty().WithMessage("ADDRESS_ID_REQUIRED");
         RuleFor(x => x.PhoneReceiver).NotEmpty().WithMessage("PHONE_RECEIVER_REQUIRED");
+        RuleFor(x => x.PaymentGateway)
+            .IsInEnum()
+            .WithMessage("PAYMENT_GATEWAY_INVALID");
+        RuleFor(x => x.ShippingGateway)
+            .IsInEnum()
+            .WithMessage("SHIPPING_GATEWAY_INVALID");
+        RuleFor(x => x.ShippingGateway)
+            .Equal(ShippingGateway.Ahamove)
+            .WithMessage("SHIPPING_GATEWAY_NOT_SUPPORTED");
+        RuleFor(x => x.Gateway)
+            .Must((request, gateway) => string.Equals(
+                gateway,
+                request.PaymentGateway.ToString(),
+                StringComparison.OrdinalIgnoreCase))
+            .WithMessage("PAYMENT_GATEWAY_MISMATCH");
         
         RuleFor(x => x.IsExportInvoice).NotEmpty().WithMessage("IS_EXPORT_FORCE");
         
