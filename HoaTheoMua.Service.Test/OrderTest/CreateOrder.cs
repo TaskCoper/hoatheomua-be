@@ -322,6 +322,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 NhanhProductId = nhanhProductId.ToString(),
                 ProductName = name,
                 AvailableForSale = availableForSale,
+                IsActive = true,
                 IsDeleted = false
             };
         }
