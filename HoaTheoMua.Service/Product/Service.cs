@@ -1,5 +1,6 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AutoMapper;
@@ -1684,12 +1685,25 @@ public class Service : IService
         request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
-        var allowedLabels = new[] { "thành phần", "phụ liệu" };
+        var baseLabels = new[]
+        {
+            "thành phần", "phụ liệu",
+            "Thành phần", "Phụ liệu",
+            "THÀNH PHẦN", "PHỤ LIỆU",
+            "Thành Phần", "Phụ Liệu"
+        };
+
+        var allowedLabels = baseLabels
+            .SelectMany(x => new[] { x.Normalize(NormalizationForm.FormC), x.Normalize(NormalizationForm.FormD) })
+            .Distinct()
+            .ToArray();
+
         var query = _dbContext.Products
             .AsNoTracking()
             .Where(product => !product.IsDeleted &&
                               product.ProductLabel != null &&
-                              allowedLabels.Contains(product.ProductLabel.ToLower()));
+                              (allowedLabels.Contains(product.ProductLabel.Trim()) ||
+                               allowedLabels.Contains(product.ProductLabel.Trim().ToLower())));
 
         if (request.ExcludeIds != null && request.ExcludeIds.Any())
         {
@@ -1698,20 +1712,36 @@ public class Service : IService
 
         if (!string.IsNullOrWhiteSpace(request.ProductLabel))
         {
-            var normalizedLabel = request.ProductLabel.Trim().ToLower();
+            var rawLabel = request.ProductLabel.Trim();
+            var labelNfc = rawLabel.Normalize(NormalizationForm.FormC);
+            var labelNfd = rawLabel.Normalize(NormalizationForm.FormD);
+            var queryLabels = new[]
+            {
+                rawLabel, labelNfc, labelNfd,
+                rawLabel.ToLower(), labelNfc.ToLower(), labelNfd.ToLower()
+            }.Distinct().ToArray();
+
             query = query.Where(product =>
                 product.ProductLabel != null &&
-                product.ProductLabel.ToLower() == normalizedLabel);
+                (queryLabels.Contains(product.ProductLabel.Trim()) ||
+                 queryLabels.Contains(product.ProductLabel.Trim().ToLower())));
         }
         
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var normalizedSearch = request.Search.Trim().ToLower();
+            var searchNfc = normalizedSearch.Normalize(NormalizationForm.FormC);
+            var searchNfd = normalizedSearch.Normalize(NormalizationForm.FormD);
+
             query = query.Where(product =>
                 (product.ProductName != null &&
-                 product.ProductName.ToLower().Contains(normalizedSearch)) ||
+                 (product.ProductName.ToLower().Contains(normalizedSearch) ||
+                  product.ProductName.ToLower().Contains(searchNfc) ||
+                  product.ProductName.ToLower().Contains(searchNfd))) ||
                 (product.ProductCode != null &&
-                 product.ProductCode.ToLower().Contains(normalizedSearch)));
+                 (product.ProductCode.ToLower().Contains(normalizedSearch) ||
+                  product.ProductCode.ToLower().Contains(searchNfc) ||
+                  product.ProductCode.ToLower().Contains(searchNfd))));
         }
         
         var totalItems = await query.CountAsync();

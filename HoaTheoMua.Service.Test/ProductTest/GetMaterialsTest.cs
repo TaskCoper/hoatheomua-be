@@ -464,5 +464,115 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
             Assert.Equal(2, items.Count);
         }
+
+        [Fact]
+        public async Task GetMaterialsAsync_WithWhitespaceAndMixedCaseLabels_ReturnsExpectedMaterials()
+        {
+            var targetId = Guid.Parse("4c47cda3-f9be-497a-987c-13be8b1827c0");
+            var excludedId = Guid.Parse("170efdad-c33a-4bdb-88a8-c6618febc5d1");
+
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity 
+                { 
+                    Id = targetId, 
+                    ProductCode = "TGK_L", 
+                    ProductName = "Trà Giảm Cân TGK_L", 
+                    ProductLabel = "  Thành phần  ", 
+                    IsDeleted = false 
+                },
+                new ProductEntity 
+                { 
+                    Id = excludedId, 
+                    ProductCode = "TGK_L_EX", 
+                    ProductName = "Sản phẩm loại trừ", 
+                    ProductLabel = "THÀNH PHẦN", 
+                    IsDeleted = false 
+                },
+                new ProductEntity 
+                { 
+                    Id = Guid.NewGuid(), 
+                    ProductCode = "PL_01", 
+                    ProductName = "Phụ liệu 1", 
+                    ProductLabel = "PHỤ LIỆU", 
+                    IsDeleted = false 
+                },
+                new ProductEntity 
+                { 
+                    Id = Guid.NewGuid(), 
+                    ProductCode = "PL_02", 
+                    ProductName = "Phụ liệu 2", 
+                    ProductLabel = "Thành Phần", 
+                    IsDeleted = false 
+                }
+            };
+
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            var request = new Request.GetMaterialsRequest
+            {
+                Search = "TGK_L",
+                ExcludeIds = new List<Guid> { excludedId },
+                PageIndex = 1,
+                PageSize = 10
+            };
+
+            var result = await service.GetMaterialsAsync(request);
+
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Value.TotalCount);
+
+            var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
+            Assert.Single(items);
+            Assert.Equal(targetId.ToString(), items[0].MaterialId);
+            Assert.Equal("TGK_L", items[0].MaterialCode);
+        }
+
+        [Fact]
+        public async Task GetMaterialsAsync_WithNfdUnicodeLabelsInDb_SuccessfullyMatches()
+        {
+            // "Thành phần" in NFD form
+            var nfdThanhPhan = "Thành phần".Normalize(System.Text.NormalizationForm.FormD);
+            var nfdPhuLieu = "Phụ liệu".Normalize(System.Text.NormalizationForm.FormD);
+
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity 
+                { 
+                    Id = id1, 
+                    ProductCode = "MAT_NFD_01", 
+                    ProductName = "Nguyên liệu NFD 1", 
+                    ProductLabel = nfdThanhPhan, 
+                    IsDeleted = false 
+                },
+                new ProductEntity 
+                { 
+                    Id = id2, 
+                    ProductCode = "MAT_NFD_02", 
+                    ProductName = "Nguyên liệu NFD 2", 
+                    ProductLabel = nfdPhuLieu, 
+                    IsDeleted = false 
+                }
+            };
+
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            // 1. Without ProductLabel filter: should return both
+            var req1 = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10 };
+            var res1 = await service.GetMaterialsAsync(req1);
+            Assert.Equal(2, res1.Value.TotalCount);
+
+            // 2. With NFC ProductLabel filter "Thành phần" (default typed in NFC)
+            var req2 = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10, ProductLabel = "Thành phần" };
+            var res2 = await service.GetMaterialsAsync(req2);
+            Assert.Equal(1, res2.Value.TotalCount);
+            var item = Assert.Single(res2.Value.Items.Cast<Response.MaterialResponse>());
+            Assert.Equal(id1.ToString(), item.MaterialId);
+        }
     }
 }
