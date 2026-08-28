@@ -26,7 +26,20 @@ public class Service: IService
 
 
     public async Task<object> EstimateShippingFee(AhaMoveRequest.EstimateShippingFeeRequest request)
-    {
+    {   
+        var itemIds = request.Items
+            .Select(x => x.ItemId.ToString())
+            .Distinct()
+            .ToList();
+
+        var hasInactiveProduct = await _appDbContext.Products
+            .AnyAsync(x => itemIds.Contains(x.NhanhProductId!) && (!x.IsActive || x.IsDeleted));
+
+        if (hasInactiveProduct)
+        {
+            throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
+        }
+
         // Call DB Tim Address cua Shop
         var companyAddress = await _appDbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
@@ -44,6 +57,7 @@ public class Service: IService
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
         var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
         var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/list?appId=" + appId + "&businessId=" + businessId;
+
         var nhanhVnProductRequest = new NhanhVnRequest.NhanhProductListRequest()
         {
             Filters = new NhanhVnRequest.NhanhFilters()
