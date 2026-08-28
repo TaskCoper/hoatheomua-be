@@ -1507,6 +1507,10 @@ public class Service : IService
 
     public async Task<List<Response.GetProductByIdsResponse>> GetProductByIds(Request.GetProductByIds request)
     {
+        // Business rule của IsActive:
+        // - Sản phẩm con chỉ active khi cả cha và chính nó đều active.
+        // - Sản phẩm cha có con chỉ active khi chính nó và toàn bộ con chưa bị xóa đều active.
+        // - Sản phẩm độc lập dùng IsActive của chính nó.
         var productIds = request?.ProductIds?
             .Where(id => id != Guid.Empty)
             .Distinct()
@@ -1528,6 +1532,52 @@ public class Service : IService
             return new List<Response.GetProductByIdsResponse>();
         }
 
+        // Với input là sản phẩm con, thu thập ID cha để tra trạng thái cha.
+        // ParentProductId lưu NhanhProductId của cha, không phải Guid Id nội bộ.
+        var parentNhanhProductIds = products
+            .Where(p => !string.IsNullOrWhiteSpace(p.ParentProductId))
+            .Select(p => p.ParentProductId!)
+            .Distinct()
+            .ToList();
+        
+        var parentActiveByNhanhProductId = parentNhanhProductIds.Count == 0
+            ? new Dictionary<string, bool>()
+            : await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => p.NhanhProductId != null &&
+                            parentNhanhProductIds.Contains(p.NhanhProductId))
+                .ToDictionaryAsync(p => p.NhanhProductId!, p => p.IsActive);
+
+        // Với input là sản phẩm cha hoặc sản phẩm độc lập, thu thập NhanhProductId
+        // để kiểm tra xem chúng có sản phẩm con hay không.
+        var requestedParentNhanhProductIds = products
+            .Where(p => string.IsNullOrWhiteSpace(p.ParentProductId) &&
+                        !string.IsNullOrWhiteSpace(p.NhanhProductId))
+            .Select(p => p.NhanhProductId!)
+            .Distinct()
+            .ToList();
+
+        // Lookup này chỉ chứa các sản phẩm thực sự có con.
+        // Value = true khi toàn bộ con chưa bị xóa đều active; chỉ cần một con false thì value = false.
+        var allChildrenActiveByParentNhanhProductId = new Dictionary<string, bool>();
+
+        if (requestedParentNhanhProductIds.Count > 0)
+        {
+            // Nạp trạng thái con theo ParentProductId và bỏ qua các con đã bị xóa mềm.
+            var childActiveStates = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted &&
+                            p.ParentProductId != null &&
+                            requestedParentNhanhProductIds.Contains(p.ParentProductId))
+                .Select(p => new { p.ParentProductId, p.IsActive })
+                .ToListAsync();
+
+            // Group theo cha và dùng All để áp dụng rule: mọi sản phẩm con đều phải active.
+            allChildrenActiveByParentNhanhProductId = childActiveStates
+                .GroupBy(p => p.ParentProductId!)
+                .ToDictionary(group => group.Key, group => group.All(child => child.IsActive));
+        }
+        
         var quantities = await CalculateAvailableQty(products.Select(p => new ProductQtyProjection
         {
             Id = p.Id,
@@ -1537,6 +1587,7 @@ public class Service : IService
             Stock = p.Stock
         }).ToList());
 
+        // Tạo lookup để map response đúng thứ tự productIds trong request.
         var productsById = products.ToDictionary(p => p.Id);
 
         return productIds
@@ -1548,12 +1599,30 @@ public class Service : IService
                     ? qtyInfo.SellableQuantity
                     : Math.Max(0, (int)(product.AvailableForSale ?? 0));
 
+                // Mặc định dùng trạng thái của chính sản phẩm. Sản phẩm độc lập sẽ giữ giá trị này.
+                var isActive = product.IsActive;
+
+                // Input là con: cha false sẽ ép kết quả false; cha true thì dùng trạng thái của con.
+                if (!string.IsNullOrWhiteSpace(product.ParentProductId) &&
+                    parentActiveByNhanhProductId.TryGetValue(product.ParentProductId, out var parentIsActive))
+                {
+                    isActive = parentIsActive && product.IsActive;
+                }
+                // Input là cha có con: cha và toàn bộ con đều phải active.
+                else if (!string.IsNullOrWhiteSpace(product.NhanhProductId) &&
+                         allChildrenActiveByParentNhanhProductId.TryGetValue(
+                             product.NhanhProductId,
+                             out var allChildrenActive))
+                {
+                    isActive = product.IsActive && allChildrenActive;
+                }
+                
                 return new Response.GetProductByIdsResponse
                 {
                     Id = product.Id,
                     ProductName = product.ProductName,
                     SellableQuantity = sellableQty,
-                    IsActive = product.IsActive
+                    IsActive = isActive
                 };
             })
             .ToList();
@@ -1733,5 +1802,185 @@ public class Service : IService
             .ToListAsync();
 
         return ApiResponseFactory.BasePagination(items, request.PageIndex, request.PageSize, totalItems);
+    }
+
+    public async Task CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request)
+    {
+        // Giai đoạn 1: Validate request
+        if (request?.ProductIds == null || request.ProductIds.Count == 0)
+        {
+            throw new BadRequestException("ProductIds are required");
+        }
+
+        var productIds = request.ProductIds
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (productIds.Count == 0)
+        {
+            throw new BadRequestException("Valid product IDs are required");
+        }
+
+        // Giai đoạn 2: Lấy thông tin sản phẩm (cần thêm NhanhProductId, ParentProductId)
+        var products = await _dbContext.Products
+            .AsNoTracking()
+            .Where(p => productIds.Contains(p.Id) && !p.IsDeleted)
+            .Select(p => new { p.Id, p.ProductName, p.ProductType, p.NhanhProductId, p.ParentProductId })
+            .ToListAsync();
+
+        if (products.Count != productIds.Count)
+        {
+            var missingIds = productIds.Except(products.Select(p => p.Id));
+            throw new BadRequestException($"Products not found: {string.Join(", ", missingIds)}");
+        }
+
+        // Giai đoạn 3: Xác định combo IDs cần kiểm tra
+        // TH1: Cha "Sản phẩm", con "Combo" → lấy tất cả combo con
+        // TH2: Cha "Combo" không có con → lấy chính nó
+        // TH3: Cha "Combo" có con → lấy tất cả combo con
+
+        // Lấy NhanhProductId của các product được request (để tìm con)
+        var nhanhProductIds = products
+            .Where(p => !string.IsNullOrEmpty(p.NhanhProductId))
+            .Select(p => p.NhanhProductId!)
+            .ToList();
+
+        // Tìm tất cả combo con (có ParentProductId = NhanhProductId của cha được request)
+        var childCombosByParent = new Dictionary<string, List<Guid>>();
+        if (nhanhProductIds.Count > 0)
+        {
+            var childCombos = await _dbContext.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted &&
+                            p.ProductType == "Combo" &&
+                            p.ParentProductId != null &&
+                            nhanhProductIds.Contains(p.ParentProductId))
+                .Select(p => new { p.ParentProductId, p.Id })
+                .ToListAsync();
+
+            foreach (var child in childCombos)
+            {
+                if (!childCombosByParent.ContainsKey(child.ParentProductId!))
+                    childCombosByParent[child.ParentProductId!] = new List<Guid>();
+                childCombosByParent[child.ParentProductId!].Add(child.Id);
+            }
+        }
+
+        // Xác định combo IDs cần check:
+        // - Nếu có con → dùng con IDs
+        // - Nếu không có con → dùng chính nó (nếu là Combo)
+        var comboIdsToCheck = new HashSet<Guid>();
+
+        foreach (var product in products)
+        {
+            if (childCombosByParent.TryGetValue(product.NhanhProductId ?? "", out var childIds))
+            {
+                // Có combo con → thêm các con
+                comboIdsToCheck.UnionWith(childIds);
+            }
+            else if (product.ProductType == "Combo")
+            {
+                // Không có con và là Combo → thêm chính nó
+                comboIdsToCheck.Add(product.Id);
+            }
+        }
+
+        // Lấy combo specs với IsCore = true
+        var coreSpecs = new List<(Guid SubId, Guid MatId, decimal Quantity)>();
+        if (comboIdsToCheck.Count > 0)
+        {
+            coreSpecs = await _dbContext.ComboSpecifications
+                .AsNoTracking()
+                .Where(cs => comboIdsToCheck.Contains(cs.SubId) &&
+                             cs.IsCore &&
+                             cs.IsActive &&
+                             !cs.IsDeleted)
+                .Select(cs => new { cs.SubId, cs.MatId, cs.Quantity })
+                .ToListAsync()
+                .ContinueWith(t => t.Result
+                    .Where(x => x.Quantity.HasValue && x.Quantity.Value > 0)
+                    .Select(x => (x.SubId, x.MatId, x.Quantity!.Value))
+                    .ToList());
+        }
+
+        if (coreSpecs.Count == 0)
+        {
+            // Không có sản phẩm combo nào hoặc không có CORE spec → không cần kiểm tra
+            return;
+        }
+
+        // Giai đoạn 4: Tính tổng định lượng cần thiết cho mỗi nguyên liệu (mỗi product = 1 cái)
+        var materialRequirements = new Dictionary<Guid, decimal>();
+        var requestedQuantities = productIds.ToDictionary(id => id, _ => 1);
+
+        foreach (var spec in coreSpecs)
+        {
+            if (!requestedQuantities.ContainsKey(spec.SubId))
+                continue;
+
+            var required = spec.Quantity;
+            if (materialRequirements.ContainsKey(spec.MatId))
+                materialRequirements[spec.MatId] += required;
+            else
+                materialRequirements[spec.MatId] = required;
+        }
+
+        if (materialRequirements.Count == 0)
+        {
+            return;
+        }
+
+        // Giai đoạn 5: Lấy AvailableForSale của các nguyên liệu
+        var materialIds = materialRequirements.Keys.ToList();
+        var inventories = await _dbContext.Products
+            .AsNoTracking()
+            .Where(p => materialIds.Contains(p.Id) && !p.IsDeleted)
+            .Select(p => new { p.Id, p.ProductName, p.AvailableForSale })
+            .ToListAsync();
+
+        var inventoryById = inventories.ToDictionary(x => x.Id, x => x);
+
+        // Giai đoạn 6: Kiểm tra và so sánh
+        var errors = new List<Response.InventoryCheckError>();
+        foreach (var (materialId, requiredQty) in materialRequirements)
+        {
+            if (!inventoryById.TryGetValue(materialId, out var material))
+                continue;
+
+            var availableQty = Math.Max(0m, material.AvailableForSale ?? 0m);
+            if (requiredQty > availableQty)
+            {
+                // Tìm các sản phẩm bị ảnh hưởng
+                var affectedProducts = coreSpecs
+                    .Where(s => s.MatId == materialId && requestedQuantities.ContainsKey(s.SubId))
+                    .Select(s =>
+                    {
+                        var product = products.FirstOrDefault(p => p.Id == s.SubId);
+                        return new Response.AffectedProductInfo
+                        {
+                            ProductId = s.SubId,
+                            ProductName = product?.ProductName ?? "Unknown"
+                        };
+                    })
+                    .Distinct()
+                    .ToList();
+
+                errors.Add(new Response.InventoryCheckError
+                {
+                    MaterialId = materialId,
+                    MaterialName = material.ProductName ?? "Unknown",
+                    RequiredQuantity = requiredQty,
+                    AvailableQuantity = availableQty,
+                    AffectedProducts = affectedProducts
+                });
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            var errorDetails = System.Text.Json.JsonSerializer.Serialize(errors);
+            throw new BadRequestException($"INVENTORY_INSUFFICIENT: {errorDetails}");
+        }
     }
 }
