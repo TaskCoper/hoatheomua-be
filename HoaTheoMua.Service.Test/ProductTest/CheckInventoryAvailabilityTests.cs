@@ -189,7 +189,8 @@ public class CheckInventoryAvailabilityTests
         var result = await service.CheckInventoryAvailability(request);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.MaterialId);
+        var inventoryError = Assert.Single(result);
+        Assert.NotNull(inventoryError.MaterialId);
     }
 
     [Fact]
@@ -480,7 +481,8 @@ public class CheckInventoryAvailabilityTests
         var result = await service.CheckInventoryAvailability(request);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.MaterialId);
+        var inventoryError = Assert.Single(result);
+        Assert.NotNull(inventoryError.MaterialId);
     }
 
     [Fact]
@@ -542,7 +544,8 @@ public class CheckInventoryAvailabilityTests
         var result = await service.CheckInventoryAvailability(request);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.MaterialId);
+        var inventoryError = Assert.Single(result);
+        Assert.NotNull(inventoryError.MaterialId);
     }
 
     [Fact]
@@ -639,7 +642,8 @@ public class CheckInventoryAvailabilityTests
         var result = await service.CheckInventoryAvailability(request);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.MaterialId);
+        var inventoryError = Assert.Single(result);
+        Assert.NotNull(inventoryError.MaterialId);
     }
 
     [Fact]
@@ -701,7 +705,7 @@ public class CheckInventoryAvailabilityTests
         var result = await service.CheckInventoryAvailability(request);
 
         Assert.NotNull(result);
-        var inventoryError = result;
+        var inventoryError = Assert.Single(result);
         Assert.Equal(material.Id, inventoryError.MaterialId);
         Assert.Equal(6, inventoryError.RequiredQuantity);
         Assert.Equal(5, inventoryError.AvailableQuantity);
@@ -889,8 +893,82 @@ public class CheckInventoryAvailabilityTests
         var result = await service.CheckInventoryAvailability(request);
 
         Assert.NotNull(result);
-        var inventoryError = result;
+        var inventoryError = Assert.Single(result);
         Assert.Equal(material.Id, inventoryError.MaterialId);
         Assert.Equal(0, inventoryError.AvailableQuantity);
+    }
+
+    [Fact]
+    public async Task CheckInventoryAvailability_MultipleInsufficientCoreMaterials_ReturnsAllMaterials()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var firstMaterial = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Sản phẩm",
+            ProductName = "Hoa Hồng",
+            AvailableForSale = 1,
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        var secondMaterial = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Sản phẩm",
+            ProductName = "Sen đá",
+            AvailableForSale = 2,
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        var combo = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductType = "Combo",
+            ProductName = "Combo nhiều CORE",
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(firstMaterial, secondMaterial, combo);
+        await dbContext.ComboSpecifications.AddRangeAsync(
+            new ComboSpecification
+            {
+                Id = Guid.NewGuid(),
+                SubId = combo.Id,
+                MatId = firstMaterial.Id,
+                Quantity = 2,
+                IsCore = true,
+                IsActive = true,
+                IsDeleted = false
+            },
+            new ComboSpecification
+            {
+                Id = Guid.NewGuid(),
+                SubId = combo.Id,
+                MatId = secondMaterial.Id,
+                Quantity = 3,
+                IsCore = true,
+                IsActive = true,
+                IsDeleted = false
+            });
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.CheckInventoryAvailability(
+            new Request.CheckInventoryAvailabilityRequest
+            {
+                Items = new List<Request.CartItem>
+                {
+                    new() { ProductId = combo.Id, Quantity = 1 }
+                }
+            });
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, x => x.MaterialId == firstMaterial.Id && x.RequiredQuantity == 2);
+        Assert.Contains(result, x => x.MaterialId == secondMaterial.Id && x.RequiredQuantity == 3);
     }
 }

@@ -1804,7 +1804,7 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(items, request.PageIndex, request.PageSize, totalItems);
     }
 
-    public async Task<Response.InventoryCheckError?> CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request)
+    public async Task<List<Response.InventoryCheckError>?> CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request)
     {
         // Bước 1: Validate từng item trước khi gộp các dòng trùng product.
         if (request?.Items == null || request.Items.Count == 0)
@@ -1959,6 +1959,6 @@ public class Service : IService
             }
         }
 
-        return list.FirstOrDefault();
+        return list.Count > 0 ? list : null;
     }
 }
