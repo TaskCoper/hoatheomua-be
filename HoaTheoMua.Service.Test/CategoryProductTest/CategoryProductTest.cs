@@ -962,4 +962,129 @@ public class CategoryProductTest
         var ex4 = await Assert.ThrowsAsync<BadRequestException>(() => service.UpdateCateProduct(category.Id, reqUpdate2));
         Assert.Equal("CATEGORY_DESCRIPTION_MUTUALLY_REQUIRED", ex4.Message);
     }
+
+    [Fact]
+    public async Task UpdateCategoryProductDetail_AssignedCategories_UpdatesPinAndPosition()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Rose" };
+        var firstCategory = CreateCategory("Featured");
+        var secondCategory = CreateCategory("Seasonal");
+
+        await dbContext.AddRangeAsync(product, firstCategory, secondCategory);
+        await dbContext.CategoryProductDetails.AddRangeAsync(
+            CreateDetail(product.Id, firstCategory.Id),
+            CreateDetail(product.Id, secondCategory.Id));
+        await dbContext.SaveChangesAsync();
+
+        await service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+        {
+            ProductId = product.Id,
+            CategoryProductLists = new List<Request.CategoryList>
+            {
+                new() { CategoryProductId = firstCategory.Id, IsPin = true, Position = 1 },
+                new() { CategoryProductId = secondCategory.Id, IsPin = false, Position = 2 }
+            }
+        });
+
+        var details = await dbContext.CategoryProductDetails
+            .Where(x => x.ProductId == product.Id)
+            .ToDictionaryAsync(x => x.CategoryProductId);
+
+        Assert.True(details[firstCategory.Id].IsPin);
+        Assert.Equal(1, details[firstCategory.Id].Position);
+        Assert.False(details[secondCategory.Id].IsPin);
+        Assert.Equal(2, details[secondCategory.Id].Position);
+        Assert.All(details.Values, detail => Assert.NotNull(detail.UpdatedAt));
+    }
+
+    [Fact]
+    public async Task UpdateCategoryProductDetail_CategoryNotAssignedToProduct_ThrowsBadRequestException()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Rose" };
+        var category = CreateCategory("Featured");
+
+        await dbContext.AddRangeAsync(product, category);
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+            {
+                ProductId = product.Id,
+                CategoryProductLists = new List<Request.CategoryList>
+                {
+                    new() { CategoryProductId = category.Id, IsPin = true, Position = 1 }
+                }
+            }));
+
+        Assert.Equal("Category product detail not found.", exception.Message);
+    }
+
+    [Fact]
+    public async Task UpdateCategoryProductDetail_CategoryAlreadyHas32PinnedProducts_ThrowsBadRequestException()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+        var category = CreateCategory("Featured");
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Product to pin" };
+        var pinnedProducts = Enumerable.Range(1, 32)
+            .Select(index => new ProductEntity
+            {
+                Id = Guid.NewGuid(),
+                ProductName = $"Pinned product {index}"
+            })
+            .ToList();
+
+        await dbContext.CategoryProducts.AddAsync(category);
+        await dbContext.Products.AddAsync(product);
+        await dbContext.Products.AddRangeAsync(pinnedProducts);
+        await dbContext.CategoryProductDetails.AddAsync(CreateDetail(product.Id, category.Id));
+        await dbContext.CategoryProductDetails.AddRangeAsync(pinnedProducts.Select(pinnedProduct =>
+        {
+            var detail = CreateDetail(pinnedProduct.Id, category.Id);
+            detail.IsPin = true;
+            return detail;
+        }));
+        await dbContext.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+            {
+                ProductId = product.Id,
+                CategoryProductLists = new List<Request.CategoryList>
+                {
+                    new() { CategoryProductId = category.Id, IsPin = true, Position = 1 }
+                }
+            }));
+
+        Assert.Equal("Only 32 products can be pinned in this category", exception.Message);
+        var detailToUpdate = await dbContext.CategoryProductDetails
+            .SingleAsync(x => x.ProductId == product.Id && x.CategoryProductId == category.Id);
+        Assert.False(detailToUpdate.IsPin);
+    }
+
+    private static CategoryProductEntity CreateCategory(string name)
+    {
+        return new CategoryProductEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Name_En = name,
+            Type = CategoryProductType.Fix,
+            IsActive = true
+        };
+    }
+
+    private static CategoryProductDetail CreateDetail(Guid productId, Guid categoryId)
+    {
+        return new CategoryProductDetail
+        {
+            Id = Guid.NewGuid(),
+            ProductId = productId,
+            CategoryProductId = categoryId
+        };
+    }
 }
