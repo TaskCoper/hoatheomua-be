@@ -39,6 +39,8 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
         private AppDbContext CreateMockDbContext(List<CompanyAddressEntity> companyAddresses)
         {
             var mockDbSet = companyAddresses.BuildMockDbSet();
+            var mockProducts = new List<HoaTheoMua.Repository.Entity.Product>()
+                .BuildMockDbSet();
             
             var configs = new List<HoaTheoMua.Repository.Entity.Config>
             {
@@ -61,6 +63,10 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             mockDbContext
                 .Setup(x => x.Configs)
                 .Returns(mockConfigDbSet.Object);
+
+            mockDbContext
+                .Setup(x => x.Products)
+                .Returns(mockProducts.Object);
 
             return mockDbContext.Object;
         }
