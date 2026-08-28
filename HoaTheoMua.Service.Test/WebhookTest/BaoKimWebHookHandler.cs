@@ -440,8 +440,8 @@
 //
 //             // Assert
 //             Assert.Equal("Paid", order.Status);
-//             Assert.Equal("AHA-123", order.AhahaMoveOrderId);
-//             Assert.Equal("https://track/aha", order.AhahaMoveTrackingUrl);
+//             Assert.Equal("AHA-123", order.ShippingPartyOrderId);
+//             Assert.Equal("https://track/aha", order.ShippingTrackingUrl);
 //             Assert.Equal(555, order.NhanhOrderId);
 //             Assert.Equal("https://track/nhanh", order.NhanhTrackingUrl);
 //             Assert.Single(capturedTransactions);

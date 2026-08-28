@@ -7,12 +7,12 @@
 Phân biệt cha–con bằng chuỗi: `child.ParentProductId == parent.NhanhProductId`.
 Sản phẩm gốc là sản phẩm có `ParentProductId` null hoặc rỗng.
 
-| Loại | Điều kiện | Cách tính |
-|---|---|---|
-| Sản phẩm thường | `ProductType` khác `"Combo"` | `max(0, Stock)` |
-| Combo độc lập | `ProductType == "Combo"` | MIN theo nguyên liệu CORE |
-| Cha của biến thể combo | `ProductType == "Sản phẩm"`, không có `ParentProductId`, có con `ProductType == "Combo"` | MAX số lượng của các biến thể |
-| Biến thể con | có `ParentProductId` | Không hiển thị trong danh sách; chỉ xuất hiện trong `Children` của API chi tiết |
+| Loại                   | Điều kiện                                                                                | Cách tính                                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Sản phẩm thường        | `ProductType` khác `"Combo"`                                                             | `max(0, Stock)`                                                                 |
+| Combo độc lập          | `ProductType == "Combo"`                                                                 | MIN theo nguyên liệu CORE                                                       |
+| Cha của biến thể combo | `ProductType == "Sản phẩm"`, không có `ParentProductId`, có con `ProductType == "Combo"` | MAX số lượng của các biến thể                                                   |
+| Biến thể con           | có `ParentProductId`                                                                     | Không hiển thị trong danh sách; chỉ xuất hiện trong `Children` của API chi tiết |
 
 ## Combo độc lập
 
@@ -52,14 +52,14 @@ q2 = floor(100/5) = 20
 
 `UnavailableReason` là mã hợp đồng cho frontend, không phải chuỗi hiển thị.
 
-| Tình huống | SellableQuantity | StockStatus | UnavailableReason |
-|---|---|---|---|
-| Còn hàng | `> 0` | `"Còn hàng"` | `null` |
-| Sản phẩm thường hết hàng | `0` | `"Hết hàng"` | `null` |
-| Combo không có dòng công thức nào | `0` | `null` | `"no_formula"` |
-| Combo có công thức nhưng không có CORE dùng được | `0` | `null` | `"no_core"` |
-| Combo hết nguyên liệu | `0` | `null` | `null` |
-| Lỗi khi tính | `0` | `null` | `"calculation_error"` |
+| Tình huống                                       | SellableQuantity | StockStatus  | UnavailableReason     |
+| ------------------------------------------------ | ---------------- | ------------ | --------------------- |
+| Còn hàng                                         | `> 0`            | `"Còn hàng"` | `null`                |
+| Sản phẩm thường hết hàng                         | `0`              | `"Hết hàng"` | `null`                |
+| Combo không có dòng công thức nào                | `0`              | `null`       | `"no_formula"`        |
+| Combo có công thức nhưng không có CORE dùng được | `0`              | `null`       | `"no_core"`           |
+| Combo hết nguyên liệu                            | `0`              | `null`       | `null`                |
+| Lỗi khi tính                                     | `0`              | `null`       | `"calculation_error"` |
 
 Với sản phẩm cha:
 

@@ -1,6 +1,10 @@
 #### Request
 ```Json
 {
+  "gateway": "BaoKim",
+  "paymentGateway": 1,
+  "shippingGateway": 1,
+  "paymentMethod": 1,
   "latitude": 0,
   "longitude": 0,
   "ward": 0,
@@ -14,11 +18,19 @@
   "items": [
     {
       "itemId": 0,
+      "productId": "00000000-0000-0000-0000-000000000000",
       "number": 0
     }
-  ]
+  ],
+  "phoneReceiver": "0901234567",
+  "fullNameReceiver": "Nguyen Van A"
 }
 ```
+
+- `paymentGateway`: `1 = BaoKim`, `2 = Sepay`.
+- `shippingGateway`: `1 = Ahamove`, `2 = XanhSm`. Hệ thống chọn đúng nhà vận chuyển để báo giá; XanhSM sử dụng `partner_pay` và Door-to-door.
+- `gateway` là field tương thích cũ và phải khớp tên của `paymentGateway`.
+
 #### Response
 ```json
 {
@@ -69,9 +81,9 @@
 - **Điều kiện:** Ahamove trả về `null` hoặc danh sách rỗng.
 - **Kết quả:** Hệ thống ném lỗi `BadRequestException` với message `Ahamove returned null or empty data`.
 **Test case 12: Tính tổng tiền order chính xác**
-- **Điều kiện:** NhanhVn trả về giá sản phẩm, Ahamove trả về phí ship.
+- **Điều kiện:** NhanhVn trả về giá sản phẩm, gateway vận chuyển đã chọn trả về phí ship.
 - **Kết quả:** Hệ thống tính:
-    - `ShippingFee = ahamoveResult[0].Data.TotalPrice`
+    - `ShippingFee = phí từ Ahamove hoặc XanhSM`
     - `ProductFree = tổng giá sản phẩm`
     - `TotalFee = ProductFree + ShippingFee`
 **Test case 13: Order mới có status Pending**
@@ -80,4 +92,3 @@
 **Test case 14: OrderDetails được tạo đúng**
 - **Điều kiện:** Tạo order với nhiều item.
 - **Kết quả:** Hệ thống tạo `OrderDetails` tương ứng với từng sản phẩm, gồm `ItemId`, `Name`, `Price`, `Number`, `Height`, `Weight`, `Length`, `Width`.
-

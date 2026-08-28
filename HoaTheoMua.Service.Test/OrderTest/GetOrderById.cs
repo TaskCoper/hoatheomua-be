@@ -51,6 +51,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Id = orderId,
                 UserId = userId ?? TestUserId,
+                PaymentGateway = HoaTheoMua.Repository.Enum.PaymentGateway.BaoKim,
+                ShippingGateway = HoaTheoMua.Repository.Enum.ShippingGateway.Ahamove,
                 Status = "Pending",
                 CreatedAt = DateTimeOffset.UtcNow,
                 IsDeleted = isDeleted,
