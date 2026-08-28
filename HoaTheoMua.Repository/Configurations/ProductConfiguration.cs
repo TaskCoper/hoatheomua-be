@@ -111,6 +111,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("now()");
 
-        builder.SeedComboProducts();
+        // builder.SeedComboProducts();
     }
 }
