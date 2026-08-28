@@ -144,7 +144,7 @@ public class ProductController: ControllerBase
     [HttpPost("/api/v1/products/check-core")]
     public async Task<IActionResult> CheckInventoryAvailability([FromBody] Request.CheckInventoryAvailabilityRequest request)
     {
-        await _productService.CheckInventoryAvailability(request);
-        return Ok(ApiResponseFactory.Base("OK", true, "Inventory check passed", HttpContext.TraceIdentifier));
+        var result = await _productService.CheckInventoryAvailability(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 }
