@@ -676,49 +676,82 @@ public class Service : IService
 
     public async Task<BaseResponse> UpdateCategoryProductDetail(Request.CategoryProductDetailRequest request)
     {
-        var categoryIds = request.CategoryProductLists
+        if (request.ProductId == Guid.Empty)
+        {
+            throw new BadRequestException("ProductId is required.");
+        }
+
+        if (!request.CategoryProductLists.Any())
+        {
+            throw new BadRequestException("CategoryProductLists is required.");
+        }
+
+        var categoryItems = request.CategoryProductLists
+            .GroupBy(x => x.CategoryProductId)
+            .Select(x => x.Last())
+            .ToList();
+
+        var categoryIds = categoryItems
             .Select(x => x.CategoryProductId)
             .ToList();
 
-        // Lấy tất cả records cần update trong 1 query
+        var productExists = await _dbContext.Products
+            .AnyAsync(x => x.Id == request.ProductId && !x.IsDeleted);
+
+        if (!productExists)
+        {
+            throw new BadRequestException("Product not found.");
+        }
+
+        var validCategoryIds = await _dbContext.CategoryProducts
+            .Where(x => categoryIds.Contains(x.Id) && !x.IsDeleted)
+            .Select(x => x.Id)
+            .ToListAsync();
+
+        var invalidCategoryIds = categoryIds.Except(validCategoryIds).ToList();
+        
+        if (invalidCategoryIds.Any())
+        {
+            throw new BadRequestException("Category product not found");
+        }
+        
         var existingDetails = await _dbContext.CategoryProductDetails
             .Where(x => x.ProductId == request.ProductId
                         && !x.IsDeleted
                         && categoryIds.Contains(x.CategoryProductId))
             .ToListAsync();
 
-        if (!existingDetails.Any())
-        {
-            throw new BadRequestException("Category product not found.");
-        }
-        
-        foreach (var categoryItem in request.CategoryProductLists)
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var categoryItem in categoryItems)
         {
             var cate = existingDetails
                 .FirstOrDefault(x => x.CategoryProductId == categoryItem.CategoryProductId);
 
+            // Pin limit check - chỉ check khi bật pin cho record mới hoặc record chưa pin.
+            if (categoryItem.IsPin && (cate == null || !cate.IsPin))
+            {
+                var pinnedCount = await _dbContext.CategoryProductDetails
+                    .CountAsync(x => !x.IsDeleted
+                                     && x.CategoryProductId == categoryItem.CategoryProductId
+                                     && x.IsPin
+                                     && x.ProductId != request.ProductId);
+
+                if (pinnedCount >= 32)
+                {
+                    throw new BadRequestException("Only 32 products can be pinned in this category");
+                }
+            }
+
             if (cate != null)
             {
-                // Pin limit check - chỉ check khi đang bật pin VÀ chưa được pin
-                if (categoryItem.IsPin && !cate.IsPin)
-                {
-                    var pinnedCount = await _dbContext.CategoryProductDetails
-                        .Where(x => !x.IsDeleted
-                                    && x.CategoryProductId == categoryItem.CategoryProductId
-                                    && x.IsPin
-                                    && x.ProductId != request.ProductId)
-                        .CountAsync();
-
-                    if (pinnedCount >= 32)
-                    {
-                        throw new BadRequestException("Only 32 products can be pinned in this category");
-                    }
-                }
-
                 cate.IsPin = categoryItem.IsPin;
                 cate.Position = categoryItem.Position;
-                cate.UpdatedAt = DateTimeOffset.UtcNow;
+                cate.UpdatedAt = now;
+                continue;
             }
+
+            throw new BadRequestException("Category product detail not found.");
         }
         
         await _dbContext.SaveChangesAsync();
