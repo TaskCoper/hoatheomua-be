@@ -48,7 +48,6 @@ services:
       XanhSmOptions__BaseUrl: ${XANHSM_BASE_URL}
       XanhSmOptions__TokenUrl: ${XANHSM_TOKEN_URL}
       XanhSmOptions__Scope: ${XANHSM_SCOPE}
-      XanhSmOptions__DoorToDoorAddonId: ${XANHSM_DOOR_TO_DOOR_ADDON_ID}
       XanhSmOptions__ClientId: ${XANHSM_CLIENT_ID}
       XanhSmOptions__ClientSecret: ${XANHSM_CLIENT_SECRET}
       XanhSmOptions__AcceptLanguage: ${XANHSM_ACCEPT_LANGUAGE}

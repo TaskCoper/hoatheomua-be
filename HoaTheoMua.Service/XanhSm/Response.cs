@@ -153,6 +153,16 @@ public class XanhSmEstimateData
     public List<XanhSmServiceEstimate> ServiceEstimates { get; set; } = [];
 }
 
+public class XanhSmDoorToDoorQuote
+{
+    public int ServiceId { get; init; }
+    public int AddonId { get; init; }
+    public required string ServiceType { get; init; }
+    public required string FeeId { get; init; }
+    public long TotalFee { get; init; }
+    public long ExpiresAt { get; init; }
+}
+
 public class XanhSmServiceEstimate
 {
     [JsonPropertyName("fee_unavailable")]
@@ -253,6 +263,12 @@ public class XanhSmDelivery
 
     [JsonPropertyName("partner_trip_id")]
     public string? PartnerTripId { get; set; }
+
+    [JsonPropertyName("tracking_url")]
+    public string? TrackingUrl { get; set; }
+
+    [JsonPropertyName("shared_link")]
+    public string? SharedLink { get; set; }
 
     [JsonPropertyName("status")]
     public string? Status { get; set; }

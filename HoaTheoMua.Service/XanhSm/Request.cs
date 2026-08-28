@@ -44,7 +44,7 @@ public class XanhSmEstimateServiceRequest
     public int Id { get; set; }
 
     [JsonPropertyName("addons")]
-    public IReadOnlyList<XanhSmAddonRequest> Addons { get; internal set; } = [];
+    public IReadOnlyList<XanhSmAddonRequest> Addons { get; init; } = [];
 }
 
 public class XanhSmDeliveryPointRequest : XanhSmCoordinatePoint
@@ -118,7 +118,7 @@ public class XanhSmBookDeliveryRequest
     public required List<XanhSmDeliveryPointRequest> Points { get; set; }
 
     [JsonPropertyName("addons")]
-    public IReadOnlyList<XanhSmAddonRequest> Addons { get; internal set; } = [];
+    public IReadOnlyList<XanhSmAddonRequest> Addons { get; init; } = [];
 
     [JsonPropertyName("goods_value")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -10,14 +10,14 @@ public class CreateOrderRequestValidatorTests
     private readonly CreateOrderRequestValidator _validator = new();
 
     [Fact]
-    public void Validate_XanhSmBeforeIntegration_ReturnsNotSupportedError()
+    public void Validate_XanhSm_ReturnsNoShippingGatewayError()
     {
         var request = CreateValidRequest();
         request.ShippingGateway = ShippingGateway.XanhSm;
 
         var result = _validator.Validate(request);
 
-        Assert.Contains(result.Errors, x => x.ErrorMessage == "SHIPPING_GATEWAY_NOT_SUPPORTED");
+        Assert.DoesNotContain(result.Errors, x => x.PropertyName == nameof(Request.CreateOrderRequest.ShippingGateway));
     }
 
     [Fact]

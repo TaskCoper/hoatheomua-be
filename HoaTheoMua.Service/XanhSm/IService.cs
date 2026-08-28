@@ -28,4 +28,16 @@ public interface IService
     Task<XanhSmApiResponse<XanhSmCancelDeliveryData>> CancelDeliveryAsync(
         XanhSmCancelDeliveryRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<XanhSmDoorToDoorQuote> EstimateDoorToDoorAsync(
+        IReadOnlyCollection<XanhSmDeliveryPointRequest> points,
+        long orderTime,
+        CancellationToken cancellationToken = default);
+
+    Task<XanhSmDelivery> BookDoorToDoorAsync(
+        IReadOnlyCollection<XanhSmDeliveryPointRequest> points,
+        long orderTime,
+        long? goodsValue,
+        string partnerTripId,
+        CancellationToken cancellationToken = default);
 }

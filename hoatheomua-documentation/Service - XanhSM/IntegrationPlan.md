@@ -1,10 +1,12 @@
 # Kế hoạch tích hợp Xanh SM
 
-## Trạng thái và giả định
+## Trạng thái
 
-- `ShippingGateway.XanhSm` đã tồn tại nhưng chưa được phép dùng trong `CreateOrderRequest`; validator trả `SHIPPING_GATEWAY_NOT_SUPPORTED` để tránh chọn Xanh SM nhưng hệ thống lại âm thầm gọi Ahamove.
+- XanhSM Express client, token cache và cấu hình Sandbox/Production đã được triển khai theo tài liệu chính thức.
+- `CreateOrderRequest` đã hỗ trợ `ShippingGateway.XanhSm` và báo giá bằng `partner_pay`, Door-to-door.
+- Payment webhook estimate lại để lấy `fee_id` còn hiệu lực, booking XanhSM và lưu `ShippingPartyOrderId`/`ShippingTrackingUrl`.
+- Door-to-door addon ID được lấy động từ `list-available-services` theo `group_name = DOOR2DOOR` và được giữ nguyên qua Estimate/Book; hệ thống không có ID cấu hình fallback.
 - `ShippingPartyOrderId` và `ShippingTrackingUrl` là field dùng chung cho mọi đơn vị vận chuyển.
-- Chưa tìm thấy tài liệu API đối tác công khai. Green SM hiện công khai cổng đăng ký [Green SM Enterprise](https://business.xanhsm.com/lead) và cổng đặt [Green Express](https://booking.xanhsm.com/). Trước khi code adapter cần nhận bộ tài liệu sandbox chính thức từ Xanh SM.
 
 ## Thông tin cần lấy từ Xanh SM
 

@@ -94,10 +94,9 @@ public class Service : IService
     {
         ArgumentNullException.ThrowIfNull(request);
         ValidateDoorToDoorPoints(request.Points);
-        var doorToDoorAddon = CreateDoorToDoorAddon();
         foreach (var service in request.ServiceIds)
         {
-            service.Addons = doorToDoorAddon;
+            ValidateDoorToDoorAddon(service.Addons);
         }
         return PostAsync<XanhSmEstimateOrderRequest, XanhSmApiResponse<XanhSmEstimateData>>(
             "estimate/order",
@@ -111,7 +110,7 @@ public class Service : IService
     {
         ArgumentNullException.ThrowIfNull(request);
         ValidateDoorToDoorPoints(request.Points);
-        request.Addons = CreateDoorToDoorAddon();
+        ValidateDoorToDoorAddon(request.Addons);
         return PostAsync<XanhSmBookDeliveryRequest, XanhSmApiResponse<XanhSmDelivery>>(
             "create-order",
             request,
@@ -159,6 +158,152 @@ public class Service : IService
             "cancel-order",
             request,
             cancellationToken);
+    }
+
+    public async Task<XanhSmDoorToDoorQuote> EstimateDoorToDoorAsync(
+        IReadOnlyCollection<XanhSmDeliveryPointRequest> points,
+        long orderTime,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateDoorToDoorPoints(points);
+
+        var pointList = points.ToList();
+        var availableServices = await GetAvailableServicesAsync(
+            new XanhSmAvailableServicesRequest
+            {
+                Pickups = pointList
+                    .Where(point => string.Equals(
+                        point.Type,
+                        XanhSmConstants.PickUpPoint,
+                        StringComparison.OrdinalIgnoreCase))
+                    .Select(ToCoordinatePoint)
+                    .ToList(),
+                Dropoffs = pointList
+                    .Where(point => string.Equals(
+                        point.Type,
+                        XanhSmConstants.DropOffPoint,
+                        StringComparison.OrdinalIgnoreCase))
+                    .Select(ToCoordinatePoint)
+                    .ToList(),
+                ServiceTypes = [XanhSmConstants.ExpressOnDemandServiceType],
+                OrderTime = orderTime
+            },
+            cancellationToken);
+
+        var availableService = availableServices.Data
+            .Select(item => new
+            {
+                Item = item,
+                DoorToDoorAddon = ResolveDoorToDoorAddon(item.Addons)
+            })
+            .FirstOrDefault(candidate =>
+                candidate.Item.Service.Enable is not false &&
+                candidate.Item.Service.DuringService is not false &&
+                string.Equals(
+                    candidate.Item.Service.ServiceType,
+                    XanhSmConstants.ExpressOnDemandServiceType,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    candidate.Item.Service.TravelMode,
+                    XanhSmConstants.MotorcycleTravelMode,
+                    StringComparison.OrdinalIgnoreCase) &&
+                candidate.DoorToDoorAddon is not null);
+
+        if (availableService is null)
+        {
+            throw new BadRequestException("XanhSM Door-to-door service is not available for this route");
+        }
+
+        var serviceId = availableService.Item.Service.Id > 0
+            ? availableService.Item.Service.Id
+            : availableService.Item.Service.ServiceId.GetValueOrDefault();
+        if (serviceId <= 0)
+        {
+            throw new BadGatewayException("XanhSM returned an invalid service ID");
+        }
+
+        var addonId = availableService.DoorToDoorAddon!.Id;
+        if (addonId <= 0)
+        {
+            throw new BadGatewayException("XanhSM returned an invalid Door-to-door addon ID");
+        }
+
+        var estimate = await EstimateOrderAsync(
+            new XanhSmEstimateOrderRequest
+            {
+                ServiceIds =
+                [
+                    new XanhSmEstimateServiceRequest
+                    {
+                        Id = serviceId,
+                        Addons = CreateDoorToDoorAddon(addonId)
+                    }
+                ],
+                OrderTime = orderTime,
+                Points = pointList
+            },
+            cancellationToken);
+
+        var serviceEstimate = estimate.Data.ServiceEstimates.FirstOrDefault(item =>
+            !item.FeeUnavailable &&
+            item.EstimateInfo?.Estimate is not null &&
+            !string.IsNullOrWhiteSpace(item.EstimateInfo.FeeId));
+        if (serviceEstimate?.EstimateInfo?.Estimate is null ||
+            string.IsNullOrWhiteSpace(serviceEstimate.EstimateInfo.FeeId))
+        {
+            var errorMessage = estimate.Data.ServiceEstimates
+                .Select(item => item.ErrorMessage)
+                .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message));
+            throw new BadRequestException(
+                string.IsNullOrWhiteSpace(errorMessage)
+                    ? "XanhSM could not estimate this Door-to-door delivery"
+                    : $"XanhSM could not estimate this Door-to-door delivery: {errorMessage}");
+        }
+
+        return new XanhSmDoorToDoorQuote
+        {
+            ServiceId = serviceId,
+            AddonId = addonId,
+            ServiceType = availableService.Item.Service.ServiceType!,
+            FeeId = serviceEstimate.EstimateInfo.FeeId,
+            TotalFee = serviceEstimate.EstimateInfo.Estimate.TotalFee,
+            ExpiresAt = serviceEstimate.EstimateInfo.ExpiresAt
+        };
+    }
+
+    public async Task<XanhSmDelivery> BookDoorToDoorAsync(
+        IReadOnlyCollection<XanhSmDeliveryPointRequest> points,
+        long orderTime,
+        long? goodsValue,
+        string partnerTripId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(partnerTripId))
+        {
+            throw new System.ArgumentException("Partner trip ID is required", nameof(partnerTripId));
+        }
+
+        var quote = await EstimateDoorToDoorAsync(points, orderTime, cancellationToken);
+        var response = await BookDeliveryAsync(
+            new XanhSmBookDeliveryRequest
+            {
+                OrderTime = orderTime,
+                ServiceId = quote.ServiceId,
+                ServiceType = quote.ServiceType,
+                FeeId = quote.FeeId,
+                Points = points.ToList(),
+                Addons = CreateDoorToDoorAddon(quote.AddonId),
+                GoodsValue = goodsValue,
+                PartnerTripId = partnerTripId
+            },
+            cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(response.Data.Id) && string.IsNullOrWhiteSpace(response.Data.OrderId))
+        {
+            throw new BadGatewayException("XanhSM booking response did not contain an order ID");
+        }
+
+        return response.Data;
     }
 
     private async Task<TResponse> PostAsync<TRequest, TResponse>(
@@ -264,10 +409,9 @@ public class Service : IService
     private void ValidateConfiguration(bool includeCredentials)
     {
         if (string.IsNullOrWhiteSpace(_options.BaseUrl) ||
-            string.IsNullOrWhiteSpace(_options.TokenUrl) ||
-            _options.DoorToDoorAddonId <= 0)
+            string.IsNullOrWhiteSpace(_options.TokenUrl))
         {
-            throw new ServerException("XanhSmOptions endpoint or Door-to-door configuration is missing");
+            throw new ServerException("XanhSmOptions endpoint configuration is missing");
         }
 
         if (includeCredentials &&
@@ -277,16 +421,62 @@ public class Service : IService
         }
     }
 
-    private IReadOnlyList<XanhSmAddonRequest> CreateDoorToDoorAddon()
+    private XanhSmAvailableAddon? ResolveDoorToDoorAddon(
+        IReadOnlyCollection<XanhSmAvailableAddon>? addons)
     {
+        if (addons is null || addons.Count == 0)
+        {
+            return null;
+        }
+
+        var addonByGroup = addons.FirstOrDefault(addon =>
+            addon.Enable is not false &&
+            addon.Id > 0 &&
+            string.Equals(
+                addon.GroupName,
+                XanhSmConstants.DoorToDoorGroup,
+                StringComparison.OrdinalIgnoreCase));
+        if (addonByGroup is not null)
+        {
+            return addonByGroup;
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<XanhSmAddonRequest> CreateDoorToDoorAddon(int addonId)
+    {
+        if (addonId <= 0)
+        {
+            throw new BadGatewayException("XanhSM returned an invalid Door-to-door addon ID");
+        }
+
         return
         [
             new XanhSmAddonRequest
             {
-                Id = _options.DoorToDoorAddonId,
+                Id = addonId,
                 Apply = true
             }
         ];
+    }
+
+    private static void ValidateDoorToDoorAddon(IReadOnlyCollection<XanhSmAddonRequest>? addons)
+    {
+        if (addons is null || addons.Count != 1 || addons.Any(addon => addon.Id <= 0 || !addon.Apply))
+        {
+            throw new BadRequestException(
+                "Exactly one applied XanhSM Door-to-door addon returned by available services is required");
+        }
+    }
+
+    private static XanhSmCoordinatePoint ToCoordinatePoint(XanhSmDeliveryPointRequest point)
+    {
+        return new XanhSmCoordinatePoint
+        {
+            Latitude = point.Latitude,
+            Longitude = point.Longitude
+        };
     }
 
     private static void ValidateDoorToDoorPoints(IReadOnlyCollection<XanhSmDeliveryPointRequest>? points)

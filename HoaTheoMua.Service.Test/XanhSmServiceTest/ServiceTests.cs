@@ -87,7 +87,7 @@ public class ServiceTests
     }
 
     [Fact]
-    public async Task EstimateOrderAsync_AlwaysUsesPartnerPayAndDoorToDoorAddon()
+    public async Task EstimateOrderAsync_UsesPartnerPayAndProvidedDoorToDoorAddon()
     {
         CapturedRequest? apiRequest = null;
         var service = CreateService(async request =>
@@ -126,7 +126,8 @@ public class ServiceTests
             [
                 new XanhSmEstimateServiceRequest
                 {
-                    Id = 2099
+                    Id = 2099,
+                    Addons = [new XanhSmAddonRequest { Id = 5 }]
                 }
             ],
             OrderTime = 1770350401,
@@ -153,7 +154,7 @@ public class ServiceTests
     }
 
     [Fact]
-    public async Task BookDeliveryAsync_AlwaysUsesPartnerPayAndDoorToDoorAddon()
+    public async Task BookDeliveryAsync_UsesPartnerPayAndProvidedDoorToDoorAddon()
     {
         CapturedRequest? apiRequest = null;
         var service = CreateService(async request =>
@@ -181,6 +182,7 @@ public class ServiceTests
             ServiceId = 2099,
             ServiceType = "EXPRESS-ONDEMAND",
             FeeId = "fee-001",
+            Addons = [new XanhSmAddonRequest { Id = 5 }],
             Points =
             [
                 CreatePoint("PICK UP"),
@@ -195,6 +197,142 @@ public class ServiceTests
         Assert.Equal("partner_pay", root.GetProperty("payment_method").GetString());
         Assert.Equal(5, root.GetProperty("addons")[0].GetProperty("id").GetInt32());
         Assert.True(root.GetProperty("addons")[0].GetProperty("apply").GetBoolean());
+    }
+
+    [Fact]
+    public async Task EstimateOrderAsync_WithoutDiscoveredAddon_ThrowsBadRequestException()
+    {
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP must not be called"));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => service.EstimateOrderAsync(
+            new XanhSmEstimateOrderRequest
+            {
+                ServiceIds = [new XanhSmEstimateServiceRequest { Id = 2099 }],
+                OrderTime = 1770350401,
+                Points = [CreatePoint("PICK UP"), CreatePoint("DROP OFF")]
+            }));
+
+        Assert.Contains("addon returned by available services is required", exception.Message);
+    }
+
+    [Fact]
+    public async Task BookDoorToDoorAsync_DiscoversServiceReestimatesAndBooks()
+    {
+        CapturedRequest? availableRequest = null;
+        CapturedRequest? estimateRequest = null;
+        CapturedRequest? bookingRequest = null;
+        var service = CreateService(async request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            if (path.EndsWith("/token"))
+            {
+                return TokenResponse();
+            }
+
+            if (path.EndsWith("/list-available-services"))
+            {
+                availableRequest = await CapturedRequest.FromAsync(request);
+                return JsonResponse("""
+                    {
+                      "data": [
+                        {
+                          "service": {
+                            "id": 2099,
+                            "service_type": "EXPRESS-ONDEMAND",
+                            "travel_mode": "Truck",
+                            "enable": true,
+                            "during_service": true
+                          },
+                          "addons": [
+                            { "id": 5, "group_name": "DOOR2DOOR", "enable": true }
+                          ]
+                        },
+                        {
+                          "service": {
+                            "id": 2100,
+                            "service_type": "EXPRESS-ONDEMAND",
+                            "travel_mode": "Motorcycle",
+                            "vehicle_models": ["BIKE"],
+                            "enable": true,
+                            "during_service": true
+                          },
+                          "addons": [
+                            { "id": 12, "group_name": "DOOR2DOOR", "enable": true }
+                          ]
+                        }
+                      ]
+                    }
+                    """);
+            }
+
+            if (path.EndsWith("/estimate/order"))
+            {
+                estimateRequest = await CapturedRequest.FromAsync(request);
+                return JsonResponse("""
+                    {
+                      "data": {
+                        "payment_method": "partner_pay",
+                        "points": [],
+                        "service_estimates": [
+                          {
+                            "fee_unavailable": false,
+                            "estimate_info": {
+                              "fee_id": "fresh-fee-id",
+                              "expires_at": 1770350500,
+                              "estimate": { "total_fee": 33000, "total_pay": 33000 }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                    """);
+            }
+
+            bookingRequest = await CapturedRequest.FromAsync(request);
+            return JsonResponse("""
+                {
+                  "data": {
+                    "id": "XANHSM-001",
+                    "status": "FINDING",
+                    "tracking_url": "https://tracking.example/XANHSM-001",
+                    "path": []
+                  }
+                }
+                """);
+        });
+
+        var delivery = await service.BookDoorToDoorAsync(
+            [CreatePoint("PICK UP"), CreatePoint("DROP OFF")],
+            1770350401,
+            150000,
+            "partner-order-001");
+
+        Assert.Equal("XANHSM-001", delivery.Id);
+        Assert.Equal("https://tracking.example/XANHSM-001", delivery.TrackingUrl);
+        Assert.NotNull(availableRequest);
+        using (var availableBody = JsonDocument.Parse(availableRequest.Body!))
+        {
+            Assert.Equal(
+                "EXPRESS-ONDEMAND",
+                availableBody.RootElement.GetProperty("service_types")[0].GetString());
+        }
+
+        Assert.NotNull(bookingRequest);
+        Assert.Equal("/v1/express/create-order", bookingRequest.Uri.AbsolutePath);
+        using var bookingBody = JsonDocument.Parse(bookingRequest.Body!);
+        Assert.Equal(2100, bookingBody.RootElement.GetProperty("service_id").GetInt32());
+        Assert.Equal("fresh-fee-id", bookingBody.RootElement.GetProperty("fee_id").GetString());
+        Assert.Equal("partner_pay", bookingBody.RootElement.GetProperty("payment_method").GetString());
+        Assert.Equal("partner-order-001", bookingBody.RootElement.GetProperty("partner_trip_id").GetString());
+        Assert.Equal(150000, bookingBody.RootElement.GetProperty("goods_value").GetInt64());
+        Assert.Equal(12, bookingBody.RootElement.GetProperty("addons")[0].GetProperty("id").GetInt32());
+
+        Assert.NotNull(estimateRequest);
+        using var estimateBody = JsonDocument.Parse(estimateRequest.Body!);
+        Assert.Equal(
+            12,
+            estimateBody.RootElement.GetProperty("service_ids")[0].GetProperty("addons")[0]
+                .GetProperty("id").GetInt32());
     }
 
     [Fact]
@@ -219,7 +357,7 @@ public class ServiceTests
     }
 
     [Fact]
-    public async Task EstimateOrderAsync_UsesConfiguredSandboxParametersAndDoorToDoorId()
+    public async Task EstimateOrderAsync_UsesSandboxEndpointsAndProvidedDoorToDoorId()
     {
         CapturedRequest? tokenRequest = null;
         CapturedRequest? estimateRequest = null;
@@ -244,12 +382,18 @@ public class ServiceTests
         },
         baseUrl: "https://api-sandbox.vn.gsm-api.net/v1/sandbox/express",
         tokenUrl: "https://api-sandbox.vn.gsm-api.net/v1/sandbox/token",
-        scope: null,
-        doorToDoorAddonId: 10);
+        scope: null);
 
         await service.EstimateOrderAsync(new XanhSmEstimateOrderRequest
         {
-            ServiceIds = [new XanhSmEstimateServiceRequest { Id = 2099 }],
+            ServiceIds =
+            [
+                new XanhSmEstimateServiceRequest
+                {
+                    Id = 2099,
+                    Addons = [new XanhSmAddonRequest { Id = 10 }]
+                }
+            ],
             OrderTime = 1770350401,
             Points = [CreatePoint("PICK UP"), CreatePoint("DROP OFF")]
         });
@@ -266,7 +410,7 @@ public class ServiceTests
     }
 
     [Fact]
-    public async Task GetAvailableServicesAsync_DoesNotOverrideConfiguredDoorToDoorId()
+    public async Task EstimateDoorToDoorAsync_UsesDiscoveredAddonIdWithoutConfiguredFallback()
     {
         var estimateBodies = new List<string>();
         var service = CreateService(async request =>
@@ -282,7 +426,13 @@ public class ServiceTests
                     {
                       "data": [
                         {
-                          "service": { "id": 2099 },
+                          "service": {
+                            "id": 2099,
+                            "service_type": "EXPRESS-ONDEMAND",
+                            "travel_mode": "Motorcycle",
+                            "enable": true,
+                            "during_service": true
+                          },
                           "addons": [
                             { "id": 12, "group_name": "DOOR2DOOR", "enable": true }
                           ]
@@ -298,26 +448,29 @@ public class ServiceTests
                   "data": {
                     "payment_method": "partner_pay",
                     "points": [],
-                    "service_estimates": []
+                    "service_estimates": [
+                      {
+                        "fee_unavailable": false,
+                        "estimate_info": {
+                          "fee_id": "dynamic-addon-fee",
+                          "expires_at": 1770350500,
+                          "estimate": { "total_fee": 33000, "total_pay": 33000 }
+                        }
+                      }
+                    ]
                   }
                 }
                 """);
-        }, doorToDoorAddonId: 10);
-
-        await service.GetAvailableServicesAsync(new XanhSmAvailableServicesRequest
-        {
-            Pickups = [new XanhSmCoordinatePoint { Latitude = 10.7, Longitude = 106.7 }]
-        });
-        await service.EstimateOrderAsync(new XanhSmEstimateOrderRequest
-        {
-            ServiceIds = [new XanhSmEstimateServiceRequest { Id = 2099 }],
-            OrderTime = 1770350401,
-            Points = [CreatePoint("PICK UP"), CreatePoint("DROP OFF")]
         });
 
+        var quote = await service.EstimateDoorToDoorAsync(
+            [CreatePoint("PICK UP"), CreatePoint("DROP OFF")],
+            1770350401);
+
+        Assert.Equal(12, quote.AddonId);
         using var body = JsonDocument.Parse(Assert.Single(estimateBodies));
         Assert.Equal(
-            10,
+            12,
             body.RootElement.GetProperty("service_ids")[0].GetProperty("addons")[0].GetProperty("id").GetInt32());
     }
 
@@ -368,21 +521,21 @@ public class ServiceTests
         Func<HttpRequestMessage, Task<HttpResponseMessage>> responder,
         string baseUrl = "https://api-partner.vn.gsm-api.net/v1/express",
         string tokenUrl = "https://api-partner.vn.gsm-api.net/v1/public/token",
-        string? scope = "express.trips",
-        int doorToDoorAddonId = 5)
+        string? scope = "express.trips")
     {
         var clientId = $"client-{Guid.NewGuid():N}";
+        var values = new Dictionary<string, string?>
+        {
+            ["XanhSmOptions:ClientId"] = clientId,
+            ["XanhSmOptions:ClientSecret"] = "client-secret",
+            ["XanhSmOptions:BaseUrl"] = baseUrl,
+            ["XanhSmOptions:TokenUrl"] = tokenUrl,
+            ["XanhSmOptions:Scope"] = scope,
+            ["XanhSmOptions:AcceptLanguage"] = "vi"
+        };
+
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["XanhSmOptions:ClientId"] = clientId,
-                ["XanhSmOptions:ClientSecret"] = "client-secret",
-                ["XanhSmOptions:BaseUrl"] = baseUrl,
-                ["XanhSmOptions:TokenUrl"] = tokenUrl,
-                ["XanhSmOptions:Scope"] = scope,
-                ["XanhSmOptions:DoorToDoorAddonId"] = doorToDoorAddonId.ToString(),
-                ["XanhSmOptions:AcceptLanguage"] = "vi"
-            })
+            .AddInMemoryCollection(values)
             .Build();
 
         return new XanhSmServiceImplementation(new HttpClient(new StubHttpMessageHandler(responder)), configuration);

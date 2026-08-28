@@ -28,7 +28,7 @@
 ```
 
 - `paymentGateway`: `1 = BaoKim`, `2 = Sepay`.
-- `shippingGateway`: `1 = Ahamove`, `2 = XanhSm`. Hiện tại chỉ Ahamove được bật; Xanh SM trả lỗi `SHIPPING_GATEWAY_NOT_SUPPORTED` cho đến khi hoàn tất tích hợp.
+- `shippingGateway`: `1 = Ahamove`, `2 = XanhSm`. Hệ thống chọn đúng nhà vận chuyển để báo giá; XanhSM sử dụng `partner_pay` và Door-to-door.
 - `gateway` là field tương thích cũ và phải khớp tên của `paymentGateway`.
 
 #### Response
@@ -81,9 +81,9 @@
 - **Điều kiện:** Ahamove trả về `null` hoặc danh sách rỗng.
 - **Kết quả:** Hệ thống ném lỗi `BadRequestException` với message `Ahamove returned null or empty data`.
 **Test case 12: Tính tổng tiền order chính xác**
-- **Điều kiện:** NhanhVn trả về giá sản phẩm, Ahamove trả về phí ship.
+- **Điều kiện:** NhanhVn trả về giá sản phẩm, gateway vận chuyển đã chọn trả về phí ship.
 - **Kết quả:** Hệ thống tính:
-    - `ShippingFee = ahamoveResult[0].Data.TotalPrice`
+    - `ShippingFee = phí từ Ahamove hoặc XanhSM`
     - `ProductFree = tổng giá sản phẩm`
     - `TotalFee = ProductFree + ShippingFee`
 **Test case 13: Order mới có status Pending**

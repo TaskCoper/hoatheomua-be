@@ -210,7 +210,13 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return mockDbContext;
         }
 
-        private static OrderServiceImpl CreateService(AppDbContext dbContext, HttpClient httpClient, ICurrentUserService currentUser, ProductService productService, HoaTheoMua.Service.BaoKim.IService? baoKimService = null)
+        private static OrderServiceImpl CreateService(
+            AppDbContext dbContext,
+            HttpClient httpClient,
+            ICurrentUserService currentUser,
+            ProductService productService,
+            HoaTheoMua.Service.BaoKim.IService? baoKimService = null,
+            HoaTheoMua.Service.XanhSm.IService? xanhSmService = null)
         {
             var mockConfig = new Mock<IConfiguration>();
             var mockConfigSection = new Mock<IConfigurationSection>();
@@ -224,7 +230,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 httpClient,
                 productService,
                 mockConfig.Object,
-                baoKimService ?? CreateMockBaoKimService());
+                baoKimService ?? CreateMockBaoKimService(),
+                xanhSmService);
         }
 
         // BaoKim is an injected dependency (not the shared HttpClient), so we mock it directly.
@@ -503,6 +510,97 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(TestPhoneReceiver, orders[0].PhoneReceiver);
             Assert.Single(details);
             Assert.Equal(101, details[0].ItemId);
+        }
+
+        [Fact]
+        public async Task CreateOrder_XanhSm_UsesDoorToDoorQuote()
+        {
+            var orders = new List<OrderEntity>();
+            var companyAddress = CreateCompanyAddress();
+            var dbContextMock = CreateMockDbContext(
+                orders: orders,
+                companyAddresses: [companyAddress]);
+            var currentUser = CreateMockCurrentUserService(TestUserId);
+            var productService = CreateMockProductService();
+
+            var handler = new Mock<HttpMessageHandler>();
+            handler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString().Contains("nhanhvn")),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(new NhanhProductListResponse
+                    {
+                        Code = 1,
+                        Data =
+                        [
+                            new NhanhProductData
+                            {
+                                Id = 101,
+                                Prices = new NhanhPrices { Retail = 50000 },
+                                Shipping = new NhanhShipping()
+                            }
+                        ]
+                    })
+                });
+
+            var xanhSmService = new Mock<HoaTheoMua.Service.XanhSm.IService>();
+            xanhSmService
+                .Setup(service => service.EstimateDoorToDoorAsync(
+                    It.IsAny<IReadOnlyCollection<HoaTheoMua.Service.XanhSm.XanhSmDeliveryPointRequest>>(),
+                    It.IsAny<long>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new HoaTheoMua.Service.XanhSm.XanhSmDoorToDoorQuote
+                {
+                    ServiceId = 2099,
+                    ServiceType = "EXPRESS-ONDEMAND",
+                    FeeId = "fee-xanhsm",
+                    TotalFee = 33000,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds()
+                });
+
+            var service = CreateService(
+                dbContextMock.Object,
+                new HttpClient(handler.Object),
+                currentUser,
+                productService,
+                xanhSmService: xanhSmService.Object);
+
+            var request = new OrderRequest.CreateOrderRequest
+            {
+                Latitude = 10.1m,
+                Longitude = 106.1m,
+                Ward = 1,
+                City = 1,
+                Address = "Dia chi giao",
+                ShortAddress = "Dia chi giao ngan",
+                FullName = "User Test",
+                Phone = "0901234567",
+                Remarks = "Ghi chu",
+                Items = [new AhaMoveRequest.Items { ItemId = 101, Number = 1 }],
+                Gateway = "BaoKim",
+                PaymentGateway = PaymentGateway.BaoKim,
+                ShippingGateway = ShippingGateway.XanhSm,
+                PhoneReceiver = TestPhoneReceiver,
+                FullNameReceiver = TestFullNameReceiver
+            };
+
+            await service.CreateOrder(request);
+
+            var order = Assert.Single(orders);
+            Assert.Equal(ShippingGateway.XanhSm, order.ShippingGateway);
+            Assert.Equal(33000m, order.ShippingFee);
+            Assert.Equal(83000m, order.TotalFee);
+            xanhSmService.Verify(service => service.EstimateDoorToDoorAsync(
+                It.Is<IReadOnlyCollection<HoaTheoMua.Service.XanhSm.XanhSmDeliveryPointRequest>>(points =>
+                    points.Count == 2 &&
+                    points.Any(point => point.Type == "PICK UP" && point.Name == companyAddress.FullName) &&
+                    points.Any(point => point.Type == "DROP OFF" && point.PhoneNumber == TestPhoneReceiver)),
+                It.Is<long>(orderTime => orderTime > 0),
+                It.IsAny<CancellationToken>()), Times.Once);
         }
 
         // ---------------------------------------------------------------------
