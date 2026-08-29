@@ -253,6 +253,10 @@ public class ServiceTests
                             "service_type": "EXPRESS-ONDEMAND",
                             "travel_mode": "Motorcycle",
                             "vehicle_models": ["BIKE"],
+                            "express_package_types": ["food_and_groceries", "others"],
+                            "express_package_sizes": ["SMALL", "MEDIUM", "LARGE"],
+                            "express_package_max_weight": 30,
+                            "express_package_weight_unit": "kg",
                             "enable": true,
                             "during_service": true
                           },
@@ -326,6 +330,10 @@ public class ServiceTests
         Assert.Equal("partner-order-001", bookingBody.RootElement.GetProperty("partner_trip_id").GetString());
         Assert.Equal(150000, bookingBody.RootElement.GetProperty("goods_value").GetInt64());
         Assert.Equal(12, bookingBody.RootElement.GetProperty("addons")[0].GetProperty("id").GetInt32());
+        var bookingPickup = bookingBody.RootElement.GetProperty("points")[0];
+        Assert.Equal(5, bookingPickup.GetProperty("package_weight").GetInt32());
+        Assert.Equal("LARGE", bookingPickup.GetProperty("package_size").GetString());
+        Assert.Equal("others", bookingPickup.GetProperty("package_types")[0].GetString());
 
         Assert.NotNull(estimateRequest);
         using var estimateBody = JsonDocument.Parse(estimateRequest.Body!);
@@ -430,6 +438,10 @@ public class ServiceTests
                             "id": 2099,
                             "service_type": "EXPRESS-ONDEMAND",
                             "travel_mode": "Motorcycle",
+                            "express_package_types": ["flowers", "others"],
+                            "express_package_sizes": ["SMALL", "MEDIUM", "LARGE"],
+                            "express_package_max_weight": 30,
+                            "express_package_weight_unit": "kg",
                             "enable": true,
                             "during_service": true
                           },
@@ -451,11 +463,16 @@ public class ServiceTests
                     "service_estimates": [
                       {
                         "fee_unavailable": false,
-                        "estimate_info": {
-                          "fee_id": "dynamic-addon-fee",
-                          "expires_at": 1770350500,
-                          "estimate": { "total_fee": 33000, "total_pay": 33000 }
-                        }
+                            "estimate_info": {
+                              "fee_id": "dynamic-addon-fee",
+                              "expires_at": 1770350500,
+                              "estimate": { "total_fee": 33000, "total_pay": 33000 },
+                              "trip": {
+                                "distance_unit": "km",
+                                "distance_estimate": 5.33,
+                                "duration_estimate": 702
+                              }
+                            }
                       }
                     ]
                   }
@@ -468,10 +485,16 @@ public class ServiceTests
             1770350401);
 
         Assert.Equal(12, quote.AddonId);
+        Assert.Equal(5.33, quote.Distance);
+        Assert.Equal("km", quote.DistanceUnit);
+        Assert.Equal(702, quote.Duration);
         using var body = JsonDocument.Parse(Assert.Single(estimateBodies));
         Assert.Equal(
             12,
             body.RootElement.GetProperty("service_ids")[0].GetProperty("addons")[0].GetProperty("id").GetInt32());
+        var pickup = body.RootElement.GetProperty("points")[0];
+        Assert.Equal("LARGE", pickup.GetProperty("package_size").GetString());
+        Assert.Equal("flowers", pickup.GetProperty("package_types")[0].GetString());
     }
 
     [Fact]

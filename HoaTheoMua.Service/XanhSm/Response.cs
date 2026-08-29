@@ -161,6 +161,9 @@ public class XanhSmDoorToDoorQuote
     public required string FeeId { get; init; }
     public long TotalFee { get; init; }
     public long ExpiresAt { get; init; }
+    public double? Distance { get; init; }
+    public string? DistanceUnit { get; init; }
+    public int? Duration { get; init; }
 }
 
 public class XanhSmServiceEstimate
