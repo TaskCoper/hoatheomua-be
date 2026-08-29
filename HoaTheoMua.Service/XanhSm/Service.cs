@@ -214,8 +214,6 @@ public class Service : IService
             throw new BadRequestException("XanhSM Door-to-door service is not available for this route");
         }
 
-        ConfigurePickupPackage(pointList, availableService.Item.Service);
-
         var serviceId = availableService.Item.Service.Id > 0
             ? availableService.Item.Service.Id
             : availableService.Item.Service.ServiceId.GetValueOrDefault();
@@ -521,54 +519,6 @@ public class Service : IService
             {
                 throw new BadRequestException("XanhSM package_types is required at every PICK UP point");
             }
-        }
-    }
-
-    private static void ConfigurePickupPackage(
-        IEnumerable<XanhSmDeliveryPointRequest> points,
-        XanhSmServiceInfo service)
-    {
-        if (!string.IsNullOrWhiteSpace(service.ExpressPackageWeightUnit) &&
-            !string.Equals(service.ExpressPackageWeightUnit, "kg", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new BadGatewayException(
-                $"XanhSM returned unsupported package weight unit '{service.ExpressPackageWeightUnit}'");
-        }
-
-        var acceptedLargeSize = service.ExpressPackageSizes.FirstOrDefault(size =>
-            string.Equals(size, XanhSmConstants.LargePackageSize, StringComparison.OrdinalIgnoreCase));
-        if (acceptedLargeSize is null)
-        {
-            throw new BadRequestException("The selected XanhSM motorcycle service does not accept LARGE packages");
-        }
-
-        var acceptedFlowerType = service.ExpressPackageTypes.FirstOrDefault(type =>
-            string.Equals(type, XanhSmConstants.FlowersPackageType, StringComparison.OrdinalIgnoreCase));
-        var acceptedOtherType = service.ExpressPackageTypes.FirstOrDefault(type =>
-            string.Equals(type, XanhSmConstants.OtherPackageType, StringComparison.OrdinalIgnoreCase));
-        var packageType = acceptedFlowerType ?? acceptedOtherType;
-        if (packageType is null)
-        {
-            throw new BadRequestException(
-                "The selected XanhSM motorcycle service does not accept flowers or other package types");
-        }
-
-        var serviceMaxWeight = service.ExpressPackageMaxWeight is > 0
-            ? service.ExpressPackageMaxWeight.Value
-            : XanhSmConstants.StandardMotorcycleMaxWeightKg;
-        var maximumWeight = Math.Min(serviceMaxWeight, XanhSmConstants.StandardMotorcycleMaxWeightKg);
-
-        foreach (var pickup in points.Where(point =>
-                     string.Equals(point.Type, XanhSmConstants.PickUpPoint, StringComparison.OrdinalIgnoreCase)))
-        {
-            if (pickup.PackageWeight > maximumWeight)
-            {
-                throw new BadRequestException(
-                    $"XanhSM motorcycle delivery supports at most {maximumWeight:0.##} kg without the bulky addon");
-            }
-
-            pickup.PackageSize = acceptedLargeSize;
-            pickup.PackageTypes = [packageType];
         }
     }
 

@@ -833,9 +833,9 @@ public class Service : IService
                 Latitude = (double)companyAddress.Latitude.Value,
                 Longitude = (double)companyAddress.Longitude.Value,
                 PackageWeight = packageWeightKg,
-                // GreenSM does not publish thresholds between SMALL/MEDIUM/LARGE.
-                // Flower orders use the conservative standard-bike size and the
-                // selected service will validate that it accepts this code.
+                // Sandbox service 1878 accepts LARGE/flowers in estimate/order but
+                // returns null package metadata from list-available-services.
+                // The estimate endpoint remains the authoritative validator.
                 PackageSize = XanhSmConstants.LargePackageSize,
                 PackageTypes = [XanhSmConstants.FlowersPackageType]
             },
