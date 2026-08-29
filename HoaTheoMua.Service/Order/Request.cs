@@ -73,6 +73,19 @@ public class Request
         public int? ParentId { get; set; }
     }
 
+    public class EstimateXanhSmShippingFeeRequest
+    {
+        public decimal Latitude { get; set; }
+        public decimal Longitude { get; set; }
+        public required string Address { get; set; }
+        public required string ShortAddress { get; set; }
+        public required string FullName { get; set; }
+        public required string Phone { get; set; }
+        public string? Remarks { get; set; }
+        public long OrderTime { get; set; }
+        public List<AhaMoveRequest.Items> Items { get; set; } = [];
+    }
+
     public class UpdateAhamoveRequest
     {
         public required string OrderId { get; set; }

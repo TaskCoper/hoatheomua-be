@@ -7,6 +7,13 @@ namespace HoaTheoMua.Service.Order;
 
 public class Response
 {
+    public class EstimateXanhSmShippingFeeResponse
+    {
+        public decimal ShippingFee { get; set; }
+        public string CurrencyCode { get; set; } = "VND";
+        public long OrderTime { get; set; }
+        public long ExpiresAt { get; set; }
+    }
 
     public class GetOrderResponse
     {

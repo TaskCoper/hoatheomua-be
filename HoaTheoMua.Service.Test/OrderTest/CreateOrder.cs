@@ -541,7 +541,13 @@ namespace HoaTheoMua.Service.Test.OrderTest
                             {
                                 Id = 101,
                                 Prices = new NhanhPrices { Retail = 50000 },
-                                Shipping = new NhanhShipping()
+                                Shipping = new NhanhShipping
+                                {
+                                    Weight = 1500,
+                                    Height = 20,
+                                    Length = 30,
+                                    Width = 20
+                                }
                             }
                         ]
                     })
@@ -597,9 +603,101 @@ namespace HoaTheoMua.Service.Test.OrderTest
             xanhSmService.Verify(service => service.EstimateDoorToDoorAsync(
                 It.Is<IReadOnlyCollection<HoaTheoMua.Service.XanhSm.XanhSmDeliveryPointRequest>>(points =>
                     points.Count == 2 &&
-                    points.Any(point => point.Type == "PICK UP" && point.Name == companyAddress.FullName) &&
+                    points.Any(point =>
+                        point.Type == "PICK UP" &&
+                        point.Name == companyAddress.FullName &&
+                        point.PackageWeight == 2 &&
+                        point.PackageSize == HoaTheoMua.Service.XanhSm.XanhSmConstants.LargePackageSize &&
+                        point.PackageTypes!.SequenceEqual(
+                            new[] { HoaTheoMua.Service.XanhSm.XanhSmConstants.FlowersPackageType })) &&
                     points.Any(point => point.Type == "DROP OFF" && point.PhoneNumber == TestPhoneReceiver)),
                 It.Is<long>(orderTime => orderTime > 0),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task EstimateXanhSmShippingFee_ValidRequest_ReturnsBuyerShippingFee()
+        {
+            var companyAddress = CreateCompanyAddress();
+            var dbContextMock = CreateMockDbContext(companyAddresses: [companyAddress]);
+            var handler = new Mock<HttpMessageHandler>();
+            handler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString().Contains("nhanhvn")),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(new NhanhProductListResponse
+                    {
+                        Code = 1,
+                        Data =
+                        [
+                            new NhanhProductData
+                            {
+                                Id = 101,
+                                Prices = new NhanhPrices { Retail = 50000 },
+                                Shipping = new NhanhShipping { Weight = 2500 }
+                            }
+                        ]
+                    })
+                });
+            var xanhSmService = new Mock<HoaTheoMua.Service.XanhSm.IService>();
+            var expiresAt = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
+            xanhSmService
+                .Setup(service => service.EstimateDoorToDoorAsync(
+                    It.IsAny<IReadOnlyCollection<HoaTheoMua.Service.XanhSm.XanhSmDeliveryPointRequest>>(),
+                    It.IsAny<long>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new HoaTheoMua.Service.XanhSm.XanhSmDoorToDoorQuote
+                {
+                    ServiceId = 2099,
+                    AddonId = 12,
+                    ServiceType = "EXPRESS-ONDEMAND",
+                    FeeId = "fee-estimate-buyer",
+                    TotalFee = 33000,
+                    ExpiresAt = expiresAt
+                });
+            var service = CreateService(
+                dbContextMock.Object,
+                new HttpClient(handler.Object),
+                CreateMockCurrentUserService(TestUserId),
+                CreateMockProductService(),
+                xanhSmService: xanhSmService.Object);
+
+            var result = await service.EstimateXanhSmShippingFee(
+                new OrderRequest.EstimateXanhSmShippingFeeRequest
+                {
+                    Latitude = 10.801937m,
+                    Longitude = 106.712372m,
+                    Address = "208 Nguyễn Hữu Cảnh, TP.HCM",
+                    ShortAddress = "Landmark 81",
+                    FullName = "Nguyễn Văn A",
+                    Phone = "0901234567",
+                    Remarks = "Gọi trước khi giao",
+                    Items = [new AhaMoveRequest.Items { ItemId = 101, Number = 2 }]
+                });
+
+            Assert.Equal(33000m, result.ShippingFee);
+            Assert.Equal("VND", result.CurrencyCode);
+            Assert.True(result.OrderTime > 0);
+            Assert.Equal(expiresAt, result.ExpiresAt);
+            xanhSmService.Verify(service => service.EstimateDoorToDoorAsync(
+                It.Is<IReadOnlyCollection<HoaTheoMua.Service.XanhSm.XanhSmDeliveryPointRequest>>(points =>
+                    points.Count == 2 &&
+                    points.Any(point =>
+                        point.Type == HoaTheoMua.Service.XanhSm.XanhSmConstants.PickUpPoint &&
+                        point.Name == companyAddress.FullName &&
+                        point.PackageWeight == 5 &&
+                        point.PackageSize == HoaTheoMua.Service.XanhSm.XanhSmConstants.LargePackageSize &&
+                        point.PackageTypes!.SequenceEqual(
+                            new[] { HoaTheoMua.Service.XanhSm.XanhSmConstants.FlowersPackageType })) &&
+                    points.Any(point =>
+                        point.Type == HoaTheoMua.Service.XanhSm.XanhSmConstants.DropOffPoint &&
+                        point.PhoneNumber == "0901234567" &&
+                        point.ShortAddress == "Landmark 81")),
+                It.Is<long>(orderTime => orderTime == result.OrderTime),
                 It.IsAny<CancellationToken>()), Times.Once);
         }
 
