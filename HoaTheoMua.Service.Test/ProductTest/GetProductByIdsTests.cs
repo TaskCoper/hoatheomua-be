@@ -73,10 +73,13 @@ public class GetProductByIdsTests
 
         var result = await service.GetProductByIds(new Request.GetProductByIds
         {
-            ProductIds = new List<Guid> { child.Id }
+            Items = new List<Request.GetProductByIdsItem>
+            {
+                new() { ProductId = child.Id, Number = 1 }
+            }
         });
 
-        Assert.False(Assert.Single(result).IsActive);
+        Assert.False(Assert.Single(result.Products).IsActive);
     }
 
     [Fact]
@@ -116,11 +119,15 @@ public class GetProductByIdsTests
 
         var result = await service.GetProductByIds(new Request.GetProductByIds
         {
-            ProductIds = new List<Guid> { activeChild.Id, inactiveChild.Id }
+            Items = new List<Request.GetProductByIdsItem>
+            {
+                new() { ProductId = activeChild.Id, Number = 1 },
+                new() { ProductId = inactiveChild.Id, Number = 1 }
+            }
         });
 
-        Assert.True(result.Single(x => x.Id == activeChild.Id).IsActive);
-        Assert.False(result.Single(x => x.Id == inactiveChild.Id).IsActive);
+        Assert.True(result.Products.Single(x => x.Id == activeChild.Id).IsActive);
+        Assert.False(result.Products.Single(x => x.Id == inactiveChild.Id).IsActive);
     }
 
     [Fact]
@@ -142,10 +149,13 @@ public class GetProductByIdsTests
 
         var result = await service.GetProductByIds(new Request.GetProductByIds
         {
-            ProductIds = new List<Guid> { product.Id }
+            Items = new List<Request.GetProductByIdsItem>
+            {
+                new() { ProductId = product.Id, Number = 1 }
+            }
         });
 
-        Assert.False(Assert.Single(result).IsActive);
+        Assert.False(Assert.Single(result.Products).IsActive);
     }
 
     [Fact]
@@ -184,10 +194,13 @@ public class GetProductByIdsTests
 
         var result = await service.GetProductByIds(new Request.GetProductByIds
         {
-            ProductIds = new List<Guid> { parent.Id }
+            Items = new List<Request.GetProductByIdsItem>
+            {
+                new() { ProductId = parent.Id, Number = 1 }
+            }
         });
 
-        Assert.False(Assert.Single(result).IsActive);
+        Assert.False(Assert.Single(result.Products).IsActive);
     }
 
     [Fact]
@@ -226,10 +239,13 @@ public class GetProductByIdsTests
 
         var result = await service.GetProductByIds(new Request.GetProductByIds
         {
-            ProductIds = new List<Guid> { parent.Id }
+            Items = new List<Request.GetProductByIdsItem>
+            {
+                new() { ProductId = parent.Id, Number = 1 }
+            }
         });
 
-        Assert.True(Assert.Single(result).IsActive);
+        Assert.True(Assert.Single(result.Products).IsActive);
     }
 
     [Fact]
@@ -260,9 +276,12 @@ public class GetProductByIdsTests
 
         var result = await service.GetProductByIds(new Request.GetProductByIds
         {
-            ProductIds = new List<Guid> { parent.Id }
+            Items = new List<Request.GetProductByIdsItem>
+            {
+                new() { ProductId = parent.Id, Number = 1 }
+            }
         });
 
-        Assert.False(Assert.Single(result).IsActive);
+        Assert.False(Assert.Single(result.Products).IsActive);
     }
 }
