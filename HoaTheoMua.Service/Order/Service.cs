@@ -1248,7 +1248,8 @@ public class Service : IService
                 (x.ShippingPartyOrderId != null && x.ShippingPartyOrderId.ToLower().Contains(normalizedSearch)) ||
                 (nhanhOrderId != null && x.NhanhOrderId == nhanhOrderId) ||
                 (isPaymentMethod && x.PaymentMethod == paymentMethod) ||
-                (x.Phone.Contains(normalizedSearch)));
+                (x.Phone.Contains(normalizedSearch)) || 
+                x.Id.ToString().Contains(normalizedSearch));
         }
 
         var totalCount = await orders.CountAsync();
