@@ -253,9 +253,9 @@ public class ServiceTests
                             "service_type": "EXPRESS-ONDEMAND",
                             "travel_mode": "Motorcycle",
                             "vehicle_models": ["BIKE"],
-                            "express_package_types": ["food_and_groceries", "others"],
-                            "express_package_sizes": ["SMALL", "MEDIUM", "LARGE"],
-                            "express_package_max_weight": 30,
+                            "express_package_types": null,
+                            "express_package_sizes": null,
+                            "express_package_max_weight": 1000,
                             "express_package_weight_unit": "kg",
                             "enable": true,
                             "during_service": true
@@ -333,7 +333,7 @@ public class ServiceTests
         var bookingPickup = bookingBody.RootElement.GetProperty("points")[0];
         Assert.Equal(5, bookingPickup.GetProperty("package_weight").GetInt32());
         Assert.Equal("LARGE", bookingPickup.GetProperty("package_size").GetString());
-        Assert.Equal("others", bookingPickup.GetProperty("package_types")[0].GetString());
+        Assert.Equal("flowers", bookingPickup.GetProperty("package_types")[0].GetString());
 
         Assert.NotNull(estimateRequest);
         using var estimateBody = JsonDocument.Parse(estimateRequest.Body!);
@@ -438,9 +438,9 @@ public class ServiceTests
                             "id": 2099,
                             "service_type": "EXPRESS-ONDEMAND",
                             "travel_mode": "Motorcycle",
-                            "express_package_types": ["flowers", "others"],
-                            "express_package_sizes": ["SMALL", "MEDIUM", "LARGE"],
-                            "express_package_max_weight": 30,
+                            "express_package_types": null,
+                            "express_package_sizes": null,
+                            "express_package_max_weight": 1000,
                             "express_package_weight_unit": "kg",
                             "enable": true,
                             "during_service": true
@@ -535,8 +535,8 @@ public class ServiceTests
             Latitude = 10.776889,
             Longitude = 106.700806,
             PackageWeight = type == "PICK UP" ? 5 : null,
-            PackageSize = type == "PICK UP" ? "SMALL" : null,
-            PackageTypes = type == "PICK UP" ? ["food"] : null
+            PackageSize = type == "PICK UP" ? "LARGE" : null,
+            PackageTypes = type == "PICK UP" ? ["flowers"] : null
         };
     }
 
