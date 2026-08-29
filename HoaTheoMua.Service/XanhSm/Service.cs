@@ -214,6 +214,8 @@ public class Service : IService
             throw new BadRequestException("XanhSM Door-to-door service is not available for this route");
         }
 
+        ConfigurePickupPackage(pointList, availableService.Item.Service);
+
         var serviceId = availableService.Item.Service.Id > 0
             ? availableService.Item.Service.Id
             : availableService.Item.Service.ServiceId.GetValueOrDefault();
@@ -267,7 +269,10 @@ public class Service : IService
             ServiceType = availableService.Item.Service.ServiceType!,
             FeeId = serviceEstimate.EstimateInfo.FeeId,
             TotalFee = serviceEstimate.EstimateInfo.Estimate.TotalFee,
-            ExpiresAt = serviceEstimate.EstimateInfo.ExpiresAt
+            ExpiresAt = serviceEstimate.EstimateInfo.ExpiresAt,
+            Distance = serviceEstimate.EstimateInfo.Trip?.DistanceEstimate,
+            DistanceUnit = serviceEstimate.EstimateInfo.Trip?.DistanceUnit,
+            Duration = serviceEstimate.EstimateInfo.Trip?.DurationEstimate
         };
     }
 
@@ -495,6 +500,75 @@ public class Service : IService
         {
             throw new BadRequestException(
                 "XanhSM Door-to-door requires at least one PICK UP point and exactly one DROP OFF point");
+        }
+
+        foreach (var pickup in points.Where(point =>
+                     string.Equals(point.Type, XanhSmConstants.PickUpPoint, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (pickup.PackageWeight is null or <= 0)
+            {
+                throw new BadRequestException("XanhSM package_weight is required at every PICK UP point");
+            }
+
+            if (string.IsNullOrWhiteSpace(pickup.PackageSize))
+            {
+                throw new BadRequestException("XanhSM package_size is required at every PICK UP point");
+            }
+
+            if (pickup.PackageTypes is null ||
+                pickup.PackageTypes.Count == 0 ||
+                pickup.PackageTypes.Any(string.IsNullOrWhiteSpace))
+            {
+                throw new BadRequestException("XanhSM package_types is required at every PICK UP point");
+            }
+        }
+    }
+
+    private static void ConfigurePickupPackage(
+        IEnumerable<XanhSmDeliveryPointRequest> points,
+        XanhSmServiceInfo service)
+    {
+        if (!string.IsNullOrWhiteSpace(service.ExpressPackageWeightUnit) &&
+            !string.Equals(service.ExpressPackageWeightUnit, "kg", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadGatewayException(
+                $"XanhSM returned unsupported package weight unit '{service.ExpressPackageWeightUnit}'");
+        }
+
+        var acceptedLargeSize = service.ExpressPackageSizes.FirstOrDefault(size =>
+            string.Equals(size, XanhSmConstants.LargePackageSize, StringComparison.OrdinalIgnoreCase));
+        if (acceptedLargeSize is null)
+        {
+            throw new BadRequestException("The selected XanhSM motorcycle service does not accept LARGE packages");
+        }
+
+        var acceptedFlowerType = service.ExpressPackageTypes.FirstOrDefault(type =>
+            string.Equals(type, XanhSmConstants.FlowersPackageType, StringComparison.OrdinalIgnoreCase));
+        var acceptedOtherType = service.ExpressPackageTypes.FirstOrDefault(type =>
+            string.Equals(type, XanhSmConstants.OtherPackageType, StringComparison.OrdinalIgnoreCase));
+        var packageType = acceptedFlowerType ?? acceptedOtherType;
+        if (packageType is null)
+        {
+            throw new BadRequestException(
+                "The selected XanhSM motorcycle service does not accept flowers or other package types");
+        }
+
+        var serviceMaxWeight = service.ExpressPackageMaxWeight is > 0
+            ? service.ExpressPackageMaxWeight.Value
+            : XanhSmConstants.StandardMotorcycleMaxWeightKg;
+        var maximumWeight = Math.Min(serviceMaxWeight, XanhSmConstants.StandardMotorcycleMaxWeightKg);
+
+        foreach (var pickup in points.Where(point =>
+                     string.Equals(point.Type, XanhSmConstants.PickUpPoint, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (pickup.PackageWeight > maximumWeight)
+            {
+                throw new BadRequestException(
+                    $"XanhSM motorcycle delivery supports at most {maximumWeight:0.##} kg without the bulky addon");
+            }
+
+            pickup.PackageSize = acceptedLargeSize;
+            pickup.PackageTypes = [packageType];
         }
     }
 

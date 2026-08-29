@@ -382,7 +382,8 @@ public class Service : IService
     // Fetches the catalog rows for the requested items from Nhanh.vn.
     private async Task<List<NhanhProductData>> FetchNhanhProductsAsync(
         List<AhaMoveRequest.Items> items,
-        GroupConfig configs)
+        GroupConfig configs,
+        CancellationToken cancellationToken = default)
     {
         var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
@@ -409,13 +410,13 @@ public class Service : IService
         httpRequest.Headers.Add("Authorization", token);
         httpRequest.Content = JsonContent.Create(productListRequest);
 
-        using var response = await _httpClient.SendAsync(httpRequest);
+        using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             throw new BadRequestException($"NhanhVn API HTTP Error ({response.StatusCode})");
         }
 
-        var result = await response.Content.ReadFromJsonAsync<NhanhProductListResponse>();
+        var result = await response.Content.ReadFromJsonAsync<NhanhProductListResponse>(cancellationToken);
         if (result == null || result.Data == null)
         {
             throw new BadRequestException("NhanhVnResponse returned null or empty data");
@@ -584,7 +585,11 @@ public class Service : IService
                 products,
                 quantityByItemId,
                 companyAddress),
-            ShippingGateway.XanhSm => await EstimateXanhSmShippingFeeAsync(request, companyAddress),
+            ShippingGateway.XanhSm => await EstimateXanhSmShippingFeeAsync(
+                request,
+                products,
+                quantityByItemId,
+                companyAddress),
             _ => throw new BadRequestException($"Shipping gateway {request.ShippingGateway} is not supported")
         };
     }
@@ -689,6 +694,8 @@ public class Service : IService
 
     private async Task<decimal> EstimateXanhSmShippingFeeAsync(
         Request.CreateOrderRequest request,
+        IReadOnlyCollection<NhanhProductData> products,
+        IReadOnlyDictionary<int, int> quantityByItemId,
         Repository.Entity.CompanyAddress? companyAddress)
     {
         if (_xanhSmService is null)
@@ -713,10 +720,79 @@ public class Service : IService
                 request.ShortAddress,
                 request.FullNameReceiver,
                 request.PhoneReceiver,
-                request.Remarks),
+                request.Remarks,
+                CalculateXanhSmPackageWeightKg(products.Select(product =>
+                    (product.Shipping.Weight, quantityByItemId[product.Id])))),
             orderTime);
 
         return quote.TotalFee;
+    }
+
+    public async Task<Response.EstimateXanhSmShippingFeeResponse> EstimateXanhSmShippingFee(
+        Request.EstimateXanhSmShippingFeeRequest request,
+        CancellationToken cancellationToken = default) 
+    {
+        if (_xanhSmService is null)
+        {
+            throw new ServerException("XanhSM service is not configured");
+        }
+
+        var companyAddress = await _dbContext.CompanyAddresses
+            .Where(address => !address.IsDeleted)
+            .OrderByDescending(address => address.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (companyAddress is null)
+        {
+            throw new BadRequestException("Company pickup address is not configured");
+        }
+
+        var itemIds = request.Items.Select(item => item.ItemId.ToString()).Distinct().ToList();
+        var hasInactiveProduct = await _dbContext.Products
+            .AnyAsync(
+                product => itemIds.Contains(product.NhanhProductId!) && (!product.IsActive || product.IsDeleted),
+                cancellationToken);
+        if (hasInactiveProduct)
+        {
+            throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
+        }
+
+        var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs, cancellationToken);
+        var productIds = products.Select(product => product.Id).ToHashSet();
+        if (request.Items.Any(item => !productIds.Contains(item.ItemId)))
+        {
+            throw new BadRequestException("Đơn hàng không tồn tại trong hệ thống");
+        }
+
+        var quantityByItemId = request.Items.ToDictionary(item => item.ItemId, item => item.Number);
+
+        var orderTime = request.OrderTime > 0
+            ? request.OrderTime
+            : DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var quote = await _xanhSmService.EstimateDoorToDoorAsync(
+            CreateXanhSmPoints(
+                companyAddress,
+                request.Latitude,
+                request.Longitude,
+                request.Address,
+                request.ShortAddress,
+                request.FullName,
+                request.Phone,
+                request.Remarks,
+                CalculateXanhSmPackageWeightKg(products.Select(product =>
+                    (product.Shipping.Weight, quantityByItemId[product.Id])))),
+            orderTime,
+            cancellationToken);
+
+        return new Response.EstimateXanhSmShippingFeeResponse
+        {
+            ShippingFee = quote.TotalFee,
+            Distance = quote.Distance,
+            DistanceUnit = quote.DistanceUnit,
+            Duration = quote.Duration,
+            OrderTime = orderTime,
+            ExpiresAt = quote.ExpiresAt
+        };
     }
 
     internal static List<XanhSmDeliveryPointRequest> CreateXanhSmPoints(
@@ -727,7 +803,8 @@ public class Service : IService
         string dropOffShortAddress,
         string dropOffName,
         string dropOffPhone,
-        string? dropOffNote)
+        string? dropOffNote,
+        int packageWeightKg)
     {
         if (companyAddress.Latitude is null || companyAddress.Longitude is null)
         {
@@ -754,7 +831,13 @@ public class Service : IService
                 ShortAddress = pickupAddress,
                 AddressNote = companyAddress.Remarks,
                 Latitude = (double)companyAddress.Latitude.Value,
-                Longitude = (double)companyAddress.Longitude.Value
+                Longitude = (double)companyAddress.Longitude.Value,
+                PackageWeight = packageWeightKg,
+                // GreenSM does not publish thresholds between SMALL/MEDIUM/LARGE.
+                // Flower orders use the conservative standard-bike size and the
+                // selected service will validate that it accepts this code.
+                PackageSize = XanhSmConstants.LargePackageSize,
+                PackageTypes = [XanhSmConstants.FlowersPackageType]
             },
             new XanhSmDeliveryPointRequest
             {
@@ -768,6 +851,17 @@ public class Service : IService
                 Longitude = (double)dropOffLongitude
             }
         ];
+    }
+
+    internal static int CalculateXanhSmPackageWeightKg(
+        IEnumerable<(double WeightInGrams, int Quantity)> packages)
+    {
+        var totalWeightInGrams = packages.Sum(package =>
+            Math.Max(package.WeightInGrams, 0) * Math.Max(package.Quantity, 0));
+
+        // Nhanh.vn/Ahamove product shipping weight is stored in grams while
+        // GreenSM requires an integer total weight in kilograms.
+        return Math.Max(1, (int)Math.Ceiling(totalWeightInGrams / 1000d));
     }
 
     public async Task<BaseResponse> GetOrderById(Guid id)
@@ -1154,7 +1248,8 @@ public class Service : IService
                 (x.ShippingPartyOrderId != null && x.ShippingPartyOrderId.ToLower().Contains(normalizedSearch)) ||
                 (nhanhOrderId != null && x.NhanhOrderId == nhanhOrderId) ||
                 (isPaymentMethod && x.PaymentMethod == paymentMethod) ||
-                (x.Phone.Contains(normalizedSearch)));
+                (x.Phone.Contains(normalizedSearch)) || 
+                x.Id.ToString().Contains(normalizedSearch));
         }
 
         var totalCount = await orders.CountAsync();

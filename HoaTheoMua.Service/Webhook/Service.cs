@@ -579,7 +579,9 @@ public partial class Service : IService
                         order.ShortAddress,
                         fullNameReceiver,
                         phoneReceiver,
-                        order.Remarks),
+                        order.Remarks,
+                        HoaTheoMua.Service.Order.Service.CalculateXanhSmPackageWeightKg(
+                            order.OrderDetails.Select(detail => (detail.Weight, detail.Number)))),
                     delayTime,
                     (long)Math.Round(order.ProductFee, MidpointRounding.AwayFromZero),
                     order.Id.ToString());

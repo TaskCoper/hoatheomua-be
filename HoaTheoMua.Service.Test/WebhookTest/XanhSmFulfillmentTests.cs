@@ -84,7 +84,11 @@ public class XanhSmFulfillmentTests
         xanhSm.Verify(service => service.BookDoorToDoorAsync(
             It.Is<IReadOnlyCollection<XanhSmDeliveryPointRequest>>(points =>
                 points.Count == 2 &&
-                points.Any(point => point.Type == XanhSmConstants.PickUpPoint) &&
+                points.Any(point =>
+                    point.Type == XanhSmConstants.PickUpPoint &&
+                    point.PackageWeight == 2 &&
+                    point.PackageSize == XanhSmConstants.LargePackageSize &&
+                    point.PackageTypes!.SequenceEqual(new[] { XanhSmConstants.FlowersPackageType })) &&
                 points.Any(point =>
                     point.Type == XanhSmConstants.DropOffPoint &&
                     point.PhoneNumber == order.PhoneReceiver)),
