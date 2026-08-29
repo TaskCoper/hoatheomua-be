@@ -115,8 +115,8 @@ services:
     environment:
       <<: *api-env
       ConnectionStrings__PostgresSql: Host=hoatheomua-postgres-prod;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
-    # ports:
-    #   - "${HTTP_PORT}:8080"
+    ports:
+      - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-prod]
     profiles: [prod, api-prod, api, prod-pull]
 
@@ -126,13 +126,6 @@ services:
     hostname: hoatheomua-cloudflare-dev
     networks: [hoatheomua-network-dev]
     profiles: [dev, cloudflare-dev, proxy, dev-pull]
-
-  hoatheomua-cloudflare-prod:
-    <<: *cloudflare-tunnel
-    container_name: hoatheomua-cloudflare-prod
-    hostname: hoatheomua-cloudflare-prod
-    networks: [hoatheomua-network-prod]
-    profiles: [prod, cloudflare-prod, proxy, prod-pull]
 
 volumes:
   postgres-hoatheomua-data-dev:

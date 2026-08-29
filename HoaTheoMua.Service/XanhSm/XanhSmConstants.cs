@@ -10,6 +10,4 @@ public static class XanhSmConstants
     public const string MotorcycleTravelMode = "Motorcycle";
     public const string LargePackageSize = "LARGE";
     public const string FlowersPackageType = "flowers";
-    public const string OtherPackageType = "others";
-    public const int StandardMotorcycleMaxWeightKg = 30;
 }

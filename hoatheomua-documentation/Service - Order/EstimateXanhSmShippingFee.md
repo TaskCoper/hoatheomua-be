@@ -78,7 +78,7 @@ Yêu cầu access token của khách hàng.
 2. Lấy `Shipping.Weight` của từng sản phẩm từ Nhanh.vn, nhân số lượng, cộng tổng gram, đổi sang kg và làm tròn lên; tối thiểu `1 kg`.
 3. Gắn `package_weight`, `package_size = LARGE`, `package_types = [flowers]` vào điểm `PICK UP`; điểm `DROP OFF` không mang ba field này.
 4. Gọi `list-available-services` và chọn xe máy có addon `DOOR2DOOR`.
-5. Đối chiếu `LARGE` với `express_package_sizes`; ưu tiên type `flowers`, nếu service không có thì dùng `others` khi được trả về. Không dùng type/size ngoài danh sách service hỗ trợ.
+5. Giữ nguyên `LARGE/flowers` khi gọi Estimate. Sandbox service `1878` trả `express_package_sizes` và `express_package_types` bằng `null` trong `list-available-services` nhưng `estimate/order` vẫn chấp nhận hai giá trị này, nên backend không dùng metadata discovery để phủ quyết request.
 6. Giới hạn tối đa `30 kg` cho xe máy tiêu chuẩn vì hệ thống không dùng Bulky addon.
 7. Lấy addon ID động từ response rồi gọi `estimate/order`.
 8. Chỉ trả phí và thời hạn báo giá cho frontend.
