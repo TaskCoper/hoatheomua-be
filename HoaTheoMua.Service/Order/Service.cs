@@ -787,6 +787,9 @@ public class Service : IService
         return new Response.EstimateXanhSmShippingFeeResponse
         {
             ShippingFee = quote.TotalFee,
+            Distance = quote.Distance,
+            DistanceUnit = quote.DistanceUnit,
+            Duration = quote.Duration,
             OrderTime = orderTime,
             ExpiresAt = quote.ExpiresAt
         };

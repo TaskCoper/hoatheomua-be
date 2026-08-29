@@ -11,6 +11,9 @@ public class Response
     {
         public decimal ShippingFee { get; set; }
         public string CurrencyCode { get; set; } = "VND";
+        public double? Distance { get; set; }
+        public string? DistanceUnit { get; set; }
+        public int? Duration { get; set; }
         public long OrderTime { get; set; }
         public long ExpiresAt { get; set; }
     }

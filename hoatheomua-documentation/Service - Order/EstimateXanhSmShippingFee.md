@@ -42,6 +42,9 @@ Yêu cầu access token của khách hàng.
   "value": {
     "shippingFee": 33000,
     "currencyCode": "VND",
+    "distance": 5.33,
+    "distanceUnit": "km",
+    "duration": 702,
     "orderTime": 1787986800,
     "expiresAt": 1787987100
   },
@@ -54,6 +57,11 @@ Yêu cầu access token của khách hàng.
 ```
 
 `shippingFee` chỉ là phí tạm tính. Khi tạo order, backend sẽ estimate lại để lấy `fee_id` mới và lưu phí chính thức vào order.
+
+- `distance`: khoảng cách giao hàng dự kiến do GreenSM trả về.
+- `distanceUnit`: đơn vị khoảng cách; GreenSM hiện trả `km`.
+- `duration`: thời gian giao hàng dự kiến theo giây.
+- Ba field hành trình có thể là `null` nếu GreenSM không trả `estimate_info.trip`.
 
 ## Validation
 

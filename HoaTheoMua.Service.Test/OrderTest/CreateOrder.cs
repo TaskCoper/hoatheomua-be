@@ -657,7 +657,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
                     ServiceType = "EXPRESS-ONDEMAND",
                     FeeId = "fee-estimate-buyer",
                     TotalFee = 33000,
-                    ExpiresAt = expiresAt
+                    ExpiresAt = expiresAt,
+                    Distance = 5.33,
+                    DistanceUnit = "km",
+                    Duration = 702
                 });
             var service = CreateService(
                 dbContextMock.Object,
@@ -681,6 +684,9 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             Assert.Equal(33000m, result.ShippingFee);
             Assert.Equal("VND", result.CurrencyCode);
+            Assert.Equal(5.33, result.Distance);
+            Assert.Equal("km", result.DistanceUnit);
+            Assert.Equal(702, result.Duration);
             Assert.True(result.OrderTime > 0);
             Assert.Equal(expiresAt, result.ExpiresAt);
             xanhSmService.Verify(service => service.EstimateDoorToDoorAsync(

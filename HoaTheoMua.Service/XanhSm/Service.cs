@@ -269,7 +269,10 @@ public class Service : IService
             ServiceType = availableService.Item.Service.ServiceType!,
             FeeId = serviceEstimate.EstimateInfo.FeeId,
             TotalFee = serviceEstimate.EstimateInfo.Estimate.TotalFee,
-            ExpiresAt = serviceEstimate.EstimateInfo.ExpiresAt
+            ExpiresAt = serviceEstimate.EstimateInfo.ExpiresAt,
+            Distance = serviceEstimate.EstimateInfo.Trip?.DistanceEstimate,
+            DistanceUnit = serviceEstimate.EstimateInfo.Trip?.DistanceUnit,
+            Duration = serviceEstimate.EstimateInfo.Trip?.DurationEstimate
         };
     }
 

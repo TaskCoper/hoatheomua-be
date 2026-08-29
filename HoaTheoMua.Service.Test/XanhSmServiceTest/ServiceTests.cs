@@ -463,11 +463,16 @@ public class ServiceTests
                     "service_estimates": [
                       {
                         "fee_unavailable": false,
-                        "estimate_info": {
-                          "fee_id": "dynamic-addon-fee",
-                          "expires_at": 1770350500,
-                          "estimate": { "total_fee": 33000, "total_pay": 33000 }
-                        }
+                            "estimate_info": {
+                              "fee_id": "dynamic-addon-fee",
+                              "expires_at": 1770350500,
+                              "estimate": { "total_fee": 33000, "total_pay": 33000 },
+                              "trip": {
+                                "distance_unit": "km",
+                                "distance_estimate": 5.33,
+                                "duration_estimate": 702
+                              }
+                            }
                       }
                     ]
                   }
@@ -480,6 +485,9 @@ public class ServiceTests
             1770350401);
 
         Assert.Equal(12, quote.AddonId);
+        Assert.Equal(5.33, quote.Distance);
+        Assert.Equal("km", quote.DistanceUnit);
+        Assert.Equal(702, quote.Duration);
         using var body = JsonDocument.Parse(Assert.Single(estimateBodies));
         Assert.Equal(
             12,
