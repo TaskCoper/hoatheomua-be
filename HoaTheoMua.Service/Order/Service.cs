@@ -366,17 +366,17 @@ public class Service : IService
 
     private async Task<List<NhanhProductData>> FetchLocalProductsAsync(List<AhaMoveRequest.Items> items)
     {
-        var itemIds = items
-            .Select(x => x.ItemId.ToString())
+        var productIds = items
+            .Select(x => x.ProductId)
             .Distinct()
             .ToList();
 
         var productRows = await _dbContext.Products
             .AsNoTracking()
-            .Where(x => x.NhanhProductId != null &&
-                        itemIds.Contains(x.NhanhProductId))
+            .Where(x => productIds.Contains(x.Id))
             .Select(x => new
             {
+                x.Id,
                 x.NhanhProductId,
                 x.ProductName,
                 x.Price,
@@ -394,16 +394,23 @@ public class Service : IService
             throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
         }
 
-        if (productRows.Count != itemIds.Count)
+        if (productRows.Count != productIds.Count)
         {
             throw new BadRequestException("Đơn hàng có sản phẩm không tồn tại hoặc đã ngừng hoạt động");
         }
 
-        var productRowsByNhanhId = productRows.ToDictionary(x => x.NhanhProductId!);
-
-        return itemIds.Select(itemId =>
+        if (productRows.Any(x =>
+                string.IsNullOrWhiteSpace(x.NhanhProductId) ||
+                !int.TryParse(x.NhanhProductId, out _)))
         {
-            var product = productRowsByNhanhId[itemId];
+            throw new BadRequestException("Đơn hàng có sản phẩm không có NhanhProductId hợp lệ");
+        }
+
+        var productRowsById = productRows.ToDictionary(x => x.Id);
+
+        return productIds.Select(productId =>
+        {
+            var product = productRowsById[productId];
 
             return new NhanhProductData
             {

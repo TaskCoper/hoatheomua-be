@@ -45,6 +45,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
     {
         private static readonly Guid TestUserId = Guid.Parse("cba7c21c-d6f2-4b30-9b4e-8c7c10b4f0b2");
         private static readonly Guid TestAddressId = Guid.Parse("a32c276b-74f0-48fe-97b8-f3c66b42f103");
+        private static readonly Guid TestProductId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         private const string TestPhoneReceiver = "0901234567";
         private const string TestFullNameReceiver = "Nguyen Van A";
 
@@ -162,7 +163,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var mockAddresses = (addresses ?? new List<AddressEntity> { CreateAddress() }).BuildMockDbSet();
             var mockProducts = (products ?? new List<ProductEntity>
             {
-                CreateStockProduct(101, "Test Product", 10m)
+                CreateStockProduct(101, "Test Product", 10m, TestProductId)
             }).BuildMockDbSet();
             var mockComboSpecifications = (comboSpecifications ?? new List<ComboSpecification>()).BuildMockDbSet();
 
@@ -326,11 +327,15 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return mock.Object;
         }
 
-        private static ProductEntity CreateStockProduct(int nhanhProductId, string name, decimal availableForSale)
+        private static ProductEntity CreateStockProduct(
+            int nhanhProductId,
+            string name,
+            decimal availableForSale,
+            Guid? productId = null)
         {
             return new ProductEntity
             {
-                Id = Guid.NewGuid(),
+                Id = productId ?? Guid.NewGuid(),
                 NhanhProductId = nhanhProductId.ToString(),
                 ProductName = name,
                 Price = 50000m,
@@ -495,7 +500,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullName = "User Test",
                 Phone = "0901234567",
                 Remarks = "Ghi chu",
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -525,7 +530,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
         {
             var orders = new List<OrderEntity>();
             var companyAddress = CreateCompanyAddress();
-            var product = CreateStockProduct(101, "Test Product", 10m);
+            var product = CreateStockProduct(101, "Test Product", 10m, TestProductId);
             product.Weight = 1500m;
             var dbContextMock = CreateMockDbContext(
                 orders: orders,
@@ -597,7 +602,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullName = "User Test",
                 Phone = "0901234567",
                 Remarks = "Ghi chu",
-                Items = [new AhaMoveRequest.Items { ItemId = 101, Number = 1 }],
+                Items = [new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 }],
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.XanhSm,
@@ -690,7 +695,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                     FullName = "Nguyễn Văn A",
                     Phone = "0901234567",
                     Remarks = "Gọi trước khi giao",
-                    Items = [new AhaMoveRequest.Items { ItemId = 101, Number = 2 }]
+                    Items = [new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 2 }]
                 });
 
             Assert.Equal(33000m, result.ShippingFee);
@@ -798,7 +803,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -840,7 +845,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -874,7 +879,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -897,7 +902,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
         public async Task CreateOrder_InactiveLocalProduct_ThrowsBadRequestException()
         {
             // Arrange
-            var inactiveProduct = CreateStockProduct(101, "Test Product", 5m);
+            var inactiveProduct = CreateStockProduct(101, "Test Product", 5m, TestProductId);
             inactiveProduct.IsActive = false;
             var dbContext = CreateMockDbContext(
                 companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
@@ -910,7 +915,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -937,7 +942,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
                 products: new List<ProductEntity>
                 {
-                    CreateStockProduct(101, "Test Product", 1m)
+                    CreateStockProduct(101, "Test Product", 1m, TestProductId)
                 }).Object;
             var currentUser = CreateMockCurrentUserService(TestUserId);
             var productService = CreateMockProductService();
@@ -947,7 +952,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 2 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -990,7 +995,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -1032,7 +1037,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var request = new OrderRequest.CreateOrderRequest
             {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -1084,7 +1089,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Phone = "0901234567",
                 Remarks = "Ghi chu",
                 TaxCode = "123456789", // Để tính VatFee
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 2 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 2 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -1162,7 +1167,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullName = "User Test",
                 Phone = "0901234567",
                 Remarks = "Ghi chu",
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
@@ -1234,7 +1239,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullName = "User Test",
                 Phone = "0901234567",
                 Remarks = "Ghi chu",
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, Number = 1 } },
+                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,

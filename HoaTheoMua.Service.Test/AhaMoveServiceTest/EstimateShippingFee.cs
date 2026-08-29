@@ -17,6 +17,9 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
 {
     public class AhaMoveServiceTests
     {
+        private static readonly Guid DefaultProductId =
+            Guid.Parse("11111111-1111-1111-1111-111111111111");
+
         private CompanyAddressEntity CreateAddress(bool isDeleted = false)
         {
             return new CompanyAddressEntity
@@ -45,7 +48,7 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             {
                 new()
                 {
-                    Id = Guid.NewGuid(),
+                    Id = DefaultProductId,
                     NhanhProductId = "1",
                     ProductName = "Sản phẩm A",
                     Price = 100000m,
@@ -161,7 +164,7 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             {
                 Items = new List<AhaMoveRequest.Items>
                 {
-                    new AhaMoveRequest.Items { ItemId = 1, Number = 1 }
+                    new AhaMoveRequest.Items { ProductId = Guid.NewGuid(), Number = 1 }
                 }
             };
 
@@ -173,9 +176,9 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             Assert.Equal("Có sản phẩm không tồn tại hoặc đã ngừng hoạt động", exception.Message);
         }
         
-        // EDGE CASE 3: ItemId truyền vô không tồn tại dẫn đến lỗi bị crash
+        // EDGE CASE 3: ProductId truyền vô không tồn tại dẫn đến lỗi bị crash
         [Fact]
-            public async Task EstimateShippingFee_ItemIdNotFoundInDb_ThrowsBadRequestException()
+            public async Task EstimateShippingFee_ProductIdNotFoundInDb_ThrowsBadRequestException()
             {
                 // Arrange
                 var companyAddress = CreateAddress();
@@ -223,7 +226,7 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
                 {
                     Items = new List<AhaMoveRequest.Items>
                     {
-                        new AhaMoveRequest.Items { ItemId = 1, Number = 2 } // Request ID = 1 nhưng NhanhVn trả về ID = 999
+                        new AhaMoveRequest.Items { ProductId = Guid.NewGuid(), Number = 2 }
                     }
                 };
 
@@ -307,7 +310,7 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
                 OrderTime = 1680000000, 
                 Items = new List<AhaMoveRequest.Items>
                 {
-                    new AhaMoveRequest.Items { ItemId = 1, Number = 2 }
+                    new AhaMoveRequest.Items { ProductId = DefaultProductId, Number = 2 }
                 }
             };
 
@@ -384,7 +387,7 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             {
                 Items = new List<AhaMoveRequest.Items>
                 {
-                    new AhaMoveRequest.Items { ItemId = 1, Number = 2 }
+                    new AhaMoveRequest.Items { ProductId = DefaultProductId, Number = 2 }
                 }
             };
 
@@ -466,7 +469,7 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             {
                 Items = new List<AhaMoveRequest.Items>
                 {
-                    new AhaMoveRequest.Items { ItemId = 1, Number = 2 }
+                    new AhaMoveRequest.Items { ProductId = DefaultProductId, Number = 2 }
                 }
             };
 
@@ -483,7 +486,8 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             Assert.NotNull(products);
 
             // ...and the outgoing Ahamove request maps the NhanhVn product data correctly:
-            // price from Prices.Retail, num from the requested quantity, and PaymentMethod "CASH".
+            // _id from NhanhProductId, price from Product.Price,
+            // num from the requested quantity, and PaymentMethod "CASH".
             Assert.NotNull(ahamoveRequestBody);
             using var doc = JsonDocument.Parse(ahamoveRequestBody!);
             var root = doc.RootElement;

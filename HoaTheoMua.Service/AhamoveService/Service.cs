@@ -97,8 +97,8 @@ public class Service: IService
         }
         */
 
-        var itemIds = request.Items
-            .Select(x => x.ItemId.ToString())
+        var productIds = request.Items
+            .Select(x => x.ProductId)
             .Distinct()
             .ToList();
         
@@ -106,11 +106,11 @@ public class Service: IService
             .AsNoTracking()
             .Where(x => !x.IsDeleted &&
                         x.IsActive &&
-                        x.NhanhProductId != null &&
-                        itemIds.Contains(x.NhanhProductId))
+                        productIds.Contains(x.Id))
             .Select(x => new
             {
-                Id = x.NhanhProductId!,
+                x.NhanhProductId,
+                x.Id,
                 Name = x.ProductName ?? string.Empty,
                 Retail = x.Price ?? 0m,
                 Height = x.Height ?? 0m,
@@ -120,19 +120,19 @@ public class Service: IService
             })
             .ToListAsync();
 
-        if (products.Count != itemIds.Count)
+        if (products.Count != productIds.Count)
         {
             throw new BadRequestException("Có sản phẩm không tồn tại hoặc đã ngừng hoạt động");
         }
 
         var requestedQuantityByProductId = request.Items
-            .GroupBy(x => x.ItemId.ToString())
+            .GroupBy(x => x.ProductId)
             .ToDictionary(x => x.Key, x => x.Sum(item => item.Number));
 
         var itemsRequest = products.Select(
             x => new AhaMoveRequest.AhamoveItem()
             {
-                Id = x.Id,
+                Id = x.NhanhProductId!,
                 Name = x.Name,
                 Price = (int)x.Retail,
                 Num = requestedQuantityByProductId[x.Id]
