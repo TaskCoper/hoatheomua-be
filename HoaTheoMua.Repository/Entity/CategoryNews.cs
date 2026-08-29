@@ -4,9 +4,9 @@ namespace HoaTheoMua.Repository.Entity;
 
 public class CategoryNews: BaseEntity<Guid>, IAuditableEntity
 {
-    public required String Title { get; set; }
-    
-    public User User { get; set; }
+    public required string Title { get; set; }
+
+    // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }
     public CategoryNews? ParentCategoryNews{ get; set; }
     public Guid? ParentCategoryNewsId { get; set; }

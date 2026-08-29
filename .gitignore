@@ -474,4 +474,7 @@ HoaTheoMua.Api/appsettings.Development.json
 
 # Docker local environment (keep .env.sample, ignore real secrets)
 .docker/.env
+.docker/.env.*
+!.docker/.env.sample
 .env
+.claude/

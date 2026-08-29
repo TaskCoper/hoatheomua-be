@@ -10,8 +10,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: UTC
       PGTZ: UTC
+    ports:
+      - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
+      - postgres-hoatheomua-data-dev:/var/lib/postgresql/data
 
   hoatheomua-api:
     container_name: hoatheomua-api-dev
@@ -50,12 +52,47 @@ services:
       # Security Configuration
       SecurityOption__Pepper: ${SECURITY_PEPPER}
 
+      # Ahamove Configuration
+      AhamoveOption__Token: ${AHAMOVE_TOKEN}
+      AhamoveOption__BaseUrl: ${AHAMOVE_BASE_URL}
+
+      # XanhSM Express
+      XanhSmOptions__BaseUrl: ${XANHSM_BASE_URL}
+      XanhSmOptions__TokenUrl: ${XANHSM_TOKEN_URL}
+      XanhSmOptions__Scope: ${XANHSM_SCOPE}
+      XanhSmOptions__ClientId: ${XANHSM_CLIENT_ID}
+      XanhSmOptions__ClientSecret: ${XANHSM_CLIENT_SECRET}
+      XanhSmOptions__AcceptLanguage: ${XANHSM_ACCEPT_LANGUAGE}
+
+      # NhanhVn Configuration
+      NhanhVnOption__Token: ${NHANHVN_TOKEN}
+      NhanhVnOption__AppId: ${NHANHVN_APP_ID}
+      NhanhVnOption__BusinessId: ${NHANHVN_BUSINESS_ID}
+      NhanhVnOption__BaseUrl: ${NHANHVN_BASE_URL}
+
+      # BaoKim Configuration (the keys are PEM blocks with real newlines).
+      # PublicKey is BaoKim's own key, used to verify inbound webhook signatures.
+      BaoKimOption__BaseUrl: ${BAOKIM_BASE_URL}
+      BaoKimOption__MerchantCode: ${BAOKIM_MERCHANT_CODE}
+      BaoKimOption__ClientId: ${BAOKIM_CLIENT_ID}
+      BaoKimOption__ClientSecret: ${BAOKIM_CLIENT_SECRET}
+      BaoKimOption__PrivateKey: ${BAOKIM_PRIVATE_KEY}
+      BaoKimOption__PublicKey: ${BAOKIM_PUBLIC_KEY}
+
+      # Sepay Configuration (verifies the "Authorization: Apikey <ApiKey>" header on inbound webhooks)
+      SepayOption__ApiKey: ${SEPAY_API_KEY}
+
+      # Revalidate Configuration (outbound cache purge to the storefront:
+      # POST BaseUrl with header "x-revalidate-secret: <SecretKey>")
+      SecretOptions__BaseUrl: ${SECRET_BASE_URL}
+      SecretOptions__SecretKey: ${SECRET_KEY}
+
       # Allowed Hosts
       AllowedHosts: "*"
     volumes:
       - ./logs:/app/logs
 
 volumes:
-  postgres-data-dev:
-    name: postgres-data-dev
+  postgres-hoatheomua-data-dev:
+    name: postgres-hoatheomua-data-dev
     driver: local

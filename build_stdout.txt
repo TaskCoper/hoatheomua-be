@@ -1,0 +1,12 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  HoaTheoMua.Repository -> C:\Users\Admin\Downloads\hoatheomua-be\HoaTheoMua.Repository\bin\Release\net8.0\HoaTheoMua.Repository.dll
+C:\Users\Admin\Downloads\hoatheomua-be\HoaTheoMua.Service\ProductImport\Service.cs(35,36): error CS0117: 'dynamic' does not contain a definition for 'Count' [C:\Users\Admin\Downloads\hoatheomua-be\HoaTheoMua.Service\HoaTheoMua.Service.csproj]
+
+Build FAILED.
+
+C:\Users\Admin\Downloads\hoatheomua-be\HoaTheoMua.Service\ProductImport\Service.cs(35,36): error CS0117: 'dynamic' does not contain a definition for 'Count' [C:\Users\Admin\Downloads\hoatheomua-be\HoaTheoMua.Service\HoaTheoMua.Service.csproj]
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.15

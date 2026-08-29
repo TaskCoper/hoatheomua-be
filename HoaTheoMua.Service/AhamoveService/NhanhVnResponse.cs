@@ -1,0 +1,380 @@
+﻿using System.Text.Json.Serialization;
+
+namespace HoaTheoMua.Service.AhamoveService;
+
+public class NhanhProductListResponse
+{
+    [JsonPropertyName("code")]
+    public int Code { get; set; }
+
+    [JsonPropertyName("paginator")] 
+    public NhanhResponsePaginator Paginator { get; set; }  = null!;
+
+    [JsonPropertyName("data")]
+    public List<NhanhProductData> Data { get; set; }  = null!;
+    [JsonPropertyName("errorCode")]
+    public string ErrorCode { get; set; }  = null!;
+    [JsonPropertyName("messages")]
+    public object Messages { get; set; }  = null!;
+}
+
+public class NhanhResponsePaginator
+{
+    // Trường này trong JSON mẫu trả về object hoặc string ("next": {"id": 100} hoặc string)
+    // Để linh hoạt nhất với Nhanh.vn, ta có thể dùng object hoặc cụ thể hóa nếu biết chắc kiểu dữ liệu
+    [JsonPropertyName("next")]
+    public object Next { get; set; }  = null!;
+}
+
+public class NhanhProductData
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("parentId")]
+    public int? ParentId { get; set; }
+
+    [JsonPropertyName("code")]
+    public string Code { get; set; }  = null!;
+
+    [JsonPropertyName("barcode")]
+    public string Barcode { get; set; }  = null!;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; }  = null!;
+
+    [JsonPropertyName("otherName")]
+    public string OtherName { get; set; }  = null!;
+
+    [JsonPropertyName("status")]
+    public int Status { get; set; }
+
+    [JsonPropertyName("priceVatMode")]
+    public int PriceVatMode { get; set; }
+
+    [JsonPropertyName("importPriceVatMode")]
+    public int ImportPriceVatMode { get; set; }
+
+    [JsonPropertyName("categoryId")]
+    public int? CategoryId { get; set; }
+
+    [JsonPropertyName("internalCategoryId")]
+    public int? InternalCategoryId { get; set; }
+
+    [JsonPropertyName("prices")]
+    public NhanhPrices Prices { get; set; }  = new();
+
+    [JsonPropertyName("images")]
+    public NhanhImages Images { get; set; }  = null!;
+
+    [JsonPropertyName("warranty")]
+    [JsonConverter(typeof(NhanhWarrantyConverter))]
+    public NhanhWarranty? Warranty { get; set; }
+
+    [JsonPropertyName("brandId")]
+    public int? BrandId { get; set; }
+
+    [JsonPropertyName("type")]
+    public int Type { get; set; }
+
+    [JsonPropertyName("shipping")]
+    public NhanhShipping Shipping { get; set; } = new();
+
+    [JsonPropertyName("countryName")]
+    public string CountryName { get; set; }  = null!;
+
+    [JsonPropertyName("units")]
+    public NhanhUnits Units { get; set; }  = null!;
+
+    [JsonPropertyName("combos")]
+    public List<NhanhCombo> Combos { get; set; }  = null!;
+
+    [JsonPropertyName("inventory")]
+    public NhanhInventory Inventory { get; set; }  = null!;
+
+    [JsonPropertyName("attributes")]
+    public List<NhanhAttribute> Attributes { get; set; }  = null!;
+
+    [JsonPropertyName("updatedAt")]
+    public long UpdatedAt { get; set; } // Sử dụng long vì thời gian thường là Unix Timestamp
+
+    [JsonPropertyName("createdAt")]
+    public long CreatedAt { get; set; }
+}
+
+public class NhanhPrices
+{
+    [JsonPropertyName("retail")]
+    public decimal Retail { get; set; } // Khuyên dùng decimal cho giá tiền để tránh sai số
+
+    [JsonPropertyName("retailVat")]
+    public decimal RetailVat { get; set; }
+
+    [JsonPropertyName("import")]
+    public decimal Import { get; set; }
+
+    [JsonPropertyName("importVat")]
+    public decimal ImportVat { get; set; }
+
+    [JsonPropertyName("old")]
+    public decimal? Old { get; set; }
+
+    [JsonPropertyName("wholesale")]
+    public decimal Wholesale { get; set; }
+
+    [JsonPropertyName("avgCost")]
+    public decimal AvgCost { get; set; }
+}
+
+public class NhanhImages
+{
+    [JsonPropertyName("avatar")]
+    public string Avatar { get; set; }  = null!;
+
+    [JsonPropertyName("others")]
+    public List<string> Others { get; set; }  = null!;
+}
+
+public class NhanhWarranty
+{
+    [JsonPropertyName("month")]
+    public int Month { get; set; }
+
+    [JsonPropertyName("phone")]
+    public string Phone { get; set; }  = null!;
+
+    [JsonPropertyName("address")]
+    public string Address { get; set; }  = null!;
+}
+
+public class NhanhShipping
+{
+    [JsonPropertyName("width")]
+    public double Width { get; set; }
+
+    [JsonPropertyName("height")]
+    public double Height { get; set; }
+
+    [JsonPropertyName("length")]
+    public double Length { get; set; }
+
+    [JsonPropertyName("weight")]
+    public double Weight { get; set; }
+}
+
+public class NhanhUnits
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; }  = null!;
+
+    [JsonPropertyName("list")] 
+    public List<NhanhUnitItem> List { get; set; }  = null!;
+}
+
+public class NhanhUnitItem
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; }  = null!;
+
+    [JsonPropertyName("quantity")]
+    public double Quantity { get; set; }
+
+    [JsonPropertyName("price")]
+    public NhanhUnitPrice Price { get; set; }  = null!;
+}
+
+public class NhanhUnitPrice
+{
+    [JsonPropertyName("retail")]
+    public decimal Retail { get; set; }
+
+    [JsonPropertyName("import")]
+    public decimal Import { get; set; }
+
+    [JsonPropertyName("wholesale")]
+    public decimal Wholesale { get; set; }
+}
+
+public class NhanhCombo
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("code")]
+    public string Code { get; set; }  = null!;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; }  = null!;
+
+    [JsonPropertyName("quantity")]
+    public decimal Quantity { get; set; }
+}
+
+public class NhanhInventory
+{
+    [JsonPropertyName("remain")]
+    public double Remain { get; set; }
+
+    [JsonPropertyName("shipping")]
+    public double Shipping { get; set; }
+
+    [JsonPropertyName("damaged")]
+    public double Damaged { get; set; }
+
+    [JsonPropertyName("holding")]
+    public double Holding { get; set; }
+
+    [JsonPropertyName("transfering")]
+    public double Transfering { get; set; }
+
+    [JsonPropertyName("available")]
+    public double Available { get; set; }
+
+    [JsonPropertyName("warranty")]
+    public NhanhInventoryWarranty Warranty { get; set; }  = null!;
+
+    [JsonPropertyName("depots")]
+    public List<NhanhDepot> Depots { get; set; }  = null!;
+}
+
+public class NhanhInventoryWarranty
+{
+    [JsonPropertyName("remain")]
+    public double Remain { get; set; }
+
+    [JsonPropertyName("holding")]
+    public double Holding { get; set; }
+}
+
+public class NhanhDepot
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("remain")]
+    public double Remain { get; set; }
+
+    [JsonPropertyName("shipping")]
+    public double Shipping { get; set; }
+
+    [JsonPropertyName("damaged")]
+    public double Damaged { get; set; }
+
+    [JsonPropertyName("holding")]
+    public double Holding { get; set; }
+
+    [JsonPropertyName("transfering")]
+    public double Transfering { get; set; }
+
+    [JsonPropertyName("available")]
+    public double Available { get; set; }
+
+    [JsonPropertyName("warranty")]
+    public NhanhInventoryWarranty Warranty { get; set; }  = null!;
+} 
+
+public class NhanhAttribute
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; }  = null!;
+
+    [JsonPropertyName("nameOther")]
+    public string NameOther { get; set; }  = null!;
+
+    [JsonPropertyName("value")]
+    public string Value { get; set; }  = null!;
+
+    [JsonPropertyName("code")]
+    public string Code { get; set; }  = null!;
+
+    [JsonPropertyName("codeOther")]
+    public string CodeOther { get; set; }  = null!;
+}
+
+/////////////
+public class DepotResponse
+{
+    [JsonPropertyName("code")]
+    public int Code { get; set; }
+
+    [JsonPropertyName("paginator")]
+    public Paginator? Paginator { get; set; }
+
+    [JsonPropertyName("data")]
+    public List<DepotData> Data { get; set; } = new();
+}
+
+public class Paginator
+{
+    [JsonPropertyName("next")]
+    public string? Next { get; set; }
+}
+
+public class DepotData
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("code")]
+    public string Code { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("mobile")]
+    public string? Mobile { get; set; }
+
+    [JsonPropertyName("location")]
+    public Location Location { get; set; } = new();
+
+    [JsonPropertyName("locationV2")]
+    public LocationV2 LocationV2 { get; set; } = new();
+}
+
+public class Location
+{
+    [JsonPropertyName("cityId")]
+    public int CityId { get; set; }
+
+    [JsonPropertyName("cityName")]
+    public string? CityName { get; set; }
+
+    [JsonPropertyName("districtId")]
+    public int DistrictId { get; set; }
+
+    [JsonPropertyName("districtName")]
+    public string? DistrictName { get; set; }
+
+    [JsonPropertyName("wardId")]
+    public int WardId { get; set; }
+
+    [JsonPropertyName("wardName")]
+    public string? WardName { get; set; }
+
+    [JsonPropertyName("address")]
+    public string? Address { get; set; }
+}
+
+public class LocationV2
+{
+    [JsonPropertyName("cityId")]
+    public int CityId { get; set; }
+
+    [JsonPropertyName("cityName")]
+    public string? CityName { get; set; } // Cho phép null vì Postman thực tế không trả về trường này
+
+    [JsonPropertyName("wardId")]
+    public int WardId { get; set; }
+
+    [JsonPropertyName("wardName")]
+    public string? WardName { get; set; } // Cho phép null vì Postman thực tế không trả về trường này
+
+    [JsonPropertyName("address")]
+    public string? Address { get; set; }
+}

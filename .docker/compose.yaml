@@ -27,23 +27,44 @@ x-api-env: &api-env
   PostgresOption__MaxOpenConns: ${POSTGRES_MAX_OPEN_CONNS}
   PostgresOption__ConnMaxLifetime: ${POSTGRES_CONN_MAX_LIFETIME}
 
-  # Mail
-  MailOption__Mail: ${MAIL_ADDRESS}
-  MailOption__DisplayName: ${MAIL_DISPLAY_NAME}
-  MailOption__Password: ${MAIL_PASSWORD}
-  MailOption__Host: ${MAIL_HOST}
-  MailOption__Port: ${MAIL_PORT}
-
-  # JWT
+  # JWT (validation only — this service no longer issues tokens; taskcoper-be does.
+  # These three MUST be identical to taskcoper-be's values for cross-service tokens to validate.)
   JwtOption__Issuer: ${JWT_ISSUER}
   JwtOption__Audience: ${JWT_AUDIENCE}
   JwtOption__AccessTokenKey: ${JWT_ACCESS_TOKEN_KEY}
-  JwtOption__AccessTokenExpireMin: ${JWT_ACCESS_TOKEN_EXPIRE_MIN}
-  JwtOption__RefreshTokenKey: ${JWT_REFRESH_TOKEN_KEY}
-  JwtOption__RefreshTokenExpireMin: ${JWT_REFRESH_TOKEN_EXPIRE_MIN}
 
-  # Security
-  SecurityOption__Pepper: ${SECURITY_PEPPER}
+  # Ahamove
+  AhamoveOption__Token: ${AHAMOVE_TOKEN}
+  AhamoveOption__BaseUrl: ${AHAMOVE_BASE_URL}
+
+  # XanhSM Express
+  XanhSmOptions__BaseUrl: ${XANHSM_BASE_URL}
+  XanhSmOptions__TokenUrl: ${XANHSM_TOKEN_URL}
+  XanhSmOptions__Scope: ${XANHSM_SCOPE}
+  XanhSmOptions__ClientId: ${XANHSM_CLIENT_ID}
+  XanhSmOptions__ClientSecret: ${XANHSM_CLIENT_SECRET}
+  XanhSmOptions__AcceptLanguage: ${XANHSM_ACCEPT_LANGUAGE}
+
+  # NhanhVn
+  NhanhVnOption__Token: ${NHANHVN_TOKEN}
+  NhanhVnOption__AppId: ${NHANHVN_APP_ID}
+  NhanhVnOption__BusinessId: ${NHANHVN_BUSINESS_ID}
+  NhanhVnOption__BaseUrl: ${NHANHVN_BASE_URL}
+
+  # BaoKim (payment gateway — the keys are PEM blocks; their newlines pass through as-is).
+  # PrivateKey signs our outbound calls; PublicKey is BaoKim's, used to verify inbound webhooks.
+  BaoKimOption__BaseUrl: ${BAOKIM_BASE_URL}
+  BaoKimOption__MerchantCode: ${BAOKIM_MERCHANT_CODE}
+  BaoKimOption__ClientId: ${BAOKIM_CLIENT_ID}
+  BaoKimOption__ClientSecret: ${BAOKIM_CLIENT_SECRET}
+  BaoKimOption__PrivateKey: ${BAOKIM_PRIVATE_KEY}
+  BaoKimOption__PublicKey: ${BAOKIM_PUBLIC_KEY}
+
+  SepayOption__ApiKey: ${SEPAY_API_KEY}
+
+  # Revalidate (outbound cache purge to the storefront: POST BaseUrl with "x-revalidate-secret: <SecretKey>")
+  SecretOptions__BaseUrl: ${SECRET_BASE_URL}
+  SecretOptions__SecretKey: ${SECRET_KEY}
 
   AllowedHosts: "*"
 
@@ -59,21 +80,21 @@ services:
     <<: *postgres-base
     container_name: hoatheomua-postgres-dev
     hostname: hoatheomua-postgres-dev
-    ports: ["5432:5432"]
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
     networks: [hoatheomua-network-dev]
     volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
-    profiles: [dev, database-dev, database]
+      - postgres-hoatheomua-data-dev:/var/lib/postgresql/data
+    profiles: [dev, database-dev, database, dev-pull]
 
   hoatheomua-postgres-prod:
     <<: *postgres-base
     container_name: hoatheomua-postgres-prod
     hostname: hoatheomua-postgres-prod
-    ports: ["5433:5432"]
+    ports: ["${POSTGRES_PORT:-5433}:5432"]
     networks: [hoatheomua-network-prod]
     volumes:
-      - postgres-data-prod:/var/lib/postgresql/data
-    profiles: [prod, database-prod, database]
+      - postgres-hoatheomua-data-prod:/var/lib/postgresql/data
+    profiles: [prod, database-prod, database, prod-pull]
 
   hoatheomua-api-dev:
     <<: *api-base
@@ -82,10 +103,10 @@ services:
     environment:
       <<: *api-env
       ConnectionStrings__PostgresSql: Host=hoatheomua-postgres-dev;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
-    ports:
-      - "${HTTP_PORT}:8080"
+    # ports:
+    #   - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-dev]
-    profiles: [dev, api-dev, api]
+    profiles: [dev, api-dev, api, dev-pull]
 
   hoatheomua-api-prod:
     <<: *api-base
@@ -97,28 +118,21 @@ services:
     ports:
       - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-prod]
-    profiles: [prod, api-prod, api]
+    profiles: [prod, api-prod, api, prod-pull]
 
   hoatheomua-cloudflare-dev:
     <<: *cloudflare-tunnel
     container_name: hoatheomua-cloudflare-dev
     hostname: hoatheomua-cloudflare-dev
     networks: [hoatheomua-network-dev]
-    profiles: [dev, cloudflare-dev, proxy]
-
-  hoatheomua-cloudflare-prod:
-    <<: *cloudflare-tunnel
-    container_name: hoatheomua-cloudflare-prod
-    hostname: hoatheomua-cloudflare-prod
-    networks: [hoatheomua-network-prod]
-    profiles: [prod, cloudflare-prod, proxy]
+    profiles: [dev, cloudflare-dev, proxy, dev-pull]
 
 volumes:
-  postgres-data-dev:
-    name: postgres-data-dev
+  postgres-hoatheomua-data-dev:
+    name: postgres-hoatheomua-data-dev
     driver: local
-  postgres-data-prod:
-    name: postgres-data-prod
+  postgres-hoatheomua-data-prod:
+    name: postgres-hoatheomua-data-prod
     driver: local
 
 networks:
