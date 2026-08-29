@@ -525,9 +525,12 @@ namespace HoaTheoMua.Service.Test.OrderTest
         {
             var orders = new List<OrderEntity>();
             var companyAddress = CreateCompanyAddress();
+            var product = CreateStockProduct(101, "Test Product", 10m);
+            product.Weight = 1500m;
             var dbContextMock = CreateMockDbContext(
                 orders: orders,
-                companyAddresses: [companyAddress]);
+                companyAddresses: [companyAddress],
+                products: [product]);
             var currentUser = CreateMockCurrentUserService(TestUserId);
             var productService = CreateMockProductService();
 
