@@ -6,6 +6,7 @@
 - `CreateOrderRequest` đã hỗ trợ `ShippingGateway.XanhSm` và báo giá bằng `partner_pay`, Door-to-door.
 - Payment webhook estimate lại để lấy `fee_id` còn hiệu lực, booking XanhSM và lưu `ShippingPartyOrderId`/`ShippingTrackingUrl`.
 - Door-to-door addon ID được lấy động từ `list-available-services` theo `group_name = DOOR2DOOR` và được giữ nguyên qua Estimate/Book; hệ thống không có ID cấu hình fallback.
+- Điểm lấy hàng gửi đủ `package_weight`, `package_size`, `package_types`. Cân nặng được đổi từ tổng gram Nhanh.vn sang kg và làm tròn lên; size/type được đối chiếu với dịch vụ xe máy do `list-available-services` trả về.
 - `ShippingPartyOrderId` và `ShippingTrackingUrl` là field dùng chung cho mọi đơn vị vận chuyển.
 
 ## Thông tin cần lấy từ Xanh SM

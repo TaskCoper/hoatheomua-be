@@ -70,7 +70,7 @@ public class XanhSmDeliveryPointRequest : XanhSmCoordinatePoint
 
     [JsonPropertyName("package_weight")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? PackageWeight { get; set; }
+    public int? PackageWeight { get; set; }
 
     [JsonPropertyName("package_size")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
