@@ -26,6 +26,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             {
                 Id = id,
                 UserId = TestUserId,
+                PaymentGateway = HoaTheoMua.Repository.Enum.PaymentGateway.BaoKim,
+                ShippingGateway = HoaTheoMua.Repository.Enum.ShippingGateway.Ahamove,
                 Ward = 1,
                 City = 1,
                 Address = "123 Duong Test",

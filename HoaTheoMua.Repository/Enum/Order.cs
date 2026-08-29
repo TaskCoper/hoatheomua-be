@@ -20,3 +20,16 @@ public enum PaymentMethod
     /// <summary>VNPay QR</summary>
     VNPayQR = 6
 }
+
+
+public enum PaymentGateway
+{
+    BaoKim = 1,
+    Sepay = 2
+}
+
+public enum ShippingGateway
+{
+    Ahamove = 1,
+    XanhSm = 2
+}

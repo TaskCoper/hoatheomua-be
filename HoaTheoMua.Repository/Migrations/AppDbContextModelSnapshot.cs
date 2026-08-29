@@ -631,12 +631,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("AhahaMoveOrderId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AhahaMoveTrackingUrl")
-                        .HasColumnType("text");
-
                     b.Property<int>("City")
                         .HasColumnType("integer");
 
@@ -680,6 +674,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<long>("OrderTime")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("PaymentGateway")
+                        .HasColumnType("integer");
+
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("integer");
 
@@ -718,6 +715,15 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<decimal>("ShippingFee")
                         .HasColumnType("numeric");
+
+                    b.Property<int>("ShippingGateway")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ShippingPartyOrderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ShippingTrackingUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("ShortAddress")
                         .IsRequired()
