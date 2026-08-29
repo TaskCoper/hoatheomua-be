@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Moq;
 using Xunit;
 using ProductEntity = HoaTheoMua.Repository.Entity.Product;
+using ComboSpecificationEntity = HoaTheoMua.Repository.Entity.ComboSpecification;
 using ProductService = HoaTheoMua.Service.Product.Service;
 
 namespace HoaTheoMua.Service.Test.ProductTest;
@@ -283,5 +284,85 @@ public class GetProductByIdsTests
         });
 
         Assert.False(Assert.Single(result.Products).IsActive);
+    }
+
+    [Fact]
+    public async Task GetProductByIds_TwoCombosShareSupportMaterial_CountsCombinedRequirement()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var firstCombo = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductName = "Combo 1",
+            ProductType = "Combo",
+            Stock = 1,
+            IsActive = true,
+            IsDeleted = false
+        };
+        var secondCombo = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductName = "Combo 2",
+            ProductType = "Combo",
+            Stock = 1,
+            IsActive = true,
+            IsDeleted = false
+        };
+        var sharedSupportMaterial = new ProductEntity
+        {
+            Id = Guid.NewGuid(),
+            ProductName = "Shared support material",
+            ProductType = "Sản phẩm",
+            AvailableForSale = 1,
+            IsActive = true,
+            IsDeleted = false
+        };
+
+        await dbContext.Products.AddRangeAsync(
+            firstCombo,
+            secondCombo,
+            sharedSupportMaterial);
+        await dbContext.ComboSpecifications.AddRangeAsync(
+            new ComboSpecificationEntity
+            {
+                Id = Guid.NewGuid(),
+                SubId = firstCombo.Id,
+                Sub = firstCombo,
+                MatId = sharedSupportMaterial.Id,
+                Mat = sharedSupportMaterial,
+                Quantity = 1,
+                IsCore = false,
+                IsActive = true,
+                IsDeleted = false
+            },
+            new ComboSpecificationEntity
+            {
+                Id = Guid.NewGuid(),
+                SubId = secondCombo.Id,
+                Sub = secondCombo,
+                MatId = sharedSupportMaterial.Id,
+                Mat = sharedSupportMaterial,
+                Quantity = 1,
+                IsCore = false,
+                IsActive = true,
+                IsDeleted = false
+            });
+        await dbContext.SaveChangesAsync();
+
+        var result = await service.GetProductByIds(new Request.GetProductByIds
+        {
+            Items = new List<Request.GetProductByIdsItem>
+            {
+                new() { ProductId = firstCombo.Id, Number = 1 },
+                new() { ProductId = secondCombo.Id, Number = 1 }
+            }
+        });
+
+        Assert.Equal(1, result.ReplaceableMaterialCount);
+        var replaceableMaterial = Assert.Single(result.ReplaceableMaterials);
+        Assert.Equal(sharedSupportMaterial.ProductName, replaceableMaterial.MaterialName);
+        Assert.Equal(1, replaceableMaterial.Quantity);
     }
 }

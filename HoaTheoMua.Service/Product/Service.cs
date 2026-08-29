@@ -1657,17 +1657,19 @@ public class Service : IService
 
         var supportMaterials = await _dbContext.ComboSpecifications
             .AsNoTracking()
-            .Where(specification =>
+            .Where(specification =>//lọc ra các dòng thõa mãn bên dới (dòng thì có mat với sub bên trong)
                 comboIds.Contains(specification.SubId) &&
+                !specification.IsCore &&
                 specification.IsActive &&
                 !specification.IsDeleted &&
                 specification.Sub.IsActive &&
                 !specification.Sub.IsDeleted &&
                 specification.Mat.IsActive &&
                 !specification.Mat.IsDeleted)
-            .Select(specification => new
+            .Select(specification => new//biến mỗi dòng phía trên thành một object chứa dữ liệu bên dưới 
             {
                 ComboId = specification.SubId,
+                MaterialId = specification.MatId,
                 MaterialName = specification.Mat.ProductName,
                 Quantity = specification.Quantity!.Value,
                 AvailableForSale = specification.Mat.AvailableForSale ?? 0m
@@ -1675,13 +1677,23 @@ public class Service : IService
             .ToListAsync();
 
         var replaceableMaterials = supportMaterials
-            .Where(material =>
-                material.AvailableForSale <
-                material.Quantity * numberByProductId[material.ComboId])
-            .Select(material => new Response.ReplaceableMaterialResponse
+            .Select(material => new
             {
-                MaterialName = material.MaterialName,
-                Quantity = material.Quantity
+                material.MaterialId,
+                material.MaterialName,
+                material.Quantity,
+                material.AvailableForSale,
+                RequiredQuantity =
+                    material.Quantity * numberByProductId[material.ComboId]
+            })
+            .GroupBy(material => material.MaterialId)
+            .Where(group =>
+                group.Sum(material => material.RequiredQuantity) >
+                group.First().AvailableForSale)
+            .Select(group => new Response.ReplaceableMaterialResponse
+            {
+                MaterialName = group.First().MaterialName,
+                Quantity = group.First().Quantity
             })
             .ToList();
 
