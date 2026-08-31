@@ -1,9 +1,17 @@
-﻿using System.Threading.RateLimiting;
+﻿using System.Globalization;
+using System.Threading.RateLimiting;
 
 namespace HoaTheoMua.Extentions;
 
 public static class RateLimitExtensions
 {
+    public const string ApiPolicy = "api";
+    public const string LoginPolicy = "login";
+    public const string HeavyPolicy = "heavy";
+    public const string OrderWritePolicy = "order-write";
+    public const string ShippingEstimatePolicy = "shipping-estimate";
+    public const string ImportPolicy = "import";
+
     public static void ConfigureRateLimiter(this IServiceCollection services)
     {
         services.AddRateLimiter(options =>
@@ -12,34 +20,36 @@ public static class RateLimitExtensions
 
             options.OnRejected = async (context, _) =>
             {
-                context.HttpContext.Response.Headers["Retry-After"] = "60";
+                var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var duration)
+                    ? Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds))
+                    : 60;
+
+                context.HttpContext.Response.Headers.RetryAfter = retryAfter.ToString(CultureInfo.InvariantCulture);
+                context.HttpContext.Response.ContentType = "text/plain; charset=utf-8";
                 await context.HttpContext.Response
                     .WriteAsync("Too many requests. Please retry later.", cancellationToken: _);
             };
 
-            // Global rate limiter applied to all endpoints
+            // Baseline protection for every endpoint: 120 requests/minute per authenticated user
+            // or per client IP for anonymous traffic.
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 RateLimitPartition.GetSlidingWindowLimiter(
-                    context.User.Identity?.Name
-                    ?? context.Connection.RemoteIpAddress?.ToString()
-                    ?? "anonymous",
+                    GetUserOrIpPartitionKey(context),
                     _ => new SlidingWindowRateLimiterOptions
                     {
-                        PermitLimit = 250,
-                        Window = TimeSpan.FromSeconds(1),
+                        PermitLimit = 120,
+                        Window = TimeSpan.FromMinutes(1),
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0
                     }));
 
-            options.AddPolicy("api", context =>
+            options.AddPolicy(ApiPolicy, context =>
                 RateLimitPartition.GetSlidingWindowLimiter(
-                    context.User.Identity?.Name
-                    ?? context.Connection.RemoteIpAddress?.ToString()
-                    ?? "anonymous",
+                    GetUserOrIpPartitionKey(context),
                     _ => new SlidingWindowRateLimiterOptions
                     {
-                        PermitLimit = 100,
+                        PermitLimit = 60,
                         Window = TimeSpan.FromMinutes(1),
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
@@ -47,9 +57,9 @@ public static class RateLimitExtensions
                     }));
 
             // Strict login policy
-            options.AddPolicy("login", context =>
+            options.AddPolicy(LoginPolicy, context =>
                 RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    GetIpPartitionKey(context),
                     _ => new FixedWindowRateLimiterOptions
                     {
                         PermitLimit = 5,
@@ -58,9 +68,9 @@ public static class RateLimitExtensions
                     }));
 
             // Heavy operation limit
-            options.AddPolicy("heavy", context =>
+            options.AddPolicy(HeavyPolicy, context =>
                 RateLimitPartition.GetTokenBucketLimiter(
-                    context.User.Identity?.Name ?? "anonymous",
+                    GetUserOrIpPartitionKey(context),
                     _ => new TokenBucketRateLimiterOptions
                     {
                         TokenLimit = 10,
@@ -68,6 +78,49 @@ public static class RateLimitExtensions
                         ReplenishmentPeriod = TimeSpan.FromMinutes(1),
                         QueueLimit = 0
                     }));
+
+            options.AddPolicy(OrderWritePolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    GetUserOrIpPartitionKey(context),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+
+            options.AddPolicy(ShippingEstimatePolicy, context =>
+                RateLimitPartition.GetSlidingWindowLimiter(
+                    GetUserOrIpPartitionKey(context),
+                    _ => new SlidingWindowRateLimiterOptions
+                    {
+                        PermitLimit = 30,
+                        Window = TimeSpan.FromMinutes(1),
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    }));
+
+            options.AddPolicy(ImportPolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    GetUserOrIpPartitionKey(context),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(10),
+                        QueueLimit = 0
+                    }));
         });
     }
+
+    private static string GetUserOrIpPartitionKey(HttpContext context)
+    {
+        var userName = context.User.Identity?.Name;
+        return !string.IsNullOrWhiteSpace(userName)
+            ? $"user:{userName}"
+            : GetIpPartitionKey(context);
+    }
+
+    private static string GetIpPartitionKey(HttpContext context) =>
+        $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
 }

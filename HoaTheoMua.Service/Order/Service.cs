@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.Order;
 
@@ -110,6 +111,41 @@ public class Service : IService
         {
             throw new UnauthorizedException("User is not verified");
         }
+
+        var checkoutConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "checkout");
+
+        var deliveryMethodsConfig = checkoutConfigs.GetValue<string>("checkout.delivery_methods");
+        if (!string.IsNullOrWhiteSpace(deliveryMethodsConfig))
+        {
+            var deliveryMethods = JObject.Parse(deliveryMethodsConfig);
+            var selectedDeliveryMethod = deliveryMethods["items"]?
+                .FirstOrDefault(x => (int?)x["gateway"] == (int)request.ShippingGateway);
+
+            if ((bool?)selectedDeliveryMethod?["enabled"] == false)
+            {
+                throw new BadRequestException(
+                    $"Phương thức giao hàng {request.ShippingGateway} hiện đang bị tắt");
+            }
+        }
+
+        var paymentMethodsConfig = checkoutConfigs.GetValue<string>("checkout.payment_methods");
+        if (!string.IsNullOrWhiteSpace(paymentMethodsConfig))
+        {
+            var paymentMethods = JObject.Parse(paymentMethodsConfig);
+            var selectedPaymentMethod = paymentMethods["items"]?
+                .FirstOrDefault(x => (int?)x["gateway"] == (int)request.PaymentGateway);
+
+            if ((bool?)selectedPaymentMethod?["enabled"] == false)
+            {
+                throw new BadRequestException(
+                    $"Phương thức thanh toán {request.PaymentGateway} hiện đang bị tắt");
+            }
+        }
+
+        var itemIds = request.Items
+            .Select(x => x.ItemId.ToString())
+            .Distinct()
+            .ToList();
         
 
         // var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
@@ -791,6 +827,21 @@ public class Service : IService
         Request.EstimateXanhSmShippingFeeRequest request,
         CancellationToken cancellationToken = default) 
     {
+        var checkoutConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "checkout");
+        var deliveryMethodsConfig = checkoutConfigs.GetValue<string>("checkout.delivery_methods");
+
+        if (!string.IsNullOrWhiteSpace(deliveryMethodsConfig))
+        {
+            var deliveryMethods = JObject.Parse(deliveryMethodsConfig);
+            var xanhSmMethod = deliveryMethods["items"]?
+                .FirstOrDefault(x => (int?)x["gateway"] == 2);
+
+            if ((bool?)xanhSmMethod?["enabled"] == false)
+            {
+                throw new BadRequestException("Phương thức giao hàng XanhSm hiện đang bị tắt");
+            }
+        }
+
         if (_xanhSmService is null)
         {
             throw new ServerException("XanhSM service is not configured");
