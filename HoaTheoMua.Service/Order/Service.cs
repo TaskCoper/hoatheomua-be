@@ -762,6 +762,21 @@ public class Service : IService
         Request.EstimateXanhSmShippingFeeRequest request,
         CancellationToken cancellationToken = default) 
     {
+        var checkoutConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "checkout");
+        var deliveryMethodsConfig = checkoutConfigs.GetValue<string>("checkout.delivery_methods");
+
+        if (!string.IsNullOrWhiteSpace(deliveryMethodsConfig))
+        {
+            var deliveryMethods = JObject.Parse(deliveryMethodsConfig);
+            var xanhSmMethod = deliveryMethods["items"]?
+                .FirstOrDefault(x => (int?)x["gateway"] == 2);
+
+            if ((bool?)xanhSmMethod?["enabled"] == false)
+            {
+                throw new BadRequestException("Phương thức giao hàng XanhSm hiện đang bị tắt");
+            }
+        }
+
         if (_xanhSmService is null)
         {
             throw new ServerException("XanhSM service is not configured");
