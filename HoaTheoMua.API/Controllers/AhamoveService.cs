@@ -1,6 +1,8 @@
-﻿using HoaTheoMua.Service.AhamoveService;
+﻿using HoaTheoMua.Extentions;
+using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HoaTheoMua.Controllers;
 
@@ -15,6 +17,7 @@ public class AhamoveService: ControllerBase
     }
     
     [HttpPost("/api/v1/ahamove/estimate")]
+    [EnableRateLimiting(RateLimitExtensions.ShippingEstimatePolicy)]
     public async Task<IActionResult> EstimateShippingFee([FromBody] AhaMoveRequest.EstimateShippingFeeRequest request)
     {
         var result = await _ahamoveService.EstimateShippingFee(request);

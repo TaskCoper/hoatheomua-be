@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using HoaTheoMua.Extentions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace HoaTheoMua.Controllers;
@@ -7,9 +8,9 @@ namespace HoaTheoMua.Controllers;
 [Route("api/[controller]")]
 public class TestController : ControllerBase
 {
-    // 1. Kiểm thử Policy "api" (Sliding Window: 100 requests / 1 phút)
+    // 1. Kiểm thử Policy "api" (Sliding Window: 60 requests / 1 phút)
     [HttpGet("normal")]
-    [EnableRateLimiting("api")]
+    [EnableRateLimiting(RateLimitExtensions.ApiPolicy)]
     public IActionResult TestNormalApi()
     {
         return Ok(new 
@@ -21,7 +22,7 @@ public class TestController : ControllerBase
 
     // 2. Kiểm thử Policy "login" (Fixed Window: 5 requests / 1 phút)
     [HttpGet("login")]
-    [EnableRateLimiting("login")]
+    [EnableRateLimiting(RateLimitExtensions.LoginPolicy)]
     public IActionResult TestLoginApi()
     {
         return Ok(new 
@@ -33,7 +34,7 @@ public class TestController : ControllerBase
 
     // 3. Kiểm thử Policy "heavy" (Token Bucket: Tối đa 10, hồi 5 token / phút)
     [HttpGet("heavy")]
-    [EnableRateLimiting("heavy")]
+    [EnableRateLimiting(RateLimitExtensions.HeavyPolicy)]
     public IActionResult TestHeavyApi()
     {
         return Ok(new 
