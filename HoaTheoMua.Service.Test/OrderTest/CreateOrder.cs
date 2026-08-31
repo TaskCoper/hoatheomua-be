@@ -635,30 +635,11 @@ namespace HoaTheoMua.Service.Test.OrderTest
         public async Task EstimateXanhSmShippingFee_ValidRequest_ReturnsBuyerShippingFee()
         {
             var companyAddress = CreateCompanyAddress();
-            var dbContextMock = CreateMockDbContext(companyAddresses: [companyAddress]);
-            var handler = new Mock<HttpMessageHandler>();
-            handler.Protected()
-                .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.ToString().Contains("nhanhvn")),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage
-                {
-                    StatusCode = HttpStatusCode.OK,
-                    Content = JsonContent.Create(new NhanhProductListResponse
-                    {
-                        Code = 1,
-                        Data =
-                        [
-                            new NhanhProductData
-                            {
-                                Id = 101,
-                                Prices = new NhanhPrices { Retail = 50000 },
-                                Shipping = new NhanhShipping { Weight = 2500 }
-                            }
-                        ]
-                    })
-                });
+            var product = CreateStockProduct(101, "Test Product", 10m, TestProductId);
+            product.Weight = 2500m;
+            var dbContextMock = CreateMockDbContext(
+                companyAddresses: [companyAddress],
+                products: [product]);
             var xanhSmService = new Mock<HoaTheoMua.Service.XanhSm.IService>();
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
             xanhSmService
@@ -680,7 +661,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 });
             var service = CreateService(
                 dbContextMock.Object,
-                new HttpClient(handler.Object),
+                new HttpClient(),
                 CreateMockCurrentUserService(TestUserId),
                 CreateMockProductService(),
                 xanhSmService: xanhSmService.Object);

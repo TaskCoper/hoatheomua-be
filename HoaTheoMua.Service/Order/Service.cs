@@ -805,18 +805,7 @@ public class Service : IService
             throw new BadRequestException("Company pickup address is not configured");
         }
 
-        var itemIds = request.Items.Select(item => item.ItemId.ToString()).Distinct().ToList();
-        var hasInactiveProduct = await _dbContext.Products
-            .AnyAsync(
-                product => itemIds.Contains(product.NhanhProductId!) && (!product.IsActive || product.IsDeleted),
-                cancellationToken);
-        if (hasInactiveProduct)
-        {
-            throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
-        }
-
-        var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs, cancellationToken);
+        var products = await FetchLocalProductsAsync(request.Items);
         var productIds = products.Select(product => product.Id).ToHashSet();
         if (request.Items.Any(item => !productIds.Contains(item.ItemId)))
         {
