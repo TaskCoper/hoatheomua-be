@@ -18,12 +18,30 @@ public class Service : IService
 
     private const string ComponentLabel = "Thành phần";
     private const string AuxiliaryLabel = "Phụ liệu";
+    private const string ComboProductType = "Combo";
 
-    private sealed record MaterialInfo(Guid Id, string? ProductLabel, string? Unit);
+    private sealed record MaterialInfo(Guid Id, string? ProductLabel, string? ProductType, string? Unit);
     private sealed record AddMaterialInfo(Guid Id, string? ProductLabel, string? Unit);
     
     private static bool HasLabel(string? value, string expected) =>
         string.Equals(value?.Trim(), expected, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsMaterial(string? productLabel, string? productType) =>
+        HasLabel(productLabel, ComponentLabel) ||
+        HasLabel(productLabel, AuxiliaryLabel) ||
+        HasLabel(productType, ComponentLabel) ||
+        HasLabel(productType, AuxiliaryLabel);
+
+    private static bool HasSameProductType(string? left, string? right) =>
+        string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private static string? ResolveMaterialLabel(string? productLabel, string? productType)
+    {
+        if (HasLabel(productLabel, ComponentLabel) || HasLabel(productLabel, AuxiliaryLabel))
+            return productLabel;
+
+        return productType;
+    }
 
     private static bool KeepsDecimal(string? unit) =>
         HasLabel(unit, "bó") || HasLabel(unit, "giỏ") || HasLabel(unit, "chậu");
@@ -264,7 +282,7 @@ public class Service : IService
         var combo = await _dbContext.Products
                         .AsNoTracking()
                         .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
-                        .Select(x => new { x.Id, x.NhanhProductId, x.IsActive })
+                        .Select(x => new { x.Id, x.NhanhProductId, x.ProductType, x.IsActive })
                         .FirstOrDefaultAsync()
                     ?? throw new NotFoundException("Không tìm thấy combo");
 
@@ -280,12 +298,11 @@ public class Service : IService
         var materials = await _dbContext.Products
             .AsNoTracking()
             .Where(x => matIds.Contains(x.Id) && !x.IsDeleted)
-            .Select(x => new MaterialInfo(x.Id, x.ProductLabel, x.Unit))
+            .Select(x => new MaterialInfo(x.Id, x.ProductLabel, x.ProductType, x.Unit))
             .ToListAsync();
-
-        if (materials.Count != matIds.Count || materials.Any(x =>
-                !HasLabel(x.ProductLabel, ComponentLabel) &&
-                !HasLabel(x.ProductLabel, AuxiliaryLabel)))
+        
+        if (materials.Count != matIds.Count ||
+            materials.Any(x => HasSameProductType(x.ProductType, ComboProductType)))
             throw new NotFoundException("Vật liệu không tồn tại hoặc không hợp lệ");
 
         var materialMap = materials.ToDictionary(x => x.Id);
@@ -356,8 +373,9 @@ public class Service : IService
         foreach (var item in items)
         {
             var material = materialMap[item.MatId];
+            var materialLabel = ResolveMaterialLabel(material.ProductLabel, material.ProductType);
 
-            var parentQuantity = CalculateParentQuantity(item.Quantity, material.ProductLabel, material.Unit);
+            var parentQuantity = CalculateParentQuantity(item.Quantity, materialLabel, material.Unit);
             ValidateChildQuantity(parentQuantity, item.MatId);
 
             calculatedSpecs.Add((comboId, item.MatId, parentQuantity, item.IsCore, item.IsActive));
@@ -369,7 +387,7 @@ public class Service : IService
                     : CalculateChildQuantity(
                         parentQuantity,
                         child.Factor,
-                        material.ProductLabel,
+                        materialLabel,
                         material.Unit);
 
                 if (childQuantity is not null)

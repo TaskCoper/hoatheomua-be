@@ -63,8 +63,8 @@
 **Test case 11: Cập nhật thông tin Ahamove thành công**  
 - **Điều kiện:** Ahamove trả về `OrderId` và `SharedLink`.  
 - **Kết quả:** Order được cập nhật:  
-    - `AhahaMoveOrderId = createAhamoveOrderResult.OrderId`  
-    - `AhahaMoveTrackingUrl = createAhamoveOrderResult.SharedLink`  
+    - `ShippingPartyOrderId = createAhamoveOrderResult.OrderId`
+    - `ShippingTrackingUrl = createAhamoveOrderResult.SharedLink`
     - `UpdatedAt = DateTimeOffset.UtcNow`  
 **Test case 12: NhanhVn API trả về lỗi HTTP**  
 - **Điều kiện:** Khi gọi API NhanhVn `/order/add`, response không thành công.  

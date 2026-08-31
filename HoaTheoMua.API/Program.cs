@@ -4,6 +4,7 @@ using HoaTheoMua.Filters;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using AssemblyReference = HoaTheoMua.Service.AssemblyReference;
 using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
 using CategoryProductService = HoaTheoMua.Service.CategoryProduct;
@@ -23,6 +24,7 @@ using BaoKimService = HoaTheoMua.Service.BaoKim;
 using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 using RevalidateService = HoaTheoMua.Service.Revalidate;
 using MaterialService = HoaTheoMua.Service.Material;
+using XanhSmService = HoaTheoMua.Service.XanhSm;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -54,6 +56,22 @@ builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
 builder.Services.AddHttpContextAccessor();
 
+var trustForwardedHeaders = builder.Configuration.GetValue<bool>("ReverseProxy:TrustForwardedHeaders");
+if (trustForwardedHeaders)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = 1;
+
+        // The API container is not published by the profile-based compose setup; only the
+        // Cloudflare tunnel can reach it. Do not enable this setting when exposing the API
+        // directly unless KnownProxies/KnownNetworks are restricted to the real proxy.
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
+
 builder.Services.AddScoped<HoaTheoMua.Service.Common.ICurrentUserService, HoaTheoMua.Service.Common.CurrentUserService>();
 builder.Services.AddScoped<CategoryNewsService.IService, CategoryNewsService.Service>();
 builder.Services.AddScoped<CategoryProductService.IService, CategoryProductService.Service>();
@@ -64,6 +82,10 @@ builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>("AhamoveService");
+builder.Services.AddHttpClient<XanhSmService.IService, XanhSmService.Service>("XanhSmService", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddHttpClient<BaoKimService.IService, BaoKimService.Service>("BaoKimService");
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
@@ -103,6 +125,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 
+if (trustForwardedHeaders)
+{
+    app.UseForwardedHeaders();
+}
+
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -111,8 +138,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerAPI();
 }
 app.UseCors("AllowFrontend");
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 
 app.UseAuthorization();
 

@@ -1,5 +1,6 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AutoMapper;
@@ -393,7 +394,8 @@ public class Service : IService
             query = query.Where(x =>
                 (x.ProductName != null && x.ProductName.ToLower().Contains(normalizedSearch)) ||
                 (x.Barcode != null && x.Barcode.ToLower().Contains(normalizedSearch)) ||
-                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
+                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)) || 
+                (x.ProductCode != null && x.ProductCode.ToLower().Contains(normalizedSearch)));
         }
 
         if (request.priceFrom.HasValue)
@@ -1753,12 +1755,25 @@ public class Service : IService
         request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
-        var allowedLabels = new[] { "thành phần", "phụ liệu" };
+        var baseLabels = new[]
+        {
+            "thành phần", "phụ liệu",
+            "Thành phần", "Phụ liệu",
+            "THÀNH PHẦN", "PHỤ LIỆU",
+            "Thành Phần", "Phụ Liệu"
+        };
+
+        var allowedLabels = baseLabels
+            .SelectMany(x => new[] { x.Normalize(NormalizationForm.FormC), x.Normalize(NormalizationForm.FormD) })
+            .Distinct()
+            .ToArray();
+
         var query = _dbContext.Products
             .AsNoTracking()
             .Where(product => !product.IsDeleted &&
                               product.ProductLabel != null &&
-                              allowedLabels.Contains(product.ProductLabel.ToLower()));
+                              (allowedLabels.Contains(product.ProductLabel.Trim()) ||
+                               allowedLabels.Contains(product.ProductLabel.Trim().ToLower())));
 
         if (request.ExcludeIds != null && request.ExcludeIds.Any())
         {
@@ -1767,20 +1782,36 @@ public class Service : IService
 
         if (!string.IsNullOrWhiteSpace(request.ProductLabel))
         {
-            var normalizedLabel = request.ProductLabel.Trim().ToLower();
+            var rawLabel = request.ProductLabel.Trim();
+            var labelNfc = rawLabel.Normalize(NormalizationForm.FormC);
+            var labelNfd = rawLabel.Normalize(NormalizationForm.FormD);
+            var queryLabels = new[]
+            {
+                rawLabel, labelNfc, labelNfd,
+                rawLabel.ToLower(), labelNfc.ToLower(), labelNfd.ToLower()
+            }.Distinct().ToArray();
+
             query = query.Where(product =>
                 product.ProductLabel != null &&
-                product.ProductLabel.ToLower() == normalizedLabel);
+                (queryLabels.Contains(product.ProductLabel.Trim()) ||
+                 queryLabels.Contains(product.ProductLabel.Trim().ToLower())));
         }
         
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var normalizedSearch = request.Search.Trim().ToLower();
+            var searchNfc = normalizedSearch.Normalize(NormalizationForm.FormC);
+            var searchNfd = normalizedSearch.Normalize(NormalizationForm.FormD);
+
             query = query.Where(product =>
                 (product.ProductName != null &&
-                 product.ProductName.ToLower().Contains(normalizedSearch)) ||
+                 (product.ProductName.ToLower().Contains(normalizedSearch) ||
+                  product.ProductName.ToLower().Contains(searchNfc) ||
+                  product.ProductName.ToLower().Contains(searchNfd))) ||
                 (product.ProductCode != null &&
-                 product.ProductCode.ToLower().Contains(normalizedSearch)));
+                 (product.ProductCode.ToLower().Contains(normalizedSearch) ||
+                  product.ProductCode.ToLower().Contains(searchNfc) ||
+                  product.ProductCode.ToLower().Contains(searchNfd))));
         }
         
         var totalItems = await query.CountAsync();
@@ -1804,172 +1835,154 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(items, request.PageIndex, request.PageSize, totalItems);
     }
 
-    public async Task CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request)
+    public async Task<List<Response.InventoryCheckError>?> CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request)
     {
-        // Giai đoạn 1: Validate request
-        if (request?.ProductIds == null || request.ProductIds.Count == 0)
+        // Bước 1: Validate từng item trước khi gộp các dòng trùng product.
+        if (request?.Items == null || request.Items.Count == 0)
         {
-            throw new BadRequestException("ProductIds are required");
+            throw new BadRequestException("Items are required");
         }
 
-        var productIds = request.ProductIds
-            .Where(id => id != Guid.Empty)
-            .Distinct()
+        if (request.Items.Any(x => x.ProductId == Guid.Empty || x.Quantity <= 0))
+        {
+            throw new BadRequestException("Each item must have a valid ProductId and Quantity greater than 0");
+        }
+
+        var requestedItems = request.Items
+            .GroupBy(x => x.ProductId)
+            .Select(g => new Request.CartItem
+            {
+                ProductId = g.Key,
+                Quantity = g.Sum(x => x.Quantity)
+            })
             .ToList();
 
-        if (productIds.Count == 0)
-        {
-            throw new BadRequestException("Valid product IDs are required");
-        }
+        var productIds = requestedItems.Select(x => x.ProductId).ToList();
 
-        // Giai đoạn 2: Lấy thông tin sản phẩm (cần thêm NhanhProductId, ParentProductId)
+        // Bước 2: Lấy thông tin sản phẩm trong một query.
         var products = await _dbContext.Products
             .AsNoTracking()
             .Where(p => productIds.Contains(p.Id) && !p.IsDeleted)
-            .Select(p => new { p.Id, p.ProductName, p.ProductType, p.NhanhProductId, p.ParentProductId })
+            .Select(p => new { p.Id, p.ProductName, p.ProductType, p.NhanhProductId, p.IsActive })
             .ToListAsync();
 
         if (products.Count != productIds.Count)
         {
-            var missingIds = productIds.Except(products.Select(p => p.Id));
-            throw new BadRequestException($"Products not found: {string.Join(", ", missingIds)}");
+            throw new BadRequestException("Products not found");
         }
 
-        // Giai đoạn 3: Xác định combo IDs cần kiểm tra
-        // TH1: Cha "Sản phẩm", con "Combo" → lấy tất cả combo con
-        // TH2: Cha "Combo" không có con → lấy chính nó
-        // TH3: Cha "Combo" có con → lấy tất cả combo con
+        var inactiveProductIds = products
+            .Where(p => !p.IsActive)
+            .Select(p => p.Id)
+            .ToList();
 
-        // Lấy NhanhProductId của các product được request (để tìm con)
-        var nhanhProductIds = products
+        if (inactiveProductIds.Count > 0)
+        {
+            throw new BadRequestException("One or more products are inactive");
+        }
+
+        var productById = products.ToDictionary(p => p.Id);
+
+        // Mặc định lấy công thức trực tiếp của product.
+        // Nếu product có combo con theo cấu trúc Nhanh.vn thì dùng công thức của các combo con.
+        var sourceIdsByProductId = products.ToDictionary(
+            p => p.Id,
+            p => new List<Guid> { p.Id });
+
+        var parentNhanhIds = products
             .Where(p => !string.IsNullOrEmpty(p.NhanhProductId))
             .Select(p => p.NhanhProductId!)
             .ToList();
 
-        // Tìm tất cả combo con (có ParentProductId = NhanhProductId của cha được request)
-        var childCombosByParent = new Dictionary<string, List<Guid>>();
-        if (nhanhProductIds.Count > 0)
+        if (parentNhanhIds.Count > 0)
         {
             var childCombos = await _dbContext.Products
                 .AsNoTracking()
                 .Where(p => !p.IsDeleted &&
+                            p.IsActive &&
                             p.ProductType == "Combo" &&
-                            p.ParentProductId != null &&
-                            nhanhProductIds.Contains(p.ParentProductId))
-                .Select(p => new { p.ParentProductId, p.Id })
+                            parentNhanhIds.Contains(p.ParentProductId!))
+                .Select(p => new { p.Id, p.ParentProductId })
                 .ToListAsync();
 
-            foreach (var child in childCombos)
+            foreach (var product in products)
             {
-                if (!childCombosByParent.ContainsKey(child.ParentProductId!))
-                    childCombosByParent[child.ParentProductId!] = new List<Guid>();
-                childCombosByParent[child.ParentProductId!].Add(child.Id);
+                var childIds = childCombos
+                    .Where(x => x.ParentProductId == product.NhanhProductId)
+                    .Select(x => x.Id)
+                    .ToList();
+
+                if (childIds.Count > 0)
+                {
+                    sourceIdsByProductId[product.Id] = childIds;
+                }
             }
         }
 
-        // Xác định combo IDs cần check:
-        // - Nếu có con → dùng con IDs
-        // - Nếu không có con → dùng chính nó (nếu là Combo)
-        var comboIdsToCheck = new HashSet<Guid>();
+        var sourceIds = sourceIdsByProductId.Values.SelectMany(x => x).Distinct().ToList();
 
-        foreach (var product in products)
-        {
-            if (childCombosByParent.TryGetValue(product.NhanhProductId ?? "", out var childIds))
-            {
-                // Có combo con → thêm các con
-                comboIdsToCheck.UnionWith(childIds);
-            }
-            else if (product.ProductType == "Combo")
-            {
-                // Không có con và là Combo → thêm chính nó
-                comboIdsToCheck.Add(product.Id);
-            }
-        }
+        var coreSpecs = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(cs => sourceIds.Contains(cs.SubId) &&
+                         cs.IsCore &&
+                         cs.IsActive &&
+                         !cs.IsDeleted &&
+                         cs.Quantity.HasValue &&
+                         cs.Quantity > 0)
+            .Select(cs => new { cs.SubId, cs.MatId, cs.Quantity })
+            .ToListAsync();
+        
 
-        // Lấy combo specs với IsCore = true
-        var coreSpecs = new List<(Guid SubId, Guid MatId, decimal Quantity)>();
-        if (comboIdsToCheck.Count > 0)
-        {
-            coreSpecs = await _dbContext.ComboSpecifications
-                .AsNoTracking()
-                .Where(cs => comboIdsToCheck.Contains(cs.SubId) &&
-                             cs.IsCore &&
-                             cs.IsActive &&
-                             !cs.IsDeleted)
-                .Select(cs => new { cs.SubId, cs.MatId, cs.Quantity })
-                .ToListAsync()
-                .ContinueWith(t => t.Result
-                    .Where(x => x.Quantity.HasValue && x.Quantity.Value > 0)
-                    .Select(x => (x.SubId, x.MatId, x.Quantity!.Value))
-                    .ToList());
-        }
+        // Gắn mỗi spec với item trong giỏ để quantity của giỏ được tính vào.
+        var requestedSpecs = requestedItems
+            .SelectMany(item => coreSpecs
+                .Where(spec => sourceIdsByProductId[item.ProductId].Contains(spec.SubId))
+                .Select(spec => new
+                {
+                    Item = item,
+                    Spec = spec
+                }))
+            .ToList();
 
-        if (coreSpecs.Count == 0)
-        {
-            // Không có sản phẩm combo nào hoặc không có CORE spec → không cần kiểm tra
-            return;
-        }
+        var materialRequirements = requestedSpecs
+            .GroupBy(x => x.Spec.MatId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(x => x.Item.Quantity * x.Spec.Quantity!.Value));
 
-        // Giai đoạn 4: Tính tổng định lượng cần thiết cho mỗi nguyên liệu (mỗi product = 1 cái)
-        var materialRequirements = new Dictionary<Guid, decimal>();
-        var requestedQuantities = productIds.ToDictionary(id => id, _ => 1);
-
-        foreach (var spec in coreSpecs)
-        {
-            if (!requestedQuantities.ContainsKey(spec.SubId))
-                continue;
-
-            var required = spec.Quantity;
-            if (materialRequirements.ContainsKey(spec.MatId))
-                materialRequirements[spec.MatId] += required;
-            else
-                materialRequirements[spec.MatId] = required;
-        }
-
-        if (materialRequirements.Count == 0)
-        {
-            return;
-        }
-
-        // Giai đoạn 5: Lấy AvailableForSale của các nguyên liệu
         var materialIds = materialRequirements.Keys.ToList();
         var inventories = await _dbContext.Products
             .AsNoTracking()
             .Where(p => materialIds.Contains(p.Id) && !p.IsDeleted)
-            .Select(p => new { p.Id, p.ProductName, p.AvailableForSale })
+            .Select(p => new { p.Id, p.ProductName, p.AvailableForSale, p.IsActive })
             .ToListAsync();
 
-        var inventoryById = inventories.ToDictionary(x => x.Id, x => x);
+        var inventoryById = inventories.ToDictionary(x => x.Id);
 
-        // Giai đoạn 6: Kiểm tra và so sánh
-        var errors = new List<Response.InventoryCheckError>();
+        var list = new List<Response.InventoryCheckError>();
+
         foreach (var (materialId, requiredQty) in materialRequirements)
         {
-            if (!inventoryById.TryGetValue(materialId, out var material))
-                continue;
-
-            var availableQty = Math.Max(0m, material.AvailableForSale ?? 0m);
+            inventoryById.TryGetValue(materialId, out var material);
+            var availableQty = material?.IsActive == true
+                ? Math.Max(0m, material.AvailableForSale ?? 0m)
+                : 0m;
             if (requiredQty > availableQty)
             {
-                // Tìm các sản phẩm bị ảnh hưởng
-                var affectedProducts = coreSpecs
-                    .Where(s => s.MatId == materialId && requestedQuantities.ContainsKey(s.SubId))
-                    .Select(s =>
+                var affectedProducts = requestedSpecs
+                    .Where(x => x.Spec.MatId == materialId)
+                    .GroupBy(x => x.Item.ProductId)
+                    .Select(g => new Response.AffectedProductInfo
                     {
-                        var product = products.FirstOrDefault(p => p.Id == s.SubId);
-                        return new Response.AffectedProductInfo
-                        {
-                            ProductId = s.SubId,
-                            ProductName = product?.ProductName ?? "Unknown"
-                        };
+                        ProductId = g.Key,
+                        ProductName = productById[g.Key].ProductName
                     })
-                    .Distinct()
                     .ToList();
 
-                errors.Add(new Response.InventoryCheckError
+                list.Add(new Response.InventoryCheckError
                 {
                     MaterialId = materialId,
-                    MaterialName = material.ProductName ?? "Unknown",
+                    MaterialName = material?.ProductName ?? "Unknown",
                     RequiredQuantity = requiredQty,
                     AvailableQuantity = availableQty,
                     AffectedProducts = affectedProducts
@@ -1977,10 +1990,6 @@ public class Service : IService
             }
         }
 
-        if (errors.Count > 0)
-        {
-            var errorDetails = System.Text.Json.JsonSerializer.Serialize(errors);
-            throw new BadRequestException($"INVENTORY_INSUFFICIENT: {errorDetails}");
-        }
+        return list.Count > 0 ? list : null;
     }
 }

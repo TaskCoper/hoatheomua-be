@@ -22,6 +22,9 @@ x-api-env: &api-env
   ASPNETCORE_URLS: http://+:8080
   HttpPort: ${HTTP_PORT}
 
+  # The API has no published host port in this compose file and is reached through cloudflared.
+  ReverseProxy__TrustForwardedHeaders: "true"
+
   # Postgres
   PostgresOption__MaxIdleConns: ${POSTGRES_MAX_IDLE_CONNS}
   PostgresOption__MaxOpenConns: ${POSTGRES_MAX_OPEN_CONNS}
@@ -36,6 +39,14 @@ x-api-env: &api-env
   # Ahamove
   AhamoveOption__Token: ${AHAMOVE_TOKEN}
   AhamoveOption__BaseUrl: ${AHAMOVE_BASE_URL}
+
+  # XanhSM Express
+  XanhSmOptions__BaseUrl: ${XANHSM_BASE_URL}
+  XanhSmOptions__TokenUrl: ${XANHSM_TOKEN_URL}
+  XanhSmOptions__Scope: ${XANHSM_SCOPE}
+  XanhSmOptions__ClientId: ${XANHSM_CLIENT_ID}
+  XanhSmOptions__ClientSecret: ${XANHSM_CLIENT_SECRET}
+  XanhSmOptions__AcceptLanguage: ${XANHSM_ACCEPT_LANGUAGE}
 
   # NhanhVn
   NhanhVnOption__Token: ${NHANHVN_TOKEN}
@@ -118,13 +129,6 @@ services:
     hostname: hoatheomua-cloudflare-dev
     networks: [hoatheomua-network-dev]
     profiles: [dev, cloudflare-dev, proxy, dev-pull]
-
-  hoatheomua-cloudflare-prod:
-    <<: *cloudflare-tunnel
-    container_name: hoatheomua-cloudflare-prod
-    hostname: hoatheomua-cloudflare-prod
-    networks: [hoatheomua-network-prod]
-    profiles: [prod, cloudflare-prod, proxy, prod-pull]
 
 volumes:
   postgres-hoatheomua-data-dev:

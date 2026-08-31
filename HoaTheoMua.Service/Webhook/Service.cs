@@ -8,6 +8,7 @@ using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.AhamoveService;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.XanhSm;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
@@ -25,10 +26,13 @@ public partial class Service : IService
     private readonly Config.IService _configService;
     private readonly AhamoveService.IService _ahaMoveService;
     private readonly Revalidate.IService _revalidateService;
+    private readonly HoaTheoMua.Service.XanhSm.IService? _xanhSmService;
 
     public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration,
         HoaTheoMua.Service.Order.IService orderService, Config.IService configService,
-        AhamoveService.IService ahaMoveService, Revalidate.IService revalidateService)
+        AhamoveService.IService ahaMoveService,
+        Revalidate.IService revalidateService,
+        HoaTheoMua.Service.XanhSm.IService? xanhSmService = null)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
@@ -39,6 +43,7 @@ public partial class Service : IService
         _configService = configService;
         _ahaMoveService = ahaMoveService;
         _revalidateService = revalidateService;
+        _xanhSmService = xanhSmService;
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
         configuration.GetSection(nameof(SepayOption)).Bind(_sepayOption);
@@ -193,6 +198,11 @@ public partial class Service : IService
             throw new NotFoundException("Order not found in description");
         }
 
+        if (order.PaymentGateway != PaymentGateway.Sepay)
+        {
+            throw new ConflictException("Payment gateway does not match SePay webhook");
+        }
+
         if (order.Status != "Pending")
         {
             throw new NotFoundException("Order not on Pending");
@@ -257,6 +267,11 @@ public partial class Service : IService
         if (order == null)
         {
             throw new NotFoundException("Order not found for mrc_order_id");
+        }
+
+        if (order.PaymentGateway != PaymentGateway.BaoKim)
+        {
+            throw new ConflictException("Payment gateway does not match BaoKim webhook");
         }
 
         // Anything that isn't a completed payment (failed, cancelled, still pending at the gateway)
@@ -341,10 +356,15 @@ public partial class Service : IService
             ? DateTime.SpecifyKind(completedAt, DateTimeKind.Utc)
             : DateTime.UtcNow;
 
-    // Shared tail for both gateways: flip the order to Paid, dispatch it to Ahamove and NhanhVn,
+    // Shared tail for both gateways: flip the order to Paid, dispatch it to the shipping party and NhanhVn,
     // then persist the order and its gateway transaction in one SaveChanges.
     private async Task FulfillPaidOrder(Repository.Entity.Order order, Transaction transaction)
     {
+        if (order.ShippingGateway is not (ShippingGateway.Ahamove or ShippingGateway.XanhSm))
+        {
+            throw new BadRequestException($"Shipping gateway {order.ShippingGateway} is not supported");
+        }
+
         order.Status = "Paid";
 
         //  var newOrders = await AhaMoveCreateOrder();
@@ -363,7 +383,7 @@ public partial class Service : IService
         // var phoneReceiver = address?.PhoneNumber; //cột này required
         var phoneReceiver = order.PhoneReceiver; //cột này required
         var fullNameReceiver = order.FullNameReceiver;
-        
+
         string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
         privateDescription += $"\n-------------------------\nNN: {fullNameReceiver} - {phoneReceiver}";
 
@@ -415,48 +435,54 @@ public partial class Service : IService
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
             ? tags.Append(vatTagId).ToList()
             : tags;
-        
+
         var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         //var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
-            
-        var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
-        
+
+        var allowInstantDelivery = order.ShippingGateway == ShippingGateway.Ahamove
+            ? ahamoveConfigs.GetValue("ahamove.instant_delivery", true)
+            : true;
+
         // Mốc unix (giây) Ahamove sẽ tới lấy hàng với đơn giao ngay = hiện tại + ahamove.idle_time.
         // Khai báo ngoài nhánh vì còn dùng lại cho DeliveryTime gửi sang NhanhVn ở dưới.
         long delayTime = 0;
         var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
-        delayTime = delayCallAhamove > 0
-            ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
-            : 0L;
-        
-        if (order.OrderTime == 0 && tags.Count == 0 && ahamoveAllowDelivery == true)
+        delayTime = order.ShippingGateway == ShippingGateway.Ahamove
+            ? delayCallAhamove > 0
+                ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
+                : 0L
+            : DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        if (order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery)
         {
             tagIds = tagIds.Append(fastTagId).ToList();
-            
-            var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
-            {
-                Id = x.Id.ToString(),
-                Name = x.Name,
-                Price = (int)x.Price,
-                Num = x.Number
-            }
-            ).ToList();
 
-            var packageDetailRequest = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail()
+            if (order.ShippingGateway == ShippingGateway.Ahamove)
             {
-                Height = x.Height,
-                Weight = x.Weight,
-                Length = x.Length,
-                Width = x.Width,
-                Description = x.Name
-            }
-            ).ToList();
+                var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
+                {
+                    Id = x.Id.ToString(),
+                    Name = x.Name,
+                    Price = (int)x.Price,
+                    Num = x.Number
+                }
+                ).ToList();
 
-            var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
-            {
-                OrderTime = delayTime,
-                IdleUntil = delayTime,
-                Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
+                var packageDetailRequest = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail()
+                {
+                    Height = x.Height,
+                    Weight = x.Weight,
+                    Length = x.Length,
+                    Width = x.Width,
+                    Description = x.Name
+                }
+                ).ToList();
+
+                var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
+                {
+                    OrderTime = delayTime,
+                    IdleUntil = delayTime,
+                    Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
                 {
                     new AhaMoveRequest.AhamoveLocationPoint()
                     {
@@ -479,8 +505,8 @@ public partial class Service : IService
                         Remarks = order.Remarks,
                     },
                 },
-                ServiceId = "SGN-BIKE",
-                Requests = new List<AhaMoveRequest.ItemsRequest>()
+                    ServiceId = "SGN-BIKE",
+                    Requests = new List<AhaMoveRequest.ItemsRequest>()
                 {
                     // new AhaMoveRequest.ItemsRequest()
                     // {
@@ -500,37 +526,69 @@ public partial class Service : IService
                         Id = "SGN-BIKE-BAGA"
                     },
                 },
-                PaymentMethod = "CASH",
-                Remarks = order.Remarks,
-                Items = itemsRequest,
-                PackageDetail = packageDetailRequest,
-            };
+                    PaymentMethod = "CASH",
+                    Remarks = order.Remarks,
+                    Items = itemsRequest,
+                    PackageDetail = packageDetailRequest,
+                };
 
-            var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders";
-            var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
-            var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
-            ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
-            ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
+                var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders";
+                var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
+                var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
+                ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
+                ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
 
-            HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
+                HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
 
-            if (ahamoveResponse.IsSuccessStatusCode)
-            {
-                createAhamoveOrderResult =
-                    await ahamoveResponse.Content.ReadFromJsonAsync<AhaMoveResponse.CreateAhaMoveOrderResponse>();
+                if (ahamoveResponse.IsSuccessStatusCode)
+                {
+                    createAhamoveOrderResult =
+                        await ahamoveResponse.Content.ReadFromJsonAsync<AhaMoveResponse.CreateAhaMoveOrderResponse>();
+                }
+                else
+                {
+                    throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
+                }
+
+                if (createAhamoveOrderResult == null)
+                {
+                    throw new BadRequestException("Ahamove returned null or empty data");
+                }
+
+                order.ShippingPartyOrderId = createAhamoveOrderResult.OrderId;
+                order.ShippingTrackingUrl = createAhamoveOrderResult.SharedLink;
             }
             else
             {
-                throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
-            }
+                if (_xanhSmService is null)
+                {
+                    throw new ServerException("XanhSM service is not configured");
+                }
 
-            if (createAhamoveOrderResult == null)
-            {
-                throw new BadRequestException("Ahamove returned null or empty data");
-            }
+                if (companyAddress is null)
+                {
+                    throw new BadRequestException("Company pickup address is not configured");
+                }
 
-            order.AhahaMoveOrderId = createAhamoveOrderResult.OrderId;
-            order.AhahaMoveTrackingUrl = createAhamoveOrderResult.SharedLink;
+                var xanhSmDelivery = await _xanhSmService.BookDoorToDoorAsync(
+                    HoaTheoMua.Service.Order.Service.CreateXanhSmPoints(
+                        companyAddress,
+                        order.Latitude,
+                        order.Longitude,
+                        order.Address,
+                        order.ShortAddress,
+                        fullNameReceiver,
+                        phoneReceiver,
+                        order.Remarks,
+                        HoaTheoMua.Service.Order.Service.CalculateXanhSmPackageWeightKg(
+                            order.OrderDetails.Select(detail => (detail.Weight, detail.Number)))),
+                    delayTime,
+                    (long)Math.Round(order.ProductFee, MidpointRounding.AwayFromZero),
+                    order.Id.ToString());
+
+                order.ShippingPartyOrderId = xanhSmDelivery.Id ?? xanhSmDelivery.OrderId;
+                order.ShippingTrackingUrl = xanhSmDelivery.TrackingUrl ?? xanhSmDelivery.SharedLink;
+            }
         }
 
         var productNhanhVnRequest = new List<Product>();
@@ -593,8 +651,8 @@ public partial class Service : IService
             Channel = new Channel
             {
                 TrafficSourceId = 996,
-                AppOrderId = createAhamoveOrderResult?.OrderId != null
-                    ? createAhamoveOrderResult.OrderId + " - " + prefixOrderId
+                AppOrderId = !string.IsNullOrWhiteSpace(order.ShippingPartyOrderId)
+                    ? order.ShippingPartyOrderId + " - " + prefixOrderId
                     : order.Id.ToString(),
                 SourceName = "WEBSITE",
                 PageId = "",
@@ -610,7 +668,7 @@ public partial class Service : IService
             },
             Carrier = new Carrier
             {
-                Id = 12,
+                Id = order.ShippingGateway == ShippingGateway.Ahamove ? 12 : 0,
                 AllowTest = 1,
                 ServiceId = 0,
                 ServiceCode = "",
@@ -619,7 +677,7 @@ public partial class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m, // Hậu tố 'm' biểu thị kiểu decimal
-                DeliveryDate = (order.OrderTime > 0) ? vnDt.ToString("yyyy-MM-dd") : ConvertInstantDateDelivery(delayTime) ,
+                DeliveryDate = (order.OrderTime > 0) ? vnDt.ToString("yyyy-MM-dd") : ConvertInstantDateDelivery(delayTime),
                 // DeliveryDate =  "2026-07-05",
                 DeliveryHour = "",
                 DeliveryMinute = "",
@@ -633,7 +691,7 @@ public partial class Service : IService
                 DeclaredFee = 0m,
                 ShipFee = 0m,
                 CodFee = 0m,
-                IsSelfConnect = 0,
+                IsSelfConnect = order.ShippingGateway == ShippingGateway.XanhSm ? 1 : 0,
                 CarrierPromotionCode = "",
                 CarrierPromotionCodes = new List<string>(),
                 ManualShipFee = 0m,
@@ -787,7 +845,7 @@ public partial class Service : IService
             .Distinct()
             .Select(x => x.ToString())
             .ToList();
-        
+
         var revalidateBody = JsonSerializer.SerializeToElement(new
         {
             entity = "product",
@@ -842,7 +900,7 @@ public partial class Service : IService
             .ToOffset(TimeSpan.FromHours(7))
             .ToString("HH:mm:ss");
     }
-    
+
     private static string ConvertInstantDateDelivery(long scheduledUnixSeconds)
     {
         if (scheduledUnixSeconds <= 0)

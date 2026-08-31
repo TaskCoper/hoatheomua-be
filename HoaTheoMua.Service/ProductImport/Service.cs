@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -266,8 +267,8 @@ public class Service : IService
     private static string? NullIfEmpty(string? val)
     {
         if (string.IsNullOrWhiteSpace(val)) return null;
-        var trimmed = val.Trim();
-        return trimmed.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : trimmed;
+        var cleaned = val.Replace('\u00A0', ' ').Trim().Normalize(NormalizationForm.FormC);
+        return cleaned.Equals("null", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(cleaned) ? null : cleaned;
     }
 
     /** Parse số thập phân từ Excel (hỗ trợ cả dấu phẩy và chấm). */

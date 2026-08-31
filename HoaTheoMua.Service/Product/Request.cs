@@ -218,6 +218,12 @@ public class Request
 
     public class CheckInventoryAvailabilityRequest
     {
-        public List<Guid> ProductIds { get; set; } = new();
+        public List<CartItem> Items { get; set; } = new();
+    }
+
+    public class CartItem
+    {
+        public Guid ProductId { get; set; }
+        public int Quantity { get; set; }
     }
 }

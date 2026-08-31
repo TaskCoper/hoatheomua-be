@@ -268,7 +268,7 @@ public class Response
 
     public class InventoryCheckError
     {
-        public Guid MaterialId { get; set; }
+        public Guid? MaterialId { get; set; }
         public string? MaterialName { get; set; }
         public decimal RequiredQuantity { get; set; }
         public decimal AvailableQuantity { get; set; }
