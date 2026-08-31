@@ -1000,7 +1000,7 @@ public class CategoryProductTest
     }
 
     [Fact]
-    public async Task UpdateCategoryProductDetail_ProductHasNoCategoryDetails_ThrowsBadRequestException()
+    public async Task UpdateCategoryProductDetail_ProductHasNoCategoryDetails_CreatesDetail()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -1010,22 +1010,25 @@ public class CategoryProductTest
         await dbContext.AddRangeAsync(product, category);
         await dbContext.SaveChangesAsync();
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+        await service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+        {
+            ProductId = product.Id,
+            CategoryProductLists = new List<Request.CategoryList>
             {
-                ProductId = product.Id,
-                CategoryProductLists = new List<Request.CategoryList>
-                {
-                    new() { CategoryProductId = category.Id, IsPin = true, Position = 1 }
-                }
-            }));
+                new() { CategoryProductId = category.Id, IsPin = true, Position = 1 }
+            }
+        });
 
-        Assert.Equal("Category product detail not found.", exception.Message);
-        Assert.Empty(await dbContext.CategoryProductDetails.ToListAsync());
+        var detail = await dbContext.CategoryProductDetails.SingleAsync();
+        Assert.Equal(product.Id, detail.ProductId);
+        Assert.Equal(category.Id, detail.CategoryProductId);
+        Assert.True(detail.IsPin);
+        Assert.Equal(1, detail.Position);
+        Assert.NotEqual(default, detail.CreatedAt);
     }
 
     [Fact]
-    public async Task UpdateCategoryProductDetail_CategoryNotAssignedToProduct_ThrowsBadRequestException()
+    public async Task UpdateCategoryProductDetail_CategoryNotAssignedToProduct_CreatesDetail()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -1037,22 +1040,21 @@ public class CategoryProductTest
         await dbContext.CategoryProductDetails.AddAsync(CreateDetail(product.Id, assignedCategory.Id));
         await dbContext.SaveChangesAsync();
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+        await service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+        {
+            ProductId = product.Id,
+            CategoryProductLists = new List<Request.CategoryList>
             {
-                ProductId = product.Id,
-                CategoryProductLists = new List<Request.CategoryList>
-                {
-                    new() { CategoryProductId = unassignedCategory.Id, IsPin = true, Position = 1 }
-                }
-            }));
+                new() { CategoryProductId = unassignedCategory.Id, IsPin = true, Position = 1 }
+            }
+        });
 
         var details = await dbContext.CategoryProductDetails
             .Where(x => x.ProductId == product.Id)
             .ToDictionaryAsync(x => x.CategoryProductId);
-        Assert.Equal("Category product detail not found.", exception.Message);
-        Assert.Single(details);
-        Assert.DoesNotContain(unassignedCategory.Id, details.Keys);
+        Assert.Equal(2, details.Count);
+        Assert.True(details[unassignedCategory.Id].IsPin);
+        Assert.Equal(1, details[unassignedCategory.Id].Position);
     }
 
     [Fact]
