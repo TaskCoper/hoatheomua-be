@@ -11,6 +11,32 @@ namespace HoaTheoMua.Service.Test.XanhSmServiceTest;
 
 public class ServiceTests
 {
+    [Theory]
+    [InlineData("{\"order_time\":1770350401}")]
+    [InlineData("{\"order_time\":\"1770350401\"}")]
+    public void EstimateData_DeserializesNumericOrStringOrderTime(string json)
+    {
+        var result = JsonSerializer.Deserialize<XanhSmEstimateData>(
+            json,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.NotNull(result);
+        Assert.Equal(1770350401L, result.OrderTime);
+    }
+
+    [Theory]
+    [InlineData("{\"order_time\":1770350401}")]
+    [InlineData("{\"order_time\":\"1770350401\"}")]
+    public void Delivery_DeserializesNumericOrStringOrderTime(string json)
+    {
+        var result = JsonSerializer.Deserialize<XanhSmDelivery>(
+            json,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.NotNull(result);
+        Assert.Equal(1770350401L, result.OrderTime);
+    }
+
     [Fact]
     public async Task GetAccessTokenAsync_SendsFormDataAndCachesToken()
     {
