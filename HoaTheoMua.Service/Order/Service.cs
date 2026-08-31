@@ -115,6 +115,36 @@ public class Service : IService
             throw new UnauthorizedException("User is not verified");
         }
 
+        var checkoutConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "checkout");
+
+        var deliveryMethodsConfig = checkoutConfigs.GetValue<string>("checkout.delivery_methods");
+        if (!string.IsNullOrWhiteSpace(deliveryMethodsConfig))
+        {
+            var deliveryMethods = JObject.Parse(deliveryMethodsConfig);
+            var selectedDeliveryMethod = deliveryMethods["items"]?
+                .FirstOrDefault(x => (int?)x["gateway"] == (int)request.ShippingGateway);
+
+            if ((bool?)selectedDeliveryMethod?["enabled"] == false)
+            {
+                throw new BadRequestException(
+                    $"Phương thức giao hàng {request.ShippingGateway} hiện đang bị tắt");
+            }
+        }
+
+        var paymentMethodsConfig = checkoutConfigs.GetValue<string>("checkout.payment_methods");
+        if (!string.IsNullOrWhiteSpace(paymentMethodsConfig))
+        {
+            var paymentMethods = JObject.Parse(paymentMethodsConfig);
+            var selectedPaymentMethod = paymentMethods["items"]?
+                .FirstOrDefault(x => (int?)x["gateway"] == (int)request.PaymentGateway);
+
+            if ((bool?)selectedPaymentMethod?["enabled"] == false)
+            {
+                throw new BadRequestException(
+                    $"Phương thức thanh toán {request.PaymentGateway} hiện đang bị tắt");
+            }
+        }
+
         var itemIds = request.Items
             .Select(x => x.ItemId.ToString())
             .Distinct()
