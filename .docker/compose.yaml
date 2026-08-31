@@ -22,6 +22,9 @@ x-api-env: &api-env
   ASPNETCORE_URLS: http://+:8080
   HttpPort: ${HTTP_PORT}
 
+  # The API has no published host port in this compose file and is reached through cloudflared.
+  ReverseProxy__TrustForwardedHeaders: "true"
+
   # Postgres
   PostgresOption__MaxIdleConns: ${POSTGRES_MAX_IDLE_CONNS}
   PostgresOption__MaxOpenConns: ${POSTGRES_MAX_OPEN_CONNS}
@@ -115,8 +118,8 @@ services:
     environment:
       <<: *api-env
       ConnectionStrings__PostgresSql: Host=hoatheomua-postgres-prod;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
-    ports:
-      - "${HTTP_PORT}:8080"
+    # ports:
+    #   - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-prod]
     profiles: [prod, api-prod, api, prod-pull]
 

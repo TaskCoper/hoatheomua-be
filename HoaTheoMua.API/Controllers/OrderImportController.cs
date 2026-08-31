@@ -1,6 +1,8 @@
-﻿using HoaTheoMua.Service.Models;
+﻿using HoaTheoMua.Extentions;
+using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.OrderNhanhVnImport;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HoaTheoMua.Controllers;
 
@@ -16,6 +18,7 @@ public class OrderImportController: ControllerBase
     }
     
     [HttpPost("/api/v1/orders/import-excel")]
+    [EnableRateLimiting(RateLimitExtensions.ImportPolicy)]
     public async Task<IActionResult> ImportExcel(IFormFile file)
     {
         await using var stream = file.OpenReadStream();
