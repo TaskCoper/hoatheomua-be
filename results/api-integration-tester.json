@@ -1,52 +1,56 @@
 {
   "skill": "api-integration-tester",
-  "status": "BLOCKED",
-  "started_at": "2026-08-26T10:01:48Z",
+  "status": "FAIL",
+  "started_at": "2026-08-31T08:01:52Z",
   "checks": [
     {
-      "name": "route_and_auth_contract",
+      "name": "official_express_contract_inventory",
       "status": "PASS",
-      "evidence": "GET /api/v2/products is registered in ProductController and has no Authorize requirement. Supported query fields are pageIndex, pageSize, search, priceFrom, priceTo, sortBy, categoryIds, and isPin."
+      "evidence": "Reviewed the current official Vietnam Express documentation for authentication, list-available-services, estimate/order, create-order, orders/{id}, list-user-orders, cancel-order, place/geocode, and webhooks."
     },
     {
-      "name": "api_build",
+      "name": "implemented_door_to_door_types",
       "status": "PASS",
-      "evidence": "dotnet build HoaTheoMua.API/HoaTheoMua.API.csproj --no-restore --disable-build-servers completed with 0 warnings and 0 errors."
+      "evidence": "All fields used by the current partner_pay Door-to-door estimate and booking flow are compatible with the official schemas. Response order_time accepts both the documented numeric string and the numeric value observed in production."
     },
     {
-      "name": "v2_service_contract_tests",
-      "status": "PASS",
-      "evidence": "16/16 tests selected by FullyQualifiedName~LocalProductSearchV2Test|FullyQualifiedName~UT_004 passed. Coverage includes position sorting, isPin filtering, search normalization, category mapping, pagination data, combo quantity, stock status, and unavailable reasons."
+      "name": "cod_and_cash_payer_request_contract",
+      "status": "FAIL",
+      "evidence": "XanhSmAddonRequest does not model remain_cod or value, and XanhSmDeliveryPointRequest does not model the point-level addons object or is_payment_check_point boolean. COD and explicit cash-payer requests cannot be represented."
     },
     {
-      "name": "http_startup_and_probe",
+      "name": "geocode_contract",
+      "status": "FAIL",
+      "evidence": "The official GET place/geocode API and its response model are not implemented in the XanhSM client."
+    },
+    {
+      "name": "webhook_contract",
+      "status": "FAIL",
+      "evidence": "No XanhSM webhook envelope, event payload DTOs, or HMAC signature handling were found. Official event_time is an integer, but the documentation is internally inconsistent about seconds versus milliseconds."
+    },
+    {
+      "name": "documented_numeric_precision",
+      "status": "PASS",
+      "evidence": "A few DTO fields use double where the documentation says integer, including service max/min distance and express package max weight. These are wider compatible types and do not create deserialization failures."
+    },
+    {
+      "name": "xanhsm_regression_tests",
+      "status": "PASS",
+      "evidence": "dotnet test filtered to FullyQualifiedName~XanhSm passed 23/23 tests."
+    },
+    {
+      "name": "production_endpoint_after_deployment",
       "status": "BLOCKED",
-      "evidence": "The API reads its local configuration successfully but exits in Program.cs during Database.MigrateAsync because PostgreSQL at 127.0.0.1:5433 refuses the connection. No HTTP listener becomes available."
-    },
-    {
-      "name": "pagination_response_metadata",
-      "status": "FAIL",
-      "evidence": "ApiResponseFactory.BasePagination does not populate TraceId or TimestampUtc. ProductController returns this object directly, so V2 cannot provide a useful correlation ID and emits the default DateTime value."
-    },
-    {
-      "name": "pagination_input_safety",
-      "status": "FAIL",
-      "evidence": "GetLocalProductsV2 computes Skip with int arithmetic: (pageIndex - 1) * pageSize. Very large positive pageIndex values can overflow to a negative offset. ApiResponseFactory also multiplies pageIndex * pageSize with int arithmetic for HasNextPage."
-    },
-    {
-      "name": "deterministic_page_order",
-      "status": "FAIL",
-      "evidence": "The final ordering uses Position and optional CreatedAt/price/name but has no unique Id tiebreaker. Rows tied on all selected fields can move between pages across executions."
+      "evidence": "The order_time compatibility change has not been deployed from this workspace, and no dedicated customer test token was provided for authenticated live contract probes."
     }
   ],
   "failures": [
-    "HTTP verification is blocked until a PostgreSQL instance is available at 127.0.0.1:5433 with the configured database and credentials.",
-    "Pagination responses omit correlation and timestamp metadata.",
-    "Pagination arithmetic can overflow for extreme pageIndex values.",
-    "Pagination ordering is not deterministic when sort fields tie."
+    "COD addon fields and point-level payment/addon fields are missing from request DTOs.",
+    "The official geocode API is not represented by the client.",
+    "The official webhook contract and signature verification are not implemented.",
+    "Production verification remains pending deployment and an authenticated test request."
   ],
   "redactions": [
-    "Database password was not recorded.",
-    "JWT signing key and external API tokens were not recorded."
+    "No JWT, XanhSM credential, customer data, or raw provider response body was recorded."
   ]
 }
