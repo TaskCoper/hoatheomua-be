@@ -117,8 +117,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
             // Arrange
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 1", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 2", ProductLabel = "THÀNH PHẦN", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 1", ProductLabel = "Vật liệu", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 2", ProductLabel = "PHỤ LIỆU, VẬT LIỆU", IsDeleted = false },
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "Product 1", ProductLabel = "Hoa hồng", ProductType = "Sản phẩm", IsDeleted = false }
             };
             var dbContext = CreateMockDbContext(products);
@@ -218,7 +218,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             {
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", ProductType = "Combo", IsDeleted = false },
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", ProductType = "Sản phẩm", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "Thành phần", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "Vật liệu", IsDeleted = false }
             };
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
