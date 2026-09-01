@@ -17,7 +17,7 @@ public class AddMaterialInCombo
     private static readonly Guid MatSupportId = Guid.Parse("55555555-5555-5555-5555-555555555555");
 
     private const string ParentNhanhProductId = "nhanh-combo-a";
-    private const string MaterialLabel = "Thành phần";
+    private const string MaterialLabel = "Vật liệu";
 
     [Fact]
     public async Task AddMaterialInCombo_ValidMaterial_AddsSpecificationForParentAndChildren()

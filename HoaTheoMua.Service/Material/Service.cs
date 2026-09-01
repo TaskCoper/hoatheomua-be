@@ -16,7 +16,7 @@ public class Service : IService
         _dbContext = dbContext;
     }
 
-    private const string ComponentLabel = "Thành phần";
+    private const string ComponentLabel = "Vật liệu";
     private const string AuxiliaryLabel = "Phụ liệu";
     private const string ComboProductType = "Combo";
 
