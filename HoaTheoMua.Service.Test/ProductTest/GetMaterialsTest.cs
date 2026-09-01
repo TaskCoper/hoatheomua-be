@@ -574,5 +574,57 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var item = Assert.Single(res2.Value.Items.Cast<Response.MaterialResponse>());
             Assert.Equal(id1.ToString(), item.MaterialId);
         }
+
+        [Fact]
+        public async Task GetMaterialsAsync_WithCommaSeparatedAndVatLieuLabel_ReturnsExpectedMaterials()
+        {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var id3 = Guid.NewGuid();
+
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity 
+                { 
+                    Id = id1, 
+                    ProductCode = "MAT_01", 
+                    ProductName = "Hoa Hồng Đà Lạt", 
+                    ProductLabel = "Tốt Nghiệp,VẬT LIỆU", 
+                    IsDeleted = false 
+                },
+                new ProductEntity 
+                { 
+                    Id = id2, 
+                    ProductCode = "MAT_02", 
+                    ProductName = "Hoa Hướng Dương", 
+                    ProductLabel = "1VẬT LIỆU", 
+                    IsDeleted = false 
+                },
+                new ProductEntity 
+                { 
+                    Id = id3, 
+                    ProductCode = "NON_MAT", 
+                    ProductName = "Sản phẩm khác", 
+                    ProductLabel = "Sản phẩm", 
+                    IsDeleted = false 
+                }
+            };
+
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            // 1. Without ProductLabel filter: should return id1 and id2
+            var req1 = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10 };
+            var res1 = await service.GetMaterialsAsync(req1);
+            Assert.Equal(2, res1.Value.TotalCount);
+
+            // 2. Filter by "Vật liệu"
+            var req2 = new Request.GetMaterialsRequest { PageIndex = 1, PageSize = 10, ProductLabel = "Vật liệu" };
+            var res2 = await service.GetMaterialsAsync(req2);
+            Assert.Equal(2, res2.Value.TotalCount);
+            var items = res2.Value.Items.Cast<Response.MaterialResponse>().ToList();
+            Assert.Contains(items, x => x.MaterialId == id1.ToString());
+            Assert.Contains(items, x => x.MaterialId == id2.ToString());
+        }
     }
 }

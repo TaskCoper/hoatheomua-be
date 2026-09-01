@@ -119,6 +119,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
             {
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 1", ProductLabel = "Thành phần", IsDeleted = false },
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 2", ProductLabel = "THÀNH PHẦN", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 3", ProductLabel = "Tốt Nghiệp,VẬT LIỆU", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Material 4", ProductLabel = "Vật liệu", IsDeleted = false },
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "Product 1", ProductLabel = "Hoa hồng", ProductType = "Sản phẩm", IsDeleted = false }
             };
             var dbContext = CreateMockDbContext(products);
@@ -130,10 +132,13 @@ namespace HoaTheoMua.Service.Test.ProductTest
 
             // Assert
             Assert.NotNull(result);
-            Assert.Equal(2, result.Value.TotalCount);
+            Assert.Equal(4, result.Value.TotalCount);
             var items = result.Value.Items.Cast<ProductDetailResponse>().ToList();
             Assert.Contains(items, x => x.ProductName == "Material 1");
             Assert.Contains(items, x => x.ProductName == "Material 2");
+            Assert.Contains(items, x => x.ProductName == "Material 3");
+            Assert.Contains(items, x => x.ProductName == "Material 4");
+            Assert.DoesNotContain(items, x => x.ProductName == "Product 1");
         }
 
         [Fact]

@@ -441,10 +441,16 @@ public class Service : IService
             switch (request.productType.Value)
             {
                 case ProductType.Material:
+                    var vatLieuNfc = "vật liệu".Normalize(NormalizationForm.FormC);
+                    var vatLieuNfd = "vật liệu".Normalize(NormalizationForm.FormD);
+                    var thanhPhanNfc = "thành phần".Normalize(NormalizationForm.FormC);
+                    var thanhPhanNfd = "thành phần".Normalize(NormalizationForm.FormD);
                     query = query.Where(x =>
                         x.ProductLabel != null &&
-                        ("," + x.ProductLabel.ToLower().Replace(" ", "") + ",")
-                            .Contains(",vậtliệu,"));
+                        (x.ProductLabel.ToLower().Contains(vatLieuNfc) ||
+                         x.ProductLabel.ToLower().Contains(vatLieuNfd) ||
+                         x.ProductLabel.ToLower().Contains(thanhPhanNfc) ||
+                         x.ProductLabel.ToLower().Contains(thanhPhanNfd)));
                     break;
                 
                 case ProductType.Combo:
@@ -1756,25 +1762,23 @@ public class Service : IService
         request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
-        var baseLabels = new[]
-        {
-            "thành phần", "phụ liệu",
-            "Thành phần", "Phụ liệu",
-            "THÀNH PHẦN", "PHỤ LIỆU",
-            "Thành Phần", "Phụ Liệu"
-        };
-
-        var allowedLabels = baseLabels
-            .SelectMany(x => new[] { x.Normalize(NormalizationForm.FormC), x.Normalize(NormalizationForm.FormD) })
-            .Distinct()
-            .ToArray();
+        var vatLieuNfc = "vật liệu".Normalize(NormalizationForm.FormC);
+        var vatLieuNfd = "vật liệu".Normalize(NormalizationForm.FormD);
+        var phuLieuNfc = "phụ liệu".Normalize(NormalizationForm.FormC);
+        var phuLieuNfd = "phụ liệu".Normalize(NormalizationForm.FormD);
+        var thanhPhanNfc = "thành phần".Normalize(NormalizationForm.FormC);
+        var thanhPhanNfd = "thành phần".Normalize(NormalizationForm.FormD);
 
         var query = _dbContext.Products
             .AsNoTracking()
             .Where(product => !product.IsDeleted &&
                               product.ProductLabel != null &&
-                              (allowedLabels.Contains(product.ProductLabel.Trim()) ||
-                               allowedLabels.Contains(product.ProductLabel.Trim().ToLower())));
+                              (product.ProductLabel.ToLower().Contains(vatLieuNfc) ||
+                               product.ProductLabel.ToLower().Contains(vatLieuNfd) ||
+                               product.ProductLabel.ToLower().Contains(phuLieuNfc) ||
+                               product.ProductLabel.ToLower().Contains(phuLieuNfd) ||
+                               product.ProductLabel.ToLower().Contains(thanhPhanNfc) ||
+                               product.ProductLabel.ToLower().Contains(thanhPhanNfd)));
 
         if (request.ExcludeIds != null && request.ExcludeIds.Any())
         {
@@ -1783,19 +1787,15 @@ public class Service : IService
 
         if (!string.IsNullOrWhiteSpace(request.ProductLabel))
         {
-            var rawLabel = request.ProductLabel.Trim();
+            var rawLabel = request.ProductLabel.Trim().ToLower();
             var labelNfc = rawLabel.Normalize(NormalizationForm.FormC);
             var labelNfd = rawLabel.Normalize(NormalizationForm.FormD);
-            var queryLabels = new[]
-            {
-                rawLabel, labelNfc, labelNfd,
-                rawLabel.ToLower(), labelNfc.ToLower(), labelNfd.ToLower()
-            }.Distinct().ToArray();
 
             query = query.Where(product =>
                 product.ProductLabel != null &&
-                (queryLabels.Contains(product.ProductLabel.Trim()) ||
-                 queryLabels.Contains(product.ProductLabel.Trim().ToLower())));
+                (product.ProductLabel.ToLower().Contains(rawLabel) ||
+                 product.ProductLabel.ToLower().Contains(labelNfc) ||
+                 product.ProductLabel.ToLower().Contains(labelNfd)));
         }
         
         if (!string.IsNullOrWhiteSpace(request.Search))

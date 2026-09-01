@@ -638,8 +638,11 @@ public class LocalProductSearchTest
         var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", ProductLabel = "Sản phẩm", IsDeleted = false };
         var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", ProductLabel = "thành phần", IsDeleted = false };
         var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "THÀNH PHẦN", IsDeleted = false };
+        var p4 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P4", ProductLabel = "Tốt Nghiệp,VẬT LIỆU", IsDeleted = false };
+        var p5 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P5", ProductLabel = "1VẬT LIỆU", IsDeleted = false };
+        var p6 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P6", ProductLabel = "Vật liệu", IsDeleted = false };
 
-        await dbContext.Products.AddRangeAsync(p1, p2, p3);
+        await dbContext.Products.AddRangeAsync(p1, p2, p3, p4, p5, p6);
         await dbContext.SaveChangesAsync();
 
         var request = new Request.LocalProductQueryRequest
@@ -653,8 +656,12 @@ public class LocalProductSearchTest
         // Assert
         Assert.NotNull(result);
         var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Equal(2, items.Count);
+        Assert.Equal(5, items.Count);
         Assert.Contains(items, x => x.ProductName == "P2");
         Assert.Contains(items, x => x.ProductName == "P3");
+        Assert.Contains(items, x => x.ProductName == "P4");
+        Assert.Contains(items, x => x.ProductName == "P5");
+        Assert.Contains(items, x => x.ProductName == "P6");
+        Assert.DoesNotContain(items, x => x.ProductName == "P1");
     }
 }

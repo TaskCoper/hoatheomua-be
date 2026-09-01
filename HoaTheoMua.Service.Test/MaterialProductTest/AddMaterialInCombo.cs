@@ -598,6 +598,29 @@ public class AddMaterialInCombo
         Assert.Empty(dbContext.ComboSpecifications);
     }
 
+    [Fact]
+    public async Task AddMaterialInCombo_WithCommaSeparatedVatLieuLabel_Success()
+    {
+        await using var dbContext = CreateDbContext();
+        var matId = Guid.NewGuid();
+        dbContext.Products.AddRange(
+            CreateParentCombo(),
+            CreateChildProduct(ChildSmallId, "combo-a-s", factor: 2m),
+            CreateMaterial(matId, productLabel: "Tốt Nghiệp,VẬT LIỆU", unit: "cành"));
+        await dbContext.SaveChangesAsync();
+
+        var response = await CreateService(dbContext).AddMaterialInCombo(
+            ComboId,
+            CreateRequest(matId, quantity: 5.5m, isCore: true));
+
+        Assert.Equal("Lưu công thức thành công.", response);
+        var specs = await dbContext.ComboSpecifications.ToListAsync();
+        Assert.Equal(2, specs.Count);
+        var parentSpec = specs.Single(x => x.SubId == ComboId);
+        Assert.Equal(5m, parentSpec.Quantity); // cành -> Floor
+        Assert.True(parentSpec.IsCore);
+    }
+
     private static MaterialRequest.MaterialComboRequest CreateRequest(
         Guid matId,
         decimal quantity,
