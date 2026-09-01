@@ -21,16 +21,16 @@ public class ComboSpecificationController : ControllerBase
     }
 
     [HttpPost("{comboId:guid}")]
-    // [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> AddMaterialInCombo(Guid comboId, [FromBody] Request.MaterialComboRequest request)
     {
         var result = await _materialComboService.AddMaterialInCombo(comboId, request);
-        // JsonElement json = JsonSerializer.SerializeToElement(new
-        // {
-        //     entity = "product", //{entity:"product", id:[comboId]}
-        //     id = new[] { comboId }
-        // });
-        // await _revalidateService.RevalidateApi(json);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "product", //{entity:"product", id:[comboId]}
+            id = new[] { comboId }
+        });
+        await _revalidateService.RevalidateApi(json);
         return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     }
 
