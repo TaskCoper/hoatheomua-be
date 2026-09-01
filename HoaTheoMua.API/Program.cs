@@ -91,7 +91,9 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://localhost:3000",
                 "https://hoatheomua-dev-client.bentran1vn.com",
-                "https://www.hoatheomua.com"
+                "https://www.hoatheomua.com",
+                "https://taskcoper.hoatheomua.com",
+                "https://hoatheomua.com"
                 )
             .AllowAnyHeader()
             .AllowAnyMethod()
