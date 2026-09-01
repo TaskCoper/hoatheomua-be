@@ -27,7 +27,7 @@ public class ProductLabelFilter
 public class RequestPaginator  
 {  
     [JsonPropertyName("size")]  
-    public int Size { get; set; }  
+    public int? Size { get; set; }  
 }
 //
 public class OrderLabelRequest

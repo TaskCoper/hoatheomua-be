@@ -127,6 +127,15 @@ public class ProductController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
+    [HttpPatch("/api/v1/products/labels")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> UpdateLabelProductNhanhVn(
+        [FromBody] List<Request.UpdateLabelProductNhanhVnRequest> requests)
+    {
+        var result = await _productService.UpdateLabelProductNhanhVn(requests);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpGet("/api/v1/products/{id}/combo-specification")]
     public async Task<IActionResult> GetComboSpecification(Guid id)
     {
