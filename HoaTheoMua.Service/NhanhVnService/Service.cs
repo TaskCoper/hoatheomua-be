@@ -30,7 +30,41 @@ public class Service: IService
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         _revalidateService = revalidateService;
     }
-    
+    //
+    public async Task<ProductLabelResponse> GetProductLabel(ProductLabelRequest request)  
+    {  
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");  
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);  
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);  
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);  
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/tags?appId=" + appId + "&businessId=" + businessId;    
+      
+      
+        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);  
+        nhanhHttpRequest.Headers.Add("Authorization", token);  
+        nhanhHttpRequest.Content = JsonContent.Create(request);  
+        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);  
+  
+        ProductLabelResponse? nhanhProductLable = null;  
+        if (nhanhVnResponse.IsSuccessStatusCode)  
+        {  
+            //string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();  
+  
+            // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:        // Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");  
+  
+            nhanhProductLable = await nhanhVnResponse.Content.ReadFromJsonAsync<ProductLabelResponse>();  
+        }    else  
+        {  
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();  
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");  
+        }  
+        if (nhanhProductLable == null)  
+        {        throw new BadRequestException("NhanhVnResponse returned null or empty data");  
+        }    if (nhanhProductLable.Code == 0)  
+        {        throw new BadRequestException("ERR_INVALID_FORM_FIELDS");  
+        }  
+        return nhanhProductLable;  
+    }
     public async Task<OrderLabelResponse> GetOrderLabel(OrderLabelRequest orderLabelRequest)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
