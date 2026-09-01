@@ -3,6 +3,34 @@ using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.NhanhVnService;
 
+//ProductLabelRequest
+public class ProductLabelRequest
+{
+    [JsonPropertyName("filters")]
+    public ProductLabelFilter? Filters { get; set; }
+
+    [JsonPropertyName("paginator")]
+    public RequestPaginator? Paginator { get; set; }
+}
+
+// Class chứa bộ lọc
+public class ProductLabelFilter
+{
+    [JsonPropertyName("ids")]
+    public List<int>? Ids { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
+
+// Class chứa tham số phân trang
+public class RequestPaginator
+{
+    [JsonPropertyName("size")]
+    public int Size { get; set; }
+}
+
+
 public class OrderLabelRequest
 {
     [JsonPropertyName("filters")]

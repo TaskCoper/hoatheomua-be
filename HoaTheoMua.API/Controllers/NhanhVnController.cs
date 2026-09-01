@@ -64,4 +64,11 @@ public class NhanhVnController : ControllerBase
         var result = await _nhanhVnService.GetOrderNhanhVnById(id);
         return Ok(ApiResponseFactory.Base(result, true, "Success", HttpContext.TraceIdentifier));
     }
+    
+    [HttpPost("/api/v1/nhanh-vn/products/label")]
+    public async Task<IActionResult> GetNhanhVnDepot([FromBody] ProductLabelRequest  request)
+    {
+        var result = await _nhanhVnService.GetProductLabel(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
 }

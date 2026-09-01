@@ -1,6 +1,63 @@
 ﻿using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.NhanhVnService;
+//
+//Product lable response
+public class ProductLabelResponse
+{
+    [JsonPropertyName("code")]
+    public int Code { get; set; }
+
+    [JsonPropertyName("paginator")]
+    public PaginatorLable Paginator { get; set; } = new();
+
+    [JsonPropertyName("data")]
+    public List<CategoryData> Data { get; set; } = new();
+}
+
+// Class quản lý phân trang
+public class PaginatorLable
+{
+    [JsonPropertyName("next")]
+    public PaginatorNext? Next { get; set; }
+}
+
+// Class chứa ID trang kế tiếp
+public class PaginatorNext
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+}
+
+// Class chứa thông tin từng đối tượng trong danh sách "data"
+public class CategoryData
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("businessId")]
+    public int BusinessId { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("status")]
+    public int Status { get; set; }
+
+    [JsonPropertyName("bgColor")]
+    public string? BgColor { get; set; }
+
+    [JsonPropertyName("textColor")]
+    public string? TextColor { get; set; }
+
+    [JsonPropertyName("createdAt")]
+    public long CreatedAt { get; set; }
+
+    // Tiện ích: Đổi Unix timestamp (giây) sang DateTime để dễ sử dụng
+    [JsonIgnore]
+    public DateTime CreatedAtDateTime => DateTimeOffset.FromUnixTimeSeconds(CreatedAt).LocalDateTime;
+}
+//
 
 public class OrderLabelResponse
 {

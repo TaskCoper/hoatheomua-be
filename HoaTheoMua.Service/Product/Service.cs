@@ -1992,4 +1992,10 @@ public class Service : IService
 
         return list.Count > 0 ? list : null;
     }
+
+    public Task<string> UpdateLabelProductNhanhVn(List<Guid> productIds)
+    {
+        
+        throw new NotImplementedException();
+    }
 }
