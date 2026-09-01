@@ -15,7 +15,7 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:5066';
 
 // Mặc định /api/Test/bypass vì có [DisableRateLimiting] -> đo đúng sức chịu tải
 // của server, không bị 429 làm nhiễu. Muốn xem hành vi rate-limit thì đổi sang
-// /api/Test/normal (giới hạn 100 request/phút).
+// /api/Test/normal (giới hạn 60 request/phút).
 const ENDPOINT = __ENV.ENDPOINT || '/api/Test/bypass';
 
 const VUS = parseInt(__ENV.VUS || '100', 10);   // số người dùng ảo (đồng thời)

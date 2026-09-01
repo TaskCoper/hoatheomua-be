@@ -3,6 +3,7 @@ using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Order;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HoaTheoMua.Controllers;
 
@@ -18,6 +19,7 @@ public class XanhSmController : ControllerBase
 
     [HttpPost("/api/v1/xanhsm/estimate")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    [EnableRateLimiting(RateLimitExtensions.ShippingEstimatePolicy)]
     public async Task<IActionResult> EstimateShippingFee(
         [FromBody] Request.EstimateXanhSmShippingFeeRequest request,
         CancellationToken cancellationToken)

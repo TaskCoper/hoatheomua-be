@@ -144,7 +144,8 @@ public class XanhSmEstimateData
     public string? PaymentMethod { get; set; }
 
     [JsonPropertyName("order_time")]
-    public string? OrderTime { get; set; }
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public long? OrderTime { get; set; }
 
     [JsonPropertyName("points")]
     public List<XanhSmDeliveryPoint> Points { get; set; } = [];
@@ -292,7 +293,8 @@ public class XanhSmDelivery
     public XanhSmVehicle? Vehicle { get; set; }
 
     [JsonPropertyName("order_time")]
-    public string? OrderTime { get; set; }
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public long? OrderTime { get; set; }
 
     [JsonPropertyName("create_time")]
     public string? CreateTime { get; set; }
