@@ -443,7 +443,8 @@ public class Service : IService
                 case ProductType.Material:
                     query = query.Where(x =>
                         x.ProductLabel != null &&
-                        x.ProductLabel.Trim().ToLower() == "thành phần");
+                        ("," + x.ProductLabel.ToLower().Replace(" ", "") + ",")
+                            .Contains(",vậtliệu,"));
                     break;
                 
                 case ProductType.Combo:
