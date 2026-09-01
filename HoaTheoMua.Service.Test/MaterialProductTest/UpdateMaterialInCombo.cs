@@ -102,7 +102,7 @@ public class UpdateMaterialInCombo
     {
         await using var dbContext = CreateDbContext();
         var material = CreateMaterial(MatCoreId);
-        material.ProductLabel = productType;
+        material.ProductLabel = new List<string> { productType };
         material.ProductType = productType;
         dbContext.Products.AddRange(CreateParentCombo(), material);
         dbContext.ComboSpecifications.Add(CreateSpecification(ComboId, MatCoreId, quantity: 5, isCore: true));
@@ -388,7 +388,7 @@ public class UpdateMaterialInCombo
         {
             Id = id,
             NhanhProductId = $"mat-{id:N}",
-            ProductLabel = MaterialLabel,
+            ProductLabel = new List<string> { MaterialLabel },
             ProductName = $"Material {id:N}",
             CreatedAt = DateTimeOffset.UtcNow
         };

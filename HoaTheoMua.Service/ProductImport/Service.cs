@@ -167,6 +167,7 @@ public class Service : IService
         Request.ExcelRow row,
         ProductEntity product)
     {
+        product.IsActive = true;
         product.SourceRowNumber = row.SourceRowNumber;
         product.NhanhProductId = NullIfEmpty(row.NhanhProductId);
         product.ParentProductId = NullIfEmpty(row.ParentProductId);
@@ -230,7 +231,8 @@ public class Service : IService
         product.WebOrder = ParseInt(row.WebOrderRaw);
         product.NhanhCreatedAt = ParseDateTimeOffset(row.NhanhCreatedAtRaw);
 
-        product.ProductLabel = NullIfEmpty(row.ProductLabel);
+        var productLabel = NullIfEmpty(row.ProductLabel);
+        product.ProductLabel = productLabel == null ? null : new List<string> { productLabel };
         product.BranchPriceDuplicate = ParseDecimal(row.BranchPriceDuplicateRaw);
         product.WholesaleBranchPriceDuplicate = ParseDecimal(row.WholesaleBranchPriceDuplicateRaw);
         product.PriceLabel = NullIfEmpty(row.PriceLabel);

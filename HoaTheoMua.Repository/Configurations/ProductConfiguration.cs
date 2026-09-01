@@ -88,7 +88,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasMaxLength(500);
 
         builder.Property(p => p.ProductLabel)
-            .HasMaxLength(300);
+            .HasColumnType("text[]");
 
         builder.Property(p => p.PriceLabel)
             .HasMaxLength(100);

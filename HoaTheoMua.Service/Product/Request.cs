@@ -186,7 +186,7 @@ public class Request
         public decimal? Height { get; set; }
         public int? WebOrder { get; set; }
         public DateTimeOffset? NhanhCreatedAt { get; set; }
-        public string? ProductLabel { get; set; }
+        public List<string>? ProductLabel { get; set; }
         public decimal? BranchPriceDuplicate { get; set; }
         public decimal? WholesaleBranchPriceDuplicate { get; set; }
         public string? PriceLabel { get; set; }
@@ -219,6 +219,12 @@ public class Request
     public class CheckInventoryAvailabilityRequest
     {
         public List<CartItem> Items { get; set; } = new();
+    }
+
+    public class UpdateLabelProductNhanhVnRequest
+    {
+        public List<Guid> ProductIds { get; set; } = new();
+        public List<string> ProductLabels { get; set; } = new();
     }
 
     public class CartItem

@@ -63,14 +63,14 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Cúc", ProductLabel = "thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói Hàn Quốc", ProductLabel = "Phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Ruy Băng Satin", ProductLabel = "phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo 1", ProductLabel = "Combo", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Sản Phẩm Đơn", ProductLabel = "Sản phẩm", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Deleted Material", ProductLabel = "Thành phần", IsDeleted = true },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Deleted Accessory", ProductLabel = "Phụ liệu", IsDeleted = true }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Cúc", ProductLabel = new List<string> { "thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói Hàn Quốc", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Ruy Băng Satin", ProductLabel = new List<string> { "phụ liệu" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo 1", ProductLabel = new List<string> { "Combo" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Sản Phẩm Đơn", ProductLabel = new List<string> { "Sản phẩm" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Deleted Material", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = true },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Deleted Accessory", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = true }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -86,8 +86,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Equal(4, result.Value.Items.Count);
 
             var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
-            Assert.DoesNotContain(items, item => item.ProductLabel == "Combo");
-            Assert.DoesNotContain(items, item => item.ProductLabel == "Sản phẩm");
+            Assert.DoesNotContain(items, item => item.ProductLabel?.Contains("Combo") == true);
+            Assert.DoesNotContain(items, item => item.ProductLabel?.Contains("Sản phẩm") == true);
             Assert.DoesNotContain(items, item => item.MaterialName == "Deleted Material");
             Assert.DoesNotContain(items, item => item.MaterialName == "Deleted Accessory");
         }
@@ -99,11 +99,11 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Cúc", ProductLabel = "thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Ruy Băng", ProductLabel = "phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Đã Xóa", ProductLabel = "Thành phần", IsDeleted = true }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Cúc", ProductLabel = new List<string> { "thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Ruy Băng", ProductLabel = new List<string> { "phụ liệu" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Đã Xóa", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = true }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -118,7 +118,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
 
             var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
             Assert.Equal(2, items.Count);
-            Assert.All(items, item => Assert.True(item.ProductLabel?.Equals("thành phần", StringComparison.OrdinalIgnoreCase)));
+            Assert.All(items, item => Assert.True(item.ProductLabel?.Any(label =>
+                label.Equals("thành phần", StringComparison.OrdinalIgnoreCase)) == true));
         }
 
         /// Test: Khi FE truyền ProductLabel = "Phụ liệu" (không phân biệt hoa/thường),
@@ -128,10 +129,10 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói Hàn Quốc", ProductLabel = "Phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Ruy Băng Satin", ProductLabel = "phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Phụ Liệu Đã Xóa", ProductLabel = "Phụ liệu", IsDeleted = true }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói Hàn Quốc", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Ruy Băng Satin", ProductLabel = new List<string> { "phụ liệu" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Phụ Liệu Đã Xóa", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = true }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -146,7 +147,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
 
             var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
             Assert.Equal(2, items.Count);
-            Assert.All(items, item => Assert.True(item.ProductLabel?.Equals("phụ liệu", StringComparison.OrdinalIgnoreCase)));
+            Assert.All(items, item => Assert.True(item.ProductLabel?.Any(label =>
+                label.Equals("phụ liệu", StringComparison.OrdinalIgnoreCase)) == true));
         }
 
         /// Test: Khi FE truyền ProductLabel không tồn tại trong DB,
@@ -156,8 +158,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Hoa Hồng", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Giấy Gói", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -179,10 +181,10 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HH01", ProductName = "Hoa Hồng Đỏ", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HH02", ProductName = "Hoa Hồng Trắng", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HC01", ProductName = "Hoa Cúc Mẫu Đơn", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "PL01", ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HH01", ProductName = "Hoa Hồng Đỏ", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HH02", ProductName = "Hoa Hồng Trắng", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HC01", ProductName = "Hoa Cúc Mẫu Đơn", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "PL01", ProductName = "Giấy Gói", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -206,9 +208,9 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "MAT_001", ProductName = "Hoa Hồng Đỏ", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "MAT_002", ProductName = "Hoa Cúc", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "ACC_001", ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "MAT_001", ProductName = "Hoa Hồng Đỏ", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "MAT_002", ProductName = "Hoa Cúc", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "ACC_001", ProductName = "Giấy Gói", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -232,9 +234,9 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HH01", ProductName = "Hoa Hồng Đỏ", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "PL01", ProductName = "Nơ Ruy Băng Hồng", ProductLabel = "Phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "PL02", ProductName = "Giấy Gói Xanh", ProductLabel = "Phụ liệu", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "HH01", ProductName = "Hoa Hồng Đỏ", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "PL01", ProductName = "Nơ Ruy Băng Hồng", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductCode = "PL02", ProductName = "Giấy Gói Xanh", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -257,7 +259,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             var items = result.Value.Items.Cast<Response.MaterialResponse>().ToList();
             Assert.Single(items);
             Assert.Equal("Nơ Ruy Băng Hồng", items[0].MaterialName);
-            Assert.Equal("Phụ liệu", items[0].ProductLabel);
+            Assert.Contains("Phụ liệu", items[0].ProductLabel!);
         }
 
         /// Test: Kiểm tra phân trang (PageIndex, PageSize, Skip/Take) hoạt động chính xác
@@ -273,7 +275,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                 {
                     Id = Guid.NewGuid(),
                     ProductName = $"Material {i}",
-                    ProductLabel = label,
+                    ProductLabel = new List<string> { label },
                     IsDeleted = false
                 });
             }
@@ -301,7 +303,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Phụ liệu 1", ProductLabel = "Phụ liệu", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Phụ liệu 1", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -336,7 +338,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                     Unit = "Cuộn",
                     AvailableForSale = 45.5m,
                     CoverImage = "https://cdn.example.com/ruy-bang-do.png",
-                    ProductLabel = "Phụ liệu",
+                    ProductLabel = new List<string> { "Phụ liệu" },
                     IsDeleted = false
                 }
             };
@@ -359,7 +361,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             Assert.Equal("Cuộn", item.Unit);
             Assert.Equal(45.5m, item.AvailableForSale);
             Assert.Equal("https://cdn.example.com/ruy-bang-do.png", item.CoverImage);
-            Assert.Equal("Phụ liệu", item.ProductLabel);
+            Assert.Contains("Phụ liệu", item.ProductLabel!);
         }
 
         /// Test: Khi lọc Thành phần nhưng DB chỉ có Combo và Sản phẩm thường,
@@ -369,8 +371,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
         {
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo 1", ProductLabel = "Combo", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Product 1", ProductLabel = "Sản phẩm thông thường", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Combo 1", ProductLabel = new List<string> { "Combo" }, IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "Product 1", ProductLabel = new List<string> { "Sản phẩm thông thường" }, IsDeleted = false }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -403,10 +405,10 @@ namespace HoaTheoMua.Service.Test.ProductTest
 
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = id1, ProductName = "Hoa Hồng Đỏ", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = id2, ProductName = "Hoa Cúc Trắng", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = id3, ProductName = "Giấy Gói Hàn Quốc", ProductLabel = "Phụ liệu", IsDeleted = false },
-                new ProductEntity { Id = id4, ProductName = "Ruy Băng Satin", ProductLabel = "Phụ liệu", IsDeleted = false }
+                new ProductEntity { Id = id1, ProductName = "Hoa Hồng Đỏ", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = id2, ProductName = "Hoa Cúc Trắng", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = id3, ProductName = "Giấy Gói Hàn Quốc", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false },
+                new ProductEntity { Id = id4, ProductName = "Ruy Băng Satin", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -442,8 +444,8 @@ namespace HoaTheoMua.Service.Test.ProductTest
 
             var products = new List<ProductEntity>
             {
-                new ProductEntity { Id = id1, ProductName = "Hoa Hồng", ProductLabel = "Thành phần", IsDeleted = false },
-                new ProductEntity { Id = id2, ProductName = "Giấy Gói", ProductLabel = "Phụ liệu", IsDeleted = false }
+                new ProductEntity { Id = id1, ProductName = "Hoa Hồng", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false },
+                new ProductEntity { Id = id2, ProductName = "Giấy Gói", ProductLabel = new List<string> { "Phụ liệu" }, IsDeleted = false }
             };
 
             var dbContext = CreateMockDbContext(products);
@@ -478,7 +480,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                     Id = targetId, 
                     ProductCode = "TGK_L", 
                     ProductName = "Trà Giảm Cân TGK_L", 
-                    ProductLabel = "  Thành phần  ", 
+                    ProductLabel = new List<string> { "  Thành phần  " }, 
                     IsDeleted = false 
                 },
                 new ProductEntity 
@@ -486,7 +488,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                     Id = excludedId, 
                     ProductCode = "TGK_L_EX", 
                     ProductName = "Sản phẩm loại trừ", 
-                    ProductLabel = "THÀNH PHẦN", 
+                    ProductLabel = new List<string> { "THÀNH PHẦN" }, 
                     IsDeleted = false 
                 },
                 new ProductEntity 
@@ -494,7 +496,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                     Id = Guid.NewGuid(), 
                     ProductCode = "PL_01", 
                     ProductName = "Phụ liệu 1", 
-                    ProductLabel = "PHỤ LIỆU", 
+                    ProductLabel = new List<string> { "PHỤ LIỆU" }, 
                     IsDeleted = false 
                 },
                 new ProductEntity 
@@ -502,7 +504,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                     Id = Guid.NewGuid(), 
                     ProductCode = "PL_02", 
                     ProductName = "Phụ liệu 2", 
-                    ProductLabel = "Thành Phần", 
+                    ProductLabel = new List<string> { "Thành Phần" }, 
                     IsDeleted = false 
                 }
             };
@@ -546,7 +548,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                     Id = id1, 
                     ProductCode = "MAT_NFD_01", 
                     ProductName = "Nguyên liệu NFD 1", 
-                    ProductLabel = nfdThanhPhan, 
+                    ProductLabel = new List<string> { nfdThanhPhan }, 
                     IsDeleted = false 
                 },
                 new ProductEntity 
@@ -554,7 +556,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
                     Id = id2, 
                     ProductCode = "MAT_NFD_02", 
                     ProductName = "Nguyên liệu NFD 2", 
-                    ProductLabel = nfdPhuLieu, 
+                    ProductLabel = new List<string> { nfdPhuLieu }, 
                     IsDeleted = false 
                 }
             };

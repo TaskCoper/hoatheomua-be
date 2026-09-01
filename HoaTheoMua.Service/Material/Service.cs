@@ -20,13 +20,16 @@ public class Service : IService
     private const string AuxiliaryLabel = "Phụ liệu";
     private const string ComboProductType = "Combo";
 
-    private sealed record MaterialInfo(Guid Id, string? ProductLabel, string? ProductType, string? Unit);
-    private sealed record AddMaterialInfo(Guid Id, string? ProductLabel, string? Unit);
+    private sealed record MaterialInfo(Guid Id, List<string>? ProductLabel, string? ProductType, string? Unit);
+    private sealed record AddMaterialInfo(Guid Id, List<string>? ProductLabel, string? Unit);
     
     private static bool HasLabel(string? value, string expected) =>
         string.Equals(value?.Trim(), expected, StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsMaterial(string? productLabel, string? productType) =>
+    private static bool HasLabel(IEnumerable<string>? values, string expected) =>
+        values?.Any(value => HasLabel(value, expected)) == true;
+
+    private static bool IsMaterial(IEnumerable<string>? productLabel, string? productType) =>
         HasLabel(productLabel, ComponentLabel) ||
         HasLabel(productLabel, AuxiliaryLabel) ||
         HasLabel(productType, ComponentLabel) ||
@@ -35,23 +38,23 @@ public class Service : IService
     private static bool HasSameProductType(string? left, string? right) =>
         string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    private static string? ResolveMaterialLabel(string? productLabel, string? productType)
+    private static IEnumerable<string>? ResolveMaterialLabel(IEnumerable<string>? productLabel, string? productType)
     {
         if (HasLabel(productLabel, ComponentLabel) || HasLabel(productLabel, AuxiliaryLabel))
             return productLabel;
 
-        return productType;
+        return productType == null ? null : new[] { productType };
     }
 
     private static bool KeepsDecimal(string? unit) =>
         HasLabel(unit, "bó") || HasLabel(unit, "giỏ") || HasLabel(unit, "chậu");
 
-    private static decimal CalculateParentQuantity(decimal requestedQuantity, string? productLabel, string? unit) =>
+    private static decimal CalculateParentQuantity(decimal requestedQuantity, IEnumerable<string>? productLabel, string? unit) =>
         HasLabel(productLabel, ComponentLabel) && HasLabel(unit, "cành")
             ? Math.Floor(requestedQuantity)
             : requestedQuantity;
 
-    private static decimal CalculateChildQuantity(decimal parentQuantity, decimal? factor, string? productLabel,
+    private static decimal CalculateChildQuantity(decimal parentQuantity, decimal? factor, IEnumerable<string>? productLabel,
         string? unit)
     {
         // Phụ liệu giữ nguyên định lượng của combo cha.

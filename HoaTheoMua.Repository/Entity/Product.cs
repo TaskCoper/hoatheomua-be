@@ -76,7 +76,7 @@ public class Product : BaseEntity<Guid>, IAuditableEntity
     
     public DateTimeOffset? NhanhUpdatedAt { get; set; }
 
-    public string? ProductLabel { get; set; }
+    public List<string>? ProductLabel { get; set; }
     public decimal? BranchPriceDuplicate { get; set; }
     public decimal? WholesaleBranchPriceDuplicate { get; set; }
     public string? PriceLabel { get; set; }

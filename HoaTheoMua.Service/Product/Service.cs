@@ -443,7 +443,7 @@ public class Service : IService
                 case ProductType.Material:
                     query = query.Where(x =>
                         x.ProductLabel != null &&
-                        x.ProductLabel.Trim().ToLower() == "thành phần");
+                        x.ProductLabel.Contains("Thành phần"));
                     break;
                 
                 case ProductType.Combo:
@@ -1772,8 +1772,9 @@ public class Service : IService
             .AsNoTracking()
             .Where(product => !product.IsDeleted &&
                               product.ProductLabel != null &&
-                              (allowedLabels.Contains(product.ProductLabel.Trim()) ||
-                               allowedLabels.Contains(product.ProductLabel.Trim().ToLower())));
+                              product.ProductLabel.Any(productLabel =>
+                                  allowedLabels.Contains(productLabel.Trim()) ||
+                                  allowedLabels.Contains(productLabel.Trim().ToLower())));
 
         if (request.ExcludeIds != null && request.ExcludeIds.Any())
         {
@@ -1793,8 +1794,9 @@ public class Service : IService
 
             query = query.Where(product =>
                 product.ProductLabel != null &&
-                (queryLabels.Contains(product.ProductLabel.Trim()) ||
-                 queryLabels.Contains(product.ProductLabel.Trim().ToLower())));
+                product.ProductLabel.Any(productLabel =>
+                    queryLabels.Contains(productLabel.Trim()) ||
+                    queryLabels.Contains(productLabel.Trim().ToLower())));
         }
         
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -1993,9 +1995,22 @@ public class Service : IService
         return list.Count > 0 ? list : null;
     }
 
-    public Task<string> UpdateLabelProductNhanhVn(List<Guid> productIds)
+    public async Task<string> UpdateLabelProductNhanhVn(Request.UpdateLabelProductNhanhVnRequest request)
     {
-        
-        throw new NotImplementedException();
+        var products = await _dbContext.Products
+            .Where(product => request.ProductIds.Contains(product.Id) && !product.IsDeleted)
+            .ToListAsync();
+
+        var updatedAt = DateTimeOffset.UtcNow;
+
+        foreach (var product in products)
+        {
+            product.ProductLabel = request.ProductLabels;
+            product.UpdatedAt = updatedAt;
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        return "Product labels updated successfully.";
     }
 }

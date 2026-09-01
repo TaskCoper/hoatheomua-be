@@ -635,9 +635,9 @@ public class LocalProductSearchTest
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", ProductLabel = "Sản phẩm", IsDeleted = false };
-        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", ProductLabel = "thành phần", IsDeleted = false };
-        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "THÀNH PHẦN", IsDeleted = false };
+        var p1 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", ProductLabel = new List<string> { "Sản phẩm" }, IsDeleted = false };
+        var p2 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false };
+        var p3 = new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = new List<string> { "Thành phần" }, IsDeleted = false };
 
         await dbContext.Products.AddRangeAsync(p1, p2, p3);
         await dbContext.SaveChangesAsync();

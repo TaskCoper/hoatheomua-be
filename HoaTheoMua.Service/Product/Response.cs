@@ -72,7 +72,7 @@ public class Response
         public bool IsActive { get; set; }
         public DateTimeOffset? NhanhCreatedAt { get; set; }
         public DateTimeOffset? NhanhUpdatedAt { get; set; }
-        public string? ProductLabel { get; set; }
+        public List<string>? ProductLabel { get; set; }
         public decimal? BranchPriceDuplicate { get; set; }
         public decimal? WholesaleBranchPriceDuplicate { get; set; }
         public string? PriceLabel { get; set; }
@@ -170,7 +170,7 @@ public class Response
     public int? WebOrder { get; set; }  
     public DateTimeOffset? NhanhCreatedAt { get; set; }  
     public DateTimeOffset? NhanhUpdatedAt { get; set; }  
-    public string? ProductLabel { get; set; }  
+    public List<string>? ProductLabel { get; set; }  
     public decimal? BranchPriceDuplicate { get; set; }  
     public decimal? WholesaleBranchPriceDuplicate { get; set; }  
     public string? PriceLabel { get; set; }  
@@ -226,7 +226,7 @@ public class Response
         public string? Unit { get; set; }
         public decimal? AvailableForSale { get; set; }
         public string? CoverImage { get; set; }
-        public string? ProductLabel { get; set; }
+        public List<string>? ProductLabel { get; set; }
     }
     
     public class ProductResponseWithList

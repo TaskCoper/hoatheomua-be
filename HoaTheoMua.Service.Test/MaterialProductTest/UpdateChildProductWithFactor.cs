@@ -467,7 +467,7 @@ public class UpdateChildProductWithFactor
         {
             Id = id,
             NhanhProductId = $"mat-{id:N}",
-            ProductLabel = productLabel,
+            ProductLabel = new List<string> { productLabel },
             Unit = unit,
             ProductName = $"Material {id:N}",
             CreatedAt = DateTimeOffset.UtcNow

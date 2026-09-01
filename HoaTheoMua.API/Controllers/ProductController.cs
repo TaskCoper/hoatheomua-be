@@ -147,4 +147,21 @@ public class ProductController: ControllerBase
         var result = await _productService.CheckInventoryAvailability(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
+
+    [HttpPatch("/api/v1/products/labels")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> UpdateLabelProductNhanhVn(
+        [FromBody] Request.UpdateLabelProductNhanhVnRequest request)
+    {
+        var result = await _productService.UpdateLabelProductNhanhVn(request);
+
+        // JsonElement json = JsonSerializer.SerializeToElement(new
+        // {
+        //     entity = "product",
+        //     id = request.ProductIds,
+        // });
+        // await _revalidateService.RevalidateApi(json);
+
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
 }

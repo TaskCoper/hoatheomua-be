@@ -669,7 +669,7 @@ public class AddMaterialInCombo
         {
             Id = id,
             NhanhProductId = $"mat-{id:N}",
-            ProductLabel = productLabel,
+            ProductLabel = productLabel == null ? null : new List<string> { productLabel },
             Unit = unit,
             Status = status,
             IsDeleted = isDeleted,

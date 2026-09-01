@@ -289,7 +289,7 @@ public class DeleteMaterialInCombo
         {
             Id = id,
             NhanhProductId = $"mat-{id:N}",
-            ProductLabel = MaterialLabel,
+            ProductLabel = new List<string> { MaterialLabel },
             ProductName = $"Material {id:N}",
             CreatedAt = DateTimeOffset.UtcNow
         };

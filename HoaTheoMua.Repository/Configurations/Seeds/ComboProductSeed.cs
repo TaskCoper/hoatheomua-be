@@ -54,7 +54,7 @@ public static class ComboProductSeed
             ProductCode = productCode,
             ProductName = productName,
             ProductType = productLabel,
-            ProductLabel = productLabel,
+            ProductLabel = new List<string> { productLabel },
             Unit = unit,
             AvailableForSale = (decimal?)availableForSale,
             IsPin = false,
