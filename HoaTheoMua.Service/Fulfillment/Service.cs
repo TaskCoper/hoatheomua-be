@@ -15,6 +15,7 @@ using NhanhVnProduct = HoaTheoMua.Service.Webhook.Product;
 using AhaMoveRequest = HoaTheoMua.Service.AhamoveService.AhaMoveRequest;
 using NhanhVnOption = HoaTheoMua.Service.AhamoveService.NhanhVnOption;
 using OrderEntity = HoaTheoMua.Repository.Entity.Order;
+using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
 
 namespace HoaTheoMua.Service.Fulfillment;
 
@@ -22,6 +23,9 @@ namespace HoaTheoMua.Service.Fulfillment;
 /// Extracted verbatim from Webhook.FulfillPaidOrder, with three deliberate changes: each step now
 /// persists its own result immediately, each step is idempotent, and outbound failures are split
 /// into transient vs permanent so the retry policy can tell them apart.
+///
+/// The courier is chosen by Order.ShippingGateway: Ahamove is called over HTTP directly (as the
+/// legacy code did), XanhSm through the existing XanhSm.IService client.
 /// </summary>
 public class Service : IService
 {
@@ -45,6 +49,7 @@ public class Service : IService
     private readonly HoaTheoMua.Service.Order.IService _orderService;
     private readonly Config.IService _configService;
     private readonly Revalidate.IService _revalidateService;
+    private readonly XanhSm.IService _xanhSmService;
     private readonly ILogger<Service> _logger;
 
     public Service(
@@ -54,13 +59,15 @@ public class Service : IService
         HoaTheoMua.Service.Order.IService orderService,
         Config.IService configService,
         Revalidate.IService revalidateService,
-        ILogger<Service> logger)
+        ILogger<Service> logger,
+        XanhSm.IService xanhSmService)
     {
         _dbContext = dbContext;
         _httpClient = httpClient;
         _orderService = orderService;
         _configService = configService;
         _revalidateService = revalidateService;
+        _xanhSmService = xanhSmService;
         _logger = logger;
 
         _nhanhVnOption = new NhanhVnOption();
@@ -74,13 +81,13 @@ public class Service : IService
     {
         var order = await LoadOrderAsync(orderId, cancellationToken);
 
-        // Temporary: the saga only knows Ahamove until the XanhSm branch is ported. Failing fast
-        // here is safer than silently booking an Ahamove courier for a XanhSm order.
-        if (order.ShippingGateway != ShippingGateway.Ahamove)
+        if (order.ShippingGateway is not (ShippingGateway.Ahamove or ShippingGateway.XanhSm))
         {
             throw new FulfillmentPermanentException(
-                $"Shipping gateway {order.ShippingGateway} is not supported by the saga yet");
+                $"Shipping gateway {order.ShippingGateway} is not supported");
         }
+
+        var isAhamove = order.ShippingGateway == ShippingGateway.Ahamove;
 
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
@@ -94,26 +101,30 @@ public class Service : IService
             : tags;
 
         var ahamoveConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
-        var ahamoveAllowDelivery = ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
 
-        // Unix seconds Ahamove will collect the parcel. Computed once here and carried in the
+        // The instant-delivery kill switch and the idle_time delay are Ahamove settings. XanhSm has
+        // neither: it is always allowed and collects "now".
+        var allowInstantDelivery = !isAhamove || ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
+
+        // Unix seconds the courier will collect the parcel. Computed once here and carried in the
         // result: the POS step must show the same moment, and recomputing it there would drift.
         var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
-        var delayTime = delayCallAhamove > 0
-            ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
-            : 0L;
+        var delayTime = isAhamove
+            ? (delayCallAhamove > 0 ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove : 0L)
+            : DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-        var shouldDispatch = order.OrderTime == 0 && tags.Count == 0 && ahamoveAllowDelivery == true;
+        var shouldDispatch = order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery;
         if (shouldDispatch)
         {
             tagIds = tagIds.Append(FastTagId).ToList();
         }
 
-        DeliveryDispatchResult Plan(bool dispatched, string? ahamoveOrderId, string? trackingUrl) => new()
+        DeliveryDispatchResult Plan(bool dispatched, string? shippingPartyOrderId, string? trackingUrl) => new()
         {
             Dispatched = dispatched,
-            AhamoveOrderId = ahamoveOrderId,
-            AhamoveTrackingUrl = trackingUrl,
+            ShippingGateway = order.ShippingGateway,
+            ShippingPartyOrderId = shippingPartyOrderId,
+            ShippingTrackingUrl = trackingUrl,
             DelayTimeUnix = delayTime,
             TagIds = tagIds,
             PrivateDescription = privateDescription
@@ -130,8 +141,8 @@ public class Service : IService
         if (!string.IsNullOrWhiteSpace(order.ShippingPartyOrderId))
         {
             _logger.LogInformation(
-                "Order {OrderId} already has Ahamove order {AhamoveOrderId}; skipping dispatch",
-                orderId, order.ShippingPartyOrderId);
+                "Order {OrderId} already has {ShippingGateway} order {ShippingPartyOrderId}; skipping dispatch",
+                orderId, order.ShippingGateway, order.ShippingPartyOrderId);
             return Plan(dispatched: true, order.ShippingPartyOrderId, order.ShippingTrackingUrl);
         }
 
@@ -140,9 +151,33 @@ public class Service : IService
         if (companyAddress == null)
         {
             throw new FulfillmentPermanentException(
-                "No CompanyAddress is configured, so the Ahamove pickup point cannot be built");
+                "No CompanyAddress is configured, so the courier pickup point cannot be built");
         }
 
+        var (shippingPartyOrderId, shippingTrackingUrl) = isAhamove
+            ? await BookAhamoveAsync(order, companyAddress, ahamoveConfigs, delayTime, cancellationToken)
+            : await BookXanhSmAsync(order, companyAddress, delayTime, cancellationToken);
+
+        // Persisted before anything else can fail. In the original this stayed in the change tracker
+        // until the single SaveChanges at the very end, so a later NhanhVn failure discarded the id
+        // of a courier that had genuinely been booked - and the retry booked another one.
+        order.ShippingPartyOrderId = shippingPartyOrderId;
+        order.ShippingTrackingUrl = shippingTrackingUrl;
+        order.UpdatedAt = DateTimeOffset.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "{ShippingGateway} order {ShippingPartyOrderId} booked and persisted for order {OrderId}",
+            order.ShippingGateway, shippingPartyOrderId, orderId);
+
+        return Plan(dispatched: true, shippingPartyOrderId, shippingTrackingUrl);
+    }
+
+    /// <summary>POST /v3/orders - the legacy inline request, moved here unchanged.</summary>
+    private async Task<(string OrderId, string? TrackingUrl)> BookAhamoveAsync(
+        OrderEntity order, CompanyAddressEntity companyAddress, GroupConfig ahamoveConfigs, long delayTime,
+        CancellationToken cancellationToken)
+    {
         var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest
         {
             OrderTime = delayTime,
@@ -212,20 +247,71 @@ public class Service : IService
             throw new FulfillmentTransientException("Ahamove returned null or empty data");
         }
 
-        // Persisted before anything else can fail. In the original this stayed in the change tracker
-        // until the single SaveChanges at the very end, so a later NhanhVn failure discarded the id
-        // of a courier that had genuinely been booked - and the retry booked another one.
-        order.ShippingPartyOrderId = createAhamoveOrderResult.OrderId;
-        order.ShippingTrackingUrl = createAhamoveOrderResult.SharedLink;
-        order.UpdatedAt = DateTimeOffset.UtcNow;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Ahamove order {AhamoveOrderId} booked and persisted for order {OrderId}",
-            createAhamoveOrderResult.OrderId, orderId);
-
-        return Plan(dispatched: true, createAhamoveOrderResult.OrderId, createAhamoveOrderResult.SharedLink);
+        return (createAhamoveOrderResult.OrderId, createAhamoveOrderResult.SharedLink);
     }
+
+    /// <summary>
+    /// XanhSm door-to-door booking, ported from the legacy inline implementation. Reuses the point
+    /// builder and the weight rule from Order.Service so what the saga books is exactly what the
+    /// checkout estimate quoted.
+    /// </summary>
+    private async Task<(string OrderId, string? TrackingUrl)> BookXanhSmAsync(
+        OrderEntity order, CompanyAddressEntity companyAddress, long delayTime, CancellationToken cancellationToken)
+    {
+        XanhSm.XanhSmDelivery delivery;
+        try
+        {
+            delivery = await _xanhSmService.BookDoorToDoorAsync(
+                HoaTheoMua.Service.Order.Service.CreateXanhSmPoints(
+                    companyAddress,
+                    order.Latitude,
+                    order.Longitude,
+                    order.Address,
+                    order.ShortAddress,
+                    order.FullNameReceiver,
+                    order.PhoneReceiver,
+                    order.Remarks,
+                    HoaTheoMua.Service.Order.Service.CalculateXanhSmPackageWeightKg(
+                        order.OrderDetails.Select(detail => (detail.Weight, detail.Number)))),
+                delayTime,
+                (long)Math.Round(order.ProductFee, MidpointRounding.AwayFromZero),
+                order.Id.ToString(),
+                cancellationToken);
+        }
+        catch (AppException ex) when (ex is not FulfillmentTransientException and not FulfillmentPermanentException)
+        {
+            throw MapXanhSmFailure("XanhSM booking", ex);
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new FulfillmentTransientException("XanhSM booking request timed out");
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new FulfillmentTransientException($"XanhSM booking transport failure: {ex.Message}");
+        }
+
+        var deliveryId = delivery.Id ?? delivery.OrderId;
+        if (string.IsNullOrWhiteSpace(deliveryId))
+        {
+            // A booking may well exist on XanhSm's side, but without its id it can be neither
+            // deduplicated nor cancelled - and retrying would only book another one.
+            throw new FulfillmentPermanentException("XanhSM returned a delivery without an id");
+        }
+
+        return (deliveryId, delivery.TrackingUrl ?? delivery.SharedLink);
+    }
+
+    // XanhSm.Service already normalises provider errors into AppExceptions (see its
+    // ThrowProviderException); this only decides which of them are worth a retry. Without it a
+    // BadRequestException would slip past the endpoint's Ignore<FulfillmentPermanentException>
+    // and be retried five times for a business rejection that cannot change.
+    private static AppException MapXanhSmFailure(string api, AppException ex) => ex switch
+    {
+        BadGatewayException or TooManyRequestException
+            => new FulfillmentTransientException($"{api} failed: {ex.Message}"),
+        _ => new FulfillmentPermanentException($"{api} rejected: {ex.Message}")
+    };
 
     public async Task<PosOrderResult> CreatePosOrderAsync(
         Guid orderId, DeliveryDispatchResult plan, CancellationToken cancellationToken = default)
@@ -293,8 +379,8 @@ public class Service : IService
             Channel = new Channel
             {
                 TrafficSourceId = NhanhTrafficSourceId,
-                AppOrderId = plan.AhamoveOrderId != null
-                    ? plan.AhamoveOrderId + " - " + prefixOrderId
+                AppOrderId = plan.ShippingPartyOrderId != null
+                    ? plan.ShippingPartyOrderId + " - " + prefixOrderId
                     : order.Id.ToString(),
                 SourceName = "WEBSITE",
                 PageId = "",
@@ -310,7 +396,9 @@ public class Service : IService
             },
             Carrier = new Carrier
             {
-                Id = 12,
+                // 12 is Ahamove's carrier id at NhanhVn. XanhSm is not a NhanhVn-integrated carrier, so
+                // the order is flagged as self-connected (we book and track the delivery ourselves).
+                Id = plan.ShippingGateway == ShippingGateway.Ahamove ? 12 : 0,
                 AllowTest = 1,
                 ServiceId = 0,
                 ServiceCode = "",
@@ -333,7 +421,7 @@ public class Service : IService
                 DeclaredFee = 0m,
                 ShipFee = 0m,
                 CodFee = 0m,
-                IsSelfConnect = 0,
+                IsSelfConnect = plan.ShippingGateway == ShippingGateway.XanhSm ? 1 : 0,
                 CarrierPromotionCode = "",
                 CarrierPromotionCodes = new List<string>(),
                 ManualShipFee = 0m,
@@ -511,19 +599,23 @@ public class Service : IService
     }
 
     public async Task<CompensationOutcome> CompensateAsync(
-        Guid orderId, string? ahamoveOrderId, int? nhanhOrderId, string reason,
-        CancellationToken cancellationToken = default)
+        Guid orderId, ShippingGateway? shippingGateway, string? shippingPartyOrderId, int? nhanhOrderId,
+        string reason, CancellationToken cancellationToken = default)
     {
         var details = new List<string>();
         var retryable = false;
 
         var deliveryCleared = true;
-        if (!string.IsNullOrWhiteSpace(ahamoveOrderId))
+        if (!string.IsNullOrWhiteSpace(shippingPartyOrderId))
         {
-            var outcome = await CancelAhamoveOrderAsync(ahamoveOrderId, reason, cancellationToken);
+            // Null gateway only on rows written before ShippingGateway existed, all of them Ahamove.
+            var courier = shippingGateway ?? ShippingGateway.Ahamove;
+            var outcome = courier == ShippingGateway.XanhSm
+                ? await CancelXanhSmDeliveryAsync(shippingPartyOrderId, reason, cancellationToken)
+                : await CancelAhamoveOrderAsync(shippingPartyOrderId, reason, cancellationToken);
             deliveryCleared = outcome.Cleared;
             retryable |= outcome.Retryable;
-            details.Add($"ahamove({ahamoveOrderId})={outcome.Detail}");
+            details.Add($"{courier.ToString().ToLowerInvariant()}({shippingPartyOrderId})={outcome.Detail}");
         }
 
         var posOrderCleared = true;
@@ -578,8 +670,9 @@ public class Service : IService
         // The one log line ops actually need: the payment was taken and the refund is manual.
         _logger.LogCritical(
             "Order {OrderId} parked as {Status} after {Step}: {Reason}. Payment WAS taken - manual refund required. "
-            + "ahamoveOrderId={AhamoveOrderId} nhanhOrderId={NhanhOrderId}",
-            orderId, FulfillmentFailedStatus, step, reason, order.ShippingPartyOrderId, order.NhanhOrderId);
+            + "shippingGateway={ShippingGateway} shippingPartyOrderId={ShippingPartyOrderId} nhanhOrderId={NhanhOrderId}",
+            orderId, FulfillmentFailedStatus, step, reason, order.ShippingGateway, order.ShippingPartyOrderId,
+            order.NhanhOrderId);
     }
 
     /// <summary>DELETE /v3/orders/{id} - see https://developers.ahamove.com/docs/api-reference/order-apis/cancel-order</summary>
@@ -718,6 +811,56 @@ public class Service : IService
         }
     }
 
+    /// <summary>
+    /// POST cancel-order through XanhSm.Service. cancel_code stays at the request type's default
+    /// (9000), the same code the team's own cancel path sends.
+    /// </summary>
+    /// <remarks>
+    /// XanhSm's error catalogue for "already cancelled" vs "already delivered" has not been confirmed
+    /// against the partner docs, so a 400 is surfaced as "not cancellable" for a human to look at
+    /// rather than guessed at. A 404 is treated as already gone, the same as Ahamove.
+    /// </remarks>
+    private async Task<CancelOutcome> CancelXanhSmDeliveryAsync(
+        string deliveryId, string reason, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _xanhSmService.CancelDeliveryAsync(new XanhSm.XanhSmCancelDeliveryRequest
+            {
+                OrderId = deliveryId,
+                CancelMessage = Truncate(reason)
+            }, cancellationToken);
+
+            _logger.LogInformation("XanhSM delivery {DeliveryId} cancelled", deliveryId);
+            return new CancelOutcome(true, false, "cancelled");
+        }
+        catch (NotFoundException)
+        {
+            return new CancelOutcome(true, false, "not found (already gone)");
+        }
+        // Surfaced as retryable rather than thrown, so the NhanhVn leg still gets attempted.
+        catch (BadGatewayException ex)
+        {
+            return new CancelOutcome(false, true, ex.Message);
+        }
+        catch (TooManyRequestException ex)
+        {
+            return new CancelOutcome(false, true, ex.Message);
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return new CancelOutcome(false, true, "XanhSM cancel request timed out");
+        }
+        catch (HttpRequestException ex)
+        {
+            return new CancelOutcome(false, true, $"XanhSM cancel transport failure: {ex.Message}");
+        }
+        catch (AppException ex)
+        {
+            return new CancelOutcome(false, false, $"not cancellable: {ex.Message}");
+        }
+    }
+
     private readonly record struct CancelOutcome(bool Cleared, bool Retryable, string Detail);
 
     private static string Truncate(string value) => value.Length <= 500 ? value : value[..500];
@@ -746,7 +889,8 @@ public class Service : IService
                 OrderId = x.CorrelationId,
                 CurrentState = x.CurrentState,
                 Gateway = x.Gateway,
-                AhamoveOrderId = x.AhamoveOrderId,
+                ShippingGateway = x.ShippingGateway,
+                ShippingPartyOrderId = x.ShippingPartyOrderId,
                 NhanhOrderId = x.NhanhOrderId,
                 DeliveryDispatched = x.DeliveryDispatched,
                 FailedStep = x.FailedStep,
@@ -767,7 +911,7 @@ public class Service : IService
     private async Task<string> BuildPrivateDescriptionAsync(OrderEntity order, string? companyRemarks)
     {
         var privateDescription = companyRemarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
-        privateDescription += $"\n-------------------------\nNN: {order.PhoneReceiver}";
+        privateDescription += $"\n-------------------------\nNN: {order.FullNameReceiver} - {order.PhoneReceiver}";
 
         if (order.OrderTime > 0)
         {
@@ -844,7 +988,7 @@ public class Service : IService
     }
 
     // Instant orders carry no tag, so ConvertTimeDeliveryAsync always returns empty for them. The
-    // delivery time NhanhVn shows is the moment Ahamove collects the parcel, rendered in VN time.
+    // delivery time NhanhVn shows is the moment the courier collects the parcel, rendered in VN time.
     private static string ConvertInstantTimeDelivery(long scheduledUnixSeconds)
         => scheduledUnixSeconds <= 0
             ? string.Empty

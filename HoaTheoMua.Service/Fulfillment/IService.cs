@@ -1,3 +1,5 @@
+using HoaTheoMua.Repository.Enum;
+
 namespace HoaTheoMua.Service.Fulfillment;
 
 /// <summary>
@@ -8,13 +10,14 @@ namespace HoaTheoMua.Service.Fulfillment;
 /// </summary>
 /// <remarks>
 /// Every method is idempotent: it re-reads the order and skips the outbound call when the result is
-/// already recorded (AhahaMoveOrderId / NhanhOrderId). That is what stops a redelivered webhook -
+/// already recorded (ShippingPartyOrderId / NhanhOrderId). That is what stops a redelivered webhook -
 /// or a retried message - from dispatching a second courier.
 /// </remarks>
 public interface IService
 {
     /// <summary>
-    /// Derives the delivery plan and, for instant orders, books the Ahamove courier. Always returns
+    /// Derives the delivery plan and, for instant orders, books the courier that
+    /// Order.ShippingGateway names (Ahamove or XanhSm). Always returns
     /// a plan even when no courier is booked, because the POS step needs the derived
     /// DelayTimeUnix / TagIds / PrivateDescription either way.
     /// </summary>
@@ -22,7 +25,7 @@ public interface IService
 
     /// <summary>
     /// Creates the NhanhVn POS order, reusing the plan verbatim so the delivery time it shows
-    /// matches what Ahamove was actually told.
+    /// matches what the courier was actually told.
     /// </summary>
     Task<PosOrderResult> CreatePosOrderAsync(Guid orderId, DeliveryDispatchResult plan,
         CancellationToken cancellationToken = default);
@@ -39,8 +42,9 @@ public interface IService
     /// complete still has to reach ops rather than loop. Retryable transport failures DO throw, so
     /// the endpoint retry policy gets a chance before the saga gives up.
     /// </summary>
-    Task<CompensationOutcome> CompensateAsync(Guid orderId, string? ahamoveOrderId, int? nhanhOrderId,
-        string reason, CancellationToken cancellationToken = default);
+    Task<CompensationOutcome> CompensateAsync(Guid orderId, ShippingGateway? shippingGateway,
+        string? shippingPartyOrderId, int? nhanhOrderId, string reason,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Terminal bookkeeping: park the order in FulfillmentFailed so it stops looking like a healthy
@@ -65,7 +69,8 @@ public record FulfillmentStateView
     public Guid OrderId { get; init; }
     public string CurrentState { get; init; } = string.Empty;
     public string? Gateway { get; init; }
-    public string? AhamoveOrderId { get; init; }
+    public ShippingGateway? ShippingGateway { get; init; }
+    public string? ShippingPartyOrderId { get; init; }
     public int? NhanhOrderId { get; init; }
     public bool DeliveryDispatched { get; init; }
     public string? FailedStep { get; init; }

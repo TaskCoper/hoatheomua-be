@@ -824,10 +824,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("CorrelationId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AhamoveOrderId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<int>("CompensationAttempts")
                         .HasColumnType("integer");
 
@@ -858,6 +854,13 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<int?>("NhanhOrderId")
                         .HasColumnType("integer");
+
+                    b.Property<int?>("ShippingGateway")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ShippingPartyOrderId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid?>("TransactionId")
                         .HasColumnType("uuid");

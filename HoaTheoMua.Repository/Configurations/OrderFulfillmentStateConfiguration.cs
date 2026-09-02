@@ -22,7 +22,7 @@ public class OrderFulfillmentStateConfiguration : IEntityTypeConfiguration<Order
             .HasMaxLength(64);
 
         builder.Property(x => x.Gateway).HasMaxLength(50);
-        builder.Property(x => x.AhamoveOrderId).HasMaxLength(100);
+        builder.Property(x => x.ShippingPartyOrderId).HasMaxLength(100);
         builder.Property(x => x.FailedStep).HasMaxLength(100);
 
         // OrderFulfillmentStateMachine truncates to this length; a NhanhVn rejection body would

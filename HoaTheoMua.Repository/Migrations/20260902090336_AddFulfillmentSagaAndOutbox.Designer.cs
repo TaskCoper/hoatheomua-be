@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260822163445_AddFulfillmentSagaAndOutbox")]
+    [Migration("20260902090336_AddFulfillmentSagaAndOutbox")]
     partial class AddFulfillmentSagaAndOutbox
     {
         /// <inheritdoc />
@@ -353,8 +353,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("MatId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal?>("Quantity")
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("SubId")
                         .HasColumnType("uuid");
@@ -367,9 +367,10 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("MatId");
 
                     b.HasIndex("SubId", "MatId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
-                    b.ToTable("ComboSpecification");
+                    b.ToTable("ComboSpecifications", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CompanyAddress", b =>
@@ -633,12 +634,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("AhahaMoveOrderId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AhahaMoveTrackingUrl")
-                        .HasColumnType("text");
-
                     b.Property<int>("City")
                         .HasColumnType("integer");
 
@@ -648,6 +643,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FullNameReceiver")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -677,6 +676,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<long>("OrderTime")
                         .HasColumnType("bigint");
+
+                    b.Property<int>("PaymentGateway")
+                        .HasColumnType("integer");
 
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("integer");
@@ -716,6 +718,15 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<decimal>("ShippingFee")
                         .HasColumnType("numeric");
+
+                    b.Property<int>("ShippingGateway")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ShippingPartyOrderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ShippingTrackingUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("ShortAddress")
                         .IsRequired()
@@ -776,6 +787,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<double>("Length")
                         .HasColumnType("double precision");
 
+                    b.Property<string>("Metadata")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -788,6 +802,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -809,10 +826,6 @@ namespace HoaTheoMua.Repository.Migrations
                 {
                     b.Property<Guid>("CorrelationId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("AhamoveOrderId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("CompensationAttempts")
                         .HasColumnType("integer");
@@ -844,6 +857,13 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<int?>("NhanhOrderId")
                         .HasColumnType("integer");
+
+                    b.Property<int?>("ShippingGateway")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ShippingPartyOrderId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid?>("TransactionId")
                         .HasColumnType("uuid");
@@ -1388,6 +1408,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("DeliveringStock")
                         .HasColumnType("numeric");
 
+                    b.Property<decimal?>("Factor")
+                        .HasColumnType("numeric");
+
                     b.Property<decimal?>("Height")
                         .HasColumnType("numeric");
 
@@ -1413,6 +1436,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<string>("InternalCategoryCode")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -1595,6 +1623,13 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("NhanhProductId")
                         .IsUnique()
                         .HasFilter("\"NhanhProductId\" IS NOT NULL");
+
+                    b.HasIndex("ParentProductId", "ProductType")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("Position", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("Products");
                 });

@@ -1,3 +1,5 @@
+using HoaTheoMua.Repository.Enum;
+
 namespace HoaTheoMua.Service.Fulfillment;
 
 // Message contracts for the order-fulfillment saga.
@@ -5,6 +7,8 @@ namespace HoaTheoMua.Service.Fulfillment;
 // The bus serializes these with Newtonsoft + TypeNameHandling.Objects, which embeds the CLR type
 // name in the payload. Renaming or moving any type in this file breaks messages already sitting in
 // a RabbitMQ queue or in the OutboxMessage table - treat these names as frozen once deployed.
+// (The Ahamove-specific names were generalised to ShippingPartyOrderId/ShippingGateway BEFORE the
+// first deployment, when XanhSm became the second courier; that was the last rename.)
 
 /// <summary>
 /// Everything the delivery step derives once and the POS step must reuse verbatim.
@@ -20,16 +24,23 @@ namespace HoaTheoMua.Service.Fulfillment;
 public record DeliveryDispatchResult
 {
     /// <summary>
-    /// False when the order is scheduled (OrderTime > 0), carries delivery tags, or the
-    /// ahamove.instant_delivery config is off - in those cases Ahamove is never called and there is
-    /// correspondingly nothing to compensate.
+    /// False when the order is scheduled (OrderTime > 0), carries delivery tags, or (Ahamove only)
+    /// the ahamove.instant_delivery config is off - in those cases no courier is booked and there
+    /// is correspondingly nothing to compensate.
     /// </summary>
     public bool Dispatched { get; init; }
 
-    public string? AhamoveOrderId { get; init; }
-    public string? AhamoveTrackingUrl { get; init; }
+    /// <summary>Copied from Order.ShippingGateway so the POS step and compensation know which courier this is.</summary>
+    public ShippingGateway ShippingGateway { get; init; }
 
-    /// <summary>Unix seconds Ahamove will collect the parcel. 0 when no delay is configured.</summary>
+    /// <summary>Courier-side id: the Ahamove order id or the XanhSm delivery id.</summary>
+    public string? ShippingPartyOrderId { get; init; }
+    public string? ShippingTrackingUrl { get; init; }
+
+    /// <summary>
+    /// Unix seconds the courier will collect the parcel. Ahamove: now + ahamove.idle_time, or 0
+    /// when no delay is configured. XanhSm: always now.
+    /// </summary>
     public long DelayTimeUnix { get; init; }
 
     /// <summary>Already includes vatTagId / fastTagId as applicable.</summary>
@@ -85,7 +96,8 @@ public record RevalidateProductCache
 public record CompensateFulfillment
 {
     public Guid OrderId { get; init; }
-    public string? AhamoveOrderId { get; init; }
+    public ShippingGateway? ShippingGateway { get; init; }
+    public string? ShippingPartyOrderId { get; init; }
     public int? NhanhOrderId { get; init; }
     public string Reason { get; init; } = string.Empty;
 }
@@ -99,7 +111,8 @@ public record MarkFulfillmentFailed
     public Guid OrderId { get; init; }
     public string Step { get; init; } = string.Empty;
     public string Reason { get; init; } = string.Empty;
-    public string? AhamoveOrderId { get; init; }
+    public ShippingGateway? ShippingGateway { get; init; }
+    public string? ShippingPartyOrderId { get; init; }
     public int? NhanhOrderId { get; init; }
 }
 

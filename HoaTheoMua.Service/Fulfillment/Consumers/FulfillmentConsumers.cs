@@ -72,7 +72,8 @@ public class CompensateFulfillmentConsumer : IConsumer<CompensateFulfillment>
     {
         var result = await _fulfillment.CompensateAsync(
             context.Message.OrderId,
-            context.Message.AhamoveOrderId,
+            context.Message.ShippingGateway,
+            context.Message.ShippingPartyOrderId,
             context.Message.NhanhOrderId,
             context.Message.Reason,
             context.CancellationToken);

@@ -59,6 +59,13 @@ jobs:
       AHAMOVE_TOKEN: ${{ secrets.AHAMOVE_TOKEN }}
       AHAMOVE_BASE_URL: ${{ secrets.AHAMOVE_BASE_URL }}
 
+      # RabbitMQ (MassTransit bus behind the fulfilment saga; maps to RabbitMqOptions__*)
+      RABBITMQ_USERNAME: ${{ secrets.RABBITMQ_USERNAME }}
+      RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+      RABBITMQ_VHOST: ${{ secrets.RABBITMQ_VHOST }}
+      RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
+      RABBITMQ_MANAGEMENT_PORT: ${{ secrets.RABBITMQ_MANAGEMENT_PORT }}
+
       # XanhSM Express
       XANHSM_BASE_URL: ${{ secrets.XANHSM_BASE_URL }}
       XANHSM_TOKEN_URL: ${{ secrets.XANHSM_TOKEN_URL }}

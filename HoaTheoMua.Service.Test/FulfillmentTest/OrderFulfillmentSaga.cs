@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Fulfillment;
 using HoaTheoMua.Service.Fulfillment.Consumers;
@@ -23,8 +24,9 @@ public class OrderFulfillmentSagaTest
     private static readonly DeliveryDispatchResult DispatchedPlan = new()
     {
         Dispatched = true,
-        AhamoveOrderId = "AHA-123",
-        AhamoveTrackingUrl = "https://track/AHA-123",
+        ShippingGateway = ShippingGateway.Ahamove,
+        ShippingPartyOrderId = "AHA-123",
+        ShippingTrackingUrl = "https://track/AHA-123",
         DelayTimeUnix = 1_800_000_000,
         TagIds = [294L],
         PrivateDescription = "pick-up note"
@@ -34,6 +36,7 @@ public class OrderFulfillmentSagaTest
     private static readonly DeliveryDispatchResult ScheduledPlan = new()
     {
         Dispatched = false,
+        ShippingGateway = ShippingGateway.Ahamove,
         DelayTimeUnix = 0,
         TagIds = [],
         PrivateDescription = "pick-up note"
@@ -59,7 +62,7 @@ public class OrderFulfillmentSagaTest
             .ReturnsAsync(new PosOrderResult { NhanhOrderId = 987, TrackingUrl = "https://nhanh/987" });
         mock.Setup(x => x.RevalidateOrderProductsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        mock.Setup(x => x.CompensateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        mock.Setup(x => x.CompensateAsync(It.IsAny<Guid>(), It.IsAny<ShippingGateway?>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CompensationOutcome { DeliveryCleared = true, PosOrderCleared = true, Details = "cancelled" });
         mock.Setup(x => x.MarkFulfillmentFailedAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -95,7 +98,7 @@ public class OrderFulfillmentSagaTest
         Assert.NotNull(instanceId);
 
         var instance = saga.Sagas.Contains(orderId);
-        Assert.Equal("AHA-123", instance.AhamoveOrderId);
+        Assert.Equal("AHA-123", instance.ShippingPartyOrderId);
         Assert.Equal(987, instance.NhanhOrderId);
         Assert.False(await harness.Published.Any<CompensateFulfillment>());
     }
@@ -120,8 +123,8 @@ public class OrderFulfillmentSagaTest
 
         // Bù trừ phải mang đúng id đơn Ahamove đã đặt - đây chính là thông tin bản cũ làm mất.
         Assert.True(await harness.Published.Any<CompensateFulfillment>(
-            x => x.Context.Message.AhamoveOrderId == "AHA-123"));
-        fulfillment.Verify(x => x.CompensateAsync(orderId, "AHA-123", null, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            x => x.Context.Message.ShippingPartyOrderId == "AHA-123"));
+        fulfillment.Verify(x => x.CompensateAsync(orderId, ShippingGateway.Ahamove, "AHA-123", null, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
 
         var instance = saga.Sagas.Contains(orderId);
         Assert.Equal(nameof(CreatePosOrder), instance.FailedStep);
@@ -148,7 +151,7 @@ public class OrderFulfillmentSagaTest
         Assert.NotNull(await saga.Exists(orderId, x => x.Failed));
 
         Assert.False(await harness.Published.Any<CompensateFulfillment>());
-        fulfillment.Verify(x => x.CompensateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        fulfillment.Verify(x => x.CompensateAsync(It.IsAny<Guid>(), It.IsAny<ShippingGateway?>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 
         // Không có vòng bù trừ nào được phát -> 0, phân biệt rõ với trường hợp có bù trừ.
         Assert.Equal(0, saga.Sagas.Contains(orderId).CompensationAttempts);
@@ -203,7 +206,7 @@ public class OrderFulfillmentSagaTest
         var fulfillment = HappyFulfillment();
         fulfillment.Setup(x => x.CreatePosOrderAsync(It.IsAny<Guid>(), It.IsAny<DeliveryDispatchResult>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new FulfillmentPermanentException("NhanhVn rejected the order"));
-        fulfillment.Setup(x => x.CompensateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        fulfillment.Setup(x => x.CompensateAsync(It.IsAny<Guid>(), It.IsAny<ShippingGateway?>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new FulfillmentTransientException("Ahamove unreachable"));
 
         await using var provider = BuildProvider(fulfillment);

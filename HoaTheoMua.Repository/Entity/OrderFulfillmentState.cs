@@ -1,4 +1,5 @@
 using HoaTheoMua.Repository.Abtraction;
+using HoaTheoMua.Repository.Enum;
 using MassTransit;
 
 namespace HoaTheoMua.Repository.Entity;
@@ -24,11 +25,18 @@ public class OrderFulfillmentState : SagaStateMachineInstance, IAuditableEntity
     public string? Gateway { get; set; }             // "BaoKim" | "SePay"
     public Guid? TransactionId { get; set; }
 
-    public string? AhamoveOrderId { get; set; }
+    /// <summary>
+    /// Which courier the delivery step booked, copied from Order.ShippingGateway. Compensation
+    /// needs it to know which cancel API to call. Null until the delivery step reports back.
+    /// </summary>
+    public ShippingGateway? ShippingGateway { get; set; }
+
+    /// <summary>Courier-side id: the Ahamove order id or the XanhSm delivery id.</summary>
+    public string? ShippingPartyOrderId { get; set; }
     public int? NhanhOrderId { get; set; }
 
     /// <summary>
-    /// False for scheduled orders, where Ahamove is never called - the POS-failure branch reads
+    /// False for scheduled orders, where no courier is booked - the POS-failure branch reads
     /// this to decide whether there is a courier to cancel at all.
     /// </summary>
     public bool DeliveryDispatched { get; set; }
@@ -39,7 +47,7 @@ public class OrderFulfillmentState : SagaStateMachineInstance, IAuditableEntity
     /// How many saga-level compensation rounds have been issued. 1 = compensation ran once; higher
     /// means an earlier round exhausted the compensate-fulfillment endpoint's own retries and the
     /// saga reissued the command. 0 = nothing was compensated at all, because nothing had been
-    /// booked yet (the failure hit before Ahamove, or the order was scheduled so it was never called).
+    /// booked yet (the failure hit before the courier was booked, or the order was scheduled so none was).
     /// </summary>
     public int CompensationAttempts { get; set; }
 

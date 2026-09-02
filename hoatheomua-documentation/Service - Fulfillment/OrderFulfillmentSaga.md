@@ -18,7 +18,7 @@ Kill switch: config key `fulfillment.use_saga` (group `fulfillment`). Đặt `fa
 
 #### Response
 
-Webhook ack **ngay lập tức**, không đợi Ahamove/NhanhVn:
+Webhook ack **ngay lập tức**, không đợi đơn vị giao hàng (Ahamove/XanhSm) hay NhanhVn:
 
 ```Json
 { "value": "success", "isSuccess": true, "isFailed": false, "error": null,
@@ -49,25 +49,39 @@ stateDiagram-v2
 Không có timer nào. Escalation do `Fault<T>` mà MassTransit tự publish khi consumer hết retry
 (`1s, 5s, 15s, 30s, 60s`; `FulfillmentPermanentException` bị `Ignore` nên fault ngay).
 
+**Đơn vị giao hàng** do `Order.ShippingGateway` quyết định, saga không có cấu hình riêng:
+
+| `ShippingGateway` | Đặt xe (bước `DispatchDelivery`) | Hủy (bước `CompensateFulfillment`) | Ghi vào NhanhVn |
+|---|---|---|---|
+| `Ahamove` (1) | `POST /v3/orders`, giờ lấy = now + `ahamove.idle_time`, tôn trọng `ahamove.instant_delivery` | `DELETE /v3/orders/{id}` | `carrier.id = 12` |
+| `XanhSm` (2) | `XanhSm.IService.BookDoorToDoorAsync` (điểm lấy/giao và cân nặng dựng bằng `Order.Service.CreateXanhSmPoints`), giờ lấy = now | `XanhSm.IService.CancelDeliveryAsync` (`POST cancel-order`, `cancel_code` 9000) | `carrier.id = 0`, `isSelfConnect = 1` |
+
+Id bên đối tác lưu ở `OrderFulfillmentState.ShippingPartyOrderId` (và `Order.ShippingPartyOrderId`),
+kèm `OrderFulfillmentState.ShippingGateway` để bước bù trừ biết gọi API hủy nào. Lỗi từ `XanhSm.Service`
+được map: `BadGateway`/`TooManyRequest` → `FulfillmentTransientException` (retry), còn lại →
+`FulfillmentPermanentException` (fault ngay).
+
 #### Test case
 
 **Test case 01: Happy path**
-- **Điều kiện:** đơn `Pending`, số tiền khớp `TotalFee`, Ahamove và NhanhVn đều trả về thành công.
+- **Điều kiện:** đơn `Pending`, số tiền khớp `TotalFee`, đơn vị giao hàng (Ahamove hoặc XanhSm) và NhanhVn đều trả về thành công.
 - **Kết quả:** saga đi `DispatchingDelivery → CreatingPosOrder → Revalidating → Fulfilled`.
-  `AhahaMoveOrderId` và `NhanhOrderId` được ghi xuống DB **ngay sau mỗi lời gọi**, không đợi tới cuối.
+  `ShippingPartyOrderId` và `NhanhOrderId` được ghi xuống DB **ngay sau mỗi lời gọi**, không đợi tới cuối.
 
-**Test case 02: NhanhVn hỏng sau khi Ahamove đã đặt xe**
-- **Điều kiện:** `POST /v3/orders` thành công, `POST /order/add` trả 5xx tới khi hết retry.
-- **Kết quả:** saga sang `Compensating`, gọi `DELETE /v3/orders/{ahamoveOrderId}` để hủy đúng chuyến
-  đã đặt, rồi sang `Failed`. `Order.Status = "FulfillmentFailed"`, `CompensationAttempts = 1` (đúng 1 chân phải hoàn tác).
-  Ghi `LogCritical` kèm `AhamoveOrderId` — **tiền đã thu, hoàn tiền phải làm thủ công**.
+**Test case 02: NhanhVn hỏng sau khi đã đặt xe**
+- **Điều kiện:** đặt xe thành công (Ahamove `POST /v3/orders` hoặc XanhSm `BookDoorToDoorAsync`),
+  `POST /order/add` trả 5xx tới khi hết retry.
+- **Kết quả:** saga sang `Compensating`, gọi đúng API hủy của đơn vị đã đặt (`DELETE /v3/orders/{id}`
+  hoặc XanhSm `cancel-order`) với đúng `ShippingPartyOrderId`, rồi sang `Failed`.
+  `Order.Status = "FulfillmentFailed"`, `CompensationAttempts = 1` (đúng 1 chân phải hoàn tác).
+  Ghi `LogCritical` kèm `ShippingGateway` + `ShippingPartyOrderId` — **tiền đã thu, hoàn tiền phải làm thủ công**.
 
 **Test case 03: Đơn hẹn giờ, NhanhVn hỏng**
-- **Điều kiện:** `OrderTime > 0` hoặc có tag giao hàng ⇒ Ahamove chưa từng được gọi.
+- **Điều kiện:** `OrderTime > 0` hoặc có tag giao hàng ⇒ chưa đặt xe với đơn vị nào.
 - **Kết quả:** sang thẳng `Failed`, **không** phát `CompensateFulfillment` (không có gì để hủy).
 
-**Test case 04: Ahamove hỏng ngay bước đầu**
-- **Điều kiện:** `POST /v3/orders` lỗi tới khi hết retry.
+**Test case 04: Đặt xe hỏng ngay bước đầu**
+- **Điều kiện:** Ahamove `POST /v3/orders` (hoặc XanhSm `BookDoorToDoorAsync`) lỗi tới khi hết retry.
 - **Kết quả:** `Failed`, `FailedStep = "DispatchDelivery"`, không bù trừ.
 
 **Test case 05: Purge cache hỏng**
@@ -78,11 +92,12 @@ Không có timer nào. Escalation do `Fault<T>` mà MassTransit tự publish khi
 **Test case 06: Gateway gửi lại webhook (replay)**
 - **Điều kiện:** gửi lại đúng callback đó (cùng `Gateway` + `RequestId`) nhiều lần, kể cả song song.
 - **Kết quả:** mọi request đều ack. Đúng **1** dòng `Transactions`, đúng **1** saga, **0** lời gọi
-  Ahamove/NhanhVn thêm. Chốt chặn là unique index `IX_Transactions_Gateway_RequestId`; vi phạm
+  đặt xe/NhanhVn thêm. Chốt chặn là unique index `IX_Transactions_Gateway_RequestId`; vi phạm
   `23505` được webhook bắt và coi là replay, không phải lỗi.
 
 **Test case 07: Bù trừ không hoàn tất**
-- **Điều kiện:** Ahamove trả `406 INVALID_ORDER_STATUS` (đơn đã giao xong nên không hủy được).
+- **Điều kiện:** Ahamove trả `406 INVALID_ORDER_STATUS` (đơn đã giao xong nên không hủy được), hoặc XanhSm
+  `cancel-order` trả 400.
 - **Kết quả:** vẫn sang `Failed`, `FailureReason` ghi rõ phần còn tồn đọng, `LogCritical` báo ops
   dọn tay. **Không** retry vô hạn.
 
@@ -95,7 +110,7 @@ Không có timer nào. Escalation do `Fault<T>` mà MassTransit tự publish khi
 
 | Giá trị | Nghĩa |
 |---|---|
-| `0` | Không có gì để hoàn tác — lỗi xảy ra trước khi đặt Ahamove, hoặc đơn hẹn giờ nên Ahamove chưa từng được gọi |
+| `0` | Không có gì để hoàn tác — lỗi xảy ra trước khi đặt xe, hoặc đơn hẹn giờ nên chưa đặt xe với đơn vị nào |
 | `1` | Phát lệnh bù trừ một lần và nó chạy xong |
 | `2`, `3` | Vòng trước đã dùng hết retry của endpoint và saga phát lại lệnh |
 

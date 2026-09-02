@@ -87,7 +87,8 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
                     // Recorded even when Dispatched is false: the failure branch reads it to decide
                     // whether there is a courier to cancel at all.
                     context.Saga.DeliveryDispatched = context.Message.Plan.Dispatched;
-                    context.Saga.AhamoveOrderId = context.Message.Plan.AhamoveOrderId;
+                    context.Saga.ShippingGateway = context.Message.Plan.ShippingGateway;
+                    context.Saga.ShippingPartyOrderId = context.Message.Plan.ShippingPartyOrderId;
                     context.Saga.UpdatedAt = DateTimeOffset.UtcNow;
                 })
                 .Publish(context => new CreatePosOrder
@@ -124,8 +125,8 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
                 {
                     RecordFailure(context.Saga, nameof(CreatePosOrder), Describe(context.Message.Exceptions));
                     logger.LogCritical(
-                        "Fulfilment failed at CreatePosOrder for order {OrderId} (ahamoveOrderId={AhamoveOrderId}): {Reason}",
-                        context.Saga.CorrelationId, context.Saga.AhamoveOrderId, context.Saga.FailureReason);
+                        "Fulfilment failed at CreatePosOrder for order {OrderId} (ahamoveOrderId={ShippingPartyOrderId}): {Reason}",
+                        context.Saga.CorrelationId, context.Saga.ShippingPartyOrderId, context.Saga.FailureReason);
                 })
                 .IfElse(
                     context => HasOutstandingBooking(context.Saga),
@@ -134,7 +135,8 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
                         .Publish(context => new CompensateFulfillment
                         {
                             OrderId = context.Saga.CorrelationId,
-                            AhamoveOrderId = context.Saga.AhamoveOrderId,
+                            ShippingGateway = context.Saga.ShippingGateway,
+                            ShippingPartyOrderId = context.Saga.ShippingPartyOrderId,
                             // Always null on this branch today: NhanhOrderId is only ever set by the
                             // PosOrderCreated handler, which moves the saga to Revalidating, where
                             // CreatePosOrderFaulted is no longer handled. Passed through anyway so a
@@ -143,7 +145,7 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
                             Reason = context.Saga.FailureReason ?? "POS order creation failed"
                         })
                         .TransitionTo(Compensating),
-                    // Scheduled order: Ahamove was never called, so go straight to Failed.
+                    // Scheduled order: no courier was booked, so go straight to Failed.
                     nothingBooked => nothingBooked
                         .Publish(context => ToMarkFailed(context.Saga))
                         .TransitionTo(Failed)));
@@ -195,7 +197,8 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
                         .Publish(context => new CompensateFulfillment
                         {
                             OrderId = context.Saga.CorrelationId,
-                            AhamoveOrderId = context.Saga.AhamoveOrderId,
+                            ShippingGateway = context.Saga.ShippingGateway,
+                            ShippingPartyOrderId = context.Saga.ShippingPartyOrderId,
                             NhanhOrderId = context.Saga.NhanhOrderId,
                             Reason = context.Saga.FailureReason ?? "compensation retry"
                         }),
@@ -204,9 +207,9 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
                     giveUp => giveUp
                         .Then(context => logger.LogCritical(
                             "Compensation gave up after {Max} rounds for order {OrderId} "
-                            + "(ahamoveOrderId={AhamoveOrderId} nhanhOrderId={NhanhOrderId}). Manual cleanup required.",
+                            + "(ahamoveOrderId={ShippingPartyOrderId} nhanhOrderId={NhanhOrderId}). Manual cleanup required.",
                             MaxCompensationRounds, context.Saga.CorrelationId,
-                            context.Saga.AhamoveOrderId, context.Saga.NhanhOrderId))
+                            context.Saga.ShippingPartyOrderId, context.Saga.NhanhOrderId))
                         .Publish(context => ToMarkFailed(context.Saga))
                         .TransitionTo(Failed)));
 
@@ -244,7 +247,7 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
     // "Outstanding" means a real booking exists on someone else's system that we are responsible
     // for clearing up.
     private static bool HasOutstandingBooking(OrderFulfillmentState saga)
-        => (saga.DeliveryDispatched && !string.IsNullOrWhiteSpace(saga.AhamoveOrderId))
+        => (saga.DeliveryDispatched && !string.IsNullOrWhiteSpace(saga.ShippingPartyOrderId))
            || saga.NhanhOrderId.HasValue;
 
     private static void RecordFailure(OrderFulfillmentState saga, string step, string reason)
@@ -259,7 +262,8 @@ public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<Order
         OrderId = saga.CorrelationId,
         Step = saga.FailedStep ?? "Unknown",
         Reason = saga.FailureReason ?? "Unknown failure",
-        AhamoveOrderId = saga.AhamoveOrderId,
+        ShippingGateway = saga.ShippingGateway,
+        ShippingPartyOrderId = saga.ShippingPartyOrderId,
         NhanhOrderId = saga.NhanhOrderId
     };
 
