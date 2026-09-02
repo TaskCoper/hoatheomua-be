@@ -1,4 +1,5 @@
-﻿using HoaTheoMua.Repository.Entity;
+﻿using HoaTheoMua.Repository.Configurations.Seeds;
+using HoaTheoMua.Repository.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,10 +9,10 @@ public class ComboSpecificationConfiguration: IEntityTypeConfiguration<ComboSpec
 {
     public void Configure(EntityTypeBuilder<ComboSpecification> builder)
     {
+        builder.ToTable("ComboSpecifications");
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Quantity)
-            .IsRequired();
+        builder.Property(x => x.Quantity);
 
         builder.Property(x => x.IsCore)
             .IsRequired();
@@ -31,8 +32,10 @@ public class ComboSpecificationConfiguration: IEntityTypeConfiguration<ComboSpec
             .OnDelete(DeleteBehavior.Restrict);
         
         builder.HasIndex(x => new { x.SubId, x.MatId })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         
+        // builder.SeedComboSpecification();
     }
 
 }

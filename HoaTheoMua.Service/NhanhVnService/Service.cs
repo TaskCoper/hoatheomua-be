@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
@@ -29,7 +30,41 @@ public class Service: IService
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         _revalidateService = revalidateService;
     }
-    
+    //
+    public async Task<ProductLabelResponse> GetProductLabel(ProductLabelRequest request)  
+    {  
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");  
+        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);  
+        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);  
+        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);  
+        var nhanhApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/product/tags?appId=" + appId + "&businessId=" + businessId;    
+      
+      
+        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);  
+        nhanhHttpRequest.Headers.Add("Authorization", token);  
+        nhanhHttpRequest.Content = JsonContent.Create(request);  
+        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);  
+  
+        ProductLabelResponse? nhanhProductLable = null;  
+        if (nhanhVnResponse.IsSuccessStatusCode)  
+        {  
+            //string rawJsonString = await nhanhVnResponse.Content.ReadAsStringAsync();  
+  
+            // Đặt đoạn mã này để bạn đặt Breakpoint hoặc dùng NLog/Serilog in ra Tab Console xem giá trị thô:        // Console.WriteLine($"[DEBUG NHANH.VN RAW DATA]: {rawJsonString}");  
+  
+            nhanhProductLable = await nhanhVnResponse.Content.ReadFromJsonAsync<ProductLabelResponse>();  
+        }    else  
+        {  
+            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();  
+            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");  
+        }  
+        if (nhanhProductLable == null)  
+        {        throw new BadRequestException("NhanhVnResponse returned null or empty data");  
+        }    if (nhanhProductLable.Code == 0)  
+        {        throw new BadRequestException("ERR_INVALID_FORM_FIELDS");  
+        }  
+        return nhanhProductLable;  
+    }
     public async Task<OrderLabelResponse> GetOrderLabel(OrderLabelRequest orderLabelRequest)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
@@ -268,7 +303,7 @@ public class Service: IService
 
             if (product == null)
             {
-               return $"Sản phẩm với id: {itemId} không tồn tại trong hệ thống";
+               continue;
             }
             
             // Parent.NhanhProductId == Child.ParentProductId.
@@ -344,20 +379,20 @@ public class Service: IService
         };
             
             product.ParentProductId = item.ParentId is > 0 ? item.ParentId.ToString() : null;
-            product.ProductCode = item.Code;
-            product.Barcode = item.Barcode;
-            product.ProductName = item.Name;
-            product.OtherName = item.OtherName;
-            product.Status = item.Status?.ToString();
+            product.ProductCode = NormalizeText(item.Code);
+            product.Barcode = NormalizeText(item.Barcode);
+            product.ProductName = NormalizeText(item.Name);
+            product.OtherName = NormalizeText(item.OtherName);
+            product.Status = NormalizeText(item.Status?.ToString());
 
             // Danh mục — webhook chỉ gửi categoryId/brandId phẳng, không gửi object category/brand,
             // nên CategoryCode/CategoryName dưới đây luôn null với dữ liệu từ webhook.
             product.NhanhCategoryId = item.CategoryId;
-            product.CategoryCode = item.Category?.Code;
-            product.CategoryName = item.Category?.Name;
-            product.InternalCategoryCode = item.InternalCategory?.Code;
+            product.CategoryCode = NormalizeText(item.Category?.Code);
+            product.CategoryName = NormalizeText(item.Category?.Name);
+            product.InternalCategoryCode = NormalizeText(item.InternalCategory?.Code);
             product.NhanhTypeId = item.Type?.Id;
-            product.ProductType = item.Type?.Name;
+            product.ProductType = NormalizeText(item.Type?.Name);
             product.NhanhBrandId = item.BrandId;
 
 
@@ -777,20 +812,20 @@ public class Service: IService
         
         product.UpdatedAt = DateTimeOffset.UtcNow;
         product.ParentProductId = item.ParentId > 0 ? item.ParentId.ToString() : null;
-        product.ProductCode = item.Code;
-        product.Barcode = item.Barcode;
-        product.ProductName = item.Name;
-        product.OtherName = item.OtherName;
-        product.Status = item.Status?.ToString();
+        product.ProductCode = NormalizeText(item.Code);
+        product.Barcode = NormalizeText(item.Barcode);
+        product.ProductName = NormalizeText(item.Name);
+        product.OtherName = NormalizeText(item.OtherName);
+        product.Status = NormalizeText(item.Status?.ToString());
 
         
         // Danh mục
         product.NhanhCategoryId = item.CategoryId;
-        product.CategoryCode = item.Category?.Code;
-        product.CategoryName = item.Category?.Name;
-        product.InternalCategoryCode = item.InternalCategory?.Code;
+        product.CategoryCode = NormalizeText(item.Category?.Code);
+        product.CategoryName = NormalizeText(item.Category?.Name);
+        product.InternalCategoryCode = NormalizeText(item.InternalCategory?.Code);
         product.NhanhTypeId = item.Type?.Id;
-        product.ProductType = item.Type?.Name;
+        product.ProductType = NormalizeText(item.Type?.Name);
         product.NhanhBrandId = item.BrandId;
         // Giá
         if (item.Prices != null)
@@ -906,21 +941,14 @@ public class Service: IService
         var productsToDelete = await _appDbContext.Products
             .Where(x => !x.IsDeleted && deletedIds.Contains(x.NhanhProductId!))
             .ToListAsync();
-
-        if (productsToDelete.Any())
+        
+        foreach (var p in productsToDelete)
         {
-            foreach (var p in productsToDelete)
-            {
-                p.IsDeleted = true;
-                p.UpdatedAt = DateTimeOffset.UtcNow;
-            }
+            p.IsDeleted = true;
+            p.UpdatedAt = DateTimeOffset.UtcNow;
+        }
 
-            await _appDbContext.SaveChangesAsync();
-        }
-        else
-        {
-            return "Sản phẩm không tồn tại";
-        }
+        await _appDbContext.SaveChangesAsync();
 
         return $"Xóa thành công {productsToDelete.Count} sản phẩm từ Nhanh.vn.";
     }
@@ -1120,4 +1148,11 @@ public class Service: IService
                     UpdatedAt = detail.UpdatedAt
                 }).ToList()
         };
+
+    private static string? NormalizeText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var cleaned = text.Replace('\u00A0', ' ').Trim().Normalize(NormalizationForm.FormC);
+        return string.IsNullOrWhiteSpace(cleaned) ? null : cleaned;
+    }
 }

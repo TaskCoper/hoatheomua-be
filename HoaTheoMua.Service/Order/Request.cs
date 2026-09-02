@@ -6,6 +6,23 @@ namespace HoaTheoMua.Service.Order;
 
 public class Request
 {
+
+    public class OrderDetailMetadata
+    {
+        public Guid SubId { get; set; }
+        public List<MaterialSnapshot> Materials { get; set; } = new();
+    }
+
+    public class MaterialSnapshot
+    {
+        public Guid MatId { get; set; }
+        public decimal Quantity { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal? Price { get; set; }
+        public bool IsCore { get; set; }
+    }
+
+
     public class CreateOrderRequest : AhaMoveRequest.EstimateShippingFeeRequest
     {
         public required string Gateway { get; set; }
@@ -13,6 +30,8 @@ public class Request
         public List<long>? TagIds { get; set; }
 
         public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.VA;
+        public required PaymentGateway PaymentGateway { get; set; }
+        public required ShippingGateway ShippingGateway { get; set; }
 
         public string? IdentityNumber { get; set; }
 
@@ -28,6 +47,7 @@ public class Request
         public InvoiceType? InvoiceType { get; set; }
         // public required Guid AddressId { get; set; }
         public required string PhoneReceiver { get; set; }
+        public required string FullNameReceiver { get; set; }
         // public string? Email { get; set; }
         // public string? PhoneNumber { get; set; }
         // public string? IdentityNumber { get; set; }
@@ -53,12 +73,25 @@ public class Request
         public int? ParentId { get; set; }
     }
 
+    public class EstimateXanhSmShippingFeeRequest
+    {
+        public decimal Latitude { get; set; }
+        public decimal Longitude { get; set; }
+        public required string Address { get; set; }
+        public required string ShortAddress { get; set; }
+        public required string FullName { get; set; }
+        public required string Phone { get; set; }
+        public string? Remarks { get; set; }
+        public long OrderTime { get; set; }
+        public List<AhaMoveRequest.Items> Items { get; set; } = [];
+    }
+
     public class UpdateAhamoveRequest
     {
         public required string OrderId { get; set; }
-        public string? AhaMoveTrackingUrl { get; set; }
+        public string? ShippingTrackingUrl { get; set; }
         public string? TrackingNumber { get; set; }
-        public decimal? ShippingFee  { get; set; }
+        public decimal? ShippingFee { get; set; }
     }
 
 }

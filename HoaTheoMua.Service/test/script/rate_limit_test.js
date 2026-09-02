@@ -12,7 +12,7 @@ export const options = {
         rate_limit_test: {
             executor: 'constant-arrival-rate',
             // Sử dụng biến môi trường (Environment Variable) để thay đổi tốc độ bắn linh hoạt
-            rate: __ENV.RATE || 10,
+            rate: __ENV.RATE || 20,
             timeUnit: '1s',
             duration: '10s',
             preAllocatedVUs: 50,
@@ -33,7 +33,7 @@ export default function () {
 
     const params = {
         headers: {
-            // ĐIỀN TOKEN CỦA USER VÀO ĐÂY (Bắt buộc cho Policy 'api' và 'heavy')
+            // Có thể điền token để kiểm tra phân vùng theo user; nếu bỏ trống sẽ phân vùng theo IP.
          
         },
     };

@@ -86,6 +86,14 @@ services:
       AhamoveOption__Token: ${AHAMOVE_TOKEN}
       AhamoveOption__BaseUrl: ${AHAMOVE_BASE_URL}
 
+      # XanhSM Express
+      XanhSmOptions__BaseUrl: ${XANHSM_BASE_URL}
+      XanhSmOptions__TokenUrl: ${XANHSM_TOKEN_URL}
+      XanhSmOptions__Scope: ${XANHSM_SCOPE}
+      XanhSmOptions__ClientId: ${XANHSM_CLIENT_ID}
+      XanhSmOptions__ClientSecret: ${XANHSM_CLIENT_SECRET}
+      XanhSmOptions__AcceptLanguage: ${XANHSM_ACCEPT_LANGUAGE}
+
       # NhanhVn Configuration
       NhanhVnOption__Token: ${NHANHVN_TOKEN}
       NhanhVnOption__AppId: ${NHANHVN_APP_ID}

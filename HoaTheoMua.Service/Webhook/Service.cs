@@ -180,6 +180,11 @@ public partial class Service : IService
             throw new NotFoundException("Order not found in description");
         }
 
+        if (order.PaymentGateway != PaymentGateway.Sepay)
+        {
+            throw new ConflictException("Payment gateway does not match SePay webhook");
+        }
+
         // A redelivery of an order we already handled is expected traffic, not an error. BaoKim's
         // handler has always acked these; this one used to throw 404 forever instead.
         if (order.Status is PaidStatus or Fulfillment.Service.FulfillmentFailedStatus)
@@ -250,6 +255,11 @@ public partial class Service : IService
         if (order == null)
         {
             throw new NotFoundException("Order not found for mrc_order_id");
+        }
+
+        if (order.PaymentGateway != PaymentGateway.BaoKim)
+        {
+            throw new ConflictException("Payment gateway does not match BaoKim webhook");
         }
 
         // Anything that isn't a completed payment (failed, cancelled, still pending at the gateway)

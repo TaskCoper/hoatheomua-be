@@ -74,6 +74,14 @@ public class Service : IService
     {
         var order = await LoadOrderAsync(orderId, cancellationToken);
 
+        // Temporary: the saga only knows Ahamove until the XanhSm branch is ported. Failing fast
+        // here is safer than silently booking an Ahamove courier for a XanhSm order.
+        if (order.ShippingGateway != ShippingGateway.Ahamove)
+        {
+            throw new FulfillmentPermanentException(
+                $"Shipping gateway {order.ShippingGateway} is not supported by the saga yet");
+        }
+
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync(cancellationToken);
@@ -119,12 +127,12 @@ public class Service : IService
         }
 
         // Idempotency: a redelivered webhook or a retried message must not book a second courier.
-        if (!string.IsNullOrWhiteSpace(order.AhahaMoveOrderId))
+        if (!string.IsNullOrWhiteSpace(order.ShippingPartyOrderId))
         {
             _logger.LogInformation(
                 "Order {OrderId} already has Ahamove order {AhamoveOrderId}; skipping dispatch",
-                orderId, order.AhahaMoveOrderId);
-            return Plan(dispatched: true, order.AhahaMoveOrderId, order.AhahaMoveTrackingUrl);
+                orderId, order.ShippingPartyOrderId);
+            return Plan(dispatched: true, order.ShippingPartyOrderId, order.ShippingTrackingUrl);
         }
 
         // The original dereferenced companyAddress unconditionally here and threw a bare NRE (a 500)
@@ -207,8 +215,8 @@ public class Service : IService
         // Persisted before anything else can fail. In the original this stayed in the change tracker
         // until the single SaveChanges at the very end, so a later NhanhVn failure discarded the id
         // of a courier that had genuinely been booked - and the retry booked another one.
-        order.AhahaMoveOrderId = createAhamoveOrderResult.OrderId;
-        order.AhahaMoveTrackingUrl = createAhamoveOrderResult.SharedLink;
+        order.ShippingPartyOrderId = createAhamoveOrderResult.OrderId;
+        order.ShippingTrackingUrl = createAhamoveOrderResult.SharedLink;
         order.UpdatedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -571,7 +579,7 @@ public class Service : IService
         _logger.LogCritical(
             "Order {OrderId} parked as {Status} after {Step}: {Reason}. Payment WAS taken - manual refund required. "
             + "ahamoveOrderId={AhamoveOrderId} nhanhOrderId={NhanhOrderId}",
-            orderId, FulfillmentFailedStatus, step, reason, order.AhahaMoveOrderId, order.NhanhOrderId);
+            orderId, FulfillmentFailedStatus, step, reason, order.ShippingPartyOrderId, order.NhanhOrderId);
     }
 
     /// <summary>DELETE /v3/orders/{id} - see https://developers.ahamove.com/docs/api-reference/order-apis/cancel-order</summary>

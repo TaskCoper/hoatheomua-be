@@ -1,0 +1,56 @@
+{
+  "skill": "api-integration-tester",
+  "status": "FAIL",
+  "started_at": "2026-08-31T08:01:52Z",
+  "checks": [
+    {
+      "name": "official_express_contract_inventory",
+      "status": "PASS",
+      "evidence": "Reviewed the current official Vietnam Express documentation for authentication, list-available-services, estimate/order, create-order, orders/{id}, list-user-orders, cancel-order, place/geocode, and webhooks."
+    },
+    {
+      "name": "implemented_door_to_door_types",
+      "status": "PASS",
+      "evidence": "All fields used by the current partner_pay Door-to-door estimate and booking flow are compatible with the official schemas. Response order_time accepts both the documented numeric string and the numeric value observed in production."
+    },
+    {
+      "name": "cod_and_cash_payer_request_contract",
+      "status": "FAIL",
+      "evidence": "XanhSmAddonRequest does not model remain_cod or value, and XanhSmDeliveryPointRequest does not model the point-level addons object or is_payment_check_point boolean. COD and explicit cash-payer requests cannot be represented."
+    },
+    {
+      "name": "geocode_contract",
+      "status": "FAIL",
+      "evidence": "The official GET place/geocode API and its response model are not implemented in the XanhSM client."
+    },
+    {
+      "name": "webhook_contract",
+      "status": "FAIL",
+      "evidence": "No XanhSM webhook envelope, event payload DTOs, or HMAC signature handling were found. Official event_time is an integer, but the documentation is internally inconsistent about seconds versus milliseconds."
+    },
+    {
+      "name": "documented_numeric_precision",
+      "status": "PASS",
+      "evidence": "A few DTO fields use double where the documentation says integer, including service max/min distance and express package max weight. These are wider compatible types and do not create deserialization failures."
+    },
+    {
+      "name": "xanhsm_regression_tests",
+      "status": "PASS",
+      "evidence": "dotnet test filtered to FullyQualifiedName~XanhSm passed 23/23 tests."
+    },
+    {
+      "name": "production_endpoint_after_deployment",
+      "status": "BLOCKED",
+      "evidence": "The order_time compatibility change has not been deployed from this workspace, and no dedicated customer test token was provided for authenticated live contract probes."
+    }
+  ],
+  "failures": [
+    "COD addon fields and point-level payment/addon fields are missing from request DTOs.",
+    "The official geocode API is not represented by the client.",
+    "The official webhook contract and signature verification are not implemented.",
+    "Production verification remains pending deployment and an authenticated test request."
+  ],
+  "redactions": [
+    "No JWT, XanhSM credential, customer data, or raw provider response body was recorded."
+  ]
+}

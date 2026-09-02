@@ -20,8 +20,8 @@ public class Order : BaseEntity<Guid>, IAuditableEntity
     //public string Metadata { get; set; }
     public int? NhanhOrderId { get; set; }
     public string? NhanhTrackingUrl { get; set; }
-    public string? AhahaMoveOrderId { get; set; }
-    public string? AhahaMoveTrackingUrl { get; set; }
+    public string? ShippingPartyOrderId { get; set; }
+    public string? ShippingTrackingUrl { get; set; }
     public string? PaymentUrl { get; set; }
     public string? QrUrl { get; set; }
     public decimal ShippingFee { get; set; }
@@ -30,6 +30,7 @@ public class Order : BaseEntity<Guid>, IAuditableEntity
     public required long OrderTime { get; set; } = 0;
     // public Guid? AddressId { get; set; }
     public required string PhoneReceiver { get; set; }
+    public required string FullNameReceiver { get; set; }
     // public string? Email { get; set; }
     // public string? PhoneNumber { get; set; }
 
@@ -52,6 +53,8 @@ public class Order : BaseEntity<Guid>, IAuditableEntity
     public InvoiceType? InvoiceType { get; set; }
 
     public PaymentMethod PaymentMethod { get; set; }
+    public required PaymentGateway PaymentGateway { get; set; }
+    public required ShippingGateway ShippingGateway { get; set; }
 
     // External user id (from taskcoper-be's token); no FK — this service has no User table.
     public Guid UserId { get; set; }

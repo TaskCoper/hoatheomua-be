@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Service.Product;
 
@@ -91,9 +92,16 @@ public class Request
         public string? search { get; set; }
         public decimal? priceFrom { get; set; }
         public decimal? priceTo { get; set; }
-        public List<string>? sortBy { get; set; }
+        /// <summary>
+        /// Sắp xếp bổ sung sau thứ tự Position. Chỉ nhận "price" và "name",
+        /// tiền tố "-" là giảm dần. Giá trị không nhận diện được sẽ sắp theo CreatedAt.
+        /// Không hỗ trợ sắp xếp theo SellableQuantity vì đây là giá trị tính toán, không có trong DB.
+        /// </summary>
+        public List<string>? sortBy { get; set; } //sellablequantity: số lượng có thể bán giảm dần
         public List<Guid>? categoryIds { get; set; }
+        public ProductType? productType  { get; set; }
         public bool? isPin { get; set; }
+        public bool? IsActive { get; set; }
     }
     
     public class MoveProductRequest
@@ -193,5 +201,29 @@ public class Request
     {
         public List<Guid> ProductIds { get; set; }
     }
-}
+    
+    public class GetMaterialsRequest
+    {
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 20;
+        public string? ProductLabel { get; set; }
+        public string? Search { get; set; }
+        public List<Guid>? ExcludeIds { get; set; }
+    }
 
+    public class GetProductByIds
+    {
+        public List<Guid> ProductIds { get; set; } = new();
+    }
+
+    public class CheckInventoryAvailabilityRequest
+    {
+        public List<CartItem> Items { get; set; } = new();
+    }
+
+    public class CartItem
+    {
+        public Guid ProductId { get; set; }
+        public int Quantity { get; set; }
+    }
+}

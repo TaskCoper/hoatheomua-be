@@ -59,6 +59,14 @@ jobs:
       AHAMOVE_TOKEN: ${{ secrets.AHAMOVE_TOKEN }}
       AHAMOVE_BASE_URL: ${{ secrets.AHAMOVE_BASE_URL }}
 
+      # XanhSM Express
+      XANHSM_BASE_URL: ${{ secrets.XANHSM_BASE_URL }}
+      XANHSM_TOKEN_URL: ${{ secrets.XANHSM_TOKEN_URL }}
+      XANHSM_SCOPE: ${{ secrets.XANHSM_SCOPE }}
+      XANHSM_CLIENT_ID: ${{ secrets.XANHSM_CLIENT_ID }}
+      XANHSM_CLIENT_SECRET: ${{ secrets.XANHSM_CLIENT_SECRET }}
+      XANHSM_ACCEPT_LANGUAGE: ${{ secrets.XANHSM_ACCEPT_LANGUAGE }}
+
       # NhanhVn
       NHANHVN_TOKEN: ${{ secrets.NHANHVN_TOKEN }}
       NHANHVN_APP_ID: ${{ secrets.NHANHVN_APP_ID }}
@@ -104,6 +112,7 @@ jobs:
         run: |
           REPO_LOWER=$(echo "${{ inputs.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "REGISTRY=ghcr.io/$REPO_LOWER" >> $GITHUB_ENV
+
       - name: Pull New Image From Registry
         run: docker compose -f .docker/compose.yaml -p hoatheomua-server-${{ inputs.profile }} --profile ${{ inputs.pull-profile }} pull
 

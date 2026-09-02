@@ -7,6 +7,8 @@ public class OrderDetails: BaseEntity<Guid>, IAuditableEntity
 {
     public string Name { get; set; }
     public int ItemId { get; set; }
+    public Guid ProductId { get; set; }
+    public string? Metadata { get; set; }
     public int Number { get; set; }
     public decimal Price { get; set; }
     public double Height { get; set; }
