@@ -656,12 +656,12 @@ public class LocalProductSearchTest
         // Assert
         Assert.NotNull(result);
         var items = result.Value.Items.Cast<Response.ProductDetailResponse>().ToList();
-        Assert.Equal(5, items.Count);
-        Assert.Contains(items, x => x.ProductName == "P2");
-        Assert.Contains(items, x => x.ProductName == "P3");
+        Assert.Equal(2, items.Count);
         Assert.Contains(items, x => x.ProductName == "P4");
-        Assert.Contains(items, x => x.ProductName == "P5");
         Assert.Contains(items, x => x.ProductName == "P6");
         Assert.DoesNotContain(items, x => x.ProductName == "P1");
+        Assert.DoesNotContain(items, x => x.ProductName == "P2");
+        Assert.DoesNotContain(items, x => x.ProductName == "P3");
+        Assert.DoesNotContain(items, x => x.ProductName == "P5");
     }
 }

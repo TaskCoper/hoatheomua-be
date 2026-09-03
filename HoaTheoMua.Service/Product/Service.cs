@@ -441,16 +441,11 @@ public class Service : IService
             switch (request.productType.Value)
             {
                 case ProductType.Material:
-                    var vatLieuNfc = "vật liệu".Normalize(NormalizationForm.FormC);
-                    var vatLieuNfd = "vật liệu".Normalize(NormalizationForm.FormD);
-                    var thanhPhanNfc = "thành phần".Normalize(NormalizationForm.FormC);
-                    var thanhPhanNfd = "thành phần".Normalize(NormalizationForm.FormD);
+                    const string vatLieuToken = ",vậtliệu,";
                     query = query.Where(x =>
                         x.ProductLabel != null &&
-                        (x.ProductLabel.ToLower().Contains(vatLieuNfc) ||
-                         x.ProductLabel.ToLower().Contains(vatLieuNfd) ||
-                         x.ProductLabel.ToLower().Contains(thanhPhanNfc) ||
-                         x.ProductLabel.ToLower().Contains(thanhPhanNfd)));
+                        ("," + x.ProductLabel.ToLower().Replace(" ", "") + ",")
+                        .Contains(vatLieuToken));
                     break;
                 
                 case ProductType.Combo:
@@ -1762,74 +1757,63 @@ public class Service : IService
         request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
-        var vatLieuNfc = "vật liệu".Normalize(NormalizationForm.FormC);
-        var vatLieuNfd = "vật liệu".Normalize(NormalizationForm.FormD);
-        var phuLieuNfc = "phụ liệu".Normalize(NormalizationForm.FormC);
-        var phuLieuNfd = "phụ liệu".Normalize(NormalizationForm.FormD);
-        var thanhPhanNfc = "thành phần".Normalize(NormalizationForm.FormC);
-        var thanhPhanNfd = "thành phần".Normalize(NormalizationForm.FormD);
+        const string vatLieuToken = ",vậtliệu,";
+        const string phuLieuToken = ",phụliệu,";
 
         var query = _dbContext.Products
             .AsNoTracking()
-            .Where(product => !product.IsDeleted &&
-                              product.ProductLabel != null &&
-                              (product.ProductLabel.ToLower().Contains(vatLieuNfc) ||
-                               product.ProductLabel.ToLower().Contains(vatLieuNfd) ||
-                               product.ProductLabel.ToLower().Contains(phuLieuNfc) ||
-                               product.ProductLabel.ToLower().Contains(phuLieuNfd) ||
-                               product.ProductLabel.ToLower().Contains(thanhPhanNfc) ||
-                               product.ProductLabel.ToLower().Contains(thanhPhanNfd)));
+            .Where(product => !product.IsDeleted && product.ProductLabel != null)
+            .Select(product => new
+            {
+                Product = product,
+                NormalizedProductLabel = "," + product.ProductLabel!.ToLower().Replace(" ", "") + ","
+            })
+            .Where(item =>
+                item.NormalizedProductLabel.Contains(vatLieuToken) ||
+                item.NormalizedProductLabel.Contains(phuLieuToken));
 
         if (request.ExcludeIds != null && request.ExcludeIds.Any())
         {
-            query = query.Where(product => !request.ExcludeIds.Contains(product.Id));
+            query = query.Where(item => !request.ExcludeIds.Contains(item.Product.Id));
         }
 
         if (!string.IsNullOrWhiteSpace(request.ProductLabel))
         {
-            var rawLabel = request.ProductLabel.Trim().ToLower();
-            var labelNfc = rawLabel.Normalize(NormalizationForm.FormC);
-            var labelNfd = rawLabel.Normalize(NormalizationForm.FormD);
+            var productLabel = request.ProductLabel
+                .Trim()
+                .ToLowerInvariant()
+                .Replace(" ", "");
+            var productLabelToken = $",{productLabel},";
 
-            query = query.Where(product =>
-                product.ProductLabel != null &&
-                (product.ProductLabel.ToLower().Contains(rawLabel) ||
-                 product.ProductLabel.ToLower().Contains(labelNfc) ||
-                 product.ProductLabel.ToLower().Contains(labelNfd)));
+            query = query.Where(item => item.NormalizedProductLabel.Contains(productLabelToken));
         }
         
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var normalizedSearch = request.Search.Trim().ToLower();
-            var searchNfc = normalizedSearch.Normalize(NormalizationForm.FormC);
-            var searchNfd = normalizedSearch.Normalize(NormalizationForm.FormD);
 
-            query = query.Where(product =>
-                (product.ProductName != null &&
-                 (product.ProductName.ToLower().Contains(normalizedSearch) ||
-                  product.ProductName.ToLower().Contains(searchNfc) ||
-                  product.ProductName.ToLower().Contains(searchNfd))) ||
-                (product.ProductCode != null &&
-                 (product.ProductCode.ToLower().Contains(normalizedSearch) ||
-                  product.ProductCode.ToLower().Contains(searchNfc) ||
-                  product.ProductCode.ToLower().Contains(searchNfd))));
+            query = query.Where(item =>
+                (item.Product.ProductName != null &&
+                 item.Product.ProductName.ToLower().Trim().Contains(normalizedSearch)) ||
+                (item.Product.ProductCode != null &&
+                 item.Product.ProductCode.ToLower().Trim().Contains(normalizedSearch)));
         }
         
         var totalItems = await query.CountAsync();
 
         var items = await query
-            .OrderByDescending(x => x.CreatedAt)
+            .OrderByDescending(x => x.Product.CreatedAt)
             .Skip((request.PageIndex - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(product => new Response.MaterialResponse
+            .Select(item => new Response.MaterialResponse
             {
-                MaterialId = product.Id.ToString(),
-                MaterialCode = product.ProductCode,
-                MaterialName = product.ProductName,
-                Unit = product.Unit,
-                AvailableForSale = product.AvailableForSale ?? 0,
-                CoverImage = product.CoverImage,
-                ProductLabel = product.ProductLabel
+                MaterialId = item.Product.Id.ToString(),
+                MaterialCode = item.Product.ProductCode,
+                MaterialName = item.Product.ProductName,
+                Unit = item.Product.Unit,
+                AvailableForSale = item.Product.AvailableForSale ?? 0,
+                CoverImage = item.Product.CoverImage,
+                ProductLabel = item.Product.ProductLabel
             })
             .ToListAsync();
 
