@@ -16,7 +16,6 @@ public class Service : IService
         _dbContext = dbContext;
     }
 
-    private const string MaterialLabel = "Vật liệu";
     private const string ComponentLabel = "Thành phần";
     private const string AuxiliaryLabel = "Phụ liệu";
     private const string ComboProductType = "Combo";
@@ -24,20 +23,12 @@ public class Service : IService
     private sealed record MaterialInfo(Guid Id, string? ProductLabel, string? ProductType, string? Unit);
     private sealed record AddMaterialInfo(Guid Id, string? ProductLabel, string? Unit);
     
-    private static bool HasLabel(string? value, string expected)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return false;
-        if (string.Equals(value.Trim(), expected, StringComparison.OrdinalIgnoreCase)) return true;
-        var parts = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return parts.Any(p => string.Equals(p, expected, StringComparison.OrdinalIgnoreCase))
-               || value.Contains(expected, StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool HasLabel(string? value, string expected) =>
+        string.Equals(value?.Trim(), expected, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsMaterial(string? productLabel, string? productType) =>
-        HasLabel(productLabel, MaterialLabel) ||
         HasLabel(productLabel, ComponentLabel) ||
         HasLabel(productLabel, AuxiliaryLabel) ||
-        HasLabel(productType, MaterialLabel) ||
         HasLabel(productType, ComponentLabel) ||
         HasLabel(productType, AuxiliaryLabel);
 
@@ -46,7 +37,7 @@ public class Service : IService
 
     private static string? ResolveMaterialLabel(string? productLabel, string? productType)
     {
-        if (HasLabel(productLabel, MaterialLabel) || HasLabel(productLabel, ComponentLabel) || HasLabel(productLabel, AuxiliaryLabel))
+        if (HasLabel(productLabel, ComponentLabel) || HasLabel(productLabel, AuxiliaryLabel))
             return productLabel;
 
         return productType;
@@ -56,7 +47,7 @@ public class Service : IService
         HasLabel(unit, "bó") || HasLabel(unit, "giỏ") || HasLabel(unit, "chậu");
 
     private static decimal CalculateParentQuantity(decimal requestedQuantity, string? productLabel, string? unit) =>
-        (HasLabel(productLabel, MaterialLabel) || HasLabel(productLabel, ComponentLabel)) && HasLabel(unit, "cành")
+        HasLabel(productLabel, ComponentLabel) && HasLabel(unit, "cành")
             ? Math.Floor(requestedQuantity)
             : requestedQuantity;
 
@@ -146,7 +137,6 @@ public class Service : IService
             .ToListAsync();
 
         if (requestMaterials.Count != matIds.Count || requestMaterials.Any(x =>
-                !HasLabel(x.ProductLabel, MaterialLabel) &&
                 !HasLabel(x.ProductLabel, ComponentLabel) &&
                 !HasLabel(x.ProductLabel, AuxiliaryLabel)))
             throw new NotFoundException("Vật liệu không tồn tại hoặc không hợp lệ");
