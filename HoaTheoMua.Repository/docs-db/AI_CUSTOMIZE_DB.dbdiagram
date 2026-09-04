@@ -1,0 +1,188 @@
+// AI Customize Database Schema
+// Project: HTM_Flourist_AI
+// Date: 2026-08-28
+//
+// Flower generation is synchronous. There are no flower_requests or
+// flower_ai_jobs tables: request data is passed to the AI module and only a
+// successful result is persisted.
+
+Enum platform_type {
+  zalo
+  facebook
+  instagram
+}
+
+Enum generation_type {
+  flower
+  card
+  post
+}
+
+Enum system_prompt_types {
+  flower
+  card
+  post
+}
+
+Enum form_type {
+  go_may
+  calligraphy
+}
+
+// Prompt hệ thống cho từng loại generation
+Table system_prompts {
+  id uuid [pk]
+  type system_prompt_types
+  content text
+}
+
+// Tiêu chuẩn nội dung cho từng nền tảng
+Table platform_standards {
+  id uuid [pk]
+  platform platform_type
+  description text
+}
+
+// Bảng có sẵn trong Core Database; dùng cho cấu hình thiệp.
+Table Config {
+  id uuid [pk]
+  key varchar
+  value jsonb
+  is_public boolean
+  group varchar
+  kind varchar
+  user_id uuid
+  created_at timestamp
+  updated_at timestamp
+  is_deleted boolean
+  // Tối đa một record is_public=true, is_deleted=false cho exact (group,key)
+}
+
+// Template dùng để tạo card
+Table card_templates {
+  id uuid [pk]
+  name varchar
+  description text
+  character_limit int
+  image_url varchar
+  metadata json
+  is_active boolean
+  created_at timestamp
+  updated_at timestamp
+  is_deleted boolean
+}
+
+// Bảng products ở Core Database. sellableQuantity là derived value tính bằng
+// CalculateAvailableQty từ dữ liệu live; không thêm column sellableQuantity.
+Table products {
+  id uuid [pk]
+  is_active boolean
+  is_deleted boolean
+}
+
+Table base_posts {
+  id uuid [pk]
+  content text
+  image_url varchar
+}
+
+Table generated_posts {
+  id uuid [pk]
+  content text
+  image_url varchar
+  user_id uuid
+  created_at timestamp
+}
+
+// Chỉ lưu kết quả tạo hoa thành công; input_snapshot là snapshot bất biến đã
+// validate trước AI, gồm Product/Mockup, bytes hoặc version/hash ảnh và full prompt.
+Table generated_flowers {
+  id uuid [pk]
+  image_url varchar
+  user_id uuid
+  input_snapshot json
+  created_at timestamp
+}
+
+Table generated_cards {
+  id uuid [pk]
+  content text
+  image_url varchar
+  user_id uuid
+  created_at timestamp
+
+  form_type form_type
+  size_key varchar
+  sender_name varchar
+  receiver_name varchar
+  message_content text
+  attached_image_url varchar
+
+  size_name varchar
+  size_width decimal
+  size_height decimal
+  size_base_price decimal
+  size_max_words int
+  word_count int
+  word_config_snapshot json
+
+  is_confirmed boolean
+  base_price decimal
+  extra_price decimal
+  total_price decimal
+}
+
+Table post_histories {
+  id uuid [pk]
+  input text
+  base_id uuid
+  output_id uuid
+  system_prompt_id uuid
+  metadata json
+  created_at timestamp
+}
+
+// Mockup được quản lý ở Core Database.
+Table mockup {
+  id uuid [pk]
+  name varchar
+  description text
+  image_url varchar
+  is_active boolean
+  is_deleted boolean
+  created_at timestamp
+  updated_at timestamp
+}
+
+// Lịch sử kết quả thành công. metadata là JSON snapshot/provenance bất biến.
+// Flower metadata lưu Product/Mockup/prompt/validated_at; Card metadata lưu
+// source_type, origin_product_id, generated_flower_id và template/config/prompt.
+Table client_histories {
+  id uuid [pk]
+  user_id uuid
+  input text
+  type generation_type
+  system_prompt_id uuid
+  metadata json
+  created_at timestamp
+  base_id uuid
+  output_id uuid
+}
+
+// Config card sử dụng: group = "card_size" hoặc "card_config",
+// kind = "Setting"; value chứa JSON của size hoặc calligraphy_words.
+
+Ref: post_histories.system_prompt_id > system_prompts.id
+Ref: client_histories.system_prompt_id > system_prompts.id
+
+// Polymorphic references in client_histories.
+Ref: client_histories.base_id > products.id             // flower; card từ combo thường
+Ref: client_histories.base_id > generated_flowers.id    // card từ bó hoa AI
+Ref: client_histories.output_id > generated_flowers.id  // flower
+Ref: client_histories.output_id > generated_cards.id    // card
+Ref: client_histories.output_id > generated_posts.id    // post
+
+// Resolve Order: generated_card -> client_histories(type=card); nếu base_id là
+// generated_flower thì tìm client_histories(type=flower) bằng output_id. Không thêm
+// generated_cards.source_flower_id. Soft-delete không xóa history/snapshot;
+// trạng thái Product live vẫn quyết định khả năng tạo Order.
