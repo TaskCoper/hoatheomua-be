@@ -20,9 +20,9 @@ public class OrderController : ControllerBase
     [HttpGet("/api/v1/orders")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
 
-    public async Task<IActionResult> GetOrderById(int pageIndex, int pageSize)
+    public async Task<IActionResult> GetOrderById(int pageIndex, int pageSize, string? status = null)
     {
-        var result = await _orderService.GetOrderPaginationResponse(pageIndex, pageSize);
+        var result = await _orderService.GetOrderPaginationResponse(pageIndex, pageSize, status);
         return Ok(result);
     }
 
