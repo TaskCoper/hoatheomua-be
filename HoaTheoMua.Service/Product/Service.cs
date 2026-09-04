@@ -585,7 +585,7 @@ public class Service : IService
 
         if (response == null)
         {
-            throw new NotFoundException("PRODUCT_NOT_FOUND");
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
         }
 
         // Giai đoạn 2: Xác định sản phẩm cha nếu sản phẩm hiện tại là biến thể.
@@ -1654,7 +1654,7 @@ public class Service : IService
 
         if (product == null)
         {
-            throw new NotFoundException("PRODUCT_NOT_FOUND");
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
         }
 
         // ParentProductId của Nhanh.vn là NhanhProductId của sản phẩm cha,
