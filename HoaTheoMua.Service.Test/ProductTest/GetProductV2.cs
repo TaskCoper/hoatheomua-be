@@ -218,7 +218,7 @@ namespace HoaTheoMua.Service.Test.ProductTest
             {
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "P1", ProductType = "Combo", IsDeleted = false },
                 new ProductEntity { Id = Guid.NewGuid(), ProductName = "P2", ProductType = "Sản phẩm", IsDeleted = false },
-                new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "Thành phần", IsDeleted = false }
+                new ProductEntity { Id = Guid.NewGuid(), ProductName = "P3", ProductLabel = "Vật liệu", IsDeleted = false }
             };
             var dbContext = CreateMockDbContext(products);
             var service = CreateService(dbContext);
