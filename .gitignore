@@ -478,3 +478,5 @@ HoaTheoMua.Api/appsettings.Development.json
 !.docker/.env.sample
 .env
 .claude/
+
+hoatheomua-documentation/Service - Fulfillment/
