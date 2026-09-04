@@ -40,6 +40,7 @@ public class Response
         public string ReceiptEmail { get; set; } = string.Empty;
         public string ReceiptFullName { get; set; } = string.Empty;
         public string ReceiptPhoneNumber { get; set; } = string.Empty;
+        public string Address {get; set; } = string.Empty;
         public decimal TotalFee { get; set; }
         public List<OrderItemSummaryResponse> Items { get; set; } = new();
 

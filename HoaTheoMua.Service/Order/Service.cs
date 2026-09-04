@@ -143,6 +143,7 @@ public class Service : IService
             OrderId = x.Id,
             Status = x.Status,
             TrackNumber = x.TrackNumber,
+            Address = x.Address,
             // NhanhOrderId = x.NhanhOrderId!,
             // NhanhTrackingUrl = x.NhanhTrackingUrl!,
             ShippingPartyOrderId = x.ShippingPartyOrderId!,
