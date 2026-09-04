@@ -200,9 +200,6 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
 
-    // Nhanh.vn depot the shop ships from, used when the config value is absent.
-    private const int DefaultDepotId = 129255;
-
     // VAT applied to the product subtotal when the buyer requests an invoice.
     private const decimal VatRate = 0.08m;
 
@@ -250,18 +247,12 @@ public class Service : IService
             .Select(x => x.ItemId.ToString())
             .Distinct()
             .ToList();
+        
 
-        var hasInactiveProduct = await _dbContext.Products
-            .AnyAsync(x => itemIds.Contains(x.NhanhProductId!) && (!x.IsActive || x.IsDeleted));
+        // var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
+        // var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
 
-        if (hasInactiveProduct)
-        {
-            throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
-        }
-
-        var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var depotId = nhanhConfigs.GetValue("nhanhvn.default_depot", DefaultDepotId);
-        var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
+        var products = await FetchLocalProductsAsync(request.Items);
 
         // Requested quantity keyed by product id — reused for pricing and order details.
         var quantityByItemId = request.Items.ToDictionary(x => x.ItemId, x => x.Number);
@@ -274,7 +265,7 @@ public class Service : IService
             throw new BadRequestException("Đơn hàng không tồn tại trong hệ thống");
         }
 
-        var comboSnapshots = await EnsureItemsInStockAsync(request.Items, depotId);
+        var comboSnapshots = await EnsureItemsInStockAsync(request.Items);
 
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
@@ -510,7 +501,74 @@ public class Service : IService
     //     return result;
     // }
 
-    // Fetches the catalog rows for the requested items from Nhanh.vn.
+    private async Task<List<NhanhProductData>> FetchLocalProductsAsync(List<AhaMoveRequest.Items> items)
+    {
+        var productIds = items
+            .Select(x => x.ProductId)
+            .Distinct()
+            .ToList();
+
+        var productRows = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => productIds.Contains(x.Id))
+            .Select(x => new
+            {
+                x.Id,
+                x.NhanhProductId,
+                x.ProductName,
+                x.Price,
+                x.Height,
+                x.Weight,
+                x.Length,
+                x.Width,
+                x.IsActive,
+                x.IsDeleted
+            })
+            .ToListAsync();
+
+        if (productRows.Any(x => !x.IsActive || x.IsDeleted))
+        {
+            throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
+        }
+
+        if (productRows.Count != productIds.Count)
+        {
+            throw new BadRequestException("Đơn hàng có sản phẩm không tồn tại hoặc đã ngừng hoạt động");
+        }
+
+        if (productRows.Any(x =>
+                string.IsNullOrWhiteSpace(x.NhanhProductId) ||
+                !int.TryParse(x.NhanhProductId, out _)))
+        {
+            throw new BadRequestException("Đơn hàng có sản phẩm không có NhanhProductId hợp lệ");
+        }
+
+        var productRowsById = productRows.ToDictionary(x => x.Id);
+
+        return productIds.Select(productId =>
+        {
+            var product = productRowsById[productId];
+
+            return new NhanhProductData
+            {
+                Id = int.Parse(product.NhanhProductId!),
+                Name = product.ProductName ?? string.Empty,
+                Prices = new NhanhPrices
+                {
+                    Retail = product.Price ?? 0m
+                },
+                Shipping = new NhanhShipping
+                {
+                    Height = (double)(product.Height ?? 0m),
+                    Weight = (double)(product.Weight ?? 0m),
+                    Length = (double)(product.Length ?? 0m),
+                    Width = (double)(product.Width ?? 0m)
+                }
+            };
+        }).ToList();
+    }
+
+    // Legacy fallback: fetches the catalog rows for the requested items from Nhanh.vn.
     private async Task<List<NhanhProductData>> FetchNhanhProductsAsync(
         List<AhaMoveRequest.Items> items,
         GroupConfig configs,
@@ -556,8 +614,8 @@ public class Service : IService
         return result.Data;
     }
 
-    // Verifies every requested item has enough stock in the target depot.
-    private async Task<Dictionary<int, Request.OrderDetailMetadata>> EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items, int depotId)
+    // Verifies every requested item has enough locally synchronized stock.
+    private async Task<Dictionary<int, Request.OrderDetailMetadata>> EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items)
     {
         var productIds = items
             .Select(x => x.ProductId)
@@ -657,7 +715,7 @@ public class Service : IService
                     item.Number * material.Quantity));
             }
         }
-
+        //step này: đã có được các ItemtId và số lượng cần mua của Item đó 
         var itemRequest = stockItems
             .GroupBy(x => x.ItemId)
             .Select(x => new
@@ -666,43 +724,50 @@ public class Service : IService
                 Number = x.Sum(item => item.Number)
             })
             .ToList();
+        //map ra nó ItemId để vào product lấy ra được số lượng có thể bán
+        // => map ra nhanhproductId với số lượng có thể bán của của ItemId đó
+        // => Từ đó tạo ra thành một cái Dictionary vơi
+        var nhanhProductIds = itemRequest
+            .Select(x => x.ItemId.ToString())
+            .ToList();
+
+        var availableForSaleByItemId = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x =>
+                !x.IsDeleted &&
+                x.IsActive &&
+                x.NhanhProductId != null &&
+                nhanhProductIds.Contains(x.NhanhProductId))
+            .Select(x => new
+            {
+                x.NhanhProductId,
+                AvailableForSale = x.AvailableForSale ?? 0m
+            })
+            .ToDictionaryAsync(
+                x => x.NhanhProductId!,
+                x => x.AvailableForSale);
 
         foreach (var item in itemRequest)
         {
-            var productDetailRequest = new HoaTheoMua.Service.Product.Request.ProductDetailRequest
+            if (!availableForSaleByItemId.TryGetValue(
+                    item.ItemId.ToString(),
+                    out var availableForSale))
             {
-                Filters = new HoaTheoMua.Service.Product.Request.ProductDetailFilters
-                {
-                    Id = item.ItemId.ToString()
-                }
-            };
-
-            var detail = await _serviceProduct.GetProductDetails(productDetailRequest);
-
-            var json = JsonConvert.SerializeObject(detail);
-            var depots = JObject.Parse(json)["Data"]?["Inventory"]?["Depots"] as JArray;
-
-            if (depots == null || depots.Count == 0)
-            {
-                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho");
+                throw new BadRequestException(
+                    $"Sản phẩm Id={item.ItemId} không tồn tại hoặc đã ngừng hoạt động");
             }
 
-            var targetDepot = depots.FirstOrDefault(d => (int?)d["Id"] == depotId);
-            if (targetDepot == null)
+            if (item.Number > availableForSale)
             {
-                throw new BadRequestException($"Sản phẩm Id={item.ItemId} không có dữ liệu tồn kho tại depot {depotId}");
-            }
-
-            var available = (decimal?)targetDepot["Available"] ?? 0m;
-            if (item.Number > available)
-            {
-                throw new BadRequestException($"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {available})");
+                throw new BadRequestException(
+                    $"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {availableForSale})");
             }
         }
 
         return comboSnapshots;
     }
 
+    // Calls Ahamove to estimate the shipping fee from the shop's warehouse to the buyer.
     private async Task<decimal> EstimateShippingFeeAsync(
         Request.CreateOrderRequest request,
         List<NhanhProductData> products,
@@ -892,18 +957,7 @@ public class Service : IService
             throw new BadRequestException("Company pickup address is not configured");
         }
 
-        var itemIds = request.Items.Select(item => item.ItemId.ToString()).Distinct().ToList();
-        var hasInactiveProduct = await _dbContext.Products
-            .AnyAsync(
-                product => itemIds.Contains(product.NhanhProductId!) && (!product.IsActive || product.IsDeleted),
-                cancellationToken);
-        if (hasInactiveProduct)
-        {
-            throw new BadRequestException("Đơn hàng có sản phẩm đã ngừng hoạt động");
-        }
-
-        var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs, cancellationToken);
+        var products = await FetchLocalProductsAsync(request.Items);
         var productIds = products.Select(product => product.Id).ToHashSet();
         if (request.Items.Any(item => !productIds.Contains(item.ItemId)))
         {
