@@ -243,6 +243,25 @@ public class Response
         public int? SellableQuantity { get; set; }
         public bool IsActive { get; set; } //trả ra linh hoạt giữa cha và con
     }
+
+    public class GetProductByIdsResult
+    {
+        public List<GetProductByIdsResponse> Products { get; set; } = new();
+        public int ReplaceableMaterialCount { get; set; }
+        public List<ReplaceableMaterialResponse> ReplaceableMaterials { get; set; } = new();
+    }
+
+    public class SupportMaterialReplacementResponse
+    {
+        public int ReplaceableMaterialCount { get; set; }
+        public List<ReplaceableMaterialResponse> ReplaceableMaterials { get; set; } = new();
+    }
+
+    public class ReplaceableMaterialResponse
+    {
+        public string? MaterialName { get; set; }
+        public decimal Quantity { get; set; }
+    }
     
     public class GetProductDetailByCustomerResponse
     {

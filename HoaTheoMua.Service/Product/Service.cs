@@ -1508,21 +1508,30 @@ public class Service : IService
         return result;
     }
 
-    public async Task<List<Response.GetProductByIdsResponse>> GetProductByIds(Request.GetProductByIds request)
+    public async Task<Response.GetProductByIdsResult> GetProductByIds(Request.GetProductByIds request)
     {
         // Business rule của IsActive:
         // - Sản phẩm con chỉ active khi cả cha và chính nó đều active.
         // - Sản phẩm cha có con chỉ active khi chính nó và toàn bộ con chưa bị xóa đều active.
         // - Sản phẩm độc lập dùng IsActive của chính nó.
-        var productIds = request?.ProductIds?
-            .Where(id => id != Guid.Empty)
-            .Distinct()
-            .ToList();
-
-        if (productIds == null || productIds.Count == 0)
+        if (request?.Items == null || request.Items.Count == 0)
         {
             throw new BadRequestException("Product IDs are required");
         }
+
+        if (request.Items.Any(item => item.ProductId == Guid.Empty || item.Number <= 0))
+        {
+            throw new BadRequestException(
+                "Each item must have a valid ProductId and Number greater than 0");
+        }
+
+        var numberByProductId = request.Items
+            .GroupBy(item => item.ProductId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Sum(item => item.Number));
+
+        var productIds = numberByProductId.Keys.ToList();
 
         var products = await _dbContext.Products
             .AsNoTracking()
@@ -1532,7 +1541,7 @@ public class Service : IService
 
         if (products.Count == 0)
         {
-            return new List<Response.GetProductByIdsResponse>();
+            return new Response.GetProductByIdsResult();
         }
 
         // Với input là sản phẩm con, thu thập ID cha để tra trạng thái cha.
@@ -1593,7 +1602,7 @@ public class Service : IService
         // Tạo lookup để map response đúng thứ tự productIds trong request.
         var productsById = products.ToDictionary(p => p.Id);
 
-        return productIds
+        var productResults = productIds
             .Where(productsById.ContainsKey)
             .Select(productId =>
             {
@@ -1629,8 +1638,73 @@ public class Service : IService
                 };
             })
             .ToList();
+
+        var supportMaterialResult = await GetReplaceableSupportMaterialsAsync(
+            numberByProductId);
+
+        return new Response.GetProductByIdsResult
+        {
+            Products = productResults,
+            ReplaceableMaterialCount = supportMaterialResult.ReplaceableMaterialCount,
+            ReplaceableMaterials = supportMaterialResult.ReplaceableMaterials
+        };
     }
 
+    private async Task<Response.SupportMaterialReplacementResponse>
+        GetReplaceableSupportMaterialsAsync(
+            IReadOnlyDictionary<Guid, int> numberByProductId)
+    {
+        var comboIds = numberByProductId.Keys.ToList();
+
+        var supportMaterials = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(specification =>//lọc ra các dòng thõa mãn bên dới (dòng thì có mat với sub bên trong)
+                comboIds.Contains(specification.SubId) &&
+                !specification.IsCore &&
+                specification.IsActive &&
+                !specification.IsDeleted &&
+                specification.Sub.IsActive &&
+                !specification.Sub.IsDeleted &&
+                specification.Mat.IsActive &&
+                !specification.Mat.IsDeleted)
+            .Select(specification => new//biến mỗi dòng phía trên thành một object chứa dữ liệu bên dưới 
+            {
+                ComboId = specification.SubId,
+                MaterialId = specification.MatId,
+                MaterialName = specification.Mat.ProductName,
+                Quantity = specification.Quantity!.Value,
+                AvailableForSale = specification.Mat.AvailableForSale ?? 0m
+            })
+            .ToListAsync();
+
+        var replaceableMaterials = supportMaterials
+            .Select(material => new
+            {
+                material.MaterialId,
+                material.MaterialName,
+                material.Quantity,
+                material.AvailableForSale,
+                RequiredQuantity =
+                    material.Quantity * numberByProductId[material.ComboId]
+            })
+            .GroupBy(material => material.MaterialId)
+            .Where(group =>
+                group.Sum(material => material.RequiredQuantity) >
+                group.First().AvailableForSale)
+            .Select(group => new Response.ReplaceableMaterialResponse
+            {
+                MaterialName = group.First().MaterialName,
+                Quantity = group.First().Quantity
+            })
+            .ToList();
+
+        return new Response.SupportMaterialReplacementResponse
+        {
+            ReplaceableMaterialCount = replaceableMaterials.Count,
+            ReplaceableMaterials = replaceableMaterials
+        };
+    }
+    
     public async Task<Response.GetProductDetailByCustomerResponse> GetProductDetailByCustomer(Guid id)
     {
         var product = await _dbContext.Products

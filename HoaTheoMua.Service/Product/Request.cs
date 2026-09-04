@@ -212,10 +212,16 @@ public class Request
     }
 
     public class GetProductByIds
-    {
-        public List<Guid> ProductIds { get; set; } = new();
+    {    
+        public List<GetProductByIdsItem> Items { get; set; } = new();
     }
-
+    
+    public class GetProductByIdsItem
+    {
+        public Guid ProductId { get; set; }
+        public int Number { get; set; }
+    }
+    
     public class CheckInventoryAvailabilityRequest
     {
         public List<CartItem> Items { get; set; } = new();
