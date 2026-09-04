@@ -53,27 +53,95 @@ public class Service : IService
     }
 
 
-    public async Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize)
+    public async Task<BasePaginationResponse> GetOrderPaginationResponse(
+        int pageIndex,
+        int pageSize,
+        string? status = null)
     {
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
         var userId = _currentUser.GetRequiredUserId();
 
-        var orders = _dbContext.Orders
-            .Where(x => x.IsDeleted == false && x.UserId == userId);
-        var totalCount = await orders.CountAsync();
+        var ordersQuery = _dbContext.Orders
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.UserId == userId);
 
-        var items = await orders
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var normalizedStatus = status.Trim().ToLower();
+            ordersQuery = ordersQuery.Where(x => x.Status.ToLower() == normalizedStatus);
+        }
+
+        var totalCount = await ordersQuery.CountAsync();
+
+        var orders = await ordersQuery
+            .Include(x => x.OrderDetails.Where(detail => !detail.IsDeleted))
             .OrderByDescending(o => o.CreatedAt)
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        var result = items.Select(x => new Response.GetOrderResponse
+        var nhanhProductIds = orders
+            .SelectMany(x => x.OrderDetails)
+            .Where(x => !x.IsDeleted)
+            .Select(x => x.ItemId.ToString())
+            .Distinct()
+            .ToList();
+
+        var productRows = new List<Response.OrderProductLookup>();
+        if (nhanhProductIds.Count > 0)
+        {
+            productRows = await _dbContext.Products
+                .AsNoTracking()
+                .Where(x => x.NhanhProductId != null
+                            && nhanhProductIds.Contains(x.NhanhProductId))
+                .Select(x => new Response.OrderProductLookup()
+                {
+                    Id = x.Id,
+                    NhanhProductId = x.NhanhProductId,
+                    ProductName = x.ProductName,
+                    CoverImage = x.CoverImage,
+                    ParentNhanhProductId = x.ParentProductId
+                })
+                .ToListAsync();
+        }
+
+        var productsByNhanhId = productRows
+            .Where(x => !string.IsNullOrWhiteSpace(x.NhanhProductId))
+            .ToDictionary(x => x.NhanhProductId!, x => x);
+
+        var parentNhanhProductIds = productRows
+            .Where(x => !string.IsNullOrWhiteSpace(x.ParentNhanhProductId))
+            .Select(x => x.ParentNhanhProductId!)
+            .Distinct()
+            .ToList();
+
+        var parentRows = new List<Response.OrderProductLookup>();
+        if (parentNhanhProductIds.Count > 0)
+        {
+            parentRows = await _dbContext.Products
+                .AsNoTracking()
+                .Where(x => x.NhanhProductId != null
+                            && parentNhanhProductIds.Contains(x.NhanhProductId))
+                .Select(x => new Response.OrderProductLookup()
+                {
+                    Id = x.Id,
+                    NhanhProductId = x.NhanhProductId,
+                    ProductName = x.ProductName,
+                    CoverImage = x.CoverImage
+                })
+                .ToListAsync();
+        }
+
+        var parentsByNhanhId = parentRows
+            .Where(x => !string.IsNullOrWhiteSpace(x.NhanhProductId))
+            .ToDictionary(x => x.NhanhProductId!, x => x);
+
+        var result = orders.Select(x => new Response.GetOrderResponse
         {
             OrderId = x.Id,
-            Status = x.Status.ToString(),
+            Status = x.Status,
             TrackNumber = x.TrackNumber,
             // NhanhOrderId = x.NhanhOrderId!,
             // NhanhTrackingUrl = x.NhanhTrackingUrl!,
@@ -92,6 +160,38 @@ public class Service : IService
             ReceiptEmail = x.ReceiptEmail!,
             ReceiptFullName = x.ReceiptFullName!,
             ReceiptPhoneNumber = x.ReceiptPhoneNumber!,
+            TotalFee = x.TotalFee,
+            Items = x.OrderDetails
+                .Where(detail => !detail.IsDeleted)
+                .OrderBy(detail => detail.CreatedAt)
+                .Select(detail =>
+                {
+                    productsByNhanhId.TryGetValue(detail.ItemId.ToString(), out var product);
+
+                    Response.ProductSummaryResponse? parent = null;
+                    if (!string.IsNullOrWhiteSpace(product?.ParentNhanhProductId)
+                        && parentsByNhanhId.TryGetValue(product.ParentNhanhProductId, out var parentProduct))
+                    {
+                        parent = new Response.ProductSummaryResponse
+                        {
+                            ProductId = parentProduct.Id,
+                            Name = parentProduct.ProductName ?? string.Empty,
+                            CoverImage = parentProduct.CoverImage
+                        };
+                    }
+
+                    return new Response.OrderItemSummaryResponse
+                    {
+                        ProductId = product?.Id ?? detail.ProductId,
+                        Name = detail.Name,
+                        CoverImage = product?.CoverImage,
+                        Quantity = detail.Number,
+                        Price = detail.Price,
+                        // LineTotal = detail.Price * detail.Number,
+                        Parent = parent
+                    };
+                })
+                .ToList(),
             CreateAt = x.CreatedAt,
             UpdateAt = x.UpdatedAt,
         }).ToList();
