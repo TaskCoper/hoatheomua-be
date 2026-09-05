@@ -158,7 +158,8 @@ public class Service : IService
         return new ProductEntity
         {
             Id = Guid.NewGuid(),
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            IsActive = true
         };
     }
 

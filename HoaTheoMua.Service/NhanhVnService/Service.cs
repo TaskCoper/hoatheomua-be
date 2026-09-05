@@ -65,6 +65,58 @@ public class Service: IService
         }  
         return nhanhProductLable;  
     }
+
+    private const string ProductLabelsConfigKey = "nhanhvn.product_labels";
+    public async Task<string?> GetProductLabelByTagIds(List<int>? tagIds)
+    {
+        if (tagIds == null || tagIds.Count == 0)
+        {
+            return null;
+        }
+
+        var productLabelsConfigValue = await _appDbContext.Configs
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted &&
+                        x.Group == "nhanhvn" &&
+                        x.Key == ProductLabelsConfigKey)
+            .Select(x => x.Value)
+            .FirstOrDefaultAsync();
+
+        if (productLabelsConfigValue == null)
+        {
+            return null;
+        }
+
+        HoaTheoMua.Service.Config.Response.ConfigItem? productLabelsConfig;
+        try
+        {
+            productLabelsConfig = JsonSerializer.Deserialize<HoaTheoMua.Service.Config.Response.ConfigItem>(
+                productLabelsConfigValue);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        if (productLabelsConfig?.Options == null)
+        {
+            return null;
+        }
+
+        var labelsById = productLabelsConfig.Options
+            .Where(x => x.Value.HasValue && !string.IsNullOrWhiteSpace(x.Label))
+            .GroupBy(x => x.Value!.Value)
+            .ToDictionary(x => x.Key, x => x.First().Label!.Trim());
+
+        var labels = tagIds
+            .Distinct()
+            .Where(labelsById.ContainsKey)
+            .Select(tagId => labelsById[tagId]);
+
+        var productLabel = string.Join(", ", labels);
+        return string.IsNullOrWhiteSpace(productLabel) ? null : productLabel;
+    }
+
     public async Task<OrderLabelResponse> GetOrderLabel(OrderLabelRequest orderLabelRequest)
     {
         var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn");
@@ -384,6 +436,7 @@ public class Service: IService
             product.ProductName = NormalizeText(item.Name);
             product.OtherName = NormalizeText(item.OtherName);
             product.Status = NormalizeText(item.Status?.ToString());
+            product.ProductLabel = await GetProductLabelByTagIds(item.TagIds);
 
             // Danh mục — webhook chỉ gửi categoryId/brandId phẳng, không gửi object category/brand,
             // nên CategoryCode/CategoryName dưới đây luôn null với dữ liệu từ webhook.
@@ -817,6 +870,10 @@ public class Service: IService
         product.ProductName = NormalizeText(item.Name);
         product.OtherName = NormalizeText(item.OtherName);
         product.Status = NormalizeText(item.Status?.ToString());
+        if (item.TagIds != null)
+        {
+            product.ProductLabel = await GetProductLabelByTagIds(item.TagIds);
+        }
 
         
         // Danh mục
