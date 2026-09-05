@@ -244,21 +244,18 @@ Table CompanyAddresses {
   UpdatedAt timestamptz
 }
 
-Table Configs {
-  Id uuid [pk]
-  IsDeleted boolean [not null]
-  Key text [not null]
-  Value jsonb [not null]
-  IsPublic boolean [not null, default: false]
-  Group text [not null]
-  Kind text
-  UserId uuid [not null, note: 'External user ID; no local FK']
-  CreatedAt timestamptz [not null]
-  UpdatedAt timestamptz
-
-  indexes {
-    Group
-  }
+Table Config {
+  id uuid [pk]
+  key varchar
+  value jsonb
+  is_public boolean
+  group varchar
+  kind varchar
+  user_id uuid
+  created_at timestamp
+  updated_at timestamp
+  is_deleted boolean
+  // Tối đa một record is_public=true, is_deleted=false cho exact (group,key)
 }
 
 Table JobDescriptions {
@@ -358,6 +355,8 @@ Table OrderDetails {
   Length double [not null]
   Width double [not null]
   OrderId uuid [not null]
+  GeneratedCardIds uuid[] [nullable, default: '{}']
+  GeneratedFlowerIds uuid[] [nullable, default: '{}']
   CreatedAt timestamptz [not null]
   UpdatedAt timestamptz
 }
@@ -638,12 +637,9 @@ Table generated_posts {
 // Hình ảnh hoa được tạo ra
 Table generated_flowers {
   id uuid [pk]
-  name text
-  input_snapshot json
   image_url varchar
   user_id uuid
-  order_id uuid
-  flower_generation_status enum
+  input_snapshot json
   is_deleted boolean
   created_at timestamp
   updated_at timestamp
@@ -655,7 +651,6 @@ Table generated_cards {
   content text
   image_url varchar
   user_id uuid
-  order_id uuid
   form_type form_type
 
   // Thông tin thiệp
@@ -701,7 +696,7 @@ Table post_histories {
   created_at timestamp
 }
 
-// Hình ảnh mockup
+// Mockup được quản lý ở Core Database.
 Table mockup {
   id uuid [pk]
   name varchar
@@ -713,6 +708,7 @@ Table mockup {
   updated_at timestamp
 }
 
+
 // Lịch sử thao tác của người dùng
 Table client_histories {
   id uuid [pk]
@@ -720,7 +716,6 @@ Table client_histories {
   input text
   base_id uuid
   output_id uuid
-  order_id uuid
   type generation_type
   system_prompt_id uuid
   metadata json

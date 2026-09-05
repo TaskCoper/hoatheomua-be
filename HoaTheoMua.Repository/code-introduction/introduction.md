@@ -1,117 +1,129 @@
-# Format chung cho `ST-{number}-introduction.md`
+# Format chung cho file giới thiệu US
 
-Mục tiêu: đọc mục I là hiểu ngay US muốn gì; phần sau là code BE tương ứng.
+Mục tiêu: đọc nhanh để biết US cần bao nhiêu API, từng API làm gì và có code triển khai đầy đủ.
 
-## 1. Nguồn phải đọc
+## 1. Nguồn đối chiếu
 
 Theo thứ tự ưu tiên:
 
-1. Quyết định mới nhất đã chốt với team/customer.
-2. Story và System Test tương ứng trong `docs-us`.
-3. `diagram/db_tong.md`: xem bảng/field trong file này như đã tồn tại thật.
-4. Code trong solution: theo đúng convention hiện tại và chỉ tái sử dụng code có thật.
+1. Quyết định mới nhất đã chốt với customer/team.
+2. Story và System Test tương ứng trong `doc-us`.
+3. `diagram/db_tong.md`: xem bảng và field trong đây như đã tồn tại.
+4. Code hiện tại trong solution: giữ đúng convention của team.
 
 Với DB dynamic:
 
-- Không suy luận FK/navigation từ `docs-db`.
+- Không tự giả định FK/navigation.
 - Tra output bằng `client_histories.type + output_id`.
-- Giải thích rõ vai trò `base_id` theo từng US.
+- Hiểu `base_id` theo đúng flow của từng US.
 
-## 2. Format bắt buộc
+## 2. Cách chọn API
 
-### I. Hiểu nhanh US
+- Một US có thể có một hoặc nhiều API.
+- Chỉ tạo API thật sự cần để FE đi hết Main Flow, Alternative Flow và các System Test liên quan.
+- Gộp dữ liệu vào cùng API khi chúng cùng màn hình, cùng quyền truy cập và số lượng dữ liệu nhỏ. Ví dụ: chi tiết thiệp kèm các Order liên quan.
+- Tách API khi dữ liệu có phân trang riêng, quyền khác nhau, xử lý nặng hoặc được gọi ở thời điểm khác.
+- Tái sử dụng API của US khác nếu đã đáp ứng đúng chức năng; không tạo API trùng.
+- Không tạo một API riêng cho mỗi thao tác FE nếu có thể lấy hợp lý trong cùng response.
+- API danh sách lớn phải phân trang; dữ liệu nhỏ, giới hạn cố định thì không cần.
 
-Phải viết theo cách giải thích cho người chưa đọc US vẫn hình dung được:
+## 3. Format file bắt buộc
 
-1. Mở đầu bằng một câu: **US này dùng để làm gì và không làm gì**.
-2. Mô tả ý tưởng đơn giản bằng chuỗi mũi tên.
-3. Cho ví dụ ID/record cụ thể nếu có group hoặc dữ liệu dynamic.
-4. Mô tả tuần tự luồng User → FE → BE → FE.
-5. Liệt kê ngay các API cần có và mỗi API đáp ứng bước nào.
-6. Chốt một câu về điểm quan trọng nhất của US.
+## I. Các API cần làm
 
-Ví dụ cách viết:
+Mở đầu bằng một câu ngắn về mục đích US, sau đó liệt kê API:
 
 ```text
-US-xxx chỉ dùng để ..., không ...
+US-xxx dùng để ...; không xử lý ...
 
-Hình dung đơn giản:
-A → B → C.
+Cần N API:
 
-Ví dụ:
-Record 1: ...
-Record 2: ...
+1. METHOD /api/v1/...
+   - FE gọi khi nào.
+   - API trả gì.
 
-Luồng hoạt động:
-1. User ...
-2. FE gọi ...
-3. BE ...
-4. FE render ...
-
-Chỉ cần N API:
-METHOD /route — mục đích.
-
-Điểm quan trọng: ...
+2. METHOD /api/v1/...
+   - FE gọi khi nào.
+   - API trả gì.
 ```
 
-Không dùng các câu mô tả chung chung như “xử lý dữ liệu” hoặc “lấy thông tin cần thiết”.
+Nếu cần mô tả flow, chỉ viết một chuỗi ngắn:
 
-### II. Code implement từng API
-
-Sau mục I đi thẳng vào code. Mỗi API theo đúng thứ tự:
-
-#### API N — Tên API
-
-**Vai trò:** API đáp ứng bước nào trong flow phía trên.
-
-**Request**
-
-```http
-METHOD /api/v1/...
+```text
+User thao tác
+→ FE gọi API 1
+→ User click
+→ FE gọi API 2
 ```
 
-```csharp
-// Request.cs — nested class trong class Request
-public class ExampleRequest
-{
-}
-```
+Không diễn giải dài, không lặp nội dung Story.
 
-**Response**
+## II. Code từng API
 
-```csharp
-// Response.cs — nested class trong class Response
-public class ExampleResponse
-{
-}
-```
+Mỗi API trình bày đúng thứ tự sau:
 
-**IService**
+### API N — Tên API
+
+**Vai trò:** một câu ngắn.
+
+### IService
 
 ```csharp
 Task<Response.ExampleResponse> Example(
     Request.ExampleRequest request);
 ```
 
-**Service**
+### Request
+
+```http
+METHOD /api/v1/...
+```
+
+```csharp
+// Request.cs
+public class Request
+{
+    public class ExampleRequest
+    {
+    }
+}
+```
+
+Route/query parameter đơn giản không cần tạo Request DTO.
+
+### Response
+
+```csharp
+// Response.cs
+public class Response
+{
+    public class ExampleResponse
+    {
+    }
+}
+```
+
+Chỉ thêm payload JSON mẫu khi response khó hình dung.
+
+### Service
 
 ```csharp
 public async Task<Response.ExampleResponse> Example(
     Request.ExampleRequest request)
 {
-    // Implementation đầy đủ, tối giản.
+    // Code đầy đủ, tối giản và chạy đúng flow.
 }
 ```
 
-Route parameter đơn giản không cần tạo Request DTO. Response đã đủ dữ liệu thì tái sử dụng, không tạo DTO/API thừa.
+Không để pseudo-code, TODO hoặc gọi helper chưa được định nghĩa.
 
-### III. DB còn thiếu — chỉ viết khi có
+## III. DB còn thiếu — chỉ thêm khi cần
 
-- Nếu DB đủ: bỏ hẳn mục này.
-- Nếu thiếu: đặt cuối file, ghi đúng `table.field`, kiểu dữ liệu, mục đích và lý do bắt buộc.
-- Không tự thêm bảng/field để làm code thuận tiện hơn.
+- DB đủ thì bỏ hẳn mục này.
+- DB thiếu thì ghi ngắn gọn `table.field`, kiểu dữ liệu và mục đích.
+- Không tự thêm bảng/field chỉ để code thuận tiện hơn.
 
-## 3. Convention code bắt buộc
+## 4. Convention code
 
 ```text
 HoaTheoMua.Service/{Module}/
@@ -121,25 +133,24 @@ HoaTheoMua.Service/{Module}/
 └── Service.cs
 ```
 
-- `Request`, `Response` là class bao ngoài; DTO là nested class.
+- `Request` và `Response` là class bao ngoài; DTO là nested class.
 - `Service : IService`; dependency inject qua constructor.
 - Lấy user bằng `ICurrentUserService.GetRequiredUserId()`.
 - Dùng exception trong `HoaTheoMua.Service.Exceptions`.
-- API phân trang trả `BasePaginationResponse` bằng `ApiResponseFactory.BasePagination(...)`.
-- Dùng `PageIndex`, `PageSize`; giới hạn `PageSize` tối đa 100.
 - Query đọc dùng `AsNoTracking()`.
-- Lọc `UserId`, `IsDeleted`, `Type` sớm và chỉ select field cần trả.
-- Phân trang tại DB; tránh N+1 query và không tải binary ảnh qua BE.
-- DB dynamic phải join thủ công bằng ID; không dùng `Include`/navigation giả định.
-- Không gọi class/helper/method chưa tồn tại hoặc chưa được định nghĩa trong file.
+- Lọc sớm `UserId`, `IsDeleted`, `Type` và ownership.
+- DB dynamic join thủ công bằng ID; không dùng navigation giả định.
+- API phân trang dùng `PageIndex`, `PageSize ≤ 100` và trả `BasePaginationResponse`.
+- Chỉ select field FE cần; tránh N+1 query.
+- Không truyền binary ảnh qua BE khi FE có thể tải trực tiếp từ URL storage.
+- Dữ liệu nguồn có thể inactive/xóa phải đọc từ snapshot đã lưu.
 - Method trong `Service` phải khớp `IService`.
 
-## 4. Checklist
+## 5. Checklist
 
-- [ ] Mục I đủ rõ để hiểu US và lý do tồn tại của từng API.
-- [ ] Sau mục I đi thẳng vào code từng API.
-- [ ] Mỗi API có Vai trò, Request, Response, IService, Service.
-- [ ] Field khớp `db_tong.md`; code đúng convention solution.
-- [ ] Không tạo API, DTO, bảng hoặc field thừa.
-- [ ] Chỉ có mục DB còn thiếu khi DB thực sự thiếu.
-- [ ] Chỉ giữ core logic, không diễn giải dài dòng.
+- [ ] Mục I cho biết ngay số API và vai trò từng API.
+- [ ] API đủ để FE hoàn thành Main Flow và System Test.
+- [ ] Không thiếu API và không có API trùng/thừa.
+- [ ] Mỗi API đúng thứ tự `IService → Request → Response → Service`.
+- [ ] Code đầy đủ, ngắn gọn và đúng DB/convention.
+- [ ] Chỉ thêm mục DB còn thiếu khi thật sự cần.
