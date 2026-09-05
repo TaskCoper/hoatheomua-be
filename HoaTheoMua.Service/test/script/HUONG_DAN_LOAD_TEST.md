@@ -82,14 +82,15 @@ k6 run -e ENDPOINT=/api/Test/normal HoaTheoMua.Service/test/script/load_test_100
 
 ## 4. ⚠️ Rất quan trọng: Rate limit ảnh hưởng kết quả
 
-Server này có **giới hạn tốc độ** cấu hình trong `RateLimitExtensions.cs`, tính **theo IP**.
-Vì test từ 1 máy = 1 IP, tất cả 100 VU dùng chung hạn mức:
+Server này có **giới hạn tốc độ** cấu hình trong `RateLimitExtensions.cs`, tính theo
+**user đã đăng nhập** hoặc **IP đối với request ẩn danh**. Vì test từ 1 máy không
+gửi access token = 1 IP, tất cả 100 VU dùng chung hạn mức:
 
 | Endpoint            | Giới hạn                    | Dùng để                                   |
 |---------------------|-----------------------------|-------------------------------------------|
 | `/api/Test/bypass`  | **Không giới hạn**          | Đo sức chịu tải thật của server ✅         |
-| *(mọi endpoint khác)* | **250 request/giây** (global) | Vượt ngưỡng sẽ trả `429`                 |
-| `/api/Test/normal`  | **100 request/phút**        | Test riêng hành vi rate-limit             |
+| *(mọi endpoint khác)* | **120 request/phút** (global) | Vượt ngưỡng sẽ trả `429`                 |
+| `/api/Test/normal`  | **60 request/phút**         | Test riêng hành vi rate-limit             |
 | `/api/Test/login`   | **5 request/phút**          | Test chặn brute-force login               |
 
 👉 **Muốn đo hiệu năng server** → giữ endpoint mặc định `/api/Test/bypass`.

@@ -3,6 +3,7 @@ using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Order;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HoaTheoMua.Controllers;
 
@@ -19,14 +20,15 @@ public class OrderController : ControllerBase
     [HttpGet("/api/v1/orders")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
 
-    public async Task<IActionResult> GetOrderById(int pageIndex, int pageSize)
+    public async Task<IActionResult> GetOrderById(int pageIndex, int pageSize, string? status = null)
     {
-        var result = await _orderService.GetOrderPaginationResponse(pageIndex, pageSize);
+        var result = await _orderService.GetOrderPaginationResponse(pageIndex, pageSize, status);
         return Ok(result);
     }
 
     [HttpPost("/api/v1/orders")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    [EnableRateLimiting(RateLimitExtensions.OrderWritePolicy)]
     public async Task<IActionResult> CreateOrder([FromBody]Request.CreateOrderRequest request)
     {
         var result = await _orderService.CreateOrder(request);
@@ -121,4 +123,3 @@ public class OrderController : ControllerBase
     //     return Ok(ApiResponseFactory.Base(result, true, "",HttpContext.TraceIdentifier));
     // }
 }
-

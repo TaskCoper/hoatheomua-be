@@ -4,6 +4,7 @@ using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
 
 namespace HoaTheoMua.Service.AhamoveService;
 
@@ -26,7 +27,23 @@ public class Service: IService
 
 
     public async Task<object> EstimateShippingFee(AhaMoveRequest.EstimateShippingFeeRequest request)
-    {   
+    {
+        var checkoutConfigs = await HoaTheoMua.Service.Common.ConfigHelper
+            .GetConfigsByGroupsAsync(_appDbContext, "checkout");
+        var deliveryMethodsConfig = checkoutConfigs.GetValue<string>("checkout.delivery_methods");
+
+        if (!string.IsNullOrWhiteSpace(deliveryMethodsConfig))
+        {
+            var deliveryMethods = JObject.Parse(deliveryMethodsConfig);
+            var ahamoveMethod = deliveryMethods["items"]?
+                .FirstOrDefault(x => (int?)x["gateway"] == 1);
+
+            if ((bool?)ahamoveMethod?["enabled"] == false)
+            {
+                throw new BadRequestException("Phương thức giao hàng Ahamove hiện đang bị tắt");
+            }
+        }
+
         var itemIds = request.Items
             .Select(x => x.ItemId.ToString())
             .Distinct()
@@ -50,9 +67,11 @@ public class Service: IService
             throw new Exception("Company address not found");
         }
         
-        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "nhanhvn", "ahamove", "contact");
+        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_appDbContext, "ahamove", "contact");
 
-        // Call NhanhVn de tim gia tien cua Item
+        /*
+        // Legacy: gọi NhanhVn product/list để lấy thông tin sản phẩm.
+        // Tạm giữ lại để đối chiếu; luồng hiện tại dùng bảng Products bên dưới nhằm tránh rate limit.
         var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
         var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
         var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
@@ -65,7 +84,7 @@ public class Service: IService
                 Id = request.Items.Select(x => x.ItemId).ToList(),
                 Status = [1,2]
             },
-            Paginator =  new NhanhVnRequest.NhanhPaginator()
+            Paginator = new NhanhVnRequest.NhanhPaginator()
             {
                 Size = 50,
                 Sort = new Dictionary<string, string>()
@@ -78,22 +97,21 @@ public class Service: IService
                 },
             }
         };
-        
+
         var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, nhanhApi);
         nhanhHttpRequest.Headers.Add("Authorization", token);
         nhanhHttpRequest.Content = JsonContent.Create(nhanhVnProductRequest);
-        
+
         HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
 
         NhanhProductListResponse? productNhanhResult = null;
-        
+
         if (nhanhVnResponse.IsSuccessStatusCode)
         {
             productNhanhResult = await nhanhVnResponse.Content.ReadFromJsonAsync<NhanhProductListResponse>();
         }
         else
         {
-            // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
             throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode})");
         }
 
@@ -106,24 +124,57 @@ public class Service: IService
         {
             throw new BadRequestException("ERR_INVALID_FORM_FIELDS");
         }
+        */
+
+        var productIds = request.Items
+            .Select(x => x.ProductId)
+            .Distinct()
+            .ToList();
         
-        var itemsRequest = productNhanhResult.Data.Select(
+        var products = await _appDbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted &&
+                        x.IsActive &&
+                        productIds.Contains(x.Id))
+            .Select(x => new
+            {
+                x.NhanhProductId,
+                x.Id,
+                Name = x.ProductName ?? string.Empty,
+                Retail = x.Price ?? 0m,
+                Height = x.Height ?? 0m,
+                Weight = x.Weight ?? 0m,
+                Length = x.Length ?? 0m,
+                Width = x.Width ?? 0m
+            })
+            .ToListAsync();
+
+        if (products.Count != productIds.Count)
+        {
+            throw new BadRequestException("Có sản phẩm không tồn tại hoặc đã ngừng hoạt động");
+        }
+
+        var requestedQuantityByProductId = request.Items
+            .GroupBy(x => x.ProductId)
+            .ToDictionary(x => x.Key, x => x.Sum(item => item.Number));
+
+        var itemsRequest = products.Select(
             x => new AhaMoveRequest.AhamoveItem()
             {
-                Id = x.Id.ToString(),
+                Id = x.NhanhProductId!,
                 Name = x.Name,
-                Price = (int)x.Prices.Retail,
-                Num = request.Items.First(item => item.ItemId.Equals(x.Id)).Number
+                Price = (int)x.Retail,
+                Num = requestedQuantityByProductId[x.Id]
             }
         ).ToList();
         
-        var packageDetailRequest = productNhanhResult.Data.Select(
+        var packageDetailRequest = products.Select(
             x => new AhaMoveRequest.PackageDetail()
             {
-                Height = x.Shipping.Height,
-                Weight = x.Shipping.Weight,
-                Length = x.Shipping.Length,
-                Width =  x.Shipping.Width,
+                Height = (double)x.Height,
+                Weight = (double)x.Weight,
+                Length = (double)x.Length,
+                Width = (double)x.Width,
                 Description = "Noi that"
             }
         ).ToList();
@@ -218,8 +269,8 @@ public class Service: IService
         {
             throw new AhamoveException();
         }
-        
-        return new { ahamoveResult, productNhanhResult};
+
+        return new { ahamoveResult, products };
     }
     
     public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()

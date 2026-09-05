@@ -8,6 +8,19 @@ x-postgres-base: &postgres-base
     TZ: UTC
     PGTZ: UTC
 
+x-rabbitmq-base: &rabbitmq-base
+  image: rabbitmq:4-management-alpine
+  restart: unless-stopped
+  environment:
+    RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+    RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+  healthcheck:
+    test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+    interval: 10s
+    timeout: 5s
+    retries: 10
+
 x-cloudflare-tunnel: &cloudflare-tunnel
   image: cloudflare/cloudflared
   restart: unless-stopped
@@ -21,6 +34,9 @@ x-api-env: &api-env
   ASPNETCORE_ENVIRONMENT: ${ENVIRONMENT}
   ASPNETCORE_URLS: http://+:8080
   HttpPort: ${HTTP_PORT}
+
+  # The API has no published host port in this compose file and is reached through cloudflared.
+  ReverseProxy__TrustForwardedHeaders: "true"
 
   # Postgres
   PostgresOption__MaxIdleConns: ${POSTGRES_MAX_IDLE_CONNS}
@@ -62,6 +78,12 @@ x-api-env: &api-env
 
   SepayOption__ApiKey: ${SEPAY_API_KEY}
 
+  # RabbitMQ (MassTransit). Host đặt riêng ở từng service vì khác nhau giữa dev/prod.
+  RabbitMqOptions__Port: 5672
+  RabbitMqOptions__VirtualHost: ${RABBITMQ_VHOST:-/}
+  RabbitMqOptions__Username: ${RABBITMQ_USERNAME}
+  RabbitMqOptions__Password: ${RABBITMQ_PASSWORD}
+
   # Revalidate (outbound cache purge to the storefront: POST BaseUrl with "x-revalidate-secret: <SecretKey>")
   SecretOptions__BaseUrl: ${SECRET_BASE_URL}
   SecretOptions__SecretKey: ${SECRET_KEY}
@@ -96,6 +118,30 @@ services:
       - postgres-hoatheomua-data-prod:/var/lib/postgresql/data
     profiles: [prod, database-prod, database, prod-pull]
 
+  hoatheomua-rabbitmq-dev:
+    <<: *rabbitmq-base
+    container_name: hoatheomua-rabbitmq-dev
+    hostname: hoatheomua-rabbitmq-dev
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    networks: [hoatheomua-network-dev]
+    volumes:
+      - rabbitmq-hoatheomua-data-dev:/var/lib/rabbitmq
+    profiles: [dev, rabbitmq-dev, rabbitmq, dev-pull]
+
+  hoatheomua-rabbitmq-prod:
+    <<: *rabbitmq-base
+    container_name: hoatheomua-rabbitmq-prod
+    hostname: hoatheomua-rabbitmq-prod
+    ports:
+      - "${RABBITMQ_PORT:-5673}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15673}:15672"
+    networks: [hoatheomua-network-prod]
+    volumes:
+      - rabbitmq-hoatheomua-data-prod:/var/lib/rabbitmq
+    profiles: [prod, rabbitmq-prod, rabbitmq, prod-pull]
+
   hoatheomua-api-dev:
     <<: *api-base
     container_name: hoatheomua-api-dev
@@ -103,6 +149,7 @@ services:
     environment:
       <<: *api-env
       ConnectionStrings__PostgresSql: Host=hoatheomua-postgres-dev;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
+      RabbitMqOptions__Host: hoatheomua-rabbitmq-dev
     # ports:
     #   - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-dev]
@@ -115,8 +162,9 @@ services:
     environment:
       <<: *api-env
       ConnectionStrings__PostgresSql: Host=hoatheomua-postgres-prod;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
-    ports:
-      - "${HTTP_PORT}:8080"
+      RabbitMqOptions__Host: hoatheomua-rabbitmq-prod
+    # ports:
+    #   - "${HTTP_PORT}:8080"
     networks: [hoatheomua-network-prod]
     profiles: [prod, api-prod, api, prod-pull]
 
@@ -133,6 +181,12 @@ volumes:
     driver: local
   postgres-hoatheomua-data-prod:
     name: postgres-hoatheomua-data-prod
+    driver: local
+  rabbitmq-hoatheomua-data-dev:
+    name: rabbitmq-hoatheomua-data-dev
+    driver: local
+  rabbitmq-hoatheomua-data-prod:
+    name: rabbitmq-hoatheomua-data-prod
     driver: local
 
 networks:

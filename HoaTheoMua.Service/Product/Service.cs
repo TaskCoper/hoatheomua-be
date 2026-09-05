@@ -443,7 +443,8 @@ public class Service : IService
                 case ProductType.Material:
                     query = query.Where(x =>
                         x.ProductLabel != null &&
-                        x.ProductLabel.Trim().ToLower() == "thành phần");
+                        ("," + x.ProductLabel.ToLower().Replace(" ", "") + ",")
+                            .Contains(",vậtliệu,"));
                     break;
                 
                 case ProductType.Combo:
@@ -584,7 +585,7 @@ public class Service : IService
 
         if (response == null)
         {
-            throw new NotFoundException("PRODUCT_NOT_FOUND");
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
         }
 
         // Giai đoạn 2: Xác định sản phẩm cha nếu sản phẩm hiện tại là biến thể.
@@ -1653,7 +1654,7 @@ public class Service : IService
 
         if (product == null)
         {
-            throw new NotFoundException("PRODUCT_NOT_FOUND");
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
         }
 
         // ParentProductId của Nhanh.vn là NhanhProductId của sản phẩm cha,
@@ -1755,25 +1756,14 @@ public class Service : IService
         request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
         request.PageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 100);
 
-        var baseLabels = new[]
-        {
-            "thành phần", "phụ liệu",
-            "Thành phần", "Phụ liệu",
-            "THÀNH PHẦN", "PHỤ LIỆU",
-            "Thành Phần", "Phụ Liệu"
-        };
-
-        var allowedLabels = baseLabels
-            .SelectMany(x => new[] { x.Normalize(NormalizationForm.FormC), x.Normalize(NormalizationForm.FormD) })
-            .Distinct()
-            .ToArray();
-
         var query = _dbContext.Products
             .AsNoTracking()
             .Where(product => !product.IsDeleted &&
                               product.ProductLabel != null &&
-                              (allowedLabels.Contains(product.ProductLabel.Trim()) ||
-                               allowedLabels.Contains(product.ProductLabel.Trim().ToLower())));
+                              (("," + product.ProductLabel.ToLower().Replace(" ", "") + ",")
+                                   .Contains(",vậtliệu,") ||
+                               ("," + product.ProductLabel.ToLower().Replace(" ", "") + ",")
+                                   .Contains(",phụliệu,")));
 
         if (request.ExcludeIds != null && request.ExcludeIds.Any())
         {
@@ -1782,36 +1772,27 @@ public class Service : IService
 
         if (!string.IsNullOrWhiteSpace(request.ProductLabel))
         {
-            var rawLabel = request.ProductLabel.Trim();
-            var labelNfc = rawLabel.Normalize(NormalizationForm.FormC);
-            var labelNfd = rawLabel.Normalize(NormalizationForm.FormD);
-            var queryLabels = new[]
-            {
-                rawLabel, labelNfc, labelNfd,
-                rawLabel.ToLower(), labelNfc.ToLower(), labelNfd.ToLower()
-            }.Distinct().ToArray();
+            var productLabel = request.ProductLabel
+                .Trim()
+                .ToLowerInvariant()
+                .Replace(" ", "");
+            var productLabelToken = $",{productLabel},";
 
             query = query.Where(product =>
                 product.ProductLabel != null &&
-                (queryLabels.Contains(product.ProductLabel.Trim()) ||
-                 queryLabels.Contains(product.ProductLabel.Trim().ToLower())));
+                ("," + product.ProductLabel.ToLower().Replace(" ", "") + ",")
+                    .Contains(productLabelToken));
         }
         
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var normalizedSearch = request.Search.Trim().ToLower();
-            var searchNfc = normalizedSearch.Normalize(NormalizationForm.FormC);
-            var searchNfd = normalizedSearch.Normalize(NormalizationForm.FormD);
 
             query = query.Where(product =>
                 (product.ProductName != null &&
-                 (product.ProductName.ToLower().Contains(normalizedSearch) ||
-                  product.ProductName.ToLower().Contains(searchNfc) ||
-                  product.ProductName.ToLower().Contains(searchNfd))) ||
+                 product.ProductName.ToLower().Trim().Contains(normalizedSearch)) ||
                 (product.ProductCode != null &&
-                 (product.ProductCode.ToLower().Contains(normalizedSearch) ||
-                  product.ProductCode.ToLower().Contains(searchNfc) ||
-                  product.ProductCode.ToLower().Contains(searchNfd))));
+                 product.ProductCode.ToLower().Trim().Contains(normalizedSearch)));
         }
         
         var totalItems = await query.CountAsync();

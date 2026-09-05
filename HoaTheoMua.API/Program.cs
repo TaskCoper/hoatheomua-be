@@ -4,6 +4,7 @@ using HoaTheoMua.Filters;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using AssemblyReference = HoaTheoMua.Service.AssemblyReference;
 using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
 using CategoryProductService = HoaTheoMua.Service.CategoryProduct;
@@ -24,6 +25,8 @@ using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 using RevalidateService = HoaTheoMua.Service.Revalidate;
 using MaterialService = HoaTheoMua.Service.Material;
 using XanhSmService = HoaTheoMua.Service.XanhSm;
+using FulfillmentService = HoaTheoMua.Service.Fulfillment;
+using HoaTheoMua.Service.DependencyInjection.Extensions;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,6 +58,22 @@ builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
 builder.Services.AddHttpContextAccessor();
 
+var trustForwardedHeaders = builder.Configuration.GetValue<bool>("ReverseProxy:TrustForwardedHeaders");
+if (trustForwardedHeaders)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = 1;
+
+        // The API container is not published by the profile-based compose setup; only the
+        // Cloudflare tunnel can reach it. Do not enable this setting when exposing the API
+        // directly unless KnownProxies/KnownNetworks are restricted to the real proxy.
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
+
 builder.Services.AddScoped<HoaTheoMua.Service.Common.ICurrentUserService, HoaTheoMua.Service.Common.CurrentUserService>();
 builder.Services.AddScoped<CategoryNewsService.IService, CategoryNewsService.Service>();
 builder.Services.AddScoped<CategoryProductService.IService, CategoryProductService.Service>();
@@ -79,6 +98,19 @@ builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImpor
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
 
+// Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
+// registering it with AddScoped would silently hand it the unnamed default HttpClient the way
+// Webhook.Service and Revalidate.Service currently get theirs.
+builder.Services.AddHttpClient<FulfillmentService.IService, FulfillmentService.Service>("FulfillmentService");
+
+
+// MassTransit + RabbitMQ: consumers, the fulfilment saga and the EF transactional outbox. Runs
+// in-process alongside the API, so the outbox shares this host's AppDbContext scope.
+builder.Services.AddMasstransitRabbitMqInfrastructure(builder.Configuration);
+
+// AddMassTransit registers a bus health check of its own, so /health reflects the RabbitMQ
+// connection as well as the app being up.
+builder.Services.AddHealthChecks();
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 builder.Services.AddAutoMapper(x => x.AddMaps(AssemblyReference.Assembly));
@@ -92,6 +124,7 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000",
                 "https://hoatheomua-dev-client.bentran1vn.com",
                 "https://www.hoatheomua.com",
+                "https://hoatheomua-dev-fe-client.bentran1vn.com",
                 "https://taskcoper.hoatheomua.com",
                 "https://hoatheomua.com"
                 )
@@ -110,6 +143,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 
+if (trustForwardedHeaders)
+{
+    app.UseForwardedHeaders();
+}
+
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -118,11 +156,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerAPI();
 }
 app.UseCors("AllowFrontend");
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
