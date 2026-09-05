@@ -7,6 +7,7 @@ namespace HoaTheoMua.Service.NhanhVnService;
 public interface IService
 {
     Task<ProductLabelResponse> GetProductLabel(ProductLabelRequest request);
+    Task<string?> GetProductLabelByTagIds(List<int>? tagIds);
     Task<OrderLabelResponse> GetOrderLabel(OrderLabelRequest orderLabelRequest);
     Task<OrderSourceResponse>  GetOrderSource(OrderSourceRequest orderSourceRequest);
 
