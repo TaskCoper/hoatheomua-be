@@ -18,6 +18,7 @@ public interface IService
     Task<BasePaginationResponse> GetMaterialsAsync(Request.GetMaterialsRequest request);
     Task<List<Response.ProductResponseWithList>> GetProductWithList(Request.GetProductWithList request);
     Task<List<Response.GetProductByIdsResponse>> GetProductByIds(Request.GetProductByIds request);
+    Task<string> UpdateLabelProductNhanhVn(List<Request.UpdateLabelProductNhanhVnRequest> requests);
     Task<Response.GetProductDetailByCustomerResponse> GetProductDetailByCustomer(Guid id);
     Task<List<Response.InventoryCheckError>?> CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request);
 }
