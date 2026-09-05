@@ -25,6 +25,8 @@ using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 using RevalidateService = HoaTheoMua.Service.Revalidate;
 using MaterialService = HoaTheoMua.Service.Material;
 using XanhSmService = HoaTheoMua.Service.XanhSm;
+using FulfillmentService = HoaTheoMua.Service.Fulfillment;
+using HoaTheoMua.Service.DependencyInjection.Extensions;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -96,6 +98,19 @@ builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImpor
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
 
+// Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
+// registering it with AddScoped would silently hand it the unnamed default HttpClient the way
+// Webhook.Service and Revalidate.Service currently get theirs.
+builder.Services.AddHttpClient<FulfillmentService.IService, FulfillmentService.Service>("FulfillmentService");
+
+
+// MassTransit + RabbitMQ: consumers, the fulfilment saga and the EF transactional outbox. Runs
+// in-process alongside the API, so the outbox shares this host's AppDbContext scope.
+builder.Services.AddMasstransitRabbitMqInfrastructure(builder.Configuration);
+
+// AddMassTransit registers a bus health check of its own, so /health reflects the RabbitMQ
+// connection as well as the app being up.
+builder.Services.AddHealthChecks();
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 builder.Services.AddAutoMapper(x => x.AddMaps(AssemblyReference.Assembly));
@@ -144,5 +159,6 @@ app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

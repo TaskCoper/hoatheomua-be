@@ -10,7 +10,7 @@ public interface IService
     // Task<string> UpdateOrder(Request.UpdateOrderRequest request);
     
     //--------------------
-    Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize);
+    Task<BasePaginationResponse> GetOrderPaginationResponse(int pageIndex, int pageSize, string? status = null);
     Task<CreateOrderResponse> CreateOrder(Request.CreateOrderRequest request);
     Task<Response.EstimateXanhSmShippingFeeResponse> EstimateXanhSmShippingFee(
         Request.EstimateXanhSmShippingFeeRequest request,

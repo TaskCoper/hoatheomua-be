@@ -43,6 +43,14 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(t => t.CreatedAt)
             .HasDefaultValueSql("now()");
 
+        // Database-level idempotency for the payment webhooks. Both gateways redeliver, and the
+        // in-code `if (order.Status == "Paid") return;` guard is a read-then-act race that two
+        // concurrent redeliveries can both pass. RequestId already carries each gateway's own event
+        // id (BaoKim `request_id`, SePay's transaction id as text), so this pair is the natural key:
+        // the loser of the race takes a 23505 and the webhook treats it as a replay.
+        builder.HasIndex(t => new { t.Gateway, t.RequestId })
+            .IsUnique();
+
         builder.SeedTransaction();
     }
 }
