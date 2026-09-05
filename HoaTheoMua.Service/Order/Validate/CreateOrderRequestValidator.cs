@@ -11,6 +11,25 @@ public class CreateOrderRequestValidator : AbstractValidator<Request.CreateOrder
     {
         Include(new EstimateShippingFeeRequestValidator());
 
+        RuleFor(x => x.Items)
+            .NotEmpty()
+            .WithMessage("ITEMS_REQUIRED");
+
+        RuleForEach(x => x.Items).ChildRules(item =>
+        {
+            item.RuleFor(x => x.ItemId)
+                .NotEmpty()
+                .WithMessage("ITEM_ID_REQUIRED");
+
+            item.RuleFor(x => x.ProductId)
+                .NotEmpty()
+                .WithMessage("PRODUCT_ID_REQUIRED");
+
+            item.RuleFor(x => x.Number)
+                .GreaterThanOrEqualTo(1)
+                .WithMessage("NUMBER_MUST_BE_GREATER_THAN_OR_EQUAL_TO_1");
+        });
+
         // RuleFor(x => x.TagIds)
         //     .NotEmpty().WithMessage("TAG_IDS_REQUIRED");
 
