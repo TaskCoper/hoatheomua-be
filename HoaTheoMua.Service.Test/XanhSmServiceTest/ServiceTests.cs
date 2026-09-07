@@ -11,6 +11,99 @@ namespace HoaTheoMua.Service.Test.XanhSmServiceTest;
 
 public class ServiceTests
 {
+    [Fact]
+    public async Task Unauthorized_RefreshesTokenAndReplaysPostBody()
+    {
+        var tokenCalls = 0;
+        var requests = new List<CapturedRequest>();
+        var service = CreateService(async request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/token"))
+                return JsonResponse($$"""{"access_token":"token-{{++tokenCalls}}","token_type":"Bearer","expires_in":3600}""");
+            requests.Add(await CapturedRequest.FromAsync(request));
+            return requests.Count == 1
+                ? JsonResponse("{}", HttpStatusCode.Unauthorized)
+                : JsonResponse("""{"data":[]}""");
+        });
+
+        await service.GetAvailableServicesAsync(new XanhSmAvailableServicesRequest
+        {
+            Pickups = [new XanhSmCoordinatePoint { Latitude = 10.8, Longitude = 106.6 }]
+        });
+
+        Assert.Equal(2, tokenCalls);
+        Assert.Equal(2, requests.Count);
+        Assert.Equal("token-1", requests[0].AuthorizationParameter);
+        Assert.Equal("token-2", requests[1].AuthorizationParameter);
+        Assert.Equal(requests[0].Body, requests[1].Body);
+        Assert.Equal(requests[0].ContentType, requests[1].ContentType);
+        Assert.Equal(requests[0].Uri, requests[1].Uri);
+        Assert.Equal(requests[0].AcceptLanguage, requests[1].AcceptLanguage);
+        Assert.Equal("token-2", (await service.GetAccessTokenAsync()).AccessToken);
+        Assert.Equal(2, tokenCalls);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, 2)]
+    [InlineData(HttpStatusCode.Forbidden, 1)]
+    public async Task AuthenticationFailure_RetriesOnlyOneUnauthorized(HttpStatusCode status, int expectedCalls)
+    {
+        var tokenCalls = 0;
+        var apiCalls = 0;
+        var service = CreateService(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/token"))
+            {
+                tokenCalls++;
+                return Task.FromResult(TokenResponse());
+            }
+            apiCalls++;
+            return Task.FromResult(JsonResponse("{}", status));
+        });
+        await Assert.ThrowsAsync<BadGatewayException>(() => service.GetDeliveryDetailsAsync("ORDER-001"));
+        Assert.Equal(expectedCalls, apiCalls);
+        Assert.Equal(expectedCalls, tokenCalls);
+        await service.GetAccessTokenAsync();
+        Assert.Equal(status == HttpStatusCode.Unauthorized ? 3 : 1, tokenCalls);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task TokenWithoutPositiveLifetime_IsNotCached(int expiresIn)
+    {
+        var calls = 0;
+        var service = CreateService(_ =>
+        {
+            calls++;
+            return Task.FromResult(JsonResponse($$"""{"access_token":"token","token_type":"Bearer","expires_in":{{expiresIn}}}"""));
+        });
+        await service.GetAccessTokenAsync();
+        await service.GetAccessTokenAsync();
+        Assert.Equal(2, calls);
+    }
+
+    [Theory]
+    [InlineData("2126ca79-8b1d-4d93-a6fb-e610b8700ab1", 250000)]
+    [InlineData("2126ca798b1d4d93a6fbe610b8700ab1", -1)]
+    public async Task BookDeliveryAsync_InvalidReferenceOrGoodsValue_RejectsBeforeHttp(
+        string partnerTripId, long goodsValue)
+    {
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP must not be called"));
+        await Assert.ThrowsAsync<BadRequestException>(() => service.BookDeliveryAsync(
+            new XanhSmBookDeliveryRequest
+            {
+                OrderTime = 1770350401,
+                ServiceId = 2100,
+                ServiceType = "EXPRESS-ONDEMAND",
+                FeeId = Guid.NewGuid().ToString(),
+                Points = [CreatePoint("PICK UP"), CreatePoint("DROP OFF")],
+                AddonIds = [5],
+                PartnerTripId = partnerTripId,
+                GoodsValue = goodsValue
+            }));
+    }
+
     [Theory]
     [InlineData("2126ca79-8b1d-4d93-a6fb-e610b8700ab1", 250000)]
     [InlineData("2126ca798b1d4d93a6fbe610b8700ab1", -1)]
