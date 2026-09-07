@@ -110,7 +110,18 @@ public class Service : IService
     {
         ArgumentNullException.ThrowIfNull(request);
         ValidateDoorToDoorPoints(request.Points);
-        ValidateDoorToDoorAddon(request.Addons);
+        if (request.AddonIds is null || request.AddonIds.Count != 1 || request.AddonIds[0] <= 0)
+        {
+            throw new BadRequestException("Exactly one positive XanhSM Door-to-door addon ID is required");
+        }
+        if (request.PartnerTripId?.Length > 32)
+        {
+            throw new BadRequestException("XanhSM partner_trip_id must not exceed 32 characters");
+        }
+        if (request.GoodsValue < 0)
+        {
+            throw new BadRequestException("XanhSM goods_value must be non-negative");
+        }
         return PostAsync<XanhSmBookDeliveryRequest, XanhSmApiResponse<XanhSmDelivery>>(
             "create-order",
             request,
@@ -295,7 +306,7 @@ public class Service : IService
                 ServiceType = quote.ServiceType,
                 FeeId = quote.FeeId,
                 Points = points.ToList(),
-                Addons = CreateDoorToDoorAddon(quote.AddonId),
+                AddonIds = [quote.AddonId],
                 GoodsValue = goodsValue,
                 PartnerTripId = partnerTripId
             },
