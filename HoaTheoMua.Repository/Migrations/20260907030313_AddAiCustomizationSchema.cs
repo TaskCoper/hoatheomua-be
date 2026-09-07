@@ -38,7 +38,6 @@ namespace HoaTheoMua.Repository.Migrations
                     name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     description = table.Column<string>(type: "text", nullable: true),
                     image_url = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: false),
-                    metadata = table.Column<string>(type: "jsonb", nullable: true),
                     template_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),

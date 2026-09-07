@@ -208,10 +208,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_deleted");
 
-                    b.Property<string>("Metadata")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("metadata");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)

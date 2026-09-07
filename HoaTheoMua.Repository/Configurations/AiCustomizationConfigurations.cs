@@ -48,7 +48,6 @@ public class CardTemplateConfiguration : IEntityTypeConfiguration<CardTemplate>
         builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
         builder.Property(x => x.Description).HasColumnName("description").HasColumnType("text");
         builder.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(2048).IsRequired();
-        builder.Property(x => x.Metadata).HasColumnName("metadata").HasColumnType("jsonb");
         builder.Property(x => x.TemplateType)
             .HasColumnName("template_type")
             .HasConversion(
