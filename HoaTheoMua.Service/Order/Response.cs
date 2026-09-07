@@ -40,9 +40,39 @@ public class Response
         public string ReceiptEmail { get; set; } = string.Empty;
         public string ReceiptFullName { get; set; } = string.Empty;
         public string ReceiptPhoneNumber { get; set; } = string.Empty;
+        public string Address {get; set; } = string.Empty;
+        public decimal TotalFee { get; set; }
+        public List<OrderItemSummaryResponse> Items { get; set; } = new();
 
         public DateTimeOffset CreateAt { get; set; }
         public DateTimeOffset? UpdateAt { get; set; }
+    }
+
+    public class OrderItemSummaryResponse
+    {
+        public Guid ProductId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? CoverImage { get; set; }
+        public int Quantity { get; set; }
+        public decimal Price { get; set; }
+        //public decimal LineTotal { get; set; }
+        public ProductSummaryResponse? Parent { get; set; }
+    }
+
+    public class ProductSummaryResponse
+    {
+        public Guid ProductId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? CoverImage { get; set; }
+    }
+    
+    public class OrderProductLookup
+    {
+        public Guid Id { get; init; }
+        public string? NhanhProductId { get; init; }
+        public string? ProductName { get; init; }
+        public string? CoverImage { get; init; }
+        public string? ParentNhanhProductId { get; init; }
     }
 
     public class GetOrderAdminResponse

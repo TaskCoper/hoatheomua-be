@@ -20,6 +20,26 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  hoatheomua-rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    networks:
+      - hoatheomua-network
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   hoatheomua-api:
     build:
       context: ..
@@ -91,6 +111,13 @@ services:
 
       SepayOption__ApiKey: ${SEPAY_API_KEY}
 
+      # RabbitMQ Configuration (MassTransit)
+      RabbitMqOptions__Host: hoatheomua-rabbitmq
+      RabbitMqOptions__Port: 5672
+      RabbitMqOptions__VirtualHost: ${RABBITMQ_VHOST:-/}
+      RabbitMqOptions__Username: ${RABBITMQ_USERNAME}
+      RabbitMqOptions__Password: ${RABBITMQ_PASSWORD}
+
       # Revalidate Configuration (outbound cache purge to the storefront:
       # POST BaseUrl with header "x-revalidate-secret: <SecretKey>")
       SecretOptions__BaseUrl: ${SECRET_BASE_URL}
@@ -102,12 +129,16 @@ services:
       - hoatheomua-network
     depends_on:
       - hoatheomua-postgres
+      - hoatheomua-rabbitmq
     volumes:
       - ./logs:/app/logs
 
 volumes:
   postgres-data:
     name: postgres-data
+    driver: local
+  rabbitmq-data:
+    name: rabbitmq-data
     driver: local
 
 networks:

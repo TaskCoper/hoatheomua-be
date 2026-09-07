@@ -1,51 +1,33 @@
-using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
-using HoaTheoMua.Service.AhamoveService;
+using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
-using HoaTheoMua.Service.XanhSm;
+using HoaTheoMua.Service.Fulfillment;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json.Linq;
+using Npgsql;
 
 namespace HoaTheoMua.Service.Webhook;
 
 public partial class Service : IService
 {
     private readonly AppDbContext _dbContext;
-    private readonly HttpClient _httpClient;
-    private readonly HoaTheoMua.Service.Order.IService _orderService;
-    private readonly NhanhVnOption _nhanhVnOption;
-    private readonly AhaMoveOption _ahaMoveOption;
     private readonly SepayOption _sepayOption;
-    private readonly Config.IService _configService;
-    private readonly AhamoveService.IService _ahaMoveService;
-    private readonly Revalidate.IService _revalidateService;
-    private readonly HoaTheoMua.Service.XanhSm.IService? _xanhSmService;
+    private readonly Fulfillment.IService _fulfillmentService;
+    private readonly IPublishEndpoint _publishEndpoint;
 
-    public Service(AppDbContext dbContext, HttpClient httpClient, IConfiguration configuration,
-        HoaTheoMua.Service.Order.IService orderService, Config.IService configService,
-        AhamoveService.IService ahaMoveService,
-        Revalidate.IService revalidateService,
-        HoaTheoMua.Service.XanhSm.IService? xanhSmService = null)
+    public Service(AppDbContext dbContext, IConfiguration configuration,
+        Fulfillment.IService fulfillmentService, IPublishEndpoint publishEndpoint)
     {
         _dbContext = dbContext;
-        _httpClient = httpClient;
-        _orderService = orderService;
-        _nhanhVnOption = new NhanhVnOption();
-        _ahaMoveOption = new AhaMoveOption();
+        _fulfillmentService = fulfillmentService;
+        _publishEndpoint = publishEndpoint;
         _sepayOption = new SepayOption();
-        _configService = configService;
-        _ahaMoveService = ahaMoveService;
-        _revalidateService = revalidateService;
-        _xanhSmService = xanhSmService;
-        configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
-        configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
         configuration.GetSection(nameof(SepayOption)).Bind(_sepayOption);
     }
 
@@ -203,10 +185,16 @@ public partial class Service : IService
             throw new ConflictException("Payment gateway does not match SePay webhook");
         }
 
-        if (order.Status != "Pending")
+        // A redelivery of an order we already handled is expected traffic, not an error. BaoKim's
+        // handler has always acked these; this one used to throw 404 forever instead.
+        if (order.Status is PaidStatus or Fulfillment.Service.FulfillmentFailedStatus)
         {
-            throw new NotFoundException("Order not on Pending");
-            ;
+            return;
+        }
+
+        if (order.Status != PendingStatus)
+        {
+            throw new ConflictException($"Order is not Pending (current: {order.Status})");
         }
 
         if (order.TotalFee != request.TransferAmount)
@@ -286,12 +274,12 @@ public partial class Service : IService
         // BaoKim redelivers until it gets an ack, so a replay of an order we already fulfilled is
         // expected traffic rather than an error — ack it and skip fulfilment instead of throwing,
         // which would otherwise re-run the Ahamove/NhanhVn calls or spin the retry schedule.
-        if (order.Status == "Paid")
+        if (order.Status is PaidStatus or Fulfillment.Service.FulfillmentFailedStatus)
         {
             return;
         }
 
-        if (order.Status != "Pending")
+        if (order.Status != PendingStatus)
         {
             throw new ConflictException($"Order is not Pending (current: {order.Status})");
         }
@@ -356,582 +344,88 @@ public partial class Service : IService
             ? DateTime.SpecifyKind(completedAt, DateTimeKind.Utc)
             : DateTime.UtcNow;
 
-    // Shared tail for both gateways: flip the order to Paid, dispatch it to the shipping party and NhanhVn,
-    // then persist the order and its gateway transaction in one SaveChanges.
+    private const string PendingStatus = "Pending";
+    private const string PaidStatus = "Paid";
+
+    /// <summary>
+    /// Kill switch. While false the gateway callback keeps running the legacy inline fulfilment, so
+    /// a bad deploy can be rolled back by flipping a Config row instead of shipping code.
+    /// </summary>
+    private const string UseSagaConfigKey = "fulfillment.use_saga";
+
+    // Shared tail for both gateways.
     private async Task FulfillPaidOrder(Repository.Entity.Order order, Transaction transaction)
     {
-        if (order.ShippingGateway is not (ShippingGateway.Ahamove or ShippingGateway.XanhSm))
+        var fulfillmentConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "fulfillment");
+        var useSaga = fulfillmentConfigs.GetValue(UseSagaConfigKey, true);
+
+        if (!useSaga)
         {
-            throw new BadRequestException($"Shipping gateway {order.ShippingGateway} is not supported");
+            await FulfillPaidOrderInline(order, transaction);
+            return;
         }
 
-        order.Status = "Paid";
-
-        //  var newOrders = await AhaMoveCreateOrder();
-        // Bat dau xu ly phan ahamove va nhanhvn
-
+        // The saga path does exactly one thing here: record that the money arrived, and hand the
+        // rest to the bus. No Ahamove call, no NhanhVn call, nothing that can make the gateway wait
+        // or make this request fail after the payment is already real.
+        order.Status = PaidStatus;
         order.UpdatedAt = DateTimeOffset.UtcNow;
-        AhaMoveResponse.CreateAhaMoveOrderResponse? createAhamoveOrderResult = null;
 
-        var companyAddress = await _dbContext.CompanyAddresses
-            .Where(x => x.IsDeleted == false)
-            .FirstOrDefaultAsync();
+        _dbContext.Orders.Update(order);
+        _dbContext.Transactions.Add(transaction);
 
-        // var address = await _dbContext.Addresses
-        //     .FirstOrDefaultAsync(x => x.Id == order.AddressId);
-
-        // var phoneReceiver = address?.PhoneNumber; //cột này required
-        var phoneReceiver = order.PhoneReceiver; //cột này required
-        var fullNameReceiver = order.FullNameReceiver;
-
-        string privateDescription = companyAddress?.Remarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
-        privateDescription += $"\n-------------------------\nNN: {fullNameReceiver} - {phoneReceiver}";
-
-        var vnDt = new DateTimeOffset();
-        if (order.OrderTime > 0)
+        // Bus outbox: this does not touch RabbitMQ. It stages an OutboxMessage row inside the very
+        // same SaveChanges below, so the order can never be marked Paid without the fulfilment
+        // message, nor the message sent for an order that failed to commit.
+        await _publishEndpoint.Publish(new OrderPaid
         {
-            vnDt = DateTimeOffset
-               .FromUnixTimeSeconds(order.OrderTime)
-               .ToOffset(TimeSpan.FromHours(7));
+            OrderId = order.Id,
+            TransactionId = transaction.Id,
+            Gateway = transaction.Gateway,
+            RequestId = transaction.RequestId,
+            Amount = transaction.TransferAmount
+        });
 
-            privateDescription += $"\n-------------------------\nGiao: {vnDt:dd/MM/yyyy}";
+        try
+        {
+            await _dbContext.SaveChangesAsync();
         }
-
-        if (order.IsExportInvoice == true && order.InvoiceType != null)
+        catch (DbUpdateException exception) when (IsDuplicateGatewayEvent(exception))
         {
-            privateDescription += "\n-------------------------";
-
-            if (order.InvoiceType == InvoiceType.Business)
-            {
-                if (!string.IsNullOrWhiteSpace(order.TaxCode))
-                {
-                    try
-                    {
-                        var taxInfo = await _orderService.GetInfoTaxCode(order.TaxCode);
-                        privateDescription += $"\n{taxInfo}";
-                    }
-                    catch (BadRequestException ex)
-                    {
-                        Console.WriteLine($"Failed to get info for TaxCode {order.TaxCode}: {ex.Message}");
-                    }
-                }
-                privateDescription += $"\nMST:{order.TaxCode}";
-                privateDescription += $"\nEmail:{order.ReceiptEmail}";
-                privateDescription += $"\nSĐT:{order.ReceiptPhoneNumber}";
-            }
-            else if (order.InvoiceType == InvoiceType.Personal)
-            {
-                privateDescription += $"\nTên:{order.ReceiptFullName}";
-                privateDescription += $"\nCCCD:{order.IdentityNumber}";
-                privateDescription += $"\nĐC:{order.ReceiptAddress}";
-                privateDescription += $"\nEmail:{order.ReceiptEmail}";
-                privateDescription += $"\nSĐT:{order.ReceiptPhoneNumber}";
-            }
+            // A concurrent redelivery won the race and already recorded this exact gateway event.
+            // The unique index is the only thing that actually stops two simultaneous callbacks -
+            // the status check above is read-then-act and both can pass it. Ack and drop.
+            return;
         }
+    }
 
-        const long vatTagId = 253L;
-        const long fastTagId = 294L;
-        var tags = order.TagIds ?? new List<long>();
-        var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
-            ? tags.Append(vatTagId).ToList()
-            : tags;
+    /// <summary>
+    /// Pre-saga behaviour, kept for one release behind <see cref="UseSagaConfigKey"/>: run the three
+    /// fulfilment steps inline and only then commit. Delete once the saga has run clean in prod.
+    /// </summary>
+    private async Task FulfillPaidOrderInline(Repository.Entity.Order order, Transaction transaction)
+    {
+        var plan = await _fulfillmentService.DispatchDeliveryAsync(order.Id);
+        await _fulfillmentService.CreatePosOrderAsync(order.Id, plan);
 
-        var ahamoveConfigs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
-        //var ahamoveServiceDetails = await _ahaMoveService.GetServiceDetailsAhaMove();
-
-        var allowInstantDelivery = order.ShippingGateway == ShippingGateway.Ahamove
-            ? ahamoveConfigs.GetValue("ahamove.instant_delivery", true)
-            : true;
-
-        // Mốc unix (giây) Ahamove sẽ tới lấy hàng với đơn giao ngay = hiện tại + ahamove.idle_time.
-        // Khai báo ngoài nhánh vì còn dùng lại cho DeliveryTime gửi sang NhanhVn ở dưới.
-        long delayTime = 0;
-        var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
-        delayTime = order.ShippingGateway == ShippingGateway.Ahamove
-            ? delayCallAhamove > 0
-                ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
-                : 0L
-            : DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
-        if (order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery)
-        {
-            tagIds = tagIds.Append(fastTagId).ToList();
-
-            if (order.ShippingGateway == ShippingGateway.Ahamove)
-            {
-                var itemsRequest = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem()
-                {
-                    Id = x.Id.ToString(),
-                    Name = x.Name,
-                    Price = (int)x.Price,
-                    Num = x.Number
-                }
-                ).ToList();
-
-                var packageDetailRequest = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail()
-                {
-                    Height = x.Height,
-                    Weight = x.Weight,
-                    Length = x.Length,
-                    Width = x.Width,
-                    Description = x.Name
-                }
-                ).ToList();
-
-                var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest()
-                {
-                    OrderTime = delayTime,
-                    IdleUntil = delayTime,
-                    Paths = new List<AhaMoveRequest.AhamoveLocationPoint>()
-                {
-                    new AhaMoveRequest.AhamoveLocationPoint()
-                    {
-                        Latitude = companyAddress?.Latitude ?? 0,
-                        Longitude = companyAddress?.Longitude ?? 0,
-                        Address =(companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
-                        ShortAddress = (companyAddress?.AddressLine +", "+ companyAddress?.Ward +", " + companyAddress?.City) ?? "",
-                        FullName = companyAddress!.FullName,
-                        Phone = companyAddress.PhoneNumber,
-                        Remarks = companyAddress.Remarks!,
-                    },
-                    new AhaMoveRequest.AhamoveLocationPoint()
-                    {
-                        Latitude = order.Latitude,
-                        Longitude = order.Longitude,
-                        Address = order.Address,
-                        ShortAddress = order.ShortAddress,
-                        FullName = order.FullName,
-                        Phone = order.Phone,
-                        Remarks = order.Remarks,
-                    },
-                },
-                    ServiceId = "SGN-BIKE",
-                    Requests = new List<AhaMoveRequest.ItemsRequest>()
-                {
-                    // new AhaMoveRequest.ItemsRequest()
-                    // {
-                    //     Id = "SGN-BIKE-SMS",
-                    // },
-                    // new AhaMoveRequest.ItemsRequest()
-                    // {
-                    //     Id = "SGN-BIKE-FRAGILE",
-                    // },
-                    // new AhaMoveRequest.ItemsRequest()
-                    // {
-                    //     Id = "SGN-BIKE-BULKY",
-                    //     TierCode = "TIER_2"
-                    // },
-                    new AhaMoveRequest.ItemsRequest()
-                    {
-                        Id = "SGN-BIKE-BAGA"
-                    },
-                },
-                    PaymentMethod = "CASH",
-                    Remarks = order.Remarks,
-                    Items = itemsRequest,
-                    PackageDetail = packageDetailRequest,
-                };
-
-                var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders";
-                var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
-                var ahamoveHttpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
-                ahamoveHttpRequest.Headers.Add("Authorization", ahamoveToken);
-                ahamoveHttpRequest.Content = JsonContent.Create(createRequest);
-
-                HttpResponseMessage ahamoveResponse = await _httpClient.SendAsync(ahamoveHttpRequest);
-
-                if (ahamoveResponse.IsSuccessStatusCode)
-                {
-                    createAhamoveOrderResult =
-                        await ahamoveResponse.Content.ReadFromJsonAsync<AhaMoveResponse.CreateAhaMoveOrderResponse>();
-                }
-                else
-                {
-                    throw new BadRequestException($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
-                }
-
-                if (createAhamoveOrderResult == null)
-                {
-                    throw new BadRequestException("Ahamove returned null or empty data");
-                }
-
-                order.ShippingPartyOrderId = createAhamoveOrderResult.OrderId;
-                order.ShippingTrackingUrl = createAhamoveOrderResult.SharedLink;
-            }
-            else
-            {
-                if (_xanhSmService is null)
-                {
-                    throw new ServerException("XanhSM service is not configured");
-                }
-
-                if (companyAddress is null)
-                {
-                    throw new BadRequestException("Company pickup address is not configured");
-                }
-
-                var xanhSmDelivery = await _xanhSmService.BookDoorToDoorAsync(
-                    HoaTheoMua.Service.Order.Service.CreateXanhSmPoints(
-                        companyAddress,
-                        order.Latitude,
-                        order.Longitude,
-                        order.Address,
-                        order.ShortAddress,
-                        fullNameReceiver,
-                        phoneReceiver,
-                        order.Remarks,
-                        HoaTheoMua.Service.Order.Service.CalculateXanhSmPackageWeightKg(
-                            order.OrderDetails.Select(detail => (detail.Weight, detail.Number)))),
-                    delayTime,
-                    (long)Math.Round(order.ProductFee, MidpointRounding.AwayFromZero),
-                    order.Id.ToString());
-
-                order.ShippingPartyOrderId = xanhSmDelivery.Id ?? xanhSmDelivery.OrderId;
-                order.ShippingTrackingUrl = xanhSmDelivery.TrackingUrl ?? xanhSmDelivery.SharedLink;
-            }
-        }
-
-        var productNhanhVnRequest = new List<Product>();
-
-        if (order.TaxCode != null && order.InvoiceType == InvoiceType.Business && order.IsExportInvoice == true)
-        {
-            productNhanhVnRequest = order.OrderDetails.Select(
-               x => new Product()
-               {
-                   Id = x.ItemId,
-                   Price = x.Price,
-                   Quantity = x.Number,
-                   Vat = 8,
-               }
-           ).ToList();
-        }
-        else
-        {
-            productNhanhVnRequest = order.OrderDetails.Select(
-                x => new Product()
-                {
-                    Id = x.ItemId,
-                    Price = x.Price,
-                    Quantity = x.Number,
-                }
-            ).ToList();
-        }
-
-        //var nhanhVnOrderSources = await _configService.GetNhanhVnOrderSources();
-        var prefixOrderId = order.Id.ToString().Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
-
-        var nhanhVnRequest = new OrderRoot
-        {
-            Depot = new Depot
-            {
-                Id = 129255,
-                PickupDepotId = 0
-            },
-            Info = new Info
-            {
-                Type = 1,
-                Mode = 1,
-                DepotId = 129255,
-                OriginalOrderId = 0,
-                ReturnFromId = 0,
-                IdReturn = null,
-                SaleId = 0,
-                SaleName = "",
-                Description = order.Remarks,
-                PrivateDescription = privateDescription,
-                //nếu admin tắt tính năng giao hàng nhanh thì đã xác nhận : ahamoveAllowDelivery == false | delay 1 tiếng | chị đào tự gọi ahamove bằng tay
-                //ngược lại tức là cho phép giao hàng nhanh thì 56: đã xác nhận là đúng rồi
-                Status = (order.OrderTime == 0 && tags.Count == 0) ? 56 : 54,
-                TagIds = tagIds,
-                //chỗ này phải tách tags ra riêng: vì dòng tag đó để đọc ngày giờ giao liền
-                //và tagIds ra riêng | còn thằng này chứa tags mà bên nhanhvn có giờ, với chị đào config(giờ | thuế | giao liền)
-                TechnicalStaffId = 0,
-                PromotionId = ""
-            },
-            Channel = new Channel
-            {
-                TrafficSourceId = 996,
-                AppOrderId = !string.IsNullOrWhiteSpace(order.ShippingPartyOrderId)
-                    ? order.ShippingPartyOrderId + " - " + prefixOrderId
-                    : order.Id.ToString(),
-                SourceName = "WEBSITE",
-                PageId = "",
-                ConversationId = "",
-                VpageUserId = "",
-                VpageGroupId = "",
-                PostPurchaseMessage = "",
-                FbPsId = "",
-                PostId = "",
-                FbAdsId = 0,
-                SourceFrom = "",
-                Id = 0
-            },
-            Carrier = new Carrier
-            {
-                Id = order.ShippingGateway == ShippingGateway.Ahamove ? 12 : 0,
-                AllowTest = 1,
-                ServiceId = 0,
-                ServiceCode = "",
-                CheckGoods = 0,
-                IsPartDelivery = 0,
-                IsDeclaredFee = 0,
-                IsFeeCustomerReject = 0,
-                FeeCustomerReject = 0m, // Hậu tố 'm' biểu thị kiểu decimal
-                DeliveryDate = (order.OrderTime > 0) ? vnDt.ToString("yyyy-MM-dd") : ConvertInstantDateDelivery(delayTime),
-                // DeliveryDate =  "2026-07-05",
-                DeliveryHour = "",
-                DeliveryMinute = "",
-                // DeliveryTime = (order.OrderTime == 0) ? "" :  "19h",
-                DeliveryTime = tags.Count > 0
-                    ? await ConvertTimeDelivery(order)
-                    : ConvertInstantTimeDelivery(delayTime),
-                CarrierAccountId = 0,
-                CarrierShopId = "",
-                DeclaredValue = null,
-                DeclaredFee = 0m,
-                ShipFee = 0m,
-                CodFee = 0m,
-                IsSelfConnect = order.ShippingGateway == ShippingGateway.XanhSm ? 1 : 0,
-                CarrierPromotionCode = "",
-                CarrierPromotionCodes = new List<string>(),
-                ManualShipFee = 0m,
-                CustomerShipFee = order.ShippingFee,
-                FollowTotalFee = 0m,
-                OrderPackageSize = new OrderPackageSize
-                {
-                    Height = 0,
-                    Merge = 0,
-                    Length = 0,
-                    Weight = 0,
-                    Width = 0
-                },
-                IsBrokenGoods = 0,
-                IsDropOff = 0,
-                IsReturnGoods = 0,
-                IsDocument = 0,
-                HandDelivery = 0
-            },
-            ShippingAddress = new ShippingAddress
-            {
-                Name = order.FullName,
-                Mobile = order.Phone,
-                Address = order.Address,
-                CityId = order.City,
-                WardId = order.Ward,
-                LocationVersion = "v2"
-            },
-            Products = productNhanhVnRequest,
-            Payment = new Payment
-            {
-                DepositAmount = 0m,
-                DepositAccountId = 0,
-                TransferAmount = order.TotalFee,
-                TransferAccountId = (order.IsExportInvoice == true && order.InvoiceType != null) ? 65087 : 65088,
-                InstallmentAmount = 0m,
-                InstallmentCode = "",
-                InstallmentAccountId = 0,
-                CreditAmount = 0m,
-                CreditCode = "",
-                CreditAccountId = 0,
-                Discount = 0m,
-                DiscountType = "percent",
-                CouponCode = "",
-                CouponMoney = 0m,
-                CouponIsValid = 0,
-                UsedPoints = 0,
-                VatValue = null,
-                VatType = "percent",
-                TaxCode = "",
-                TaxDate = "",
-                DebtDueDate = "",
-                CancelAutoPoint = 0,
-                CancelAutoPromotion = 0,
-                PaymentMoMoCrm = 0,
-                MoneyTransferPaymentLink = 0,
-                TotalProductPrice = order.ProductFee,
-                UseManualDiscount = 0
-            }
-        };
-
-        var configs = await HoaTheoMua.Service.Common.ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        var appId = configs.GetValue("nhanhvn.app_id", _nhanhVnOption.AppId);
-        var businessId = configs.GetValue("nhanhvn.business_id", _nhanhVnOption.BusinessId);
-        var token = configs.GetValue("nhanhvn.token", _nhanhVnOption.Token);
-        var createNhanhOrderApi = configs.GetValue("nhanhvn.base_url", _nhanhVnOption.BaseUrl) + "/order/add?appId=" + appId + "&businessId=" + businessId;
-
-        var nhanhHttpRequest = new HttpRequestMessage(HttpMethod.Post, createNhanhOrderApi);
-        nhanhHttpRequest.Headers.Add("Authorization", token);
-        nhanhHttpRequest.Content = JsonContent.Create(nhanhVnRequest);
-
-        // var debugJson = await nhanhHttpRequest.Content.ReadAsStringAsync();
-        // Console.WriteLine("NhanhVN request body: " + debugJson);
-        //
-        HttpResponseMessage nhanhVnResponse = await _httpClient.SendAsync(nhanhHttpRequest);
-
-        // NhanhVn replies with HTTP 200 even when it rejects the order (code != 1), and in that case
-        // `data` comes back as an empty array [] instead of an object. A direct
-        // ReadFromJsonAsync<OrderResponse>() then blows up with a cryptic
-        // "could not be converted to OrderData. Path: $.data". Read the raw body and inspect it
-        // defensively so we surface NhanhVn's real error (in `messages`) instead of a 500.
-        var nhanhRawContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-
-        if (!nhanhVnResponse.IsSuccessStatusCode)
-        {
-            throw new BadRequestException($"NhanhVn API HTTP Error ({nhanhVnResponse.StatusCode}): {nhanhRawContent}");
-        }
-
-        using var nhanhDoc = JsonDocument.Parse(nhanhRawContent);
-        var nhanhRoot = nhanhDoc.RootElement;
-
-        var nhanhCode = nhanhRoot.TryGetProperty("code", out var nhanhCodeElement)
-                        && nhanhCodeElement.ValueKind == JsonValueKind.Number
-            ? nhanhCodeElement.GetInt32()
-            : 0;
-
-        // Only a code==1 response with `data` as an object is a successful order creation.
-        if (nhanhCode != 1
-            || !nhanhRoot.TryGetProperty("data", out var nhanhDataElement)
-            || nhanhDataElement.ValueKind != JsonValueKind.Object)
-        {
-            throw new BadRequestException($"NhanhVn order creation failed: {nhanhRawContent}");
-        }
-
-        var createOrderNhanhResult = nhanhDataElement.Deserialize<OrderData>();
-        if (createOrderNhanhResult == null)
-        {
-            throw new BadRequestException($"NhanhVn order creation failed: {nhanhRawContent}");
-        }
-
-        order.NhanhOrderId = createOrderNhanhResult.Id;
-        order.NhanhTrackingUrl = createOrderNhanhResult.TrackingUrl;
+        // Status is flipped LAST, deliberately. Both fulfilment steps SaveChanges on this same
+        // scoped DbContext, so assigning "Paid" up front would persist it before NhanhVn had
+        // succeeded, and the gateway's next redelivery would short-circuit on the Paid guard and
+        // never finish the order.
+        order.Status = PaidStatus;
+        order.UpdatedAt = DateTimeOffset.UtcNow;
 
         _dbContext.Orders.Update(order);
         _dbContext.Transactions.Add(transaction);
 
         await _dbContext.SaveChangesAsync();
 
-        var nhanhProductIds = order.OrderDetails
-            .Select(x => x.ItemId.ToString())
-            .Distinct()
-            .ToList();
-
-        var orderedProducts = await _dbContext.Products
-            .Where(x => !x.IsDeleted
-                        && x.NhanhProductId != null
-                        && nhanhProductIds.Contains(x.NhanhProductId))
-            .Select(x => new
-            {
-                x.Id,
-                x.ParentProductId
-            })
-            .ToListAsync();
-
-        var parentNhanhProductIds = orderedProducts
-            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
-            .Select(x => x.ParentProductId!)
-            .Distinct()
-            .ToList();
-
-        var parentProductIds = await _dbContext.Products
-            .Where(x => !x.IsDeleted
-                        && x.NhanhProductId != null
-                        && parentNhanhProductIds.Contains(x.NhanhProductId))
-            .Select(x => x.Id)
-            .ToListAsync();
-
-        var productIds = orderedProducts
-            .Select(x => x.Id)
-            .Concat(parentProductIds)
-            .Distinct()
-            .Select(x => x.ToString())
-            .ToList();
-
-        var revalidateBody = JsonSerializer.SerializeToElement(new
-        {
-            entity = "product",
-            id = productIds
-        });
-
-        await _revalidateService.RevalidateApi(revalidateBody);
+        await _fulfillmentService.RevalidateOrderProductsAsync(order.Id);
     }
 
-    private async Task<string> ConvertTimeDelivery(Repository.Entity.Order order)
-    {
-        if (order.TagIds == null || order.TagIds.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var orderTagConfig = await _configService.GetNhanhVnOrderTag();
-
-        var deliveryTime = orderTagConfig.Options?
-            .FirstOrDefault(x =>
-                x.Value.HasValue && order.TagIds.Contains(x.Value.Value));
-
-        if (deliveryTime == null)
-        {
-            throw new BadRequestException("Không tồn tại thời gian giao hàng");
-        }
-
-        var convertDeliveryTime = Regex
-            .Match(deliveryTime.Label ?? string.Empty, @"\d{1,2}");
-
-        if (!convertDeliveryTime.Success || !int.TryParse(convertDeliveryTime.Value, out var time)
-                                         || time is < 0 or > 23)
-        {
-            return string.Empty;
-        }
-
-        return $"{time:D2}:00:00";
-    }
-
-    // Đơn giao ngay không có tag nên ConvertTimeDelivery luôn trả rỗng. Với các đơn này, giờ giao
-    // hiển thị trên NhanhVn là mốc Ahamove tới lấy hàng (hiện tại + ahamove.idle_time), quy về giờ
-    // VN (UTC+7) và render theo định dạng H:i:s mà NhanhVn hỗ trợ.
-    private static string ConvertInstantTimeDelivery(long scheduledUnixSeconds)
-    {
-        if (scheduledUnixSeconds <= 0)
-        {
-            return string.Empty;
-        }
-
-        return DateTimeOffset
-            .FromUnixTimeSeconds(scheduledUnixSeconds)
-            .ToOffset(TimeSpan.FromHours(7))
-            .ToString("HH:mm:ss");
-    }
-
-    private static string ConvertInstantDateDelivery(long scheduledUnixSeconds)
-    {
-        if (scheduledUnixSeconds <= 0)
-        {
-            return string.Empty;
-        }
-
-        return DateTimeOffset
-            .FromUnixTimeSeconds(scheduledUnixSeconds)
-            .ToOffset(TimeSpan.FromHours(7))
-            .ToString("yyyy-MM-dd");
-    }
-
+    // Matches the unique index on Transactions (Gateway, RequestId). RequestId carries each
+    // gateway's own event id - BaoKim's request_id, SePay's transaction id as text.
+    private static bool IsDuplicateGatewayEvent(DbUpdateException exception)
+        => exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgres
+           && (postgres.ConstraintName?.Contains("Gateway_RequestId", StringComparison.OrdinalIgnoreCase) ?? false);
 }
-
-//     
-//     List<AhaMoveResponse.ServiceResponse>? ahamoveResult = null;
-//     
-//     if (ahamoveResponse.IsSuccessStatusCode)
-//     {
-//         ahamoveResult = await ahamoveResponse.Content.ReadFromJsonAsync<List<AhaMoveResponse.ServiceResponse>>();
-//     } else
-//     {
-//         // string nhanhErrorContent = await nhanhVnResponse.Content.ReadAsStringAsync();
-//         throw new Exception($"Ahamove API HTTP Error ({ahamoveResponse.StatusCode})");
-//     }
-//     
-//     if (ahamoveResult == null || ahamoveResult.Any() == false)
-//     {
-//         throw new Exception("Ahamove returned null or empty data");
-//     }   
-//     
-//     return new {ahamoveResult};
-// }

@@ -2,7 +2,34 @@
 using System.Text.Json.Serialization;
 
 namespace HoaTheoMua.Service.NhanhVnService;
-
+//
+//ProductLabelRequest  
+public class ProductLabelRequest  
+{  
+    [JsonPropertyName("filters")]  
+    public ProductLabelFilter? Filters { get; set; }  
+  
+    [JsonPropertyName("paginator")]  
+    public RequestPaginator? Paginator { get; set; }  
+}  
+  
+// Class chứa bộ lọc  
+public class ProductLabelFilter  
+{  
+    [JsonPropertyName("ids")]  
+    public List<int>? Ids { get; set; }  
+  
+    [JsonPropertyName("name")]  
+    public string? Name { get; set; }  
+}  
+  
+// Class chứa tham số phân trang  
+public class RequestPaginator  
+{  
+    [JsonPropertyName("size")]  
+    public int? Size { get; set; }  
+}
+//
 public class OrderLabelRequest
 {
     [JsonPropertyName("filters")]
@@ -206,6 +233,9 @@ public class NhanhProductDetailDto
 
     [JsonPropertyName("status")]
     public int? Status { get; set; }
+
+    [JsonPropertyName("tagIds")]
+    public List<int>? TagIds { get; set; }
 
     // Webhook productAdd/productUpdate chỉ gửi id phẳng (categoryId/brandId), KHÔNG gửi object
     // `category`/`brand` như response của /api/product/search. Giữ cả hai dạng để không phá code cũ.
