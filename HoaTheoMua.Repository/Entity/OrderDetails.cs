@@ -17,6 +17,8 @@ public class OrderDetails: BaseEntity<Guid>, IAuditableEntity
     public double Width { get; set; }
     public Order Order { get; set; }
     public Guid OrderId { get; set; }
+    public Guid GeneratedFlower { get; set; }
+    public Guid GeneratedCard { get; set; }
     
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }

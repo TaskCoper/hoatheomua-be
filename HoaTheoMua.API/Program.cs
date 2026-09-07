@@ -3,8 +3,10 @@ using HoaTheoMua.Extentions;
 using HoaTheoMua.Filters;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
+using Npgsql;
 using AssemblyReference = HoaTheoMua.Service.AssemblyReference;
 using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
 using CategoryProductService = HoaTheoMua.Service.CategoryProduct;
@@ -47,6 +49,9 @@ builder.Services.AddEndpointsApiExplorer();
 var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
 var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.EnableDynamicJson();
+dataSourceBuilder.MapEnum<SystemPromptType>("system_prompt_types");
+dataSourceBuilder.MapEnum<PlatformType>("platform_type");
+dataSourceBuilder.MapEnum<CardFormType>("form_type");
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
