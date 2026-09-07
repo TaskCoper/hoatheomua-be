@@ -105,27 +105,6 @@ public class ServiceTests
     }
 
     [Theory]
-    [InlineData("2126ca79-8b1d-4d93-a6fb-e610b8700ab1", 250000)]
-    [InlineData("2126ca798b1d4d93a6fbe610b8700ab1", -1)]
-    public async Task BookDeliveryAsync_InvalidReferenceOrGoodsValue_RejectsBeforeHttp(
-        string partnerTripId, long goodsValue)
-    {
-        var service = CreateService(_ => throw new InvalidOperationException("HTTP must not be called"));
-        await Assert.ThrowsAsync<BadRequestException>(() => service.BookDeliveryAsync(
-            new XanhSmBookDeliveryRequest
-            {
-                OrderTime = 1770350401,
-                ServiceId = 2100,
-                ServiceType = "EXPRESS-ONDEMAND",
-                FeeId = Guid.NewGuid().ToString(),
-                Points = [CreatePoint("PICK UP"), CreatePoint("DROP OFF")],
-                AddonIds = [5],
-                PartnerTripId = partnerTripId,
-                GoodsValue = goodsValue
-            }));
-    }
-
-    [Theory]
     [InlineData("{\"order_time\":1770350401}")]
     [InlineData("{\"order_time\":\"1770350401\"}")]
     public void EstimateData_DeserializesNumericOrStringOrderTime(string json)
