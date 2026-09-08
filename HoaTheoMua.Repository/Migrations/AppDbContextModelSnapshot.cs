@@ -434,11 +434,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<string>("Input")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("input");
-
                     b.Property<string>("Metadata")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -448,9 +443,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("output_id");
 
-                    b.Property<Guid?>("SystemPromptId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("system_prompt_id");
+                    b.Property<string>("SystemForm")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("system_form");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -463,8 +458,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("SystemPromptId");
 
                     b.HasIndex("Type", "OutputId")
                         .IsUnique();
@@ -629,7 +622,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("Group", "Key")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false AND \"IsPublic\" = true AND \"Kind\" = 'Setting' AND \"Group\" IN ('card_size', 'card_config')");
+                        .HasFilter("\"IsDeleted\" = false AND \"Kind\" = 'Setting' AND \"Group\" = 'card_config' AND \"Key\" IN ('card_config.sizes', 'card_config.prices')");
 
                     b.ToTable("Configs");
                 });
@@ -2511,16 +2504,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("CategoryProduct");
 
                     b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ClientHistory", b =>
-                {
-                    b.HasOne("HoaTheoMua.Repository.Entity.SystemPrompt", "SystemPrompt")
-                        .WithMany()
-                        .HasForeignKey("SystemPromptId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("SystemPrompt");
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.ComboSpecification", b =>

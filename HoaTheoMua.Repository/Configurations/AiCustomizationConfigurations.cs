@@ -215,17 +215,12 @@ public class ClientHistoryConfiguration : IEntityTypeConfiguration<ClientHistory
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.UserId).HasColumnName("user_id");
-        builder.Property(x => x.Input).HasColumnName("input").HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.Type).HasColumnName("type").HasMaxLength(50).IsRequired();
-        builder.Property(x => x.SystemPromptId).HasColumnName("system_prompt_id");
+        builder.Property(x => x.SystemForm).HasColumnName("system_form").HasColumnType("jsonb");
         builder.Property(x => x.Metadata).HasColumnName("metadata").HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
         builder.Property(x => x.BaseId).HasColumnName("base_id");
         builder.Property(x => x.OutputId).HasColumnName("output_id");
-        builder.HasOne(x => x.SystemPrompt)
-            .WithMany()
-            .HasForeignKey(x => x.SystemPromptId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         // base_id/output_id are logical polymorphic references, so they intentionally have no FK.
         builder.HasIndex(x => new { x.Type, x.OutputId }).IsUnique();

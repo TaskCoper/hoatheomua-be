@@ -18,7 +18,7 @@ public class ConfigConfiguration: IEntityTypeConfiguration<Config>
         builder.HasIndex(x => x.Group);
         builder.HasIndex(x => new { x.Group, x.Key })
             .IsUnique()
-            .HasFilter("\"IsDeleted\" = false AND \"IsPublic\" = true AND \"Kind\" = 'Setting' AND \"Group\" IN ('card_size', 'card_config')");
+            .HasFilter("\"IsDeleted\" = false AND \"Kind\" = 'Setting' AND \"Group\" = 'card_config' AND \"Key\" IN ('card_config.sizes', 'card_config.prices')");
         builder.Property(x => x.Group)
             .IsRequired();
 
