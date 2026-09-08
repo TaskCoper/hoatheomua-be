@@ -29,6 +29,7 @@ using MaterialService = HoaTheoMua.Service.Material;
 using XanhSmService = HoaTheoMua.Service.XanhSm;
 using FulfillmentService = HoaTheoMua.Service.Fulfillment;
 using HoaTheoMua.Service.DependencyInjection.Extensions;
+using MockupService = HoaTheoMua.Service.Mockup;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -104,6 +105,7 @@ builder.Services.AddScoped<ProductImportService.IService, ProductImportService.S
 builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
+builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
 
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
 // registering it with AddScoped would silently hand it the unnamed default HttpClient the way
