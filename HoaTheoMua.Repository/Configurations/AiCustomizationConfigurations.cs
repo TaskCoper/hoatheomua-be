@@ -225,7 +225,7 @@ public class ClientHistoryConfiguration : IEntityTypeConfiguration<ClientHistory
         builder.Property(clientHistory => clientHistory.SystemForm).HasColumnName("SystemForm").HasColumnType("jsonb");
         builder.Property(clientHistory => clientHistory.Metadata).HasColumnName("Metadata").HasColumnType("jsonb").IsRequired();
         builder.Property(clientHistory => clientHistory.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
-        builder.Property(clientHistory => clientHistory.RootID).HasColumnName("RootID").IsRequired();
+        builder.Property(clientHistory => clientHistory.RootId).HasColumnName("RootID").IsRequired();
         builder.Property(clientHistory => clientHistory.BaseId).HasColumnName("BaseId");
         builder.Property(clientHistory => clientHistory.OutputId).HasColumnName("OutputId");
 

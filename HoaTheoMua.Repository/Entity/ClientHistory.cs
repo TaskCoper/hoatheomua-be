@@ -9,7 +9,7 @@ public class ClientHistory
     public ClientHistoryType Type { get; set; }
     public string? SystemForm { get; set; }
     public string Metadata { get; set; } = null!;
-    public Guid RootID { get; set; }
+    public Guid RootId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public Guid BaseId { get; set; }
     public Guid OutputId { get; set; }
