@@ -50,6 +50,7 @@ public class AppDbContext : DbContext
         modelBuilder.HasPostgresEnum<SystemPromptType>(name: "system_prompt_types");
         modelBuilder.HasPostgresEnum<PlatformType>(name: "platform_type");
         modelBuilder.HasPostgresEnum<CardFormType>(name: "form_type");
+        modelBuilder.HasPostgresEnum<ClientHistoryType>(name: "client_history_types");
         modelBuilder.ApplyConfigurationsFromAssembly(AssemblyReference.Assembly);
 
         // MassTransit transactional outbox/inbox. All three are required: the webhook publishes

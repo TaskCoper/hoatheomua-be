@@ -26,6 +26,14 @@ public enum GeneratedCardType
     Handmade
 }
 
+public enum ClientHistoryType
+{
+    Flower,
+    Card,
+    HandmadeCard,
+    Post
+}
+
 public enum CardFormType
 {
     GoMay,

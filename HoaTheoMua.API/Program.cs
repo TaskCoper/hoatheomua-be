@@ -56,6 +56,7 @@ dataSourceBuilder.EnableDynamicJson();
 dataSourceBuilder.MapEnum<SystemPromptType>("system_prompt_types");
 dataSourceBuilder.MapEnum<PlatformType>("platform_type");
 dataSourceBuilder.MapEnum<CardFormType>("form_type");
+dataSourceBuilder.MapEnum<ClientHistoryType>("client_history_types");
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<AppDbContext>(options =>

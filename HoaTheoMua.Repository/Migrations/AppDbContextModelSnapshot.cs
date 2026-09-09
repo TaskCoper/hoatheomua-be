@@ -22,6 +22,7 @@ namespace HoaTheoMua.Repository.Migrations
                 .HasAnnotation("ProductVersion", "8.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "client_history_types", new[] { "flower", "card", "handmade_card", "post" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "form_type", new[] { "go_may", "calligraphy" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "platform_type", new[] { "zalo", "facebook", "instagram" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "system_prompt_types", new[] { "flower", "card", "post" });
@@ -155,18 +156,18 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("content");
+                        .HasColumnName("Content");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
-                        .HasColumnName("image_url");
+                        .HasColumnName("ImageUrl");
 
                     b.HasKey("Id");
 
@@ -178,61 +179,61 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
+                        .HasColumnName("CreatedAt")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Description")
                         .HasColumnType("text")
-                        .HasColumnName("description");
+                        .HasColumnName("Description");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
-                        .HasColumnName("image_url");
+                        .HasColumnName("ImageUrl");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true)
-                        .HasColumnName("is_active");
+                        .HasColumnName("IsActive");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
-                        .HasColumnName("is_deleted");
+                        .HasColumnName("IsDeleted");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
-                        .HasColumnName("name");
+                        .HasColumnName("Name");
 
                     b.Property<string>("TemplateType")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
-                        .HasColumnName("template_type");
+                        .HasColumnName("TemplateType");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnName("UpdatedAt");
 
                     b.HasKey("Id");
 
                     b.HasIndex("TemplateType", "IsActive", "CreatedAt")
                         .IsDescending(false, false, true)
-                        .HasFilter("is_deleted = false");
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("card_templates", null, t =>
                         {
-                            t.HasCheckConstraint("CK_card_templates_template_type", "template_type IN ('ai', 'handmade')");
+                            t.HasCheckConstraint("CK_card_templates_template_type", "\"TemplateType\" IN ('ai', 'handmade')");
                         });
                 });
 
@@ -422,43 +423,42 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<Guid>("BaseId")
                         .HasColumnType("uuid")
-                        .HasColumnName("base_id");
+                        .HasColumnName("BaseId");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
+                        .HasColumnName("CreatedAt")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Metadata")
                         .IsRequired()
                         .HasColumnType("jsonb")
-                        .HasColumnName("metadata");
+                        .HasColumnName("Metadata");
 
                     b.Property<Guid>("OutputId")
                         .HasColumnType("uuid")
-                        .HasColumnName("output_id");
+                        .HasColumnName("OutputId");
+
+                    b.Property<Guid>("RootID")
+                        .HasColumnType("uuid")
+                        .HasColumnName("RootID");
 
                     b.Property<string>("SystemForm")
                         .HasColumnType("jsonb")
-                        .HasColumnName("system_form");
+                        .HasColumnName("SystemForm");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("type");
+                    b.Property<ClientHistoryType>("Type")
+                        .HasColumnType("client_history_types")
+                        .HasColumnName("Type");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<Guid>("root")
-                        .HasColumnType("uuid");
+                        .HasColumnName("UserId");
 
                     b.HasKey("Id");
 
@@ -635,113 +635,113 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<string>("AttachedImageUrl")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
-                        .HasColumnName("attached_image_url");
+                        .HasColumnName("AttachedImageUrl");
 
                     b.Property<decimal>("BasePrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
-                        .HasColumnName("base_price");
+                        .HasColumnName("BasePrice");
 
                     b.Property<string>("CardType")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
-                        .HasColumnName("card_type");
+                        .HasColumnName("CardType");
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("content");
+                        .HasColumnName("Content");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
+                        .HasColumnName("CreatedAt")
                         .HasDefaultValueSql("now()");
 
                     b.Property<decimal>("ExtraPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
-                        .HasColumnName("extra_price");
+                        .HasColumnName("ExtraPrice");
 
                     b.Property<CardFormType>("FormType")
                         .HasColumnType("form_type")
-                        .HasColumnName("form_type");
+                        .HasColumnName("FormType");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
-                        .HasColumnName("image_url");
+                        .HasColumnName("ImageUrl");
 
                     b.Property<string>("MessageContent")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("message_content");
+                        .HasColumnName("MessageContent");
 
                     b.Property<string>("RawImage")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
-                        .HasColumnName("raw_image");
+                        .HasColumnName("RawImage");
 
                     b.Property<string>("ReceiverName")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
-                        .HasColumnName("receiver_name");
+                        .HasColumnName("ReceiverName");
 
                     b.Property<string>("SenderName")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
-                        .HasColumnName("sender_name");
+                        .HasColumnName("SenderName");
 
                     b.Property<decimal>("SizeBasePrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
-                        .HasColumnName("size_base_price");
+                        .HasColumnName("SizeBasePrice");
 
                     b.Property<decimal>("SizeHeight")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)")
-                        .HasColumnName("size_height");
+                        .HasColumnName("SizeHeight");
 
                     b.Property<int>("SizeMaxWords")
                         .HasColumnType("integer")
-                        .HasColumnName("size_max_words");
+                        .HasColumnName("SizeMaxWords");
 
                     b.Property<string>("SizeName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
-                        .HasColumnName("size_name");
+                        .HasColumnName("SizeName");
 
                     b.Property<decimal>("SizeWidth")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)")
-                        .HasColumnName("size_width");
+                        .HasColumnName("SizeWidth");
 
                     b.Property<decimal>("TotalPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
-                        .HasColumnName("total_price");
+                        .HasColumnName("TotalPrice");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnName("UserId");
 
                     b.Property<string>("WordConfigSnapshot")
                         .HasColumnType("jsonb")
-                        .HasColumnName("word_config_snapshot");
+                        .HasColumnName("WordConfigSnapshot");
 
                     b.Property<int>("WordCount")
                         .HasColumnType("integer")
-                        .HasColumnName("word_count");
+                        .HasColumnName("WordCount");
 
                     b.HasKey("Id");
 
@@ -753,13 +753,13 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.ToTable("generated_cards", null, t =>
                         {
-                            t.HasCheckConstraint("CK_generated_cards_ai_images", "card_type <> 'ai' OR (raw_image IS NOT NULL AND image_url IS NOT NULL)");
+                            t.HasCheckConstraint("CK_generated_cards_ai_images", "\"CardType\" <> 'ai' OR (\"RawImage\" IS NOT NULL AND \"ImageUrl\" IS NOT NULL)");
 
-                            t.HasCheckConstraint("CK_generated_cards_card_type", "card_type IN ('ai', 'handmade')");
+                            t.HasCheckConstraint("CK_generated_cards_card_type", "\"CardType\" IN ('ai', 'handmade')");
 
-                            t.HasCheckConstraint("CK_generated_cards_handmade", "card_type <> 'handmade' OR (form_type = 'calligraphy' AND attached_image_url IS NULL AND raw_image IS NULL AND base_price = 0 AND total_price = extra_price)");
+                            t.HasCheckConstraint("CK_generated_cards_handmade", "\"CardType\" <> 'handmade' OR (\"FormType\" = 'calligraphy' AND \"AttachedImageUrl\" IS NULL AND \"RawImage\" IS NULL AND \"BasePrice\" = 0 AND \"TotalPrice\" = \"ExtraPrice\")");
 
-                            t.HasCheckConstraint("CK_generated_cards_non_negative_values", "size_width >= 0 AND size_height >= 0 AND size_base_price >= 0 AND size_max_words >= 0 AND word_count >= 0 AND base_price >= 0 AND extra_price >= 0 AND total_price >= 0");
+                            t.HasCheckConstraint("CK_generated_cards_non_negative_values", "\"SizeWidth\" >= 0 AND \"SizeHeight\" >= 0 AND \"SizeBasePrice\" >= 0 AND \"SizeMaxWords\" >= 0 AND \"WordCount\" >= 0 AND \"BasePrice\" >= 0 AND \"ExtraPrice\" >= 0 AND \"TotalPrice\" >= 0");
                         });
                 });
 
@@ -768,23 +768,23 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
+                        .HasColumnName("CreatedAt")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
-                        .HasColumnName("image_url");
+                        .HasColumnName("ImageUrl");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnName("UserId");
 
                     b.HasKey("Id");
 
@@ -799,28 +799,28 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("content");
+                        .HasColumnName("Content");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
+                        .HasColumnName("CreatedAt")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
-                        .HasColumnName("image_url");
+                        .HasColumnName("ImageUrl");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnName("UserId");
 
                     b.HasKey("Id");
 
@@ -915,52 +915,52 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
+                        .HasColumnName("CreatedAt")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Description")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
-                        .HasColumnName("description");
+                        .HasColumnName("Description");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
-                        .HasColumnName("image_url");
+                        .HasColumnName("ImageUrl");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true)
-                        .HasColumnName("is_active");
+                        .HasColumnName("IsActive");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
-                        .HasColumnName("is_deleted");
+                        .HasColumnName("IsDeleted");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
-                        .HasColumnName("name");
+                        .HasColumnName("Name");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnName("UpdatedAt");
 
                     b.HasKey("Id");
 
                     b.HasIndex("IsActive", "CreatedAt")
                         .IsDescending(false, true)
-                        .HasFilter("is_deleted = false");
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("mockup", (string)null);
                 });
@@ -1769,16 +1769,16 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("description");
+                        .HasColumnName("Description");
 
                     b.Property<PlatformType>("Platform")
                         .HasColumnType("platform_type")
-                        .HasColumnName("platform");
+                        .HasColumnName("Platform");
 
                     b.HasKey("Id");
 
@@ -1792,34 +1792,34 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<Guid>("BaseId")
                         .HasColumnType("uuid")
-                        .HasColumnName("base_id");
+                        .HasColumnName("BaseId");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
+                        .HasColumnName("CreatedAt")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Input")
                         .IsRequired()
                         .HasColumnType("jsonb")
-                        .HasColumnName("input");
+                        .HasColumnName("Input");
 
                     b.Property<string>("Metadata")
                         .HasColumnType("jsonb")
-                        .HasColumnName("metadata");
+                        .HasColumnName("Metadata");
 
                     b.Property<Guid>("OutputId")
                         .HasColumnType("uuid")
-                        .HasColumnName("output_id");
+                        .HasColumnName("OutputId");
 
                     b.Property<Guid>("SystemPromptId")
                         .HasColumnType("uuid")
-                        .HasColumnName("system_prompt_id");
+                        .HasColumnName("SystemPromptId");
 
                     b.HasKey("Id");
 
@@ -2172,12 +2172,12 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("content");
+                        .HasColumnName("Content");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -2187,7 +2187,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<SystemPromptType>("Type")
                         .HasColumnType("system_prompt_types")
-                        .HasColumnName("type");
+                        .HasColumnName("Type");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

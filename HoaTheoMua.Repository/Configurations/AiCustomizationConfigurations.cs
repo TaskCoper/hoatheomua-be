@@ -10,14 +10,14 @@ public class SystemPromptConfiguration : IEntityTypeConfiguration<SystemPrompt>
     public void Configure(EntityTypeBuilder<SystemPrompt> builder)
     {
         builder.ToTable("system_prompts");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.Type)
-            .HasColumnName("type")
+        builder.HasKey(systemPrompt => systemPrompt.Id);
+        builder.Property(systemPrompt => systemPrompt.Id).HasColumnName("Id");
+        builder.Property(systemPrompt => systemPrompt.Type)
+            .HasColumnName("Type")
             .HasColumnType("system_prompt_types")
             .IsRequired();
-        builder.Property(x => x.Content).HasColumnName("content").HasColumnType("text").IsRequired();
-        builder.HasIndex(x => x.Type).IsUnique();
+        builder.Property(systemPrompt => systemPrompt.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
+        builder.HasIndex(systemPrompt => systemPrompt.Type).IsUnique();
     }
 }
 
@@ -26,14 +26,14 @@ public class PlatformStandardConfiguration : IEntityTypeConfiguration<PlatformSt
     public void Configure(EntityTypeBuilder<PlatformStandard> builder)
     {
         builder.ToTable("platform_standards");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.Platform)
-            .HasColumnName("platform")
+        builder.HasKey(platformStandard => platformStandard.Id);
+        builder.Property(platformStandard => platformStandard.Id).HasColumnName("Id");
+        builder.Property(platformStandard => platformStandard.Platform)
+            .HasColumnName("Platform")
             .HasColumnType("platform_type")
             .IsRequired();
-        builder.Property(x => x.Description).HasColumnName("description").HasColumnType("text").IsRequired();
-        builder.HasIndex(x => x.Platform);
+        builder.Property(platformStandard => platformStandard.Description).HasColumnName("Description").HasColumnType("text").IsRequired();
+        builder.HasIndex(platformStandard => platformStandard.Platform);
     }
 }
 
@@ -42,27 +42,32 @@ public class CardTemplateConfiguration : IEntityTypeConfiguration<CardTemplate>
     public void Configure(EntityTypeBuilder<CardTemplate> builder)
     {
         builder.ToTable("card_templates", table =>
-            table.HasCheckConstraint("CK_card_templates_template_type", "template_type IN ('ai', 'handmade')"));
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
-        builder.Property(x => x.Description).HasColumnName("description").HasColumnType("text");
-        builder.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(2048).IsRequired();
-        builder.Property(x => x.TemplateType)
-            .HasColumnName("template_type")
+            table.HasCheckConstraint("CK_card_templates_template_type", "\"TemplateType\" IN ('ai', 'handmade')"));
+        builder.HasKey(cardTemplate => cardTemplate.Id);
+        builder.Property(cardTemplate => cardTemplate.Id).HasColumnName("Id");
+        builder.Property(cardTemplate => cardTemplate.Name).HasColumnName("Name").HasMaxLength(200).IsRequired();
+        builder.Property(cardTemplate => cardTemplate.Description).HasColumnName("Description").HasColumnType("text");
+        builder.Property(cardTemplate => cardTemplate.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
+        builder.Property(cardTemplate => cardTemplate.TemplateType)
+            .HasColumnName("TemplateType")
             .HasConversion(
                 value => value == CardTemplateType.Ai ? "ai" : "handmade",
                 value => value == "ai" ? CardTemplateType.Ai : CardTemplateType.Handmade)
             .HasMaxLength(20)
             .IsRequired();
-        builder.Property(x => x.IsActive).HasColumnName("is_active").HasDefaultValue(true);
-        builder.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
-        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(cardTemplate => cardTemplate.IsActive).HasColumnName("IsActive").HasDefaultValue(true);
+        builder.Property(cardTemplate => cardTemplate.IsDeleted).HasColumnName("IsDeleted").HasDefaultValue(false);
+        builder.Property(cardTemplate => cardTemplate.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
+        builder.Property(cardTemplate => cardTemplate.UpdatedAt).HasColumnName("UpdatedAt");
 
-        builder.HasIndex(x => new { x.TemplateType, x.IsActive, x.CreatedAt })
+        builder.HasIndex(cardTemplate => new
+            {
+                cardTemplate.TemplateType,
+                cardTemplate.IsActive,
+                cardTemplate.CreatedAt
+            })
             .IsDescending(false, false, true)
-            .HasFilter("is_deleted = false");
+            .HasFilter("\"IsDeleted\" = false");
     }
 }
 
@@ -71,10 +76,10 @@ public class BasePostConfiguration : IEntityTypeConfiguration<BasePost>
     public void Configure(EntityTypeBuilder<BasePost> builder)
     {
         builder.ToTable("base_posts");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.Content).HasColumnName("content").HasColumnType("text").IsRequired();
-        builder.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(2048).IsRequired();
+        builder.HasKey(basePost => basePost.Id);
+        builder.Property(basePost => basePost.Id).HasColumnName("Id");
+        builder.Property(basePost => basePost.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
+        builder.Property(basePost => basePost.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
     }
 }
 
@@ -83,13 +88,13 @@ public class GeneratedPostConfiguration : IEntityTypeConfiguration<GeneratedPost
     public void Configure(EntityTypeBuilder<GeneratedPost> builder)
     {
         builder.ToTable("generated_posts");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.Content).HasColumnName("content").HasColumnType("text").IsRequired();
-        builder.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(2048).IsRequired();
-        builder.Property(x => x.UserId).HasColumnName("user_id");
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
-        builder.HasIndex(x => new { x.UserId, x.CreatedAt }).IsDescending(false, true);
+        builder.HasKey(generatedPost => generatedPost.Id);
+        builder.Property(generatedPost => generatedPost.Id).HasColumnName("Id");
+        builder.Property(generatedPost => generatedPost.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
+        builder.Property(generatedPost => generatedPost.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
+        builder.Property(generatedPost => generatedPost.UserId).HasColumnName("UserId");
+        builder.Property(generatedPost => generatedPost.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
+        builder.HasIndex(generatedPost => new { generatedPost.UserId, generatedPost.CreatedAt }).IsDescending(false, true);
     }
 }
 
@@ -98,12 +103,12 @@ public class GeneratedFlowerConfiguration : IEntityTypeConfiguration<GeneratedFl
     public void Configure(EntityTypeBuilder<GeneratedFlower> builder)
     {
         builder.ToTable("generated_flowers");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(2048).IsRequired();
-        builder.Property(x => x.UserId).HasColumnName("user_id");
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
-        builder.HasIndex(x => new { x.UserId, x.CreatedAt }).IsDescending(false, true);
+        builder.HasKey(generatedFlower => generatedFlower.Id);
+        builder.Property(generatedFlower => generatedFlower.Id).HasColumnName("Id");
+        builder.Property(generatedFlower => generatedFlower.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
+        builder.Property(generatedFlower => generatedFlower.UserId).HasColumnName("UserId");
+        builder.Property(generatedFlower => generatedFlower.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
+        builder.HasIndex(generatedFlower => new { generatedFlower.UserId, generatedFlower.CreatedAt }).IsDescending(false, true);
     }
 }
 
@@ -113,53 +118,53 @@ public class GeneratedCardConfiguration : IEntityTypeConfiguration<GeneratedCard
     {
         builder.ToTable("generated_cards", table =>
         {
-            table.HasCheckConstraint("CK_generated_cards_card_type", "card_type IN ('ai', 'handmade')");
+            table.HasCheckConstraint("CK_generated_cards_card_type", "\"CardType\" IN ('ai', 'handmade')");
             table.HasCheckConstraint(
                 "CK_generated_cards_non_negative_values",
-                "size_width >= 0 AND size_height >= 0 AND size_base_price >= 0 AND size_max_words >= 0 AND word_count >= 0 AND base_price >= 0 AND extra_price >= 0 AND total_price >= 0");
+                "\"SizeWidth\" >= 0 AND \"SizeHeight\" >= 0 AND \"SizeBasePrice\" >= 0 AND \"SizeMaxWords\" >= 0 AND \"WordCount\" >= 0 AND \"BasePrice\" >= 0 AND \"ExtraPrice\" >= 0 AND \"TotalPrice\" >= 0");
             table.HasCheckConstraint(
                 "CK_generated_cards_handmade",
-                "card_type <> 'handmade' OR (form_type = 'calligraphy' AND attached_image_url IS NULL AND raw_image IS NULL AND base_price = 0 AND total_price = extra_price)");
+                "\"CardType\" <> 'handmade' OR (\"FormType\" = 'calligraphy' AND \"AttachedImageUrl\" IS NULL AND \"RawImage\" IS NULL AND \"BasePrice\" = 0 AND \"TotalPrice\" = \"ExtraPrice\")");
             table.HasCheckConstraint(
                 "CK_generated_cards_ai_images",
-                "card_type <> 'ai' OR (raw_image IS NOT NULL AND image_url IS NOT NULL)");
+                "\"CardType\" <> 'ai' OR (\"RawImage\" IS NOT NULL AND \"ImageUrl\" IS NOT NULL)");
         });
 
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.Content).HasColumnName("content").HasColumnType("text").IsRequired();
-        builder.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(2048).IsRequired();
-        builder.Property(x => x.RawImage).HasColumnName("raw_image").HasMaxLength(2048);
-        builder.Property(x => x.UserId).HasColumnName("user_id");
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
-        builder.Property(x => x.CardType)
-            .HasColumnName("card_type")
+        builder.HasKey(generatedCard => generatedCard.Id);
+        builder.Property(generatedCard => generatedCard.Id).HasColumnName("Id");
+        builder.Property(generatedCard => generatedCard.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
+        builder.Property(generatedCard => generatedCard.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
+        builder.Property(generatedCard => generatedCard.RawImage).HasColumnName("RawImage").HasMaxLength(2048);
+        builder.Property(generatedCard => generatedCard.UserId).HasColumnName("UserId");
+        builder.Property(generatedCard => generatedCard.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
+        builder.Property(generatedCard => generatedCard.CardType)
+            .HasColumnName("CardType")
             .HasConversion(
                 value => value == GeneratedCardType.Ai ? "ai" : "handmade",
                 value => value == "ai" ? GeneratedCardType.Ai : GeneratedCardType.Handmade)
             .HasMaxLength(20)
             .IsRequired();
-        builder.Property(x => x.FormType)
-            .HasColumnName("form_type")
+        builder.Property(generatedCard => generatedCard.FormType)
+            .HasColumnName("FormType")
             .HasColumnType("form_type")
             .IsRequired();
-        builder.Property(x => x.SenderName).HasColumnName("sender_name").HasMaxLength(500).IsRequired();
-        builder.Property(x => x.ReceiverName).HasColumnName("receiver_name").HasMaxLength(500).IsRequired();
-        builder.Property(x => x.MessageContent).HasColumnName("message_content").HasColumnType("text").IsRequired();
-        builder.Property(x => x.AttachedImageUrl).HasColumnName("attached_image_url").HasMaxLength(2048);
-        builder.Property(x => x.SizeName).HasColumnName("size_name").HasMaxLength(100).IsRequired();
-        builder.Property(x => x.SizeWidth).HasColumnName("size_width").HasPrecision(10, 2);
-        builder.Property(x => x.SizeHeight).HasColumnName("size_height").HasPrecision(10, 2);
-        builder.Property(x => x.SizeBasePrice).HasColumnName("size_base_price").HasPrecision(18, 2);
-        builder.Property(x => x.SizeMaxWords).HasColumnName("size_max_words");
-        builder.Property(x => x.WordCount).HasColumnName("word_count");
-        builder.Property(x => x.WordConfigSnapshot).HasColumnName("word_config_snapshot").HasColumnType("jsonb");
-        builder.Property(x => x.BasePrice).HasColumnName("base_price").HasPrecision(18, 2);
-        builder.Property(x => x.ExtraPrice).HasColumnName("extra_price").HasPrecision(18, 2);
-        builder.Property(x => x.TotalPrice).HasColumnName("total_price").HasPrecision(18, 2);
+        builder.Property(generatedCard => generatedCard.SenderName).HasColumnName("SenderName").HasMaxLength(500).IsRequired();
+        builder.Property(generatedCard => generatedCard.ReceiverName).HasColumnName("ReceiverName").HasMaxLength(500).IsRequired();
+        builder.Property(generatedCard => generatedCard.MessageContent).HasColumnName("MessageContent").HasColumnType("text").IsRequired();
+        builder.Property(generatedCard => generatedCard.AttachedImageUrl).HasColumnName("AttachedImageUrl").HasMaxLength(2048);
+        builder.Property(generatedCard => generatedCard.SizeName).HasColumnName("SizeName").HasMaxLength(100).IsRequired();
+        builder.Property(generatedCard => generatedCard.SizeWidth).HasColumnName("SizeWidth").HasPrecision(10, 2);
+        builder.Property(generatedCard => generatedCard.SizeHeight).HasColumnName("SizeHeight").HasPrecision(10, 2);
+        builder.Property(generatedCard => generatedCard.SizeBasePrice).HasColumnName("SizeBasePrice").HasPrecision(18, 2);
+        builder.Property(generatedCard => generatedCard.SizeMaxWords).HasColumnName("SizeMaxWords");
+        builder.Property(generatedCard => generatedCard.WordCount).HasColumnName("WordCount");
+        builder.Property(generatedCard => generatedCard.WordConfigSnapshot).HasColumnName("WordConfigSnapshot").HasColumnType("jsonb");
+        builder.Property(generatedCard => generatedCard.BasePrice).HasColumnName("BasePrice").HasPrecision(18, 2);
+        builder.Property(generatedCard => generatedCard.ExtraPrice).HasColumnName("ExtraPrice").HasPrecision(18, 2);
+        builder.Property(generatedCard => generatedCard.TotalPrice).HasColumnName("TotalPrice").HasPrecision(18, 2);
 
-        builder.HasIndex(x => new { x.UserId, x.CreatedAt }).IsDescending(false, true);
-        builder.HasIndex(x => new { x.CardType, x.CreatedAt }).IsDescending(false, true);
+        builder.HasIndex(generatedCard => new { generatedCard.UserId, generatedCard.CreatedAt }).IsDescending(false, true);
+        builder.HasIndex(generatedCard => new { generatedCard.CardType, generatedCard.CreatedAt }).IsDescending(false, true);
     }
 }
 
@@ -168,20 +173,20 @@ public class PostHistoryConfiguration : IEntityTypeConfiguration<PostHistory>
     public void Configure(EntityTypeBuilder<PostHistory> builder)
     {
         builder.ToTable("post_histories");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.Input).HasColumnName("input").HasColumnType("jsonb").IsRequired();
-        builder.Property(x => x.BaseId).HasColumnName("base_id");
-        builder.Property(x => x.OutputId).HasColumnName("output_id");
-        builder.Property(x => x.SystemPromptId).HasColumnName("system_prompt_id");
-        builder.Property(x => x.Metadata).HasColumnName("metadata").HasColumnType("jsonb");
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
+        builder.HasKey(postHistory => postHistory.Id);
+        builder.Property(postHistory => postHistory.Id).HasColumnName("Id");
+        builder.Property(postHistory => postHistory.Input).HasColumnName("Input").HasColumnType("jsonb").IsRequired();
+        builder.Property(postHistory => postHistory.BaseId).HasColumnName("BaseId");
+        builder.Property(postHistory => postHistory.OutputId).HasColumnName("OutputId");
+        builder.Property(postHistory => postHistory.SystemPromptId).HasColumnName("SystemPromptId");
+        builder.Property(postHistory => postHistory.Metadata).HasColumnName("Metadata").HasColumnType("jsonb");
+        builder.Property(postHistory => postHistory.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
         builder.HasOne<SystemPrompt>()
             .WithMany()
-            .HasForeignKey(x => x.SystemPromptId)
+            .HasForeignKey(postHistory => postHistory.SystemPromptId)
             .OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(x => x.OutputId).IsUnique();
-        builder.HasIndex(x => new { x.BaseId, x.CreatedAt }).IsDescending(false, true);
+        builder.HasIndex(postHistory => postHistory.OutputId).IsUnique();
+        builder.HasIndex(postHistory => new { postHistory.BaseId, postHistory.CreatedAt }).IsDescending(false, true);
     }
 }
 
@@ -190,18 +195,18 @@ public class MockupConfiguration : IEntityTypeConfiguration<Mockup>
     public void Configure(EntityTypeBuilder<Mockup> builder)
     {
         builder.ToTable("mockup");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(50).IsRequired();
-        builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(200);
-        builder.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(2048).IsRequired();
-        builder.Property(x => x.IsActive).HasColumnName("is_active").HasDefaultValue(true);
-        builder.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
-        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
-        builder.HasIndex(x => new { x.IsActive, x.CreatedAt })
+        builder.HasKey(mockup => mockup.Id);
+        builder.Property(mockup => mockup.Id).HasColumnName("Id");
+        builder.Property(mockup => mockup.Name).HasColumnName("Name").HasMaxLength(50).IsRequired();
+        builder.Property(mockup => mockup.Description).HasColumnName("Description").HasMaxLength(200);
+        builder.Property(mockup => mockup.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
+        builder.Property(mockup => mockup.IsActive).HasColumnName("IsActive").HasDefaultValue(true);
+        builder.Property(mockup => mockup.IsDeleted).HasColumnName("IsDeleted").HasDefaultValue(false);
+        builder.Property(mockup => mockup.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
+        builder.Property(mockup => mockup.UpdatedAt).HasColumnName("UpdatedAt");
+        builder.HasIndex(mockup => new { mockup.IsActive, mockup.CreatedAt })
             .IsDescending(false, true)
-            .HasFilter("is_deleted = false");
+            .HasFilter("\"IsDeleted\" = false");
     }
 }
 
@@ -210,19 +215,23 @@ public class ClientHistoryConfiguration : IEntityTypeConfiguration<ClientHistory
     public void Configure(EntityTypeBuilder<ClientHistory> builder)
     {
         builder.ToTable("client_histories");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id");
-        builder.Property(x => x.UserId).HasColumnName("user_id");
-        builder.Property(x => x.Type).HasColumnName("type").HasMaxLength(50).IsRequired();
-        builder.Property(x => x.SystemForm).HasColumnName("system_form").HasColumnType("jsonb");
-        builder.Property(x => x.Metadata).HasColumnName("metadata").HasColumnType("jsonb").IsRequired();
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
-        builder.Property(x => x.BaseId).HasColumnName("base_id");
-        builder.Property(x => x.OutputId).HasColumnName("output_id");
+        builder.HasKey(clientHistory => clientHistory.Id);
+        builder.Property(clientHistory => clientHistory.Id).HasColumnName("Id");
+        builder.Property(clientHistory => clientHistory.UserId).HasColumnName("UserId");
+        builder.Property(clientHistory => clientHistory.Type)
+            .HasColumnName("Type")
+            .HasColumnType("client_history_types")
+            .IsRequired();
+        builder.Property(clientHistory => clientHistory.SystemForm).HasColumnName("SystemForm").HasColumnType("jsonb");
+        builder.Property(clientHistory => clientHistory.Metadata).HasColumnName("Metadata").HasColumnType("jsonb").IsRequired();
+        builder.Property(clientHistory => clientHistory.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
+        builder.Property(clientHistory => clientHistory.RootID).HasColumnName("RootID").IsRequired();
+        builder.Property(clientHistory => clientHistory.BaseId).HasColumnName("BaseId");
+        builder.Property(clientHistory => clientHistory.OutputId).HasColumnName("OutputId");
 
-        // base_id/output_id are logical polymorphic references, so they intentionally have no FK.
-        builder.HasIndex(x => new { x.Type, x.OutputId }).IsUnique();
-        builder.HasIndex(x => new { x.UserId, x.Type, x.CreatedAt }).IsDescending(false, false, true);
-        builder.HasIndex(x => new { x.BaseId, x.Type, x.CreatedAt }).IsDescending(false, false, true);
+        // BaseId/OutputId are logical polymorphic references, so they intentionally have no FK.
+        builder.HasIndex(clientHistory => new { clientHistory.Type, clientHistory.OutputId }).IsUnique();
+        builder.HasIndex(clientHistory => new { clientHistory.UserId, clientHistory.Type, clientHistory.CreatedAt }).IsDescending(false, false, true);
+        builder.HasIndex(clientHistory => new { clientHistory.BaseId, clientHistory.Type, clientHistory.CreatedAt }).IsDescending(false, false, true);
     }
 }
