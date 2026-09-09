@@ -629,7 +629,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                         point.PackageTypes!.SequenceEqual(
                             new[] { HoaTheoMua.Service.XanhSm.XanhSmConstants.FlowersPackageType })) &&
                     points.Any(point => point.Type == "DROP OFF" && point.PhoneNumber == "+84901234567")),
-                It.Is<long>(orderTime => orderTime >= beforeCreate + 3600 && orderTime <= afterCreate + 3600),
+                It.Is<long>(orderTime => orderTime >= beforeCreate + 5400 && orderTime <= afterCreate + 5400),
                 It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -687,8 +687,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(5.33, result.Distance);
             Assert.Equal("km", result.DistanceUnit);
             Assert.Equal(702, result.Duration);
-            Assert.InRange(result.OrderTime, beforeEstimate + 3600,
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 3600);
+            Assert.InRange(result.OrderTime, beforeEstimate + 5400,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 5400);
             Assert.Equal(expiresAt, result.ExpiresAt);
             xanhSmService.Verify(service => service.EstimateDoorToDoorAsync(
                 It.Is<IReadOnlyCollection<HoaTheoMua.Service.XanhSm.XanhSmDeliveryPointRequest>>(points =>

@@ -65,7 +65,7 @@ public class DispatchDeliveryXanhSmTest
         Assert.Equal(ShippingGateway.XanhSm, plan.ShippingGateway);
         Assert.Equal(XanhSmDeliveryId, plan.ShippingPartyOrderId);
         Assert.Equal(XanhSmTrackingUrl, plan.ShippingTrackingUrl);
-        Assert.InRange(plan.DelayTimeUnix, beforeDispatch + 3600, afterDispatch + 3600);
+        Assert.InRange(plan.DelayTimeUnix, beforeDispatch + 5400, afterDispatch + 5400);
         Assert.Contains(294L, plan.TagIds);
         Assert.Contains("NN: Nguoi nhan - 0902222222", plan.PrivateDescription);
 

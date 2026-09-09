@@ -38,8 +38,8 @@ public record DeliveryDispatchResult
     public string? ShippingTrackingUrl { get; init; }
 
     /// <summary>
-    /// Unix seconds the courier will collect the parcel. Ahamove: now + ahamove.idle_time, or 0
-    /// when no delay is configured. XanhSm: always now.
+    /// Unix seconds the courier will collect the parcel: now + 90 minutes for flower preparation
+    /// for both Ahamove and XanhSm.
     /// </summary>
     public long DelayTimeUnix { get; init; }
 

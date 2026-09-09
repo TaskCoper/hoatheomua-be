@@ -665,6 +665,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal>("Longitude")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("NhanhCompletedShippingOrderId")
+                        .HasColumnType("text");
+
                     b.Property<int?>("NhanhOrderId")
                         .HasColumnType("integer");
 

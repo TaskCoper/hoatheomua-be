@@ -81,6 +81,10 @@ builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
+builder.Services.AddScoped<XanhSmService.XanhSmWebhookService>();
+builder.Services.AddScoped<XanhSmService.XanhSmDeliveryCompletionService>();
+builder.Services.AddHttpClient<NhanhVnService.INhanhVnDeliveryStatusClient, NhanhVnService.NhanhVnDeliveryStatusClient>(
+    "NhanhVnDeliveryStatus", client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>("AhamoveService");

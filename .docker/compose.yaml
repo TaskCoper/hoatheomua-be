@@ -60,6 +60,9 @@ x-api-env: &api-env
   XanhSmOptions__ClientId: ${XANHSM_CLIENT_ID}
   XanhSmOptions__ClientSecret: ${XANHSM_CLIENT_SECRET}
   XanhSmOptions__AcceptLanguage: ${XANHSM_ACCEPT_LANGUAGE}
+  XanhSmWebhookOptions__Environment: ${XANHSM_WEBHOOK_ENVIRONMENT:-}
+  XanhSmWebhookOptions__SigningKey: ${XANHSM_WEBHOOK_SIGNING_KEY:-}
+  XanhSmWebhookOptions__SecondarySigningKey: ${XANHSM_WEBHOOK_SECONDARY_SIGNING_KEY:-}
 
   # NhanhVn
   NhanhVnOption__Token: ${NHANHVN_TOKEN}
