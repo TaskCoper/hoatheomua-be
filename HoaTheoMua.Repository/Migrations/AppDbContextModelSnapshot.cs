@@ -22,10 +22,10 @@ namespace HoaTheoMua.Repository.Migrations
                 .HasAnnotation("ProductVersion", "8.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "client_history_types", new[] { "flower", "card", "handmade_card", "post" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "form_type", new[] { "go_may", "calligraphy" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "platform_type", new[] { "zalo", "facebook", "instagram" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "system_prompt_types", new[] { "flower", "card", "post" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "CardFormType", new[] { "go_may", "calligraphy" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "ClientHistoryType", new[] { "flower", "card", "handmade_card", "post" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "PlatformType", new[] { "zalo", "facebook", "instagram" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "SystemPromptType", new[] { "flower", "card", "post" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Address", b =>
@@ -171,7 +171,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("base_posts", (string)null);
+                    b.ToTable("BasePost", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardTemplate", b =>
@@ -231,7 +231,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsDescending(false, false, true)
                         .HasFilter("\"IsDeleted\" = false");
 
-                    b.ToTable("card_templates", null, t =>
+                    b.ToTable("CardTemplate", null, t =>
                         {
                             t.HasCheckConstraint("CK_card_templates_template_type", "\"TemplateType\" IN ('ai', 'handmade')");
                         });
@@ -453,7 +453,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnName("SystemForm");
 
                     b.Property<ClientHistoryType>("Type")
-                        .HasColumnType("client_history_types")
+                        .HasColumnType("ClientHistoryType")
                         .HasColumnName("Type");
 
                     b.Property<Guid>("UserId")
@@ -471,7 +471,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("UserId", "Type", "CreatedAt")
                         .IsDescending(false, false, true);
 
-                    b.ToTable("client_histories", (string)null);
+                    b.ToTable("ClientHistory", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.ComboSpecification", b =>
@@ -670,7 +670,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnName("ExtraPrice");
 
                     b.Property<CardFormType>("FormType")
-                        .HasColumnType("form_type")
+                        .HasColumnType("CardFormType")
                         .HasColumnName("FormType");
 
                     b.Property<string>("ImageUrl")
@@ -751,7 +751,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("UserId", "CreatedAt")
                         .IsDescending(false, true);
 
-                    b.ToTable("generated_cards", null, t =>
+                    b.ToTable("GeneratedCard", null, t =>
                         {
                             t.HasCheckConstraint("CK_generated_cards_ai_images", "\"CardType\" <> 'ai' OR (\"RawImage\" IS NOT NULL AND \"ImageUrl\" IS NOT NULL)");
 
@@ -791,7 +791,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("UserId", "CreatedAt")
                         .IsDescending(false, true);
 
-                    b.ToTable("generated_flowers", (string)null);
+                    b.ToTable("GeneratedFlower", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.GeneratedPost", b =>
@@ -827,7 +827,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("UserId", "CreatedAt")
                         .IsDescending(false, true);
 
-                    b.ToTable("generated_posts", (string)null);
+                    b.ToTable("GeneratedPost", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
@@ -962,7 +962,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsDescending(false, true)
                         .HasFilter("\"IsDeleted\" = false");
 
-                    b.ToTable("mockup", (string)null);
+                    b.ToTable("Mockup", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.News", b =>
@@ -1777,14 +1777,14 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnName("Description");
 
                     b.Property<PlatformType>("Platform")
-                        .HasColumnType("platform_type")
+                        .HasColumnType("PlatformType")
                         .HasColumnName("Platform");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Platform");
 
-                    b.ToTable("platform_standards", (string)null);
+                    b.ToTable("PlatformStandard", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostHistory", b =>
@@ -1831,7 +1831,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("BaseId", "CreatedAt")
                         .IsDescending(false, true);
 
-                    b.ToTable("post_histories", (string)null);
+                    b.ToTable("PostHistory", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
@@ -2186,7 +2186,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<SystemPromptType>("Type")
-                        .HasColumnType("system_prompt_types")
+                        .HasColumnType("SystemPromptType")
                         .HasColumnName("Type");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
@@ -2197,7 +2197,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("Type")
                         .IsUnique();
 
-                    b.ToTable("system_prompts", (string)null);
+                    b.ToTable("SystemPrompt", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>

@@ -9,12 +9,12 @@ public class SystemPromptConfiguration : IEntityTypeConfiguration<SystemPrompt>
 {
     public void Configure(EntityTypeBuilder<SystemPrompt> builder)
     {
-        builder.ToTable("system_prompts");
+        builder.ToTable("SystemPrompt");
         builder.HasKey(systemPrompt => systemPrompt.Id);
         builder.Property(systemPrompt => systemPrompt.Id).HasColumnName("Id");
         builder.Property(systemPrompt => systemPrompt.Type)
             .HasColumnName("Type")
-            .HasColumnType("system_prompt_types")
+            .HasColumnType("SystemPromptType")
             .IsRequired();
         builder.Property(systemPrompt => systemPrompt.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
         builder.HasIndex(systemPrompt => systemPrompt.Type).IsUnique();
@@ -25,12 +25,12 @@ public class PlatformStandardConfiguration : IEntityTypeConfiguration<PlatformSt
 {
     public void Configure(EntityTypeBuilder<PlatformStandard> builder)
     {
-        builder.ToTable("platform_standards");
+        builder.ToTable("PlatformStandard");
         builder.HasKey(platformStandard => platformStandard.Id);
         builder.Property(platformStandard => platformStandard.Id).HasColumnName("Id");
         builder.Property(platformStandard => platformStandard.Platform)
             .HasColumnName("Platform")
-            .HasColumnType("platform_type")
+            .HasColumnType("PlatformType")
             .IsRequired();
         builder.Property(platformStandard => platformStandard.Description).HasColumnName("Description").HasColumnType("text").IsRequired();
         builder.HasIndex(platformStandard => platformStandard.Platform);
@@ -41,7 +41,7 @@ public class CardTemplateConfiguration : IEntityTypeConfiguration<CardTemplate>
 {
     public void Configure(EntityTypeBuilder<CardTemplate> builder)
     {
-        builder.ToTable("card_templates", table =>
+        builder.ToTable("CardTemplate", table =>
             table.HasCheckConstraint("CK_card_templates_template_type", "\"TemplateType\" IN ('ai', 'handmade')"));
         builder.HasKey(cardTemplate => cardTemplate.Id);
         builder.Property(cardTemplate => cardTemplate.Id).HasColumnName("Id");
@@ -75,7 +75,7 @@ public class BasePostConfiguration : IEntityTypeConfiguration<BasePost>
 {
     public void Configure(EntityTypeBuilder<BasePost> builder)
     {
-        builder.ToTable("base_posts");
+        builder.ToTable("BasePost");
         builder.HasKey(basePost => basePost.Id);
         builder.Property(basePost => basePost.Id).HasColumnName("Id");
         builder.Property(basePost => basePost.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
@@ -87,7 +87,7 @@ public class GeneratedPostConfiguration : IEntityTypeConfiguration<GeneratedPost
 {
     public void Configure(EntityTypeBuilder<GeneratedPost> builder)
     {
-        builder.ToTable("generated_posts");
+        builder.ToTable("GeneratedPost");
         builder.HasKey(generatedPost => generatedPost.Id);
         builder.Property(generatedPost => generatedPost.Id).HasColumnName("Id");
         builder.Property(generatedPost => generatedPost.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
@@ -102,7 +102,7 @@ public class GeneratedFlowerConfiguration : IEntityTypeConfiguration<GeneratedFl
 {
     public void Configure(EntityTypeBuilder<GeneratedFlower> builder)
     {
-        builder.ToTable("generated_flowers");
+        builder.ToTable("GeneratedFlower");
         builder.HasKey(generatedFlower => generatedFlower.Id);
         builder.Property(generatedFlower => generatedFlower.Id).HasColumnName("Id");
         builder.Property(generatedFlower => generatedFlower.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
@@ -116,7 +116,7 @@ public class GeneratedCardConfiguration : IEntityTypeConfiguration<GeneratedCard
 {
     public void Configure(EntityTypeBuilder<GeneratedCard> builder)
     {
-        builder.ToTable("generated_cards", table =>
+        builder.ToTable("GeneratedCard", table =>
         {
             table.HasCheckConstraint("CK_generated_cards_card_type", "\"CardType\" IN ('ai', 'handmade')");
             table.HasCheckConstraint(
@@ -146,7 +146,7 @@ public class GeneratedCardConfiguration : IEntityTypeConfiguration<GeneratedCard
             .IsRequired();
         builder.Property(generatedCard => generatedCard.FormType)
             .HasColumnName("FormType")
-            .HasColumnType("form_type")
+            .HasColumnType("CardFormType")
             .IsRequired();
         builder.Property(generatedCard => generatedCard.SenderName).HasColumnName("SenderName").HasMaxLength(500).IsRequired();
         builder.Property(generatedCard => generatedCard.ReceiverName).HasColumnName("ReceiverName").HasMaxLength(500).IsRequired();
@@ -172,7 +172,7 @@ public class PostHistoryConfiguration : IEntityTypeConfiguration<PostHistory>
 {
     public void Configure(EntityTypeBuilder<PostHistory> builder)
     {
-        builder.ToTable("post_histories");
+        builder.ToTable("PostHistory");
         builder.HasKey(postHistory => postHistory.Id);
         builder.Property(postHistory => postHistory.Id).HasColumnName("Id");
         builder.Property(postHistory => postHistory.Input).HasColumnName("Input").HasColumnType("jsonb").IsRequired();
@@ -194,7 +194,7 @@ public class MockupConfiguration : IEntityTypeConfiguration<Mockup>
 {
     public void Configure(EntityTypeBuilder<Mockup> builder)
     {
-        builder.ToTable("mockup");
+        builder.ToTable("Mockup");
         builder.HasKey(mockup => mockup.Id);
         builder.Property(mockup => mockup.Id).HasColumnName("Id");
         builder.Property(mockup => mockup.Name).HasColumnName("Name").HasMaxLength(50).IsRequired();
@@ -214,13 +214,13 @@ public class ClientHistoryConfiguration : IEntityTypeConfiguration<ClientHistory
 {
     public void Configure(EntityTypeBuilder<ClientHistory> builder)
     {
-        builder.ToTable("client_histories");
+        builder.ToTable("ClientHistory");
         builder.HasKey(clientHistory => clientHistory.Id);
         builder.Property(clientHistory => clientHistory.Id).HasColumnName("Id");
         builder.Property(clientHistory => clientHistory.UserId).HasColumnName("UserId");
         builder.Property(clientHistory => clientHistory.Type)
             .HasColumnName("Type")
-            .HasColumnType("client_history_types")
+            .HasColumnType("ClientHistoryType")
             .IsRequired();
         builder.Property(clientHistory => clientHistory.SystemForm).HasColumnName("SystemForm").HasColumnType("jsonb");
         builder.Property(clientHistory => clientHistory.Metadata).HasColumnName("Metadata").HasColumnType("jsonb").IsRequired();

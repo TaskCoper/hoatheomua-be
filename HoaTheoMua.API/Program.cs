@@ -53,10 +53,10 @@ builder.Services.AddEndpointsApiExplorer();
 var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
 var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.EnableDynamicJson();
-dataSourceBuilder.MapEnum<SystemPromptType>("system_prompt_types");
-dataSourceBuilder.MapEnum<PlatformType>("platform_type");
-dataSourceBuilder.MapEnum<CardFormType>("form_type");
-dataSourceBuilder.MapEnum<ClientHistoryType>("client_history_types");
+dataSourceBuilder.MapEnum<SystemPromptType>("SystemPromptType");
+dataSourceBuilder.MapEnum<PlatformType>("PlatformType");
+dataSourceBuilder.MapEnum<CardFormType>("CardFormType");
+dataSourceBuilder.MapEnum<ClientHistoryType>("ClientHistoryType");
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
