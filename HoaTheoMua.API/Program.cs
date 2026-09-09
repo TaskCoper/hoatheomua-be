@@ -31,6 +31,7 @@ using FulfillmentService = HoaTheoMua.Service.Fulfillment;
 using HoaTheoMua.Service.DependencyInjection.Extensions;
 using SystemPromptService = HoaTheoMua.Service.SystemPrompt;
 using MockupService = HoaTheoMua.Service.Mockup;
+using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -109,6 +110,7 @@ builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
 builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
 
 builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
+builder.Services.AddScoped<CardTemplateService.IService, CardTemplateService.Service>();
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
 // registering it with AddScoped would silently hand it the unnamed default HttpClient the way
 // Webhook.Service and Revalidate.Service currently get theirs.
