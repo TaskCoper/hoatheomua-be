@@ -626,7 +626,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                         point.PackageSize == HoaTheoMua.Service.XanhSm.XanhSmConstants.LargePackageSize &&
                         point.PackageTypes!.SequenceEqual(
                             new[] { HoaTheoMua.Service.XanhSm.XanhSmConstants.FlowersPackageType })) &&
-                    points.Any(point => point.Type == "DROP OFF" && point.PhoneNumber == TestPhoneReceiver)),
+                    points.Any(point => point.Type == "DROP OFF" && point.PhoneNumber == "+84901234567")),
                 It.Is<long>(orderTime => orderTime > 0),
                 It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -698,7 +698,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                             new[] { HoaTheoMua.Service.XanhSm.XanhSmConstants.FlowersPackageType })) &&
                     points.Any(point =>
                         point.Type == HoaTheoMua.Service.XanhSm.XanhSmConstants.DropOffPoint &&
-                        point.PhoneNumber == "0901234567" &&
+                        point.PhoneNumber == "+84901234567" &&
                         point.ShortAddress == "Landmark 81")),
                 It.Is<long>(orderTime => orderTime == result.OrderTime),
                 It.IsAny<CancellationToken>()), Times.Once);

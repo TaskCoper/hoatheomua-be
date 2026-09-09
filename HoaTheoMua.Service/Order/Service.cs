@@ -1026,7 +1026,7 @@ public class Service : IService
             {
                 Type = XanhSmConstants.PickUpPoint,
                 Name = companyAddress.FullName,
-                PhoneNumber = companyAddress.PhoneNumber,
+                PhoneNumber = NormalizeXanhSmPhoneNumber(companyAddress.PhoneNumber),
                 Address = pickupAddress,
                 ShortAddress = pickupAddress,
                 AddressNote = companyAddress.Remarks,
@@ -1043,7 +1043,7 @@ public class Service : IService
             {
                 Type = XanhSmConstants.DropOffPoint,
                 Name = dropOffName,
-                PhoneNumber = dropOffPhone,
+                PhoneNumber = NormalizeXanhSmPhoneNumber(dropOffPhone),
                 Address = dropOffAddress,
                 ShortAddress = dropOffShortAddress,
                 AddressNote = dropOffNote,
@@ -1051,6 +1051,20 @@ public class Service : IService
                 Longitude = (double)dropOffLongitude
             }
         ];
+    }
+
+    internal static string NormalizeXanhSmPhoneNumber(string phoneNumber)
+    {
+        var normalized = new string(phoneNumber.Trim()
+            .Where(character => !char.IsWhiteSpace(character) && character is not '-' and not '.' and not '(' and not ')')
+            .ToArray());
+        if (normalized.StartsWith("00", StringComparison.Ordinal))
+            return "+" + normalized[2..];
+        if (normalized.StartsWith('0'))
+            return "+84" + normalized[1..];
+        if (normalized.StartsWith("84", StringComparison.Ordinal))
+            return "+" + normalized;
+        return normalized;
     }
 
     internal static int CalculateXanhSmPackageWeightKg(

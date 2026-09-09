@@ -21,6 +21,16 @@ public class AppDbContext : DbContext
     public virtual DbSet<JobDescriptions> JobDescriptions { get; set; }
     public virtual DbSet<RecruitmentRequest> RecruitmentRequests { get; set; }
     public virtual DbSet<Address> Addresses { get; set; }
+    public virtual DbSet<SystemPrompt> SystemPrompts { get; set; }
+    public virtual DbSet<PlatformStandard> PlatformStandards { get; set; }
+    public virtual DbSet<CardTemplate> CardTemplates { get; set; }
+    public virtual DbSet<BasePost> BasePosts { get; set; }
+    public virtual DbSet<GeneratedPost> GeneratedPosts { get; set; }
+    public virtual DbSet<GeneratedFlower> GeneratedFlowers { get; set; }
+    public virtual DbSet<GeneratedCard> GeneratedCards { get; set; }
+    public virtual DbSet<PostHistory> PostHistories { get; set; }
+    public virtual DbSet<Mockup> Mockups { get; set; }
+    public virtual DbSet<ClientHistory> ClientHistories { get; set; }
 
     public virtual DbSet<OrderDetails> OrderDetails { get; set; }
     public virtual DbSet<Product> Products { get; set; }
@@ -37,6 +47,9 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // base.OnModelCreating(modelBuilder);
+        modelBuilder.HasPostgresEnum<SystemPromptType>(name: "system_prompt_types");
+        modelBuilder.HasPostgresEnum<PlatformType>(name: "platform_type");
+        modelBuilder.HasPostgresEnum<CardFormType>(name: "form_type");
         modelBuilder.ApplyConfigurationsFromAssembly(AssemblyReference.Assembly);
 
         // MassTransit transactional outbox/inbox. All three are required: the webhook publishes

@@ -77,15 +77,16 @@ public class DispatchDeliveryXanhSmTest
                 points.Any(point =>
                     point.Type == XanhSmConstants.PickUpPoint &&
                     point.PackageWeight == 2 &&
+                    point.PhoneNumber == "+84903333333" &&
                     point.PackageSize == XanhSmConstants.LargePackageSize &&
                     point.PackageTypes!.SequenceEqual(new[] { XanhSmConstants.FlowersPackageType })) &&
                 points.Any(point =>
                     point.Type == XanhSmConstants.DropOffPoint &&
                     point.Name == order.FullNameReceiver &&
-                    point.PhoneNumber == order.PhoneReceiver)),
+                    point.PhoneNumber == "+84902222222")),
             It.Is<long>(orderTime => orderTime > 0),
             (long)order.ProductFee,
-            order.Id.ToString(),
+            order.Id.ToString("N"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

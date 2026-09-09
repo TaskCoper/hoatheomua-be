@@ -275,7 +275,7 @@ public class Service : IService
                         order.OrderDetails.Select(detail => (detail.Weight, detail.Number)))),
                 delayTime,
                 (long)Math.Round(order.ProductFee, MidpointRounding.AwayFromZero),
-                order.Id.ToString(),
+                order.Id.ToString("N"),
                 cancellationToken);
         }
         catch (AppException ex) when (ex is not FulfillmentTransientException and not FulfillmentPermanentException)
