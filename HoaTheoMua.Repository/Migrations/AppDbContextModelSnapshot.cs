@@ -1186,6 +1186,12 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("GeneratedCard")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("GeneratedFlower")
+                        .HasColumnType("uuid");
+
                     b.Property<double>("Height")
                         .HasColumnType("double precision");
 
@@ -2181,9 +2187,18 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("text")
                         .HasColumnName("content");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<SystemPromptType>("Type")
                         .HasColumnType("system_prompt_types")
                         .HasColumnName("type");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 

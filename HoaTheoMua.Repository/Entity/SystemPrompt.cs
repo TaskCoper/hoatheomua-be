@@ -1,10 +1,12 @@
+using HoaTheoMua.Repository.Abtraction;
 using HoaTheoMua.Repository.Enum;
 
 namespace HoaTheoMua.Repository.Entity;
 
-public class SystemPrompt
+public class SystemPrompt : BaseEntity<Guid>, IAuditableEntity
 {
-    public Guid Id { get; set; }
     public SystemPromptType Type { get; set; }
     public string Content { get; set; } = null!;
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
 }
