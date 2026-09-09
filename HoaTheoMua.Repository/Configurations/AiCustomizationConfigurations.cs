@@ -144,7 +144,6 @@ public class GeneratedCardConfiguration : IEntityTypeConfiguration<GeneratedCard
             .HasColumnName("form_type")
             .HasColumnType("form_type")
             .IsRequired();
-        builder.Property(x => x.SizeKey).HasColumnName("size_key").HasMaxLength(100).IsRequired();
         builder.Property(x => x.SenderName).HasColumnName("sender_name").HasMaxLength(500).IsRequired();
         builder.Property(x => x.ReceiverName).HasColumnName("receiver_name").HasMaxLength(500).IsRequired();
         builder.Property(x => x.MessageContent).HasColumnName("message_content").HasColumnType("text").IsRequired();
