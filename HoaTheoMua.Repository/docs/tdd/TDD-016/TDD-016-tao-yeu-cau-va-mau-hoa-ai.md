@@ -1,12 +1,14 @@
-# TDD-016: Tạo và tạo lại mẫu hoa AI
+# TDD-016: Tạo và tạo lại mẫu hoa bằng AI
 
 ## Thông tin tài liệu
+- **Tiêu đề**: Tạo mẫu hoa mới và tạo lại mẫu hoa từ lịch sử
+- **Ghi chú**: Khách hàng chọn sản phẩm và mẫu bố cục để tạo ảnh hoa. Cả tạo mới và tạo lại đều không nhận `userInput`.
 
+## Metadata quản trị tài liệu
 | Trường | Giá trị |
 |---|---|
 | Mã tài liệu | TDD-016 |
-| Tiêu đề | Tạo ảnh mẫu hoa AI và tạo lại từ lịch sử |
-| Phiên bản | v1.1 |
+| Phiên bản | v2.0 |
 | Author | Codex |
 | Reviewer | Chưa chỉ định |
 | Approver | Chưa chỉ định |
@@ -20,170 +22,179 @@
 ### Thông tin tài liệu
 
 - **Mã tài liệu**: TDD-016
-- **Tính năng**: Tạo mới mẫu hoa AI và tạo lại từ một Flower trong lịch sử.
+- **Tính năng**: Tạo mẫu hoa mới và tạo lại một mẫu hoa đã có trong lịch sử.
 - **Story liên quan**: STORY-030, STORY-033.
-- **Phạm vi API**: `POST /api/ai-flowers` và `POST /api/ai-flowers/{source_flower_id}/regenerate`.
+- **Phạm vi API**: `POST /api/ai-flowers` và `POST /api/ai-flowers/{sourceFlowerId}/regenerate`.
+- **Ngoài phạm vi**: Cách hàm gọi AI tự đếm lượt, thử lại và tạo mã lỗi riêng. Tài liệu ngữ cảnh có thể mô tả các quy tắc đó, nhưng TDD này chỉ nhận kết quả cuối cùng từ hàm gọi AI.
 
 ### Business Rules
 
-- **BR-016-01**: Chỉ khách hàng đã đăng nhập và có tài khoản đang hoạt động được sử dụng hai API.
-- **BR-016-02**: Create bắt buộc nhận đúng `product_id` của Combo/biến thể được chọn và `mockup_id`. Product được kiểm tra lần lượt: tồn tại, chưa xóa, đang hoạt động và có thể bán.
-- **BR-016-03**: Create kiểm tra Mockup lần lượt: tồn tại, chưa xóa và đang hoạt động.
-- **BR-016-04**: Create bắt buộc dùng System Prompt hiện hành có `type="flower"` và `content` hợp lệ.
-- **BR-016-05**: Nội dung gửi sang `AIModule` được dựng theo thứ tự ưu tiên `Combo > Mockup > note > style` và đóng băng trong `FlowerGenerationSnapshot`.
-- **BR-016-06**: `AIModule` là dependency nội bộ. Service nghiệp vụ chỉ gọi module bằng snapshot và nhận kết quả cuối cùng là ảnh hợp lệ hoặc lỗi. Cách module xử lý nội bộ không thuộc TDD này.
-- **BR-016-07**: Ảnh kết quả được gắn logo theo cấu hình hiện hành trước khi lưu.
-- **BR-016-08**: Thành công phải tạo `generated_flowers` và `client_histories` trong cùng flow; History có `type="flower"`, `base_id=products.id`, `root=base_id`, `output_id=generated_flowers.id`. `root` là UUID bắt buộc, khác `Guid.Empty`, chỉ dùng nội bộ và không có FK.
-- **BR-016-09**: `generated_flowers.input_snapshot` lưu dữ liệu thực tế đã dùng: Product/biến thể, toàn bộ `user_input`, Mockup, tham chiếu ảnh Product bất biến, System Prompt, cấu hình logo và `validated_at` UTC.
-- **BR-016-10**: `client_histories.metadata` chỉ lưu provenance cần tra cứu; `client_histories.system_form` lưu `{type, content}` và không lưu ID prompt. Không lưu input trong History.
-- **BR-016-11**: Nếu `AIModule`, xử lý logo hoặc persistence trả lỗi thì không tạo dở dang Flower/History.
-- **BR-016-12**: Không tạo `flower_requests` hoặc `flower_ai_jobs`.
-- **BR-016-13**: Regenerate yêu cầu Flower nguồn tồn tại, thuộc user hiện tại và có History `type="flower"` cùng Product lineage/snapshot đầy đủ. History nguồn phải có `base_id` Product hợp lệ và `root=base_id`; thiếu hoặc không nhất quán trả `FLOWER_SOURCE_HISTORY_INVALID`.
-- **BR-016-14**: Regenerate chỉ nhận `mockup_id` tùy chọn. Product/biến thể, ảnh Product và toàn bộ `user_input` lấy từ snapshot nguồn; ảnh kết quả của Flower nguồn không được dùng làm input ảnh.
-- **BR-016-15**: Regenerate bỏ `mockup_id`, truyền `null` hoặc đúng ID Mockup nguồn thì dùng snapshot Mockup nguồn mà không kiểm tra dữ liệu live. Chỉ ID khác nguồn được kiểm tra theo `not found → deleted → inactive`.
-- **BR-016-16**: Regenerate ưu tiên System Prompt `flower` hiện hành. Nếu không có prompt hiện hành hợp lệ thì dùng `system_form` của History nguồn; nếu cả hai đều không dùng được thì trả `FLOWER_SOURCE_HISTORY_INVALID`.
-- **BR-016-17**: Regenerate dùng logo/config hiện hành và tạo snapshot mới từ dữ liệu nguồn, Effective Mockup, prompt thực tế và logo/config thực tế.
-- **BR-016-18**: History mới kế thừa `base_id` của History nguồn và gán `root=base_id`; `metadata.regenerated_from_flower_id` là ID Flower trực tiếp được chọn. Không gán ID Flower nguồn vào `base_id` hoặc `root`. Chuỗi F1 → F2 → F3 giữ cùng Product `base_id/root`, nhưng parent trực tiếp lần lượt là F1 và F2.
-- **BR-016-19**: Generated Flower đã tạo thành công vẫn có thể được dùng cho flow tạo Card. Việc kiểm tra Product live khi Checkout/Order thuộc tài liệu của các flow đó.
+- **BR-016-01**: Chỉ khách hàng đã đăng nhập và có tài khoản đang hoạt động mới được tạo hoặc tạo lại mẫu hoa.
+- **BR-016-02**: Khi tạo mới, request chỉ nhận `productId` và `mockupId`. `userInput` không còn thuộc hợp đồng API. Tên field dùng dạng camelCase để thống nhất với cấu hình chung của API.
+- **BR-016-03**: `productId` phải là đúng mã Product hoặc biến thể khách hàng đã chọn. Nếu Product có biến thể thì không dùng mã Product cha thay cho mã biến thể.
+- **BR-016-04**: Product được kiểm tra theo thứ tự: có tồn tại hay không, có bị đánh dấu xóa hay không, có đang hoạt động hay không và có thể bán hay không. Mỗi nguyên nhân có mã lỗi riêng để người gọi hiểu đúng lý do.
+- **BR-016-05**: Mockup, tức mẫu bố cục dùng để tạo ảnh hoa, phải tồn tại, chưa bị đánh dấu xóa và đang hoạt động.
+- **BR-016-06**: Khi tạo mới, hệ thống phải lấy hướng dẫn dành cho hoa đang được sử dụng trong `system_prompts`. Nếu không có hướng dẫn dùng được thì dừng trước khi gọi AI.
+- **BR-016-07**: Nếu request Create hoặc Regenerate chứa `userInput`, hệ thống trả `VALIDATION_ERROR/400` và không gọi AI.
+- **BR-016-08**: Hệ thống chuẩn bị một bộ dữ liệu cố định trong bộ nhớ rồi gửi một lần cho hàm gọi AI. Bộ dữ liệu tạo mới gồm Product, Mockup, ảnh Product, hướng dẫn dành cho hoa và cấu hình cần dùng. Cách hàm gọi AI tự thử lại nằm ngoài TDD này.
+- **BR-016-09**: Ảnh AI trả về phải dùng được. Hệ thống gắn logo theo cấu hình hiện hành trước khi lưu. Thiếu hoặc sai cấu hình logo được xem là lỗi nội bộ.
+- **BR-016-10**: Thành công phải lưu một `generated_flowers` và một `client_histories` trong cùng một giao dịch dữ liệu. Nếu một bước lưu thất bại thì không giữ lại bản ghi nào.
+- **BR-016-11**: `generated_flowers` chỉ giữ ID, địa chỉ ảnh kết quả, ID khách hàng và thời điểm tạo. Bảng này không có `input_snapshot`.
+- **BR-016-12**: History của hoa có `type="flower"`, `base_id=productId`, `root=base_id` và `output_id=generatedFlower.id`. `root` bắt buộc khác `Guid.Empty`, chỉ dùng nội bộ và không có khóa ngoại trong cơ sở dữ liệu.
+- **BR-016-13**: `client_histories.metadata` là nơi duy nhất lưu dữ liệu cần dùng lại khi tạo lại hoa. Metadata không lặp Product ID, Flower ID, ảnh kết quả hoặc System Prompt vì các dữ liệu đó đã có ở cột khác.
+- **BR-016-14**: Metadata phải lưu tên Product, thuộc tính Product, ảnh Product bất biến, trạng thái Product tại thời điểm tạo, Mockup thực tế, cấu hình logo thực tế, loại thao tác, nguồn tạo lại nếu có, nguồn System Prompt và thời điểm dữ liệu được chuẩn bị.
+- **BR-016-15**: `client_histories.system_form` lưu `{type, content}` của System Prompt thực tế đã dùng và không lưu ID của prompt. Metadata không lặp lại nội dung này.
+- **BR-016-16**: Không tạo `flower_requests`, `flower_ai_jobs` hoặc bản ghi trung gian khác.
+- **BR-016-17**: Khi tạo lại, Flower nguồn phải tồn tại, thuộc khách hàng hiện tại và có đúng một History loại `flower` với `output_id` bằng ID Flower nguồn.
+- **BR-016-18**: History nguồn phải có `base_id` và `root` cùng là một Product ID hợp lệ, khác `Guid.Empty`. Metadata phải có đủ tên, thuộc tính, ảnh Product và Mockup cần dùng. Thiếu hoặc mâu thuẫn thì trả `FLOWER_SOURCE_HISTORY_INVALID/409`; không đọc Product hiện tại để đoán bù.
+- **BR-016-19**: Request tạo lại chỉ được có `mockupId` tùy chọn. Hệ thống không nhận `productId`, `userInput` hoặc field thay đổi nội dung nào khác.
+- **BR-016-20**: Tạo lại không dùng ảnh kết quả của Flower nguồn làm ảnh đầu vào. Tên, thuộc tính và ảnh Product được lấy từ History metadata nguồn.
+- **BR-016-21**: Nếu `mockupId` bị bỏ trống, bằng `null` hoặc bằng ID Mockup nguồn, hệ thống dùng nguyên Mockup trong History metadata mà không đọc lại bản ghi Mockup hiện tại.
+- **BR-016-22**: Nếu `mockupId` khác ID Mockup nguồn, Mockup mới phải tồn tại, chưa bị đánh dấu xóa và đang hoạt động. History mới lưu dữ liệu của Mockup mới này.
+- **BR-016-23**: Khi tạo lại, hệ thống ưu tiên System Prompt hiện hành dành cho hoa. Nếu prompt hiện hành không dùng được thì lấy `system_form` của History nguồn. Nếu cả hai đều không dùng được thì trả `FLOWER_SOURCE_HISTORY_INVALID/409`.
+- **BR-016-24**: Tạo lại luôn dùng cấu hình logo hiện hành. History mới lưu đúng cấu hình logo đã dùng cho lần tạo lại đó.
+- **BR-016-25**: History mới kế thừa `base_id` của History nguồn và đặt `root=base_id`. `metadata.regeneratedFromFlowerId` lưu ID Flower trực tiếp được chọn, còn `output_id` lưu ID Flower mới.
+- **BR-016-26**: Trong chuỗi F1 → F2 → F3, cả ba History giữ cùng Product trong `base_id/root`. F2 lưu `regeneratedFromFlowerId=F1`; F3 lưu `regeneratedFromFlowerId=F2`.
+- **BR-016-27**: Nếu hàm gọi AI, bước gắn logo hoặc giao dịch lưu dữ liệu trả lỗi cuối cùng thì API trả lỗi nội bộ và không lưu Flower hoặc History mới.
+- **BR-016-28**: Product và Mockup chỉ được kiểm tra ở thời điểm chuẩn bị dữ liệu của request. Thay đổi xảy ra sau thời điểm đó không làm hủy kết quả đang được xử lý.
 
 ### Bối cảnh & Mục tiêu
 
 **Vấn đề**
 
-Khách hàng cần nhận ảnh mẫu hoa từ Combo, Mockup và nhu cầu cá nhân trong một request; đồng thời có thể tạo lại một kết quả trong lịch sử và chỉ thay Mockup.
+Khách hàng cần xem trước một mẫu hoa được tạo từ Product và Mockup đã chọn. Khách hàng cũng có thể tạo một phiên bản mới từ kết quả cũ. Dữ liệu dùng lại phải còn chính xác ngay cả khi Product hoặc Mockup hiện tại đã thay đổi.
+
+Trước đây dữ liệu này được ghi cả trong `generated_flowers.input_snapshot` và `client_histories.metadata`. Hai nơi lưu cùng mục đích dễ lệch nhau. Thiết kế mới bỏ `input_snapshot` và giao toàn bộ dữ liệu dùng lại cho Flower History.
 
 **Mục tiêu**
 
-- Giữ hai API đồng bộ, không sinh request/job trung gian.
-- Phân định rõ validation của service nghiệp vụ và contract cuối cùng với `AIModule`.
-- Lưu đủ snapshot/provenance để tái tạo và truy vết kết quả.
-- Trình bày đầy đủ request, response và mã lỗi của từng nhánh nghiệp vụ.
+- Tạo ảnh hoa từ đúng Product và Mockup khách hàng chọn.
+- Không nhận hoặc lưu `userInput` trong cả hai đường dẫn API.
+- Dùng Flower History làm nguồn duy nhất khi tạo lại.
+- Giữ được tên, thuộc tính và ảnh Product tại thời điểm tạo.
+- Không để Product hoặc Mockup thay đổi về sau làm sai dữ liệu nguồn.
+- Lưu Flower và History đầy đủ hoặc không lưu gì cả.
 
-**Ngoài phạm vi**
+**Kết quả mong đợi**
 
-- Cách `AIModule` giao tiếp với nhà cung cấp hoặc xử lý lỗi nội bộ.
-- CRUD Mockup; xem TDD-012 đến TDD-015.
-- Checkout, Order, thanh toán và tồn kho tại thời điểm đặt hàng.
+- `generated_flowers` chỉ chứa kết quả ảnh.
+- `client_histories` chứa nguồn gốc Product và dữ liệu cần dùng lại.
+- Tạo lại không phụ thuộc vào Product hiện tại.
+- Card vẫn có thể dùng `generated_flowers.image_url`; Product gốc vẫn được xác định bằng `base_id/root` của Flower History.
 
 ---
 
 ## BƯỚC 2 — Kiến trúc & Sơ đồ
 
-### Kiến trúc tổng quan
-
-**Mô tả**: Service xác thực dữ liệu, dựng snapshot, gọi `AIModule`, xử lý logo và chỉ lưu khi đã có kết quả cuối cùng hợp lệ.
+### Kiến trúc tổng quan (Architecture)
 
 ```mermaid
 flowchart LR
-    FE[Frontend]
-    API[AI Flowers Controller]
-    SVC[AI Flowers Service]
-    CORE[Product Service]
-    DB[(Database)]
-    AI[AIModule]
-    MEDIA[Logo / Media Processing]
-
-    FE -->|Create hoặc Regenerate| API
-    API --> SVC
-    SVC -->|Kiểm tra Product khi Create| CORE
-    SVC -->|Đọc Mockup, prompt và source snapshot| DB
-    SVC -->|FlowerGenerationSnapshot| AI
-    AI -->|Ảnh hoặc lỗi cuối cùng| SVC
-    SVC --> MEDIA
-    SVC -->|Lưu Flower và History| DB
-    SVC --> API
-    API --> FE
+    C[Khách hàng] --> API[API tạo hoa]
+    API --> S[Dịch vụ tạo hoa]
+    S --> P[(Product)]
+    S --> M[(Mockup)]
+    S --> SP[(System Prompt)]
+    S --> AI[Hàm gọi AI]
+    AI --> L[Bước gắn logo]
+    L --> GF[(generated_flowers)]
+    L --> CH[(client_histories)]
 ```
 
-**Ghi chú**: Codebase hiện chưa có controller/service/DTO cho hai route này. Tên `AIModule` là tên dependency khái niệm đã dùng trong context, không khẳng định tên class hoặc transport khi triển khai.
+Sơ đồ cho thấy dịch vụ tạo hoa đọc các nguồn cần thiết, gửi dữ liệu cho hàm gọi AI, gắn logo và lưu kết quả. `generated_flowers` giữ ảnh kết quả; `client_histories` giữ dữ liệu cần truy lại.
 
 ### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor Client
-    participant API as AI Flowers Controller
-    participant S as AI Flowers Service
-    participant P as Product Service
-    participant DB as Database
-    participant AI as AIModule
+    actor KH as Khách hàng
+    participant API as API tạo hoa
+    participant DV as Dịch vụ tạo hoa
+    participant DB as Cơ sở dữ liệu
+    participant AI as Hàm gọi AI
 
-    alt Create
-        Client->>API: POST /api/ai-flowers
-        API->>S: product_id, mockup_id, user_input
-        S->>P: Kiểm tra Product và khả năng bán
-        S->>DB: Kiểm tra Mockup; lấy prompt và logo/config
-    else Regenerate
-        Client->>API: POST /api/ai-flowers/{source_flower_id}/regenerate
-        API->>S: source_flower_id, mockup_id tùy chọn
-        S->>DB: Đọc Flower, History và source snapshot
-        opt Client chọn Mockup khác nguồn
-            S->>DB: Kiểm tra Mockup mới
-        end
-        S->>DB: Lấy prompt hiện hành và logo/config
+    alt Tạo mới
+        KH->>API: Gửi productId và mockupId
+        API->>DV: Yêu cầu tạo mới
+        DV->>DB: Đọc và kiểm tra Product, Mockup, System Prompt, logo
+        DV->>AI: Gửi bộ dữ liệu tạo mới
+    else Tạo lại
+        KH->>API: Gửi sourceFlowerId và mockupId tùy chọn
+        API->>DV: Yêu cầu tạo lại
+        DV->>DB: Đọc Flower và Flower History nguồn
+        DV->>DB: Đọc Mockup mới nếu khách chọn ID khác
+        DV->>AI: Gửi Product từ History và Mockup thực tế
     end
-    S->>S: Dựng FlowerGenerationSnapshot
-    S->>AI: Generate(snapshot)
-    alt Kết quả cuối cùng là lỗi
-        AI-->>S: Error
-        S-->>API: INTERNAL_SERVER_ERROR
-    else Có ảnh hợp lệ
-        AI-->>S: Generated image
-        S->>S: Gắn logo
-        S->>DB: Transaction tạo generated_flowers và client_histories
-        S-->>API: Generated Flower
+
+    AI-->>DV: Trả ảnh hoặc lỗi cuối cùng
+    alt Có ảnh hợp lệ
+        DV->>DV: Gắn logo hiện hành
+        DV->>DB: Lưu Flower và History cùng lúc
+        DV-->>API: Trả Flower mới
+        API-->>KH: HTTP 201
+    else Có lỗi
+        DV-->>API: Không lưu dữ liệu mới
+        API-->>KH: Trả mã lỗi theo nguyên nhân
     end
-    API-->>Client: HTTP response
 ```
+
+Khi tạo mới, dữ liệu gồm Product và Mockup hiện tại. Khi tạo lại, dữ liệu Product đến từ Flower History. Cả hai nhánh không nhận `userInput` và chỉ lưu khi đã có ảnh hợp lệ và gắn logo thành công.
 
 ### Activity Diagram
 
 ```mermaid
 flowchart TD
-    A[Nhận request] --> B{Xác thực và request hợp lệ?}
-    B -->|Không| E1[Trả 400 hoặc 401]
-    B -->|Có| C{Nguồn phụ thuộc hợp lệ?}
-    C -->|Không| E2[Trả lỗi Product, Mockup, prompt hoặc source]
-    C -->|Có| D[Dựng snapshot]
-    D --> E[Gọi AIModule]
-    E --> F{Có ảnh hợp lệ?}
-    F -->|Không| E3[Trả 500; không lưu]
-    F -->|Có| G[Gắn logo]
-    G --> H{Lưu Flower và History thành công?}
-    H -->|Không| E3
-    H -->|Có| I[Trả 201]
+    A[Bắt đầu] --> B{Tạo mới hay tạo lại?}
+    B -->|Tạo mới| C[Kiểm tra Product và Mockup]
+    C --> D[Lấy System Prompt và logo hiện hành]
+    D --> E[Chuẩn bị Product và Mockup]
+    B -->|Tạo lại| F[Kiểm tra Flower và History nguồn]
+    F --> G{Có chọn Mockup khác?}
+    G -->|Không| H[Dùng Mockup từ History]
+    G -->|Có| I[Kiểm tra và dùng Mockup mới]
+    H --> J[Chuẩn bị Product từ History và Mockup]
+    I --> J
+    E --> K[Gọi AI]
+    J --> K
+    K --> L{Có ảnh hợp lệ?}
+    L -->|Không| M[Trả lỗi và không lưu]
+    L -->|Có| N[Gắn logo]
+    N --> O{Gắn logo thành công?}
+    O -->|Không| M
+    O -->|Có| P[Lưu Flower và History cùng lúc]
+    P --> Q[Trả kết quả]
 ```
+
+Điểm quan trọng của luồng là tạo lại không đọc Product hiện tại. Nếu History không đủ dữ liệu thì hệ thống dừng, thay vì đoán hoặc ghép dữ liệu từ nguồn khác.
 
 ### State Diagram
 
-Không áp dụng. Hệ thống không tạo entity request/job có vòng đời trạng thái; Flower chỉ xuất hiện sau khi hoàn tất thành công.
+```mermaid
+stateDiagram-v2
+    [*] --> DangChuanBi: Nhận request
+    DangChuanBi --> BiTuChoi: Dữ liệu không hợp lệ
+    DangChuanBi --> DangTaoAnh: Dữ liệu hợp lệ
+    DangTaoAnh --> ThatBai: Hàm gọi AI trả lỗi
+    DangTaoAnh --> DangGanLogo: Có ảnh hợp lệ
+    DangGanLogo --> ThatBai: Thiếu hoặc sai cấu hình
+    DangGanLogo --> DangLuu: Gắn logo thành công
+    DangLuu --> ThatBai: Không lưu trọn vẹn
+    DangLuu --> HoanTat: Lưu Flower và History
+    BiTuChoi --> [*]
+    ThatBai --> [*]
+    HoanTat --> [*]
+```
 
-### Mô hình dữ liệu (ERD)
+Trạng thái hoàn tất chỉ đạt được khi cả Flower và History đã được lưu. Mọi trạng thái lỗi đều kết thúc mà không giữ dữ liệu mới dang dở.
 
-**Mô tả**: Sơ đồ chỉ liệt kê các entity và field liên quan. Theo yêu cầu tài liệu, không biểu diễn dây nối quan hệ; liên kết đa hình được mô tả bằng ghi chú bên dưới.
+### Mô hình dữ liệu (Data Model / ERD)
 
 ```mermaid
 erDiagram
-    PRODUCTS {
-        uuid id PK
-        boolean is_active
-        boolean is_deleted
-    }
-
-    MOCKUP {
-        uuid id PK
-        string name
-        string image_url
-        boolean is_active
-        boolean is_deleted
-    }
-
     GENERATED_FLOWERS {
         uuid id PK
         string image_url
         uuid user_id
-        json input_snapshot
         timestamp created_at
     }
 
@@ -193,260 +204,188 @@ erDiagram
         string type
         json system_form
         json metadata
-        uuid root "Product ID gốc; required; no FK"
+        timestamp created_at
+        uuid root
         uuid base_id
         uuid output_id
-        timestamp created_at
-    }
-
-    SYSTEM_PROMPTS {
-        uuid id PK
-        string type UK
-        text content
     }
 ```
 
-- Với `type="flower"`, `base_id` là Product nguồn, `root=base_id` và `output_id` là Generated Flower. Nếu Product được chọn là biến thể thì hai cột cùng lưu đúng ID biến thể.
-- `root` do service gán, không có quan hệ database và không xuất hiện trong response API.
-- Mockup và System Prompt được snapshot; không tạo FK riêng từ Flower.
+Không tạo khóa ngoại giữa hai bảng trong sơ đồ này. Code chịu trách nhiệm gán `output_id` bằng ID Flower và giữ `base_id/root` là Product ID gốc.
+
+Metadata của Flower History dùng `schemaVersion=3`:
+
+```json
+{
+  "schemaVersion": 3,
+  "operation": "create",
+  "product": {
+    "name": "Combo A - biến thể đỏ",
+    "attributes": {},
+    "image": {
+      "url": "https://storage.example.com/products/a.jpg",
+      "objectKey": "products/a.jpg",
+      "versionId": "v15",
+      "sha256": "hash-cua-anh"
+    },
+    "observedStatus": {
+      "isActive": true,
+      "isDeleted": false,
+      "sellableQuantity": 3
+    }
+  },
+  "mockup": {
+    "id": "550e8400-e29b-41d4-a716-446655440002",
+    "name": "Bó hoa đặt giữa",
+    "description": "Bố cục nhìn thẳng",
+    "image": {
+      "url": "https://storage.example.com/mockups/m.jpg",
+      "objectKey": "mockups/m.jpg",
+      "versionId": "v8",
+      "sha256": "hash-cua-anh"
+    },
+    "observedStatus": {
+      "isActive": true,
+      "isDeleted": false
+    }
+  },
+  "logoConfig": {},
+  "regeneratedFromFlowerId": null,
+  "systemPromptSource": "current",
+  "validatedAt": "2026-09-09T08:00:00Z"
+}
+```
+
+`product` không chứa ID vì Product ID đã nằm trong `base_id/root`. `userInput` không thuộc request và không xuất hiện trong metadata. Với lần tạo lại, `operation="regenerate"`, `regeneratedFromFlowerId` có ID Flower nguồn và `systemPromptSource` có giá trị `current` hoặc `source_flower_fallback`.
+
+`system_form` lưu riêng hướng dẫn thực tế đã dùng:
+
+```json
+{
+  "type": "flower",
+  "content": "Nội dung hướng dẫn đầy đủ"
+}
+```
 
 ---
 
 ## BƯỚC 3 — API
 
-### Quy ước response
+### API Contract nội bộ
 
-Response thành công dùng envelope hiện hành của hệ thống:
+#### Endpoint #1
+- **Method**: POST
+- **Endpoint**: `/api/ai-flowers`
+- **Tên endpoint**: Tạo mẫu hoa mới
+- **Mô tả**: Tạo một ảnh hoa từ Product và Mockup khách hàng chọn.
 
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `isSuccess` | boolean | `true` khi request hoàn tất thành công. |
-| `isFailed` | boolean | `false` khi thành công. |
-| `error` | object/null | `null` khi thành công. |
-| `traceId` | string | Mã truy vết request do backend sinh. |
-| `timestampUtc` | datetime UTC | Thời điểm backend tạo response. |
-| `value` | object | Generated Flower vừa tạo. |
-| `value.id` | uuid | ID của `generated_flowers`. |
-| `value.image_url` | string URL | Ảnh kết quả đã xử lý logo và được lưu. |
-| `value.user_id` | uuid | ID user sở hữu kết quả. |
-| `value.created_at` | datetime UTC | Thời điểm tạo kết quả. |
-
-Response lỗi dùng các field `title`, `status`, `detail`, `messageCode`, `errors`, `traceId`, `timestampUtc`. `messageCode` là mã ổn định để FE xử lý; `detail` là mô tả cho người đọc/người dùng.
-
-### Endpoint #1 — Tạo mẫu hoa AI
-
-- **Method**: `POST`
-- **Route**: `/api/ai-flowers`
-- **Thành công**: HTTP `201`
-
-#### Request fields
-
-| Field | Kiểu | Bắt buộc | Mô tả |
+| Field | Type | Required | Mô tả |
 |---|---|---:|---|
-| `product_id` | uuid | Có | ID chính xác của Combo hoặc biến thể được người dùng chọn. |
-| `mockup_id` | uuid | Có | ID Mockup dùng làm bố cục/tham chiếu. |
-| `user_input` | object | Có | Nhóm dữ liệu form mà FE gửi để cá nhân hóa mẫu hoa. |
-| `user_input.name` | string/null | Theo form FE | Tên/yêu cầu chính của mẫu hoa. Context hiện chưa chốt giới hạn độ dài hoặc quy tắc rỗng. |
-| `user_input.occasion` | string/null | Theo form FE | Dịp sử dụng do FE gửi. Context hiện chưa chốt enum phía backend. |
-| `user_input.style` | string/null | Theo form FE | Phong cách do FE gửi; được dùng sau Combo, Mockup và note trong thứ tự dựng prompt. Context hiện chưa chốt enum phía backend. |
-| `user_input.budget` | number/null | Theo form FE | Ngân sách người dùng nhập. Context hiện chưa chốt min/max hoặc đơn vị validation phía backend. |
-| `user_input.note` | string/null | Theo form FE | Yêu cầu bổ sung. Context hiện chưa chốt giới hạn độ dài phía backend. |
+| `productId` | uuid | Có | ID chính xác của Product hoặc biến thể được chọn. |
+| `mockupId` | uuid | Có | ID Mockup dùng làm bố cục. |
+| `userInput` | — | Không cho phép | Field này đã bị loại khỏi luồng tạo hoa; nếu xuất hiện thì trả `VALIDATION_ERROR/400`. |
 
-#### Request/response mẫu
-
-**C01 — Thành công**
+**Ví dụ — Tạo thành công** — HTTP `201`
 
 Request:
 
 ```json
 {
-  "product_id": "550e8400-e29b-41d4-a716-446655440001",
-  "mockup_id": "550e8400-e29b-41d4-a716-446655440002",
-  "user_input": {
-    "name": "Bó hoa sinh nhật mẹ",
-    "occasion": "sinh_nhat",
-    "style": "dang_cap",
-    "budget": 500000,
-    "note": "Ưa thích hoa hồng và hoa lan"
-  }
+  "productId": "550e8400-e29b-41d4-a716-446655440001",
+  "mockupId": "550e8400-e29b-41d4-a716-446655440002"
 }
 ```
 
-Response — HTTP `201`:
+Response:
 
 ```json
 {
-  "isSuccess": true,
-  "isFailed": false,
-  "error": null,
-  "traceId": "00-...",
-  "timestampUtc": "2026-09-08T10:35:00Z",
   "value": {
-    "id": "880e8400-e29b-41d4-a716-446655440005",
-    "image_url": "https://storage.example.com/flowers/880e8400.png",
-    "user_id": "770e8400-e29b-41d4-a716-446655440004",
-    "created_at": "2026-09-08T10:35:00Z"
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "imageUrl": "https://storage.example.com/flowers/flower-01.png",
+    "userId": "770e8400-e29b-41d4-a716-446655440001",
+    "createdAt": "2026-09-09T08:00:00Z"
   }
 }
 ```
 
-#### Các tình huống lỗi
+History được lưu với `base_id=root=productId`, `output_id=value.id`. Metadata có Product, Mockup và cấu hình thực tế. Request và dữ liệu lưu không có `userInput`.
 
-Mỗi hàng dưới đây là một cặp request/response hoàn chỉnh. “Như C01” nghĩa là giữ nguyên toàn bộ body C01 và chỉ thay đổi điều kiện được nêu trong cột Request.
+#### Endpoint #2
+- **Method**: POST
+- **Endpoint**: `/api/ai-flowers/{sourceFlowerId}/regenerate`
+- **Tên endpoint**: Tạo lại mẫu hoa
+- **Mô tả**: Tạo Flower mới từ dữ liệu Product và Mockup đã lưu trong Flower History nguồn.
 
-| ID | Request | Response |
-|---|---|---|
-| C02 | Không có token; body như C01. | HTTP `401`, `messageCode=UNAUTHORIZED`. |
-| C03 | Body như C01 nhưng bỏ `product_id`. | HTTP `400`, `messageCode=VALIDATION_ERROR`, lỗi field `product_id`. |
-| C04 | Body như C01 nhưng bỏ `mockup_id`. | HTTP `400`, `messageCode=VALIDATION_ERROR`, lỗi field `mockup_id`. |
-| C05 | Body không phải JSON object hoặc một field có kiểu dữ liệu không khớp contract. Không đặt thêm giới hạn nội dung vì context chưa chốt. | HTTP `400`, `messageCode=VALIDATION_ERROR`, `errors` chỉ rõ field sai. |
-| C06 | Body như C01 nhưng `product_id` không có trong DB. | HTTP `404`, `messageCode=PRODUCT_NOT_FOUND`. |
-| C07 | Body như C01 nhưng Product đã soft-delete. | HTTP `410`, `messageCode=PRODUCT_DELETED`. |
-| C08 | Body như C01 nhưng Product chưa xóa và inactive. | HTTP `409`, `messageCode=PRODUCT_INACTIVE`. |
-| C09 | Body như C01 nhưng Product có `sellableQuantity=0`. | HTTP `409`, `messageCode=PRODUCT_OUT_OF_STOCK`. |
-| C10 | Body như C01 nhưng kết quả khả dụng là `no_formula`. Đại diện cả `no_core` vì cùng kết quả API. | HTTP `422`, `messageCode=PRODUCT_NOT_SELLABLE`. |
-| C11 | Body như C01 nhưng không xác minh được khả năng bán của Product. | HTTP `503`, `messageCode=PRODUCT_AVAILABILITY_UNAVAILABLE`. |
-| C12 | Body như C01 nhưng `mockup_id` không tồn tại. | HTTP `404`, `messageCode=MOCKUP_NOT_FOUND`. |
-| C13 | Body như C01 nhưng Mockup đã soft-delete. | HTTP `410`, `messageCode=MOCKUP_DELETED`. |
-| C14 | Body như C01 nhưng Mockup chưa xóa và inactive. | HTTP `409`, `messageCode=MOCKUP_INACTIVE`. |
-| C15 | Body như C01 nhưng không có prompt `flower` hiện hành hợp lệ. | HTTP `409`, `messageCode=SYSTEM_PROMPT_INVALID`. |
-| C16 | Body hợp lệ như C01; `AIModule`, bước gắn logo hoặc transaction lưu dữ liệu trả lỗi cuối cùng. | HTTP `500`, `messageCode=INTERNAL_SERVER_ERROR`; không có Flower/History mới. |
-
-Response lỗi mẫu cho C12:
-
-```json
-{
-  "title": "Not Found",
-  "status": 404,
-  "detail": "Không tìm thấy Mockup nguồn.",
-  "messageCode": "MOCKUP_NOT_FOUND",
-  "errors": null,
-  "traceId": "00-...",
-  "timestampUtc": "2026-09-08T10:35:00Z"
-}
-```
-
-Các hàng khác giữ cùng envelope và thay `status`, `detail`, `messageCode`, `errors` theo bảng.
-
-### Endpoint #2 — Tạo lại mẫu hoa từ lịch sử
-
-- **Method**: `POST`
-- **Route**: `/api/ai-flowers/{source_flower_id}/regenerate`
-- **Thành công**: HTTP `201`
-
-#### Path và request fields
-
-| Field | Vị trí | Kiểu | Bắt buộc | Mô tả |
+| Field | Vị trí | Type | Required | Mô tả |
 |---|---|---|---:|---|
-| `source_flower_id` | path | uuid | Có | ID `generated_flowers` được chọn từ History; không phải History ID. |
-| `mockup_id` | body | uuid/null | Không | Bỏ field, `null` hoặc bằng Mockup nguồn: dùng snapshot nguồn. UUID khác: chọn Mockup mới và kiểm tra live. |
+| `sourceFlowerId` | path | uuid | Có | ID của `generated_flowers` được chọn. |
+| `mockupId` | body | uuid/null | Không | Bỏ trống, `null` hoặc bằng ID nguồn để dùng Mockup đã lưu; ID khác để chọn Mockup mới. |
+| `productId` | body | — | Không cho phép | Product luôn lấy từ History nguồn. |
+| `userInput` | body | — | Không cho phép | Tạo lại không sử dụng nội dung người dùng đã nhập. |
 
-Body không được chứa field khác. Product và `user_input` luôn lấy từ source snapshot.
-
-#### Request/response mẫu
-
-**R01 — Thành công, dùng Mockup nguồn**
+**Ví dụ 1 — Dùng lại Mockup nguồn** — HTTP `201`
 
 Request:
 
-```http
-POST /api/ai-flowers/880e8400-e29b-41d4-a716-446655440005/regenerate
-Content-Type: application/json
-
+```json
 {}
 ```
 
-Response — HTTP `201`:
-
-```json
-{
-  "isSuccess": true,
-  "isFailed": false,
-  "error": null,
-  "traceId": "00-...",
-  "timestampUtc": "2026-09-08T11:00:00Z",
-  "value": {
-    "id": "990e8400-e29b-41d4-a716-446655440006",
-    "image_url": "https://storage.example.com/flowers/990e8400.png",
-    "user_id": "770e8400-e29b-41d4-a716-446655440004",
-    "created_at": "2026-09-08T11:00:00Z"
-  }
-}
-```
-
-**R02 — Thành công, chọn Mockup mới**
+**Ví dụ 2 — Chọn Mockup khác** — HTTP `201`
 
 Request:
 
-```http
-POST /api/ai-flowers/880e8400-e29b-41d4-a716-446655440005/regenerate
-Content-Type: application/json
-
+```json
 {
-  "mockup_id": "660e8400-e29b-41d4-a716-446655440003"
+  "mockupId": "550e8400-e29b-41d4-a716-446655440099"
 }
 ```
 
-Response — HTTP `201`: cùng schema R01; `value.id`, `value.image_url`, `value.created_at` là dữ liệu mới. Snapshot lưu Mockup `660e8400-e29b-41d4-a716-446655440003`.
+Response của cả hai trường hợp có cùng cấu trúc với Endpoint #1. History mới giữ Product ID gốc trong `base_id/root` và lưu ID Flower nguồn trong `metadata.regeneratedFromFlowerId`.
 
-#### Các tình huống lỗi
-
-Mỗi hàng là một cặp request/response. “Như R01” nghĩa là cùng path/body R01 và chỉ thay điều kiện nêu trong cột Request.
-
-| ID | Request | Response |
-|---|---|---|
-| R03 | Không có token; request như R01. | HTTP `401`, `messageCode=UNAUTHORIZED`. |
-| R04 | Path chứa `source_flower_id` không tồn tại; body `{}`. | HTTP `404`, `messageCode=FLOWER_SOURCE_NOT_FOUND`. |
-| R05 | Path là Flower tồn tại nhưng thuộc user khác; body `{}`. | HTTP `403`, `messageCode=ACCESS_DENIED`. |
-| R06 | Request như R01 nhưng source thiếu History, Product lineage, `base_id/root` hợp lệ hoặc snapshot bắt buộc. | HTTP `409`, `messageCode=FLOWER_SOURCE_HISTORY_INVALID`. |
-| R07 | Body chứa thêm `product_id` hoặc `user_input`. Đại diện mọi field ngoài allowlist `mockup_id`. | HTTP `400`, `messageCode=VALIDATION_ERROR`. |
-| R08 | Body có `mockup_id` khác nguồn nhưng ID không tồn tại. | HTTP `404`, `messageCode=MOCKUP_NOT_FOUND`. |
-| R09 | Body có `mockup_id` khác nguồn và Mockup đã soft-delete. | HTTP `410`, `messageCode=MOCKUP_DELETED`. |
-| R10 | Body có `mockup_id` khác nguồn, chưa xóa nhưng inactive. | HTTP `409`, `messageCode=MOCKUP_INACTIVE`. |
-| R11 | Request như R01; prompt hiện hành không dùng được và `system_form` nguồn cũng thiếu/rỗng. | HTTP `409`, `messageCode=FLOWER_SOURCE_HISTORY_INVALID`. |
-| R12 | Request hợp lệ như R01; `AIModule`, bước gắn logo hoặc transaction lưu dữ liệu trả lỗi cuối cùng. | HTTP `500`, `messageCode=INTERNAL_SERVER_ERROR`; source không đổi và không có Flower/History mới. |
-
-Response lỗi mẫu cho R06:
+**Ví dụ 3 — History nguồn thiếu dữ liệu Product** — HTTP `409`
 
 ```json
 {
-  "title": "Conflict",
   "status": 409,
-  "detail": "Mẫu hoa nguồn không có lịch sử, Product gốc hoặc snapshot đầy đủ để tạo lại.",
-  "messageCode": "FLOWER_SOURCE_HISTORY_INVALID",
-  "errors": null,
-  "traceId": "00-...",
-  "timestampUtc": "2026-09-08T11:00:00Z"
+  "messageCode": "FLOWER_SOURCE_HISTORY_INVALID"
 }
 ```
 
-### Danh mục mã lỗi
+Hệ thống không đọc Product hiện tại hoặc metadata của loại History khác để đoán dữ liệu bị thiếu.
+
+#### Mã lỗi
 
 | Code | HTTP | Áp dụng | Khi nào xảy ra |
 |---|---:|---|---|
-| `VALIDATION_ERROR` | 400 | Create/Regenerate | Body, kiểu dữ liệu, field bắt buộc hoặc allowlist không hợp lệ. |
-| `UNAUTHORIZED` | 401 | Create/Regenerate | Chưa đăng nhập hoặc tài khoản không hoạt động. |
-| `PRODUCT_NOT_FOUND` | 404 | Create | Không có Product theo ID. |
-| `PRODUCT_DELETED` | 410 | Create | Product đã soft-delete. |
-| `PRODUCT_INACTIVE` | 409 | Create | Product chưa xóa nhưng inactive. |
-| `PRODUCT_OUT_OF_STOCK` | 409 | Create | Product hợp lệ nhưng lượng có thể bán bằng 0. |
-| `PRODUCT_NOT_SELLABLE` | 422 | Create | Product không có formula hoặc CORE usable. |
-| `PRODUCT_AVAILABILITY_UNAVAILABLE` | 503 | Create | Không tính/xác minh được khả năng bán. |
-| `MOCKUP_NOT_FOUND` | 404 | Create/Mockup mới | Không có Mockup theo ID. |
-| `MOCKUP_DELETED` | 410 | Create/Mockup mới | Mockup đã soft-delete. |
-| `MOCKUP_INACTIVE` | 409 | Create/Mockup mới | Mockup chưa xóa nhưng inactive. |
-| `SYSTEM_PROMPT_INVALID` | 409 | Create | Prompt `flower` hiện hành thiếu/rỗng/không hợp lệ. |
-| `FLOWER_SOURCE_NOT_FOUND` | 404 | Regenerate | Flower nguồn không tồn tại. |
-| `ACCESS_DENIED` | 403 | Regenerate | Flower nguồn không thuộc user hiện tại. |
-| `FLOWER_SOURCE_HISTORY_INVALID` | 409 | Regenerate | History, Product lineage, `base_id/root`, snapshot hoặc prompt nguồn bắt buộc không dùng được. |
-| `INTERNAL_SERVER_ERROR` | 500 | Create/Regenerate | Dependency tạo ảnh, xử lý logo hoặc persistence trả lỗi cuối cùng. |
+| `VALIDATION_ERROR` | 400 | Cả hai | Path hoặc body sai kiểu, thiếu field bắt buộc hoặc chứa field không được phép. |
+| `UNAUTHORIZED` | 401 | Cả hai | Chưa đăng nhập hoặc tài khoản không hoạt động. |
+| `PRODUCT_NOT_FOUND` | 404 | Tạo mới | Product không tồn tại. |
+| `PRODUCT_DELETED` | 410 | Tạo mới | Product đã bị đánh dấu xóa. |
+| `PRODUCT_INACTIVE` | 409 | Tạo mới | Product đang ngừng hoạt động. |
+| `PRODUCT_OUT_OF_STOCK` | 409 | Tạo mới | Product không còn số lượng có thể bán. |
+| `PRODUCT_NOT_SELLABLE` | 422 | Tạo mới | Product thiếu công thức hoặc dữ liệu lõi cần thiết. |
+| `PRODUCT_AVAILABILITY_UNAVAILABLE` | 503 | Tạo mới | Không xác định được số lượng có thể bán. |
+| `MOCKUP_NOT_FOUND` | 404 | Cả hai | Mockup cần kiểm tra không tồn tại. |
+| `MOCKUP_DELETED` | 410 | Cả hai | Mockup cần kiểm tra đã bị đánh dấu xóa. |
+| `MOCKUP_INACTIVE` | 409 | Cả hai | Mockup cần kiểm tra đang ngừng hoạt động. |
+| `SYSTEM_PROMPT_INVALID` | 409 | Tạo mới | Không có System Prompt dành cho hoa dùng được. |
+| `FLOWER_SOURCE_NOT_FOUND` | 404 | Tạo lại | Flower nguồn không tồn tại. |
+| `ACCESS_DENIED` | 403 | Tạo lại | Flower nguồn thuộc khách hàng khác. |
+| `FLOWER_SOURCE_HISTORY_INVALID` | 409 | Tạo lại | Thiếu History, có nhiều History phù hợp, nguồn gốc Product mâu thuẫn, metadata thiếu dữ liệu hoặc không có System Prompt dùng được. |
+| `INTERNAL_SERVER_ERROR` | 500 | Cả hai | Hàm gọi AI trả lỗi cuối cùng, thiếu hoặc sai cấu hình logo, gắn logo thất bại hoặc không lưu trọn vẹn Flower và History. |
 
-### Contract với AIModule
+TDD này không định nghĩa mã lỗi quota hoặc quy tắc thử lại. Các việc đó thuộc hàm gọi AI và được mô tả trong tài liệu ngữ cảnh tương ứng.
 
-- Service truyền một `FlowerGenerationSnapshot` bất biến chứa Product, Effective Mockup, `user_input`, tham chiếu ảnh Product, prompt và cấu hình cần dùng.
-- Module trả ảnh hợp lệ hoặc lỗi cuối cùng. Service không diễn giải các bước nội bộ của module.
-- Regenerate không truyền ảnh output của Flower nguồn làm input.
-- Nhà cung cấp, endpoint, credential và transport cụ thể chưa có trong codebase nên không được quy định tại TDD này.
+### API Contract bên ngoài
+
+- Dịch vụ nghiệp vụ gọi một hàm AI nội bộ và nhận ảnh hợp lệ hoặc lỗi cuối cùng.
+- Với tạo mới, dữ liệu gửi vào gồm Product, ảnh Product và Mockup.
+- Với tạo lại, Product và ảnh Product đến từ Flower History; Mockup đến từ History hoặc Mockup mới được chọn.
+- Cả hai luồng đều từ chối `userInput`.
+- Dịch vụ nghiệp vụ không tự đếm lượt và không tự điều khiển số lần thử lại.
+- Nhà cung cấp AI, địa chỉ dịch vụ và thông tin đăng nhập chưa được quy định trong codebase nên không được tự bổ sung tại TDD này.
 
 ---
 
@@ -454,17 +393,20 @@ Response lỗi mẫu cho R06:
 
 ### 🔴 Tham chiếu đến
 
-- `AI_Flower_Context.md` — quy tắc tổng thể của AI Flower và các chính sách vận hành thuộc AI Module.
-- `AI_DB_Diagram.md`, `AI_CUSTOMIZE_DB.dbdiagram` — schema `generated_flowers`, `client_histories`, `mockup`, `system_prompts`.
-- TDD-012 đến TDD-015 — CRUD và trạng thái Mockup.
-- Product Entity/Core Database — Product/biến thể và phép tính khả năng bán.
-- `ApiResponseFactory`, `GlobalExceptionHandlerMiddleware` — response envelope hiện hành.
+- `AI_Flower_Context.md` — quy tắc tổng thể của luồng tạo hoa và phần vận hành bên trong hàm gọi AI.
+- `AI_DB_Diagram.md`, `AI_CUSTOMIZE_DB.dbdiagram` — cấu trúc `generated_flowers`, `client_histories`, Mockup và System Prompt.
+- TDD-012 đến TDD-015 — quản lý và trạng thái Mockup.
+- Product Entity/Core Database — Product, biến thể và cách xác định khả năng bán.
 
 ### ⚫ Trỏ vào tài liệu này
 
-- TDD-006 và TDD-007 — có thể dùng Generated Flower làm nguồn tạo Card.
+- TDD-006 — tạo Card AI từ Product hoặc Generated Flower.
+- TDD-007 — tạo lại Card AI từ lịch sử.
+- TDD-021 — tạo Card HandMade từ Product hoặc Generated Flower.
 
 ### ⋯ Bị ảnh hưởng
 
-- Flow Checkout/Order — resolve và kiểm tra Product gốc khi khách hàng đặt hàng.
-- Implementation AI Flowers — controller, service, DTO và persistence chưa có trong codebase hiện tại.
+- `GeneratedFlower` entity và cấu hình bảng — bỏ `InputSnapshot`/`input_snapshot`.
+- Migration cơ sở dữ liệu — xóa cột `generated_flowers.input_snapshot`.
+- Flower History — trở thành nguồn duy nhất chứa dữ liệu Product và Mockup dùng cho tạo lại.
+- Checkout/Order — tiếp tục dùng `root` để xác định Product gốc và kiểm tra Product hiện tại khi đặt hàng.

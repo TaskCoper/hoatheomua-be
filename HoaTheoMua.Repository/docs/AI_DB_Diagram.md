@@ -8,14 +8,14 @@
 - Flow tạo hoa của STORY-030 và STORY-033 dùng chung một API đồng bộ.
 - Không có bảng `flower_requests` hoặc `flower_ai_jobs`.
 - API nhận input, gọi AI (kèm retry), trả kết quả; chỉ khi thành công mới lưu `generated_flowers` và `client_histories`.
-- `client_histories` không lưu request input; dữ liệu kết quả Card nằm ở `generated_cards`, dữ liệu tạo Flower nằm ở `generated_flowers.input_snapshot`, còn history chỉ giữ loại, lineage, output, provenance và System Prompt snapshot.
+- `userInput` của Flower không được lưu. Dữ liệu kết quả nằm ở `generated_flowers`; tên, thuộc tính, ảnh và trạng thái Product cùng Mockup/cấu hình cần dùng lại nằm ở `client_histories.metadata`.
 - `client_histories.root` là UUID bắt buộc, luôn lưu `products.id` gốc của History `flower`, `card` hoặc `handmade_card`. Giá trị do service xác định; không tạo FK, navigation hoặc quan hệ database cho cột này.
 - Card giữ logic hiện tại: cấu hình dùng bảng `Config`, còn quan hệ Card–Flower được suy ra từ `client_histories`, không dùng `generated_cards.source_flower_id`.
 - `card_templates` dùng string bắt buộc `template_type="ai"|"handmade"`; cả hai loại kết quả đều lưu trong `generated_cards` và phân biệt bằng string bắt buộc `card_type`.
 - Khi áp dụng schema cho dữ liệu hiện có, backfill `card_templates.template_type="ai"` và `generated_cards.card_type="ai"` trước khi bật ràng buộc không null. Hai discriminator chỉ nhận lowercase; `template_type` không được đổi sau khi tạo.
 - HandMade Card không gọi AI, không dùng prompt/quota, luôn viết tay và chỉ tính phụ phí số từ; `system_form` của history bằng null.
 - `client_histories.type` là string mở rộng. Phạm vi hiện tại của `root` gồm `flower`, `card`, `handmade_card`; `post` chưa được sử dụng trong flow này và không được suy diễn quy tắc `root`.
-- Không thêm bảng mới. `generated_flowers.input_snapshot`, `client_histories.metadata` và `client_histories.system_form` giữ snapshot/provenance bất biến; soft-delete nguồn không xóa history/snapshot.
+- Không thêm bảng mới. `client_histories.metadata` và `client_histories.system_form` giữ dữ liệu bất biến cần dùng lại; soft-delete nguồn không xóa History.
 - `products.sellableQuantity` là giá trị dẫn xuất từ dữ liệu live bằng cùng thuật toán `CalculateAvailableQty`, không phải column trong schema.
 
 ## Enums
@@ -93,7 +93,6 @@ Table generated_flowers {
   id uuid [pk]
   image_url varchar
   user_id uuid
-  input_snapshot json
   created_at timestamp
 }
 
@@ -164,7 +163,7 @@ Ràng buộc nghiệp vụ cho `generated_cards.card_type="handmade"`: `form_typ
 
 | type | base_id | output_id | root | metadata |
 |---|---|---|---|---|
-| flower | `products.id` | `generated_flowers.id` | Bằng `base_id` | Snapshot Product, Mockup, ảnh và validation; System Prompt nằm trong `system_form` |
+| flower | `products.id` | `generated_flowers.id` | Bằng `base_id` | Tên, thuộc tính, ảnh, trạng thái Product; Mockup, logo/config, thao tác và nguồn tạo lại; System Prompt nằm trong `system_form`; không có `userInput` |
 | card (hoa thường) | `products.id` | `generated_cards.id` | Bằng `base_id` | `source_type=product`, `origin_product_id`, provenance và Template snapshot không gồm ảnh |
 | card (hoa AI) | `generated_flowers.id` | `generated_cards.id` | `base_id` của `client_histories(type=flower, output_id=generated_flowers.id)` | Provenance bắt buộc đầy đủ; Template snapshot không gồm ảnh |
 | handmade_card (hoa thường) | `products.id` | `generated_cards.id` | Bằng `base_id` | Provenance và Template snapshot không gồm ảnh; `system_form=null` |
@@ -172,13 +171,15 @@ Ràng buộc nghiệp vụ cho `generated_cards.card_type="handmade"`: `form_typ
 
 Đối với các loại đang dùng trong `client_histories`, column `input` bị loại bỏ. `system_form` là JSON nullable, không có FK: AI Flower/Card lưu `{type, content}` của System Prompt thực tế và HandMade lưu `null`. `post_histories` là bảng khác nên tiếp tục giữ `system_prompt_id` hiện tại; Post nằm ngoài phạm vi quy tắc `root` này.
 
+Flower History dùng metadata `schemaVersion=3` với các nhóm dữ liệu: `operation`, `product{name, attributes, image, observedStatus}`, `mockup{id, name, description, image, observedStatus}`, `logoConfig`, `regeneratedFromFlowerId`, `systemPromptSource` và `validatedAt`. Không lưu Product ID trong metadata vì đã có ở `base_id/root`; không lưu Flower ID kết quả vì đã có ở `output_id`; không lưu System Prompt vì đã có ở `system_form`; không lưu `userInput`.
+
 ```sql
 Ref: post_histories.system_prompt_id > system_prompts.id
 ```
 
 Không khai báo `Ref` cho `client_histories.base_id`, `root` hoặc `output_id`. Đây là các giá trị lineage đa hình do code quản lý, không phải quan hệ database.
 
-`mockup` được truyền vào API tạo hoa và snapshot trong `generated_flowers.input_snapshot` cùng `client_histories.metadata`; không cần FK riêng cho flow tạo hoa.
+`mockup` được truyền vào API tạo hoa và lưu trong `client_histories.metadata`; không cần FK riêng cho flow tạo hoa. Flower History metadata là nguồn duy nhất của Product và Mockup khi tạo lại.
 
 Lineage khi Order kiểm tra nguồn live:
 

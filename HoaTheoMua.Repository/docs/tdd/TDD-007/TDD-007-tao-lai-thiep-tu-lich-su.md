@@ -32,7 +32,7 @@
 ### Business Rules
 - **BR-007-01**: Endpoint yêu cầu đăng nhập. `sourceCardId` là `generated_cards.id` được chọn từ `client_histories.output_id`.
 - **BR-007-02**: Source Card phải tồn tại, thuộc user hiện tại, có `card_type=ai` và có History `type=card` với snapshot, `base_id` và `root` Product hợp lệ. `root` bắt buộc khác `Guid.Empty`. Card HandMade trả `HANDMADE_CARD_REGENERATE_NOT_SUPPORTED`.
-- **BR-007-03**: Request chỉ nhận `cardTemplateId` tùy chọn; không mở form chỉnh sửa nội dung.
+- **BR-007-03**: Request chỉ nhận `cardTemplateId` tùy chọn. Nếu body có `productId`, `generatedFlowerId`, `senderName`, `receiverName`, `messageContent`, `formType`, `attachedImageUrl`, `sizeKey` hoặc field khác thì trả `VALIDATION_ERROR/400`; không gọi AI và không tạo dữ liệu mới.
 - **BR-007-04**: `cardTemplateId` bỏ trống/null/đúng ID Template nguồn dùng Template snapshot nguồn mà không query live. ID khác nguồn phải validate `CARD_TEMPLATE_NOT_FOUND` → `CARD_TEMPLATE_DELETED` → `CARD_TEMPLATE_INACTIVE` và bắt buộc `templateType=ai`; HandMade Template trả `CARD_TEMPLATE_TYPE_INVALID`.
 - **BR-007-05**: Giữ nguyên `senderName`, `receiverName`, `messageContent`, `attachedImageUrl`, `formType`, toàn bộ Size snapshot, `wordCount`, Calligraphy snapshot và giá từ Card nguồn.
 - **BR-007-06**: Không query/validate live Product, Generated Flower, Mockup, Size Config hoặc Price Config nguồn. Trạng thái live thay đổi không chặn Regenerate.
@@ -410,6 +410,20 @@ Response:
 {"title":"Unauthorized","status":401,"detail":"Bạn cần đăng nhập.","messageCode":"UNAUTHORIZED"}
 ```
 
+**Ví dụ 14 — Gửi field không được phép** — HTTP `400`
+
+Request:
+```http
+POST /api/ai-cards/550e8400-e29b-41d4-a716-446655440001/regenerate
+
+{"senderName":"Tên mới"}
+```
+
+Response:
+```json
+{"title":"Bad Request","status":400,"detail":"Request tạo lại chỉ được chứa cardTemplateId.","messageCode":"VALIDATION_ERROR"}
+```
+
 #### Mã lỗi
 | Code | HTTP | Khi nào xảy ra |
 |---|---:|---|
@@ -421,6 +435,7 @@ Response:
 | `CARD_TEMPLATE_INACTIVE` | 409 | Template khác source inactive |
 | `CARD_TEMPLATE_TYPE_INVALID` | 409 | Template khác source không phải AI |
 | `HANDMADE_CARD_REGENERATE_NOT_SUPPORTED` | 409 | Source là HandMade Card |
+| `VALIDATION_ERROR` | 400 | Body chứa field khác `cardTemplateId` hoặc `cardTemplateId` sai kiểu UUID |
 | `UNAUTHORIZED` | 401 | Chưa đăng nhập |
 | `INTERNAL_SERVER_ERROR` | 500 | AIModule, upload hoặc persistence không tạo kết quả hoàn chỉnh |
 

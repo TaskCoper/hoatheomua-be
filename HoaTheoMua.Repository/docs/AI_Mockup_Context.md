@@ -140,7 +140,7 @@ Admin chọn chức năng "Thêm Mockup".
 | Hiển thị | Không hiển thị trong danh sách Mockup mặc định của Admin |
 | Khách hàng | Không hiển thị cho khách hàng trong quy trình tạo mẫu hoa mới |
 | Sử dụng | Không được chọn cho request Flower mới hoặc làm Mockup được chọn mới khi Regenerate; snapshot lịch sử vẫn được dùng lại khi client không chọn Mockup |
-| Dữ liệu | Vẫn giữ dữ liệu, ảnh Preview, snapshot trong `generated_flowers`/`client_histories` và kết quả lịch sử |
+| Dữ liệu | Vẫn giữ dữ liệu, ảnh Preview, Mockup trong `client_histories.metadata` và kết quả lịch sử |
 
 ---
 
@@ -219,8 +219,8 @@ erDiagram
 - **BR-014-02**: Mockup Inactive (`isActive = false`) có thể chuyển sang Active
 - **BR-014-03**: Chỉ Admin có quyền mới được phép chuyển trạng thái
 - **BR-014-04**: Mockup Inactive không hiển thị cho khách hàng
-- **BR-014-05**: Request Flower mới kiểm tra trạng thái Mockup đúng một lần tại admission; thay đổi trạng thái sau snapshot không ảnh hưởng request đang chạy
-- **BR-014-06**: Regenerate Flower chỉ kiểm tra live khi client truyền ID Mockup khác nguồn; bỏ trống/null/đúng ID nguồn thì dùng Mockup snapshot nguồn dù record live đã inactive
+- **BR-014-05**: Request Flower mới kiểm tra trạng thái Mockup đúng một lần trước khi gọi AI; thay đổi trạng thái sau khi dữ liệu đã được chuẩn bị không ảnh hưởng request đang chạy
+- **BR-014-06**: Regenerate Flower chỉ kiểm tra dữ liệu hiện tại khi client truyền ID Mockup khác nguồn; bỏ trống/null/đúng ID nguồn thì dùng Mockup trong Flower History metadata dù record hiện tại đã inactive
 
 ### 4.4 Xóa Mockup (STORY-053)
 
@@ -229,16 +229,16 @@ erDiagram
 - **BR-015-03**: Mockup đã xóa không hiển thị trong danh sách mặc định
 - **BR-015-04**: Mockup đã xóa không hiển thị cho khách hàng
 - **BR-015-05**: Dữ liệu và liên kết với yêu cầu đã tồn tại được giữ nguyên
-- **BR-015-06**: Request Flower mới kiểm tra `isDeleted` đúng một lần tại admission; không revalidate trước persist/history
-- **BR-015-07**: Soft-delete không vô hiệu hóa Mockup snapshot của Flower lịch sử. Regenerate bỏ trống/null/đúng ID nguồn dùng snapshot đó mà không query record live; nếu client chọn ID khác nguồn thì Mockup mới đã xóa trả `MOCKUP_DELETED/410`
+- **BR-015-06**: Request Flower mới kiểm tra `isDeleted` đúng một lần trước khi gọi AI; không kiểm tra lại trước khi lưu Flower/History
+- **BR-015-07**: Soft-delete không vô hiệu hóa Mockup đã lưu trong Flower History metadata. Regenerate bỏ trống/null/đúng ID nguồn dùng dữ liệu đó mà không đọc record hiện tại; nếu client chọn ID khác nguồn thì Mockup mới đã xóa trả `MOCKUP_DELETED/410`
 
 ### 4.5 Validation boundary của Generate/Regenerate Flower
 
 - Create Flower và Regenerate có ID Mockup khác nguồn đều validate theo thứ tự cố định: không tồn tại → `MOCKUP_NOT_FOUND/404`; `isDeleted=true` → `MOCKUP_DELETED/410`; chưa xóa nhưng `isActive=false` → `MOCKUP_INACTIVE/409`.
-- Regenerate bỏ trống/null hoặc truyền đúng ID Mockup nguồn dùng nguyên snapshot của Flower nguồn, không query live và không kiểm tra active/soft-delete. Trạng thái record Mockup nguồn không chặn flow này.
-- Khi hợp lệ, service đóng băng metadata và nội dung ảnh bằng bytes đã tải hoặc `url + objectKey/versionId + sha256` trong `generated_flowers.input_snapshot` và `client_histories.metadata` trước AI.
-- AI và mọi retry dùng cùng snapshot; không tải lại URL live và không query lại Mockup.
-- Admin inactive/soft-delete Mockup sau admission không được hủy AI, retry, gắn logo, persist `generated_flowers` hoặc persist history.
+- Regenerate bỏ trống/null hoặc truyền đúng ID Mockup nguồn dùng nguyên Mockup trong Flower History metadata, không đọc dữ liệu hiện tại và không kiểm tra active/soft-delete. Trạng thái record Mockup nguồn không chặn flow này.
+- Khi hợp lệ, service chuẩn bị nội dung ảnh bằng bytes đã tải hoặc `url + objectKey/versionId + sha256`. Flower History metadata lưu ID, tên, mô tả, ảnh và trạng thái Mockup đã dùng; `generated_flowers` không có `input_snapshot`.
+- Hàm gọi AI tự quản lý retry và phải dùng cùng dữ liệu; không tải lại URL hiện tại và không đọc lại Mockup.
+- Admin inactive/soft-delete Mockup sau khi dữ liệu đã được chuẩn bị không được hủy bước gọi AI, gắn logo hoặc lưu `generated_flowers`/History.
 - Generated Flower đã thành công vẫn được xem và dùng tạo Card dù Mockup gốc đổi trạng thái. Mockup không phải dependency tồn kho và không được dùng để chặn Checkout/Order.
 - Không có bảng `flower_requests`; toàn bộ Flower/Card history là các record phân loại bởi `client_histories.type`.
 
@@ -272,4 +272,4 @@ erDiagram
 - **Mockup là nguồn tham chiếu**: Dùng làm tham chiếu cho kiểu dáng, bố cục hoa
 - **Trạng thái Active/Inactive**: Kiểm soát Mockup nào được hiển thị cho khách hàng
 - **Xóa mềm**: Không xóa vật lý, giữ nguyên dữ liệu lịch sử
-- **Kiểm tra trạng thái**: Create và Regenerate chọn ID Mockup khác nguồn kiểm tra `isActive`/`isDeleted` một lần tại admission; Regenerate bỏ trống/null/đúng ID nguồn dùng snapshot nguồn không kiểm tra live; không revalidate sau snapshot
+- **Kiểm tra trạng thái**: Create và Regenerate chọn ID Mockup khác nguồn kiểm tra `isActive`/`isDeleted` một lần trước khi gọi AI; Regenerate bỏ trống/null/đúng ID nguồn dùng Mockup trong Flower History metadata và không đọc lại dữ liệu hiện tại

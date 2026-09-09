@@ -209,7 +209,6 @@ erDiagram
         uuid id PK
         string image_url
         uuid user_id
-        json input_snapshot
     }
     card_templates {
         uuid id PK

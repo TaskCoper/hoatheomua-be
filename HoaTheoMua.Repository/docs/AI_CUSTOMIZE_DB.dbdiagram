@@ -93,13 +93,12 @@ Table generated_posts {
   created_at timestamp
 }
 
-// Chỉ lưu kết quả tạo hoa thành công; input_snapshot là snapshot bất biến đã
-// validate trước AI, gồm Product/Mockup, bytes hoặc version/hash ảnh và full prompt.
+// Chỉ lưu kết quả tạo hoa thành công. Product/Mockup/cấu hình cần dùng lại nằm
+// trong metadata của client_histories(type=flower); userInput không được lưu.
 Table generated_flowers {
   id uuid [pk]
   image_url varchar
   user_id uuid
-  input_snapshot json
   created_at timestamp
 }
 
@@ -153,7 +152,10 @@ Table mockup {
   updated_at timestamp
 }
 
-// Lịch sử kết quả thành công. Không lưu input. metadata là JSON provenance bất biến.
+// Lịch sử kết quả thành công. Không lưu userInput. Với Flower, metadata schemaVersion=3
+// giữ product{name,attributes,image,observedStatus}, mockup, logoConfig, operation,
+// regeneratedFromFlowerId, systemPromptSource và validatedAt. Product ID nằm ở
+// base_id/root, Flower ID nằm ở output_id, System Prompt nằm ở system_form.
 // Với Card, metadata không lặp dữ liệu đã có trong generated_cards: không lưu card_type,
 // size value, Calligraphy rule, pricing hoặc image của Template. System Prompt snapshot
 // tách sang system_form và chỉ gồm các field của system_prompts ngoại trừ id.
