@@ -2,18 +2,18 @@
 
 ## Thông tin tài liệu
 - **Tiêu đề**: Admin xóa mềm Card Template
-- **Ghi chú**: API ngừng sử dụng Template cho flow mới nhưng giữ record, ảnh và mọi snapshot lịch sử. Đây là thiết kế mục tiêu vì code Card Template chưa tồn tại.
+- **Ghi chú**: API ngừng sử dụng Template cho flow mới nhưng giữ record, ảnh, dữ liệu trong `generated_cards` và phần Template metadata không trùng của history. Đây là thiết kế mục tiêu vì code Card Template chưa tồn tại.
 
 ## Metadata quản trị tài liệu
 | Trường | Giá trị |
 |---|---|
 | Mã tài liệu | TDD-026 |
-| Phiên bản | v0.2 |
+| Phiên bản | v0.4 |
 | Author | Nguyễn Tùng Dương |
 | Reviewer | Tân Trần |
 | Approver | Chưa chỉ định |
 | Owner | Nguyễn Tùng Dương |
-| Cập nhật gần nhất | 2026-09-07 |
+| Cập nhật gần nhất | 2026-09-09 |
 
 ---
 
@@ -24,7 +24,7 @@
 - **Tính năng**: Xóa Card Template
 - **Tác giả**: Nguyễn Tùng Dương
 - **Người review**: Tân Trần
-- **Phiên bản**: v0.2
+- **Phiên bản**: v0.4
 - **Cập nhật (YYYY-MM-DD)**: 2026-09-07
 - **Story liên quan**:
   - Chưa có Story riêng cho CRUD Card Template
@@ -35,21 +35,21 @@
 - **BR-022-03**: Template không tồn tại trả `CARD_TEMPLATE_NOT_FOUND/404`.
 - **BR-022-04**: Template đã soft-delete trả `CARD_TEMPLATE_ALREADY_DELETED/410`; thao tác không được xem là thành công lặp lại.
 - **BR-022-05**: Có thể xóa Template Active hoặc Inactive.
-- **BR-022-06**: Không xóa file `image_url` tại thời điểm soft-delete để bảo toàn preview/audit và tránh ảnh hưởng dữ liệu lịch sử.
-- **BR-022-07**: Không update hoặc xóa `generated_cards` và `client_histories`; các record này dùng snapshot đã lưu.
+- **BR-022-06**: Không xóa file `image_url` tại thời điểm soft-delete để bảo toàn preview/audit và tránh ảnh hưởng dữ liệu lịch sử; `client_histories.metadata` không snapshot `cardTemplate.imageUrl`.
+- **BR-022-07**: Không update hoặc xóa `generated_cards` và `client_histories`; dữ liệu Card/ảnh đã lưu nằm trong `generated_cards`, còn history giữ provenance và phần Template metadata không trùng.
 - **BR-022-08**: Template đã xóa không xuất hiện trong danh sách và không được dùng cho Card Create hoặc làm Template mới khi Regenerate.
-- **BR-022-09**: Regenerate AI bỏ trống/null hoặc dùng đúng ID Template nguồn vẫn dùng snapshot nguồn mà không query trạng thái record live, kể cả Template đã bị xóa.
+- **BR-022-09**: Regenerate AI bỏ trống/null hoặc dùng đúng ID Template nguồn vẫn dùng dữ liệu nguồn đã lưu trong `generated_cards` và phần Template metadata không trùng, không query trạng thái record live, kể cả Template đã bị xóa.
 - **BR-022-10**: Nếu persistence thất bại, record phải giữ nguyên `is_deleted=false` và `updated_at` cũ.
 
 ### Bối cảnh & Mục tiêu
 
 **Vấn đề**
-> Template không còn phù hợp phải được loại khỏi flow mới nhưng không được phá hỏng Generated Card và history đã snapshot trước đó.
+> Template không còn phù hợp phải được loại khỏi flow mới nhưng không được phá hỏng Generated Card và history đã lưu trước đó.
 
 **Mục tiêu**
 - Xóa mềm Template theo quyền Admin.
 - Loại Template khỏi danh sách và flow tạo mới.
-- Giữ ảnh và snapshot lịch sử nguyên vẹn.
+- Giữ ảnh trong Generated Card và metadata lịch sử nguyên vẹn.
 - Đảm bảo rollback khi persistence thất bại.
 
 **Ngoài phạm vi** (Out of scope)
@@ -109,7 +109,7 @@ sequenceDiagram
     end
 ```
 
-**Ghi chú**: Không kiểm tra ràng buộc với Generated Card vì history đã giữ snapshot.
+**Ghi chú**: Không kiểm tra ràng buộc với Generated Card vì dữ liệu nguồn đã nằm trong `generated_cards` và phần Template metadata không trùng của history.
 
 ### Activity Diagram
 **Tiêu đề**: Quyết định xóa Card Template
@@ -139,14 +139,13 @@ stateDiagram-v2
 ```
 
 ### Mô hình dữ liệu (Data Model / ERD)
-**Tiêu đề**: Soft-delete Card Template và snapshot liên quan
-**Mô tả**: Không có FK bắt buộc từ history tới Template live; metadata giữ snapshot bất biến.
+**Tiêu đề**: Soft-delete Card Template và dữ liệu lịch sử liên quan
+**Mô tả**: Không có FK bắt buộc từ history tới Template live; metadata chỉ giữ phần Template không trùng và không có `cardTemplate.imageUrl`. Các cột lineage đa hình `base_id`, `root`, `output_id` đều do code quản lý và không tạo quan hệ database.
 
 **Quy ước**: ERD bên dưới dùng đúng tên table/column PostgreSQL dạng `snake_case`; field response dùng `camelCase`.
 
 ```mermaid
 erDiagram
-    card_templates ||--o{ client_histories : "snapshot trong metadata"
     card_templates {
         uuid id PK
         string image_url "được giữ lại"
@@ -158,10 +157,14 @@ erDiagram
     client_histories {
         uuid id PK
         string type
-        json metadata "Template snapshot"
+        uuid base_id
+        uuid root "Product ID gốc, NOT NULL"
+        json metadata "Template metadata không trùng"
         uuid output_id
     }
 ```
+
+Sơ đồ không nối `card_templates` với `client_histories`: Template chỉ được ghi nhận trong metadata snapshot; `base_id`, `root` và `output_id` không có FK/navigation/cascade.
 
 ---
 

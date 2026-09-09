@@ -2,7 +2,7 @@
 
 > Document First Project: hoa-theo-mua-ai-customize
 > Date: 2026-08-27
-> Last Updated: 2026-09-07
+> Last Updated: 2026-09-09
 
 ---
 
@@ -165,8 +165,6 @@ Table mockup {
 
 ```mermaid
 erDiagram
-    mockup ||--o{ client_histories : "metadata_flower"
-
     mockup {
         uuid id PK
         string name
@@ -181,13 +179,17 @@ erDiagram
     client_histories {
         uuid id PK
         uuid user_id
-        string type "flower | card | handmade_card | post"
+        string type "flower | card | handmade_card; post hiện chưa dùng"
+        json system_form "type + content; null với handmade_card"
         json metadata
+        uuid root "Product ID gốc; required; không có FK"
         uuid base_id
         uuid output_id
         timestamp created_at
     }
 ```
+
+`client_histories` không có column `input`. `system_form` không có FK tới `system_prompts`; AI Flower/Card lưu `{type, content}` và HandMade lưu `null`. Với các History Flower/Card đang dùng, `root` là Product ID gốc do code gán và không có quan hệ database; Post nằm ngoài phạm vi thay đổi này.
 
 ---
 

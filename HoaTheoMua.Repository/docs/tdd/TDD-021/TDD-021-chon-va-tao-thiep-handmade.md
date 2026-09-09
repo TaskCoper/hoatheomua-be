@@ -1,8 +1,8 @@
-# TDD-021: Chọn và tạo thiệp HandMade
+# TDD-021: Khách hàng chọn mẫu thiệp có sẵn và tạo thiệp HandMade cho hoa
 
 ## Thông tin tài liệu
 
-- **Tiêu đề**: Chọn mẫu thiệp có sẵn và tạo thiệp HandMade cho hoa
+- **Tiêu đề**: Khách hàng chọn mẫu thiệp có sẵn và tạo thiệp HandMade cho hoa
 - **Ghi chú**: Flow dùng chung `POST /api/ai-cards` với Card AI nhưng không gọi AI. Service load `card_templates` trước và phân nhánh theo `templateType`. Đây là thiết kế mục tiêu vì code Card/HandMade chưa tồn tại trong codebase.
 
 ## Metadata quản trị tài liệu
@@ -10,12 +10,12 @@
 | Trường | Giá trị |
 |---|---|
 | Mã tài liệu | TDD-021 |
-| Phiên bản | v0.4 |
+| Phiên bản | v0.7 |
 | Author | Nguyễn Tùng Dương |
 | Reviewer | Tân Trần |
 | Approver | Chưa chỉ định |
 | Owner | Nguyễn Tùng Dương |
-| Cập nhật gần nhất | 2026-09-07 |
+| Cập nhật gần nhất | 2026-09-09 |
 
 ---
 
@@ -26,8 +26,8 @@
 - **Tính năng**: Tạo HandMade Card từ mẫu Admin
 - **Tác giả**: Nguyễn Tùng Dương
 - **Người review**: Tân Trần
-- **Phiên bản**: v0.4
-- **Cập nhật (YYYY-MM-DD)**: 2026-09-07
+- **Phiên bản**: v0.7
+- **Cập nhật (YYYY-MM-DD)**: 2026-09-09
 - **Story liên quan**:
   - STORY-035 — Tạo thiệp thiết kế
   - Chưa có Story riêng cho HandMade Card
@@ -37,23 +37,22 @@
 - **BR-017-01**: Chỉ khách hàng đã đăng nhập và có tài khoản hoạt động được gọi API.
 - **BR-017-02**: Column `card_templates.template_type` là string bắt buộc, chỉ nhận lowercase `ai` hoặc `handmade`, không được đổi sau khi tạo. Dữ liệu Template hiện có được xem là `ai`.
 - **BR-017-03**: Client dùng chung `POST /api/ai-cards`. Service phải load Template trước; `templateType=ai` chạy TDD-006, `templateType=handmade` chạy TDD này.
-- **BR-017-04**: Request HandMade bắt buộc đúng một nguồn hoa: `productId` hoặc `generatedFlowerId`; đồng thời bắt buộc `cardTemplateId`, `sizeKey`, `senderName`, `receiverName`, `messageContent`.
+- **BR-017-04**: Request HandMade bắt buộc đúng một nguồn hoa: `productId` hoặc `generatedFlowerId`; đồng thời bắt buộc có các field `cardTemplateId`, `senderName`, `receiverName`, `messageContent`. `messageContent` được phép là chuỗi rỗng; khi đó được tính là 0 từ.
 - **BR-017-05**: Không chấp nhận `formType`. Nếu có field này, trả `HANDMADE_CARD_FORM_TYPE_NOT_ALLOWED/400` với message `Thiệp mẫu có sẵn luôn sử dụng hình thức viết tay; không được truyền formType.`
 - **BR-017-06**: Không chấp nhận `attachedImageUrl`. Nếu có field này, trả `HANDMADE_CARD_ATTACHMENT_NOT_ALLOWED/400` với message `Thiệp mẫu có sẵn không hỗ trợ ảnh đính kèm.`
 - **BR-017-07**: Server luôn gán `formType="calligraphy"` cho HandMade.
 - **BR-017-08**: Template HandMade được validate live một lần theo thứ tự not-found → deleted → inactive và phải có `templateType="handmade"`.
-- **BR-017-09**: Người dùng được chọn Size Config hợp lệ. Hệ thống snapshot đầy đủ Size Config và vẫn kiểm tra `messageContent` không vượt `maxWords`.
+- **BR-017-09**: Singleton `card_config.sizes` phải có đúng một Size chung. Hệ thống tự lấy và snapshot Size này, sau đó kiểm tra `messageContent` không vượt `max_words`; client không chọn Size.
 - **BR-017-10**: Giá size không được thu: `sizeBasePrice` giữ giá cấu hình để audit, còn `basePrice=0`.
-- **BR-017-11**: Hệ thống đếm từ giống Card AI, validate Calligraphy Config live một lần, chọn đúng rule chứa `wordCount` và snapshot rule đã áp dụng.
+- **BR-017-11**: Hệ thống đếm từ giống Card AI, parse hai lớp singleton `card_config.prices`, chọn đúng rule chứa `wordCount` và chỉ snapshot rule đã áp dụng. Không có rule phù hợp trả `CALLIGRAPHY_PRICE_RULE_NOT_FOUND/422`.
 - **BR-017-12**: `extraPrice` bằng phụ phí của Calligraphy rule; `totalPrice=extraPrice`.
 - **BR-017-13**: Ảnh kết quả dùng trực tiếp column `card_templates.image_url`; chỉ lưu URL, không tạo bản sao và không render người gửi, người nhận hoặc nội dung lên ảnh preview.
 - **BR-017-14**: HandMade không gọi AI, không load System Prompt, không retry và không reserve/consume quota Card AI theo ngày hoặc quota Card AI theo `baseId` nguồn.
 - **BR-017-15**: Request thành công tạo `generated_cards.card_type="handmade"` và `client_histories.type="handmade_card"` trong cùng transaction. Nếu client không gọi API thì không tạo record.
-- **BR-017-16**: Column `client_histories.system_prompt_id=null`; metadata không có `systemPrompt` nhưng phải snapshot đầy đủ Template HandMade, Size Config, Calligraphy rule, pricing, source và provenance.
-- **BR-017-17**: Nguồn Product có `baseId=products.id`; nguồn Generated Flower có `baseId=generated_flowers.id`; mọi trường hợp có `outputId=generated_cards.id` mới tạo.
-- **BR-017-18**: HandMade mới bắt buộc provenance đầy đủ và `provenanceStatus="available"`. Nguồn Generated Flower phải thuộc user và resolve nhất quán về Product gốc.
+- **BR-017-16**: Column `client_histories.system_form=null`; metadata không có `systemPrompt` và chỉ giữ source, provenance, Template snapshot không gồm `imageUrl`, định danh Size Config không gồm `value` và `validatedAt`. Dữ liệu Card, Size, Calligraphy, pricing và nội dung nằm trong `generated_cards`.
+- **BR-017-17**: Nguồn Product có `baseId=products.id` và `root=baseId`; nguồn Generated Flower có `baseId=generated_flowers.id`, còn `root` lấy từ `base_id` của Flower History `type="flower", output_id=generatedFlowerId`. Mọi trường hợp có `outputId=generated_cards.id` mới tạo.
+- **BR-017-18**: HandMade mới bắt buộc provenance đầy đủ, `provenanceStatus="available"` và `root` Product khác `Guid.Empty`. Nguồn Generated Flower phải thuộc user và resolve nhất quán về Product gốc; thiếu Flower History/Product ID gốc hoặc lineage không nhất quán trả `SOURCE_PRODUCT_PROVENANCE_INVALID/409` trước persistence. Không dùng metadata để đoán Product ID.
 - **BR-017-19**: HandMade không được tạo lại dưới bất kỳ hình thức nào và không hỗ trợ chuyển chéo AI ↔ HandMade. Regenerate source history `handmade_card` trả `HANDMADE_CARD_REGENERATE_NOT_SUPPORTED/409` với message `Thiệp HandMade không hỗ trợ chức năng tạo lại.`
-- **BR-017-20**: API History mặc định trả cả `card` và `handmade_card`; filter `type` nhận từng giá trị string này.
 - **BR-017-21**: Danh sách Template cho màn AI chỉ trả `templateType=ai`; màn chọn thiệp có sẵn chỉ trả `templateType=handmade`. Admin dùng chung CRUD và không được cập nhật `templateType` của record đã tạo.
 - **BR-017-22**: Phần gắn Card vào Checkout/Order không thuộc phạm vi TDD này.
 
@@ -120,15 +119,19 @@ sequenceDiagram
     alt Template type là ai
         S->>S: Chuyển sang flow TDD-006
     else Template type là handmade
-        S->>S: Từ chối formType nếu client truyền
-        S->>S: Từ chối attachedImageUrl nếu client truyền
+        opt Client truyền formType
+            S->>S: Từ chối formType → HANDMADE_CARD_FORM_TYPE_NOT_ALLOWED/400
+        end
+        opt Client truyền attachedImageUrl
+            S->>S: Từ chối attachedImageUrl → HANDMADE_CARD_ATTACHMENT_NOT_ALLOWED/400
+        end
         S->>DB: Validate source và provenance
         S->>DB: Validate Template live
         S->>DB: Load Size và Calligraphy Config live
         S->>S: Đếm từ, validate maxWords, chọn Calligraphy rule
         S->>S: Gán formType là calligraphy
         S->>S: Tính basePrice = 0 và totalPrice = extraPrice
-        S->>S: Tạo snapshot bất biến
+        S->>S: Tạo snapshot bất biến: generated_cards.{imageUrl, formType, senderName, receiverName, messageContent, Size, wordConfigSnapshot, pricing} + client_histories.{root, metadata, systemForm=null}
         S->>DB: Transaction insert generated_cards và client_histories
         alt Persistence thất bại
             DB-->>S: Rollback
@@ -180,9 +183,6 @@ flowchart TD
 
 ```mermaid
 erDiagram
-    card_templates ||--o{ client_histories : "snapshot trong metadata"
-    generated_cards ||--|| client_histories : "output"
-
     card_templates {
         uuid id PK
         string name
@@ -199,7 +199,6 @@ erDiagram
         string card_type "handmade"
         string image_url
         string form_type "calligraphy"
-        string size_key
         string sender_name
         string receiver_name
         text message_content
@@ -220,22 +219,31 @@ erDiagram
     client_histories {
         uuid id PK
         uuid user_id
-        json input "JSON request đã được chấp nhận"
         string type "handmade_card"
-        uuid system_prompt_id "null"
+        json system_form "null"
         json metadata
+        uuid root "Product ID gốc; required; no FK"
         uuid base_id "Product hoặc Generated Flower"
         uuid output_id "Generated Card"
         timestamp created_at
     }
 ```
 
+Sơ đồ không vẽ dây quan hệ cho `client_histories`: `base_id`, `root` và `output_id` đều do code quản lý, không có FK/navigation/cascade trong database.
+
 ### Snapshot bắt buộc
+
+Snapshot được tạo trong bộ nhớ ở message số 13 của sequence, trước khi mở transaction; không có bảng snapshot riêng. Transaction ngay sau đó persist snapshot vào các field sau:
+
+- `generated_cards`: snapshot của Card kết quả gồm `cardType`, `imageUrl` (URL trực tiếp của Template), `formType`, `senderName`, `receiverName`, `messageContent`, `attachedImageUrl=null`, `sizeName`, `sizeWidth`, `sizeHeight`, `sizeBasePrice`, `sizeMaxWords`, `wordCount`, `wordConfigSnapshot`, `basePrice`, `extraPrice` và `totalPrice`.
+- `client_histories`: không có column `input`.
+- `client_histories.root`: Product ID gốc, bắt buộc, khác `Guid.Empty`, không có FK và không nằm trong response API.
+- `client_histories.metadata`: snapshot provenance gồm `schemaVersion`, `sourceType`, `originProductId`, `generatedFlowerId`, `provenanceStatus`, `cardTemplate` không gồm `imageUrl`, `sizeConfig` chỉ gồm `group`/`key` và `validatedAt`.
+- `client_histories.system_form`: luôn là `null`; metadata không có `systemPrompt` vì HandMade không gọi AI.
 
 ```json
 {
   "schemaVersion": 2,
-  "cardType": "handmade",
   "sourceType": "product",
   "originProductId": "product-001",
   "generatedFlowerId": null,
@@ -244,50 +252,17 @@ erDiagram
     "id": "template-hm-001",
     "name": "Mẫu thiệp viết tay",
     "templateType": "handmade",
-    "description": "Mẫu do Admin chuẩn bị",
-    "imageUrl": "https://storage.example.com/cards/hm-001.png"
+    "description": "Mẫu do Admin chuẩn bị"
   },
   "sizeConfig": {
-    "group": "card_size",
-    "key": "size_A",
-    "value": {
-      "name": "Size A",
-      "width": 10,
-      "height": 15,
-      "basePrice": 100000,
-      "maxWords": 100
-    }
-  },
-  "calligraphyRule": {
-    "minWords": 36,
-    "maxWords": 70,
-    "extraPrice": 39000
-  },
-  "pricing": {
-    "configuredSizeBasePrice": 100000,
-    "chargedBasePrice": 0,
-    "extraPrice": 39000,
-    "totalPrice": 39000
+    "group": "card_config",
+    "key": "card_config.sizes"
   },
   "validatedAt": "2026-09-04T08:00:00Z"
 }
 ```
 
-`systemPrompt` không xuất hiện trong metadata HandMade. Với nguồn Generated Flower, `sourceType="generated_flower"`, `generatedFlowerId` có giá trị và `originProductId` là Product gốc resolve từ Flower history.
-
-`client_histories.input` lưu request HandMade thực tế đã được chấp nhận, không bổ sung field do AI dùng:
-
-```json
-{
-  "productId": "product-001",
-  "generatedFlowerId": null,
-  "cardTemplateId": "template-hm-001",
-  "sizeKey": "size_A",
-  "senderName": "Minh",
-  "receiverName": "Lan",
-  "messageContent": "Chúc bạn luôn vui và hạnh phúc"
-}
-```
+`systemPrompt` không xuất hiện trong metadata HandMade và `system_form=null`. Với nguồn Generated Flower, `sourceType="generated_flower"`, `generatedFlowerId` có giá trị, `originProductId` là Product gốc resolve từ Flower History và cột `root` nhận cùng Product ID đó.
 
 ---
 
@@ -310,10 +285,9 @@ erDiagram
 | `productId` | uuid? | Điều kiện | Nguồn hoa thường; chỉ truyền một trong hai nguồn |
 | `generatedFlowerId` | uuid? | Điều kiện | Nguồn hoa AI; chỉ truyền một trong hai nguồn |
 | `cardTemplateId` | uuid | Có | Template có `templateType=handmade` |
-| `sizeKey` | string | Có | Size người dùng chọn |
 | `senderName` | string | Có | Người gửi |
 | `receiverName` | string | Có | Người nhận |
-| `messageContent` | string | Có | Nội dung, vẫn tính từ và phụ phí viết tay |
+| `messageContent` | string | Có | Nội dung; field bắt buộc có trong request nhưng được phép là chuỗi rỗng. Hệ thống vẫn tính từ và phụ phí viết tay. |
 | `formType` | — | Không cho phép | Server tự gán `calligraphy` |
 | `attachedImageUrl` | — | Không cho phép | HandMade không hỗ trợ ảnh đính kèm |
 
@@ -326,7 +300,6 @@ Content-Type: application/json
 {
   "productId": "product-001",
   "cardTemplateId": "template-hm-001",
-  "sizeKey": "size_A",
   "senderName": "Minh",
   "receiverName": "Lan",
   "messageContent": "Chúc bạn luôn vui và hạnh phúc"
@@ -340,8 +313,7 @@ Content-Type: application/json
     "cardType": "handmade",
     "imageUrl": "https://storage.example.com/cards/hm-001.png",
     "formType": "calligraphy",
-    "sizeKey": "size_A",
-    "sizeBasePrice": 100000,
+    "sizeBasePrice": 10000,
     "basePrice": 0,
     "extraPrice": 39000,
     "totalPrice": 39000
@@ -349,7 +321,7 @@ Content-Type: application/json
 }
 ```
 
-History tương ứng có `type="handmade_card"`, `baseId="product-001"`, `outputId="generated-card-hm-001"` và `systemPromptId=null`.
+History tương ứng có `type="handmade_card"`, `baseId="product-001"`, `outputId="generated-card-hm-001"` và `systemForm=null`.
 
 **Ví dụ 2 — Tạo HandMade Card từ Generated Flower** — HTTP `200`
 
@@ -360,14 +332,13 @@ Content-Type: application/json
 {
   "generatedFlowerId": "generated-flower-001",
   "cardTemplateId": "template-hm-001",
-  "sizeKey": "size_A",
   "senderName": "Minh",
   "receiverName": "Lan",
   "messageContent": "Chúc mừng sinh nhật"
 }
 ```
 
-History có `baseId="generated-flower-001"`; metadata bắt buộc có `generatedFlowerId`, `originProductId` và `provenanceStatus="available"`.
+History có `baseId="generated-flower-001"`, `root="product-001"`; metadata bắt buộc có `generatedFlowerId`, `originProductId` và `provenanceStatus="available"`.
 
 ```json
 {
@@ -376,7 +347,6 @@ History có `baseId="generated-flower-001"`; metadata bắt buộc có `generate
     "cardType": "handmade",
     "imageUrl": "https://storage.example.com/cards/hm-001.png",
     "formType": "calligraphy",
-    "sizeKey": "size_A",
     "basePrice": 0,
     "extraPrice": 0,
     "totalPrice": 0
@@ -393,7 +363,6 @@ Content-Type: application/json
 {
   "productId": "product-001",
   "cardTemplateId": "template-hm-001",
-  "sizeKey": "size_A",
   "senderName": "Minh",
   "receiverName": "Lan",
   "messageContent": "Chúc mừng sinh nhật",
@@ -417,7 +386,6 @@ Content-Type: application/json
 {
   "productId": "product-001",
   "cardTemplateId": "template-hm-001",
-  "sizeKey": "size_A",
   "senderName": "Minh",
   "receiverName": "Lan",
   "messageContent": "Chúc mừng sinh nhật",
@@ -436,18 +404,21 @@ Content-Type: application/json
 
 | Code | HTTP | Khi nào xảy ra |
 |---|---:|---|
-| `VALIDATION_ERROR` | 400 | Thiếu/sai field, không truyền đúng một nguồn, message vượt `maxWords`, hoặc không có Calligraphy rule khớp |
+| `VALIDATION_ERROR` | 400 | Thiếu/sai field, không truyền đúng một nguồn hoặc message vượt `maxWords` |
 | `HANDMADE_CARD_FORM_TYPE_NOT_ALLOWED` | 400 | Request HandMade truyền `formType` |
 | `HANDMADE_CARD_ATTACHMENT_NOT_ALLOWED` | 400 | Request HandMade truyền `attachedImageUrl` |
 | `CARD_TEMPLATE_NOT_FOUND` | 404 | Template không tồn tại |
 | `CARD_TEMPLATE_DELETED` | 410 | Template đã soft-delete |
 | `CARD_TEMPLATE_INACTIVE` | 409 | Template chưa xóa nhưng inactive |
-| `CARD_SIZE_CONFIG_NOT_FOUND` | 404 | Không có Size Config theo `sizeKey` |
+| `CARD_SIZE_CONFIG_NOT_FOUND` | 404 | Không có singleton `card_config.sizes` |
 | `CARD_SIZE_CONFIG_DELETED` | 410 | Size Config đã soft-delete |
 | `CARD_SIZE_CONFIG_INACTIVE` | 409 | Size Config không public/không khả dụng |
-| `CALLIGRAPHY_CONFIG_NOT_FOUND` | 404 | Không có Calligraphy Config |
+| `CARD_SIZE_CONFIG_INVALID` | 409 | Wrapper/JSON sai schema hoặc `items` không có đúng một Size chung |
+| `CALLIGRAPHY_CONFIG_NOT_FOUND` | 404 | Không có singleton `card_config.prices` |
 | `CALLIGRAPHY_CONFIG_DELETED` | 410 | Calligraphy Config đã soft-delete |
 | `CALLIGRAPHY_CONFIG_INACTIVE` | 409 | Calligraphy Config không public/không khả dụng |
+| `CALLIGRAPHY_CONFIG_INVALID` | 409 | Wrapper hoặc chuỗi JSON/items/range của Price Config sai schema |
+| `CALLIGRAPHY_PRICE_RULE_NOT_FOUND` | 422 | `wordCount` không thuộc bậc giá hiện hành nào |
 | `CARD_CONFIG_AMBIGUOUS` | 409 | Có nhiều Config active/chưa xóa cho cùng exact `(group,key)` |
 | `PRODUCT_NOT_FOUND` | 404 | Product không tồn tại |
 | `PRODUCT_DELETED` | 410 | Product đã soft-delete |
@@ -469,12 +440,6 @@ Content-Type: application/json
 - Màn tạo Card AI yêu cầu filter `ai`; màn chọn mẫu có sẵn yêu cầu filter `handmade`.
 - Admin Create bắt buộc truyền một `templateType` hợp lệ. Admin Update không nhận thay đổi `templateType`.
 - Một Template sai type không được dùng chéo flow.
-
-#### API History
-
-- Khi không truyền filter loại Card, kết quả bao gồm cả history `type="card"` và `type="handmade_card"`.
-- Khi truyền filter, `type=card` chỉ trả Card AI; `type=handmade_card` chỉ trả HandMade Card.
-- `client_histories.type` là string để có thể bổ sung loại mới mà không phụ thuộc DB enum.
 
 ### API Contract bên ngoài
 

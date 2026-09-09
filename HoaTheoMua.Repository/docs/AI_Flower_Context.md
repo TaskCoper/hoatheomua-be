@@ -2,7 +2,7 @@
 
 > Document First Project: hoa-theo-mua-ai-customize  
 > Date: 2026-08-27  
-> Last Updated: 2026-09-07
+> Last Updated: 2026-09-09
 
 ---
 
@@ -13,8 +13,9 @@
 | Generate validate live đúng một lần trước AI, sau đó dùng immutable snapshot cho lần đầu và tối đa hai retry | Chốt |
 | Admin đổi active/delete/stock/config sau snapshot không ảnh hưởng request đang chạy | Chốt |
 | Generated Flower lịch sử vẫn tạo Card; Order mới validate Product gốc live | Chốt |
-| Generated Flower legacy đủ ảnh/ownership nhưng thiếu provenance vẫn tạo Card, ghi unavailable; Order chặn 409 | Chốt — phương án A |
+| Generated Flower thiếu Flower History/Product lineage không được dùng tạo Card; trả `SOURCE_PRODUCT_PROVENANCE_INVALID/409` | Chốt |
 | Flower/Card history đều là record trong `client_histories`, không có bảng history riêng | Chốt |
+| `client_histories.root` bắt buộc lưu Product ID gốc; Flower History luôn có `root=base_id` và cột không có FK | Chốt |
 | API Generate với Product có variants phải nhận đúng child/variant ID | Chốt |
 | Parent inactive chỉ chặn ở Order sau khi child active; không dùng parent để chặn Generate | Chốt |
 | Config cho phép nhiều key trong cùng group; tối đa một record active/chưa xóa cho exact `(group,key)` | Chốt |
@@ -95,20 +96,20 @@ Khách hàng chọn Combo Card, chọn Mockup, nhập thông tin trên form và 
 #### Lưu kết quả
 
 - Chỉ khi AI trả ảnh hợp lệ, tạo một dòng `generated_flowers` và một dòng `client_histories` có `type = "flower"`.
-- `client_histories.input` lưu JSON request gốc của lần thành công để phục vụ history; không phải trạng thái tạm của yêu cầu tạo hoa.
-- `client_histories.base_id = products.id`; `output_id = generated_flowers.id`.
-- `generated_flowers.input_snapshot` và `client_histories.metadata` lưu snapshot Product, Mockup, ảnh, full system prompt và provenance đã dùng.
+- `client_histories` không lưu request input; dữ liệu đã dùng để tạo hoa nằm trong `generated_flowers.input_snapshot`.
+- `client_histories.base_id = products.id`; `root = base_id`; `output_id = generated_flowers.id`. Nếu Product được chọn là biến thể thì cả `base_id` và `root` lưu đúng ID biến thể đó.
+- `generated_flowers.input_snapshot` lưu dữ liệu tạo hoa; `client_histories.metadata` giữ provenance không gồm System Prompt, còn `client_histories.system_form` snapshot System Prompt đã dùng.
 - Khi AI thất bại sau retry, không tạo `generated_flowers`, `client_histories`, `flower_requests` hoặc `flower_ai_jobs`.
 
 ### Tạo lại mẫu hoa từ lịch sử
 
-- Flower nguồn phải thuộc user hiện tại và có `client_histories(type="flower")`, `base_id` Product gốc cùng snapshot đủ dùng. Thiếu lineage/Product provenance hoặc snapshot bắt buộc trả `FLOWER_SOURCE_HISTORY_INVALID/409`.
+- Flower nguồn phải thuộc user hiện tại và có `client_histories(type="flower")`, `base_id` Product gốc, `root=base_id` khác `Guid.Empty` cùng snapshot đủ dùng. Thiếu hoặc không nhất quán lineage/Product provenance/root hay snapshot bắt buộc trả `FLOWER_SOURCE_HISTORY_INVALID/409`.
 - Không dùng ảnh kết quả `imageUrl` của Flower nguồn làm input AI. Hệ thống dựng input mới từ Product/biến thể snapshot, ảnh Product đã đóng băng, toàn bộ user input nguồn và Effective Mockup.
 - Client chỉ được truyền `mockupId` tùy chọn; mọi field còn lại không được phép thay đổi. Bỏ trống/null hoặc truyền đúng ID Mockup nguồn thì dùng nguyên Mockup snapshot nguồn, không query live và không kiểm tra active/soft-delete. Chỉ ID khác nguồn mới được validate theo not-found → deleted → inactive.
 - Mỗi `system_prompts.type` có đúng một prompt hiện hành. Regenerate ưu tiên prompt hiện hành type `flower`; nếu record không tồn tại hoặc content rỗng/không hợp lệ thì dùng full prompt snapshot nguồn, không kiểm tra trạng thái record nguồn.
 - Logo dùng cấu hình hiện hành. `generated_flowers.input_snapshot` được dựng mới từ dữ liệu nguồn + Effective Mockup + prompt thực tế + logo/config hiện hành.
-- History mới giữ cột `base_id` của history nguồn, đặt cột `output_id` bằng ID Flower mới và `metadata.regeneratedFromFlowerId` bằng ID Flower trực tiếp được chọn. Chuỗi F1 → F2 → F3 vì vậy có cùng Product `base_id`, còn quan hệ trực tiếp lần lượt là F2→F1 và F3→F2.
-- `client_histories.input` chỉ ghi hành động thực tế `{operation,sourceFlowerId,mockupId}`; metadata giữ snapshot/provenance thực tế và `systemPromptSource=current|source_flower_fallback`.
+- History mới giữ cột `base_id` của History nguồn, gán `root=base_id`, đặt `output_id` bằng ID Flower mới và `metadata.regeneratedFromFlowerId` bằng ID Flower trực tiếp được chọn. Chuỗi F1 → F2 → F3 vì vậy có cùng Product `base_id/root`, còn quan hệ trực tiếp lần lượt là F2→F1 và F3→F2.
+- History Regenerate không lưu input; metadata giữ provenance thực tế, `regeneratedFromFlowerId` và `systemPromptSource=current|source_flower_fallback`.
 
 ### STORY-038: Khởi tạo Checkout
 
@@ -195,11 +196,11 @@ Table generated_flowers {
 Table client_histories {
   id uuid [pk]
   user_id uuid
-  input jsonb                   -- JSON request tạo mới hoặc hành động regenerate thực tế
-  type varchar                  -- flower | card | handmade_card | post
-  system_prompt_id uuid [null]  -- null với handmade_card
-  metadata json                 -- Snapshot/provenance Product, Mockup, ảnh và full prompt
+  type varchar                  -- flower | card | handmade_card; post hiện chưa dùng
+  system_form json [null]       -- Snapshot {type, content}; null với handmade_card
+  metadata json                 -- Snapshot/provenance; không chứa System Prompt
   created_at timestamp
+  root uuid [not null]          -- Product ID gốc; type=flower luôn bằng base_id; không có FK
 
   -- Polymorphic references:
   -- type = flower: base_id -> products.id, output_id -> generated_flowers.id
@@ -218,11 +219,13 @@ Table client_histories {
 
 ```text
 products.id --(base_id)--> client_histories(type=flower)
+products.id --(root, logical only)--> client_histories(type=flower)
 client_histories.output_id --> generated_flowers.id
-client_histories.system_prompt_id --> system_prompts.id
 ```
 
-`generated_flowers.input_snapshot` và `client_histories.metadata` khi tạo mới hoặc tạo lại hoa dùng `schemaVersion = 2`:
+Các mũi tên trên mô tả lineage nghiệp vụ. Database không tạo FK cho `base_id`, `output_id` hoặc `root`; service chịu trách nhiệm gán và kiểm tra. `root` không nằm trong response API công khai.
+
+`generated_flowers.input_snapshot` khi tạo mới hoặc tạo lại hoa dùng `schemaVersion = 2`:
 
 ```json
 {
@@ -256,13 +259,22 @@ client_histories.system_prompt_id --> system_prompts.id
 }
 ```
 
+`client_histories.metadata` giữ provenance cần tra cứu nhưng không chứa `systemPrompt`; `client_histories.system_form` không có FK và snapshot mọi field của `system_prompts` ngoại trừ `id`:
+
+```json
+{
+  "type": "flower",
+  "content": "Full prompt đã dùng"
+}
+```
+
 ---
 
 ## 4. QUY TẮC NGHIỆP VỤ
 
 ### 4.1 Nguồn tạo hoa
 
-- `base_id` là `products.id` chính xác của Combo/biến thể user chọn. Nếu Product cha có biến thể, API không chấp nhận ID cha thay cho ID biến thể.
+- `base_id` là `products.id` chính xác của Combo/biến thể user chọn. `root` bắt buộc bằng `base_id`. Nếu Product cha có biến thể, API không chấp nhận ID cha thay cho ID biến thể.
 - Product được kiểm tra theo thứ tự cố định: không có → `PRODUCT_NOT_FOUND/404`; đã xóa → `PRODUCT_DELETED/410`; inactive → `PRODUCT_INACTIVE/409`; không còn lượng bán → `PRODUCT_OUT_OF_STOCK/409`.
 - `no_formula` hoặc `no_core` → `PRODUCT_NOT_SELLABLE/422`; lỗi tính tồn kho → `PRODUCT_AVAILABILITY_UNAVAILABLE/503`. Lượng bán của đúng biến thể được chọn phải được tính bằng `CalculateAvailableQty`, không dùng lượng tối đa của Product cha.
 - Mockup được kiểm tra: không có → `MOCKUP_NOT_FOUND/404`; đã xóa → `MOCKUP_DELETED/410`; inactive → `MOCKUP_INACTIVE/409`.
@@ -276,15 +288,16 @@ Thứ tự admission là `auth/request → Product → Mockup → system prompt 
 - Nếu admission fail: không gọi AI, không tạo `generated_flowers`/`client_histories`, không consume quota.
 - Sau snapshot không revalidate nguồn trong AI, retry, trước persist hoặc sau khi gắn logo.
 - Retry dùng cùng bytes/version ảnh và full prompt snapshot; URL live không được tải lại.
-- Generated Flower thuộc user là kết quả lịch sử hợp lệ để tạo Card dù Product/Mockup gốc về sau inactive, soft-delete hoặc hết hàng.
+- Generated Flower thuộc user chỉ là nguồn hợp lệ để tạo Card khi có Flower History nhất quán và xác định được Product ID gốc. Product/Mockup gốc về sau inactive, soft-delete hoặc hết hàng không làm thay đổi `root` và không chặn Card.
 - Generated Flower không bảo đảm Order hợp lệ; Order phải lần theo `client_histories` đến Product gốc và kiểm tra live.
 
 ### 4.2A Regenerate Flower
 
-- Admission: `auth/request → ownership → source Flower + history/snapshot → resolve Effective Mockup → prompt current/fallback → current logo/config → reserve quota → snapshot → AI`.
+- Admission: `auth/request → ownership → source Flower + history/snapshot → kiểm tra base_id/root Product gốc → resolve Effective Mockup → prompt current/fallback → current logo/config → reserve quota → snapshot → AI`.
 - Product, toàn bộ user input và ảnh Product lấy nguyên từ snapshot nguồn; không query hay validate Product live, không lấy ảnh output Flower cũ làm input AI.
 - Nếu `mockupId` null/bỏ trống hoặc bằng ID Mockup nguồn, Effective Mockup là snapshot nguồn và không kiểm tra live. Chỉ ID khác nguồn mới được validate: `MOCKUP_NOT_FOUND/404` → `MOCKUP_DELETED/410` → `MOCKUP_INACTIVE/409`.
 - Prompt hiện hành type `flower` chỉ dùng khi content hợp lệ; nếu không có/rỗng/invalid thì fallback full prompt snapshot nguồn. Nếu cả hai không đủ dùng, trả `FLOWER_SOURCE_HISTORY_INVALID/409`.
+- Regenerate kế thừa `base_id` của Flower History nguồn và gán `root=base_id`; không gán `sourceFlowerId` vào hai cột này. `base_id/root` thiếu, bằng `Guid.Empty` hoặc không nhất quán trả `FLOWER_SOURCE_HISTORY_INVALID/409` trước AI và persistence.
 - Flower mới có ID, AI `imageUrl`, `createdAt` mới và `userId` hiện tại. Logo/config lấy hiện hành; các dữ liệu nghiệp vụ còn lại lấy từ nguồn.
 
 ### 4.3 Thứ tự ưu tiên Prompt

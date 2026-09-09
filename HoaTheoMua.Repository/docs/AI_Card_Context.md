@@ -2,7 +2,7 @@
 
 > Document First Project: hoa-theo-mua-ai-customize
 > Date: 2026-08-27
-> Last Updated: 2026-09-07
+> Last Updated: 2026-09-09
 
 ---
 
@@ -66,7 +66,7 @@ Hệ thống Card cho phép khách hàng tạo thiệp cá nhân hóa bằng AI 
 **Preconditions:**
 - Khách hàng đã đăng nhập
 - Checkout phải tồn tại, thuộc khách hàng hiện tại và chưa hoàn tất
-- Có ít nhất 01 Template và 01 Size đang ở trạng thái khả dụng từ Core DB
+- Có ít nhất 01 Template và singleton Size Config đang ở trạng thái khả dụng từ Core DB
 
 **Trigger:**
 Khách hàng chọn "Tạo thiệp" tại Checkout.
@@ -78,7 +78,6 @@ Khách hàng chọn "Tạo thiệp" tại Checkout.
 | Người nhận (`receiverName`) | tối đa 20 từ |
 | Lời chúc (`messageContent`) | tối đa 100 từ |
 | Template (`cardTemplateId`) | bắt buộc - chọn từ `card_templates` |
-| Size (`sizeKey`) | bắt buộc - chọn từ Config `group="card_size"` |
 | Hình thức (`formType`) | Calligraphy hoặc Gõ máy |
 
 #### Ảnh đính kèm
@@ -88,8 +87,8 @@ Khách hàng chọn "Tạo thiệp" tại Checkout.
 - Dung lượng tối đa: 10 MB
 
 #### Thông tin bổ sung cho AI Module
-- **`cardSize`**: Thông tin size được chọn từ Config (`name`, `width`, `height`, `basePrice`, `maxWords`)
-- **`cardConfig`**: Thông tin calligraphy config từ Config (`minWords`, `maxWords`, `extraPrice`)
+- **`cardSize`**: Size chung duy nhất từ chuỗi JSON của `card_config.sizes` (`name`, `width`, `height`, `base_price`, `max_words`)
+- **`cardConfig`**: Price rule được chọn từ chuỗi JSON của `card_config.prices` (`min_words`, `max_words`, `extra_price`)
 - **`flowerInfo`**: Thông tin bó hoa mà thiệp dựa vào:
   - Nếu dựa vào bó hoa bình thường: `imageUrl` của Product
   - Nếu dựa vào bó hoa AI: `imageUrl` của Generated Flower
@@ -115,13 +114,13 @@ Khách hàng chọn "Tạo thiệp" tại Checkout.
 - Card nguồn phải có `rawImage`: ảnh AI sinh trước khi chèn chữ. AI dùng ảnh này làm image-reference và trả cả `rawImage` mới lẫn `imageUrl` đã chèn chữ.
 - Khóa Template và Size bằng snapshot nguồn, không validate live hai dependency này; request truyền chúng bị từ chối.
 - Cho sửa sender, receiver, lời chúc, form type và ảnh đính kèm. Sender/receiver/message không truyền, null, rỗng hoặc blank dùng lại giá trị nguồn; các giá trị hiệu lực được validate, tính số từ, Calligraphy và giá lại như Card Create.
-- History mới kế thừa cột `base_id` gốc của History Card được chọn; `input.sourceCardId` và metadata lưu ID Card được chọn. Không thay đổi Order/Checkout trong flow này.
+- History mới kế thừa cột `base_id` gốc của History Card được chọn; metadata lưu ID Card được chọn. Không thay đổi Order/Checkout trong flow này.
 
 ### Chọn thiệp HandMade có sẵn
 
 - Admin quản lý chung `card_templates`; `template_type="ai"` dùng cho AI, `template_type="handmade"` dùng làm mẫu thiệp có sẵn. Field bắt buộc, không nullable và không được đổi sau khi tạo; dữ liệu cũ mặc định `ai`.
 - Client gọi chung `POST /api/ai-cards`. Service load Template trước: `ai` chạy flow AI hiện tại; `handmade` chạy flow không AI.
-- HandMade chỉ nhận nguồn hoa, `cardTemplateId`, `sizeKey`, sender, receiver và message. Nếu truyền `formType` hoặc `attachedImageUrl`, trả lỗi riêng `400`.
+- HandMade chỉ nhận nguồn hoa, `cardTemplateId`, sender, receiver và message. Nếu truyền `formType` hoặc `attachedImageUrl`, trả lỗi riêng `400`.
 - HandMade luôn `formType="calligraphy"`; ảnh kết quả dùng trực tiếp `card_templates.image_url`, không render nội dung lên preview, không gọi AI/System Prompt/retry và không consume quota AI.
 - Size và Calligraphy Config được validate live đúng một lần để snapshot. Size chỉ quyết định kích thước/max words, không tính tiền: giữ `sizeBasePrice` theo Config để audit nhưng `basePrice=0`; `extraPrice` tính theo word count và `totalPrice=extraPrice`.
 - Chỉ khi client xác nhận bằng cách gửi request hợp lệ mới transaction tạo `generated_cards(card_type="handmade")` và `client_histories(type="handmade_card")`. Không gọi API thì không có record.
@@ -157,10 +156,10 @@ Enum system_prompt_types {
 ```sql
 Table Config {
   id uuid [pk]
-  key varchar                    -- Key định danh: "size_A", "size_B", "calligraphy_words"
+  key varchar                    -- Card Config chỉ dùng "card_config.sizes" hoặc "card_config.prices"
   value jsonb                   -- JSON chứa cấu hình chi tiết
   is_public boolean              -- Dùng để xác định config có đang hoạt động để người dùng chọn
-  group varchar                  -- "card_size" hoặc "card_config"
+  group varchar                  -- "card_config"
   kind varchar                   -- "Setting" cho card configs
   user_id guid
   created_at timestamp
@@ -169,11 +168,11 @@ Table Config {
 }
 ```
 
-**Group values:**
-- `card_size` - cấu hình size thiệp
-- `card_config` - cấu hình calligraphy words
+**Group và key dành cho Card:**
+- `group="card_config"`, `key="card_config.sizes"`: một record chứa đúng một Size chung cho mọi Card.
+- `group="card_config"`, `key="card_config.prices"`: một record chứa toàn bộ bậc giá Calligraphy.
 
-Cho phép nhiều Config cùng `group`, nhưng mỗi lựa chọn dùng `key` riêng (`size_A`, `size_B`, ...). Trong các record chưa xóa, chỉ được có một record `is_public = true` cho cùng cặp `(group, key)`. Dữ liệu cũ có nhiều record active cùng cặp bị chặn bằng `CARD_CONFIG_AMBIGUOUS/409`; không chọn ngẫu nhiên. Calligraphy dùng đúng cặp `group=card_config`, `key=calligraphy_words`, `value` là mảng rule giá.
+Hai key trên là singleton: chỉ được có một record chưa xóa cho mỗi key. `group`, `key` và `kind` không được đổi sau khi tạo; Admin chỉ cập nhật payload `value`, trạng thái `is_public`, hoặc xóa mềm record. API tạo Card Config chủ động ghi `is_public=true`, còn default chung ở DB vẫn là `false`. Việc xóa `card_config.sizes` hoặc `card_config.prices` làm dependency tương ứng không khả dụng cho request mới; Card đã tạo vẫn dùng snapshot.
 
 **Kind values:**
 - `Setting` - cho card configs
@@ -224,14 +223,13 @@ Table generated_cards {
 
   -- Thông tin thiệp:
   form_type form_type           -- "go_may" hoặc "calligraphy"
-  size_key varchar              -- Key của size: "size_A", "size_B"
   sender_name varchar           -- Người gửi
   receiver_name varchar         -- Người nhận
   message_content text          -- Lời chúc
   attached_image_url varchar     -- Ảnh đính kèm; luôn null với HandMade
 
   -- Snapshot Size tại thời điểm tạo:
-  size_name varchar              -- "A", "B", "C"
+  size_name varchar              -- Nhãn của Size chung tại thời điểm tạo
   size_width decimal             -- 10 (cm)
   size_height decimal            -- 15 (cm)
   size_base_price decimal       -- Giá base tại thời điểm đó: 100000
@@ -239,7 +237,7 @@ Table generated_cards {
 
   -- Snapshot Word count tại thời điểm tạo:
   word_count int               -- Số từ thực tế: 60
-  word_config_snapshot json     -- JSON lưu rule áp dụng: { "minWords": 36, "maxWords": 70, "extraPrice": 39000 }
+  word_config_snapshot json     -- Chỉ rule áp dụng: { "min_words": 36, "max_words": 70, "extra_price": 39000 }
 
   -- Giá đã tính toán:
   base_price decimal            -- AI: size_base_price; HandMade: 0
@@ -256,11 +254,11 @@ Lịch sử thao tác của người dùng (dùng chung cho flower và card).
 Table client_histories {
   id uuid [pk]
   user_id uuid                  -- Ai tạo history
-  input jsonb                   -- JSON request gốc
-  type varchar                   -- "flower", "card", "handmade_card", "post"
-  system_prompt_id uuid [null]   -- null khi type="handmade_card"
+  type varchar                   -- "flower", "card", "handmade_card"; post hiện chưa dùng
+  system_form json [null]        -- Snapshot {type, content}; null khi type="handmade_card"
   metadata json                 -- Snapshot/provenance bất biến, schemaVersion=2
   created_at timestamp
+  root uuid [not null]          -- Product ID gốc; do code gán, không có FK
 
   -- base_id: polymorphic reference - xác định nguồn gốc
   --   - Nếu type = "card" hoặc "handmade_card" và base là combo: product.id
@@ -273,10 +271,12 @@ Table client_histories {
   --   - Nếu type = "flower": reference đến generated_flowers.id
   output_id uuid
 
-  -- Refs:
-  system_prompt_id -> system_prompts.id
 }
 ```
+
+`client_histories` không có column `input`. `system_form` thay cho `system_prompt_id`, không có FK tới `system_prompts`, và snapshot toàn bộ field của System Prompt ngoại trừ `id`. Với schema hiện tại, giá trị là `{ "type": "card", "content": "Full prompt đã dùng" }`; HandMade lưu `null`.
+
+`root` không nằm trong public API. Với `type="flower"`, `root=base_id=products.id`. Với `type="card"` hoặc `type="handmade_card"`, `root` luôn là Product ID gốc dù `base_id` là Product hay Generated Flower. Service quản lý quy tắc này; database không có FK, navigation hoặc cascade cho `root`. Post chưa được sử dụng trong flow này và nằm ngoài contract `root` hiện tại.
 
 ### 3.3 Mối quan hệ giữa client_histories và Card
 
@@ -284,6 +284,7 @@ Table client_histories {
 ```
 base_id = product.id (combo không có biến thể HOẶC biến thể là con của biến thể cha)
 output_id = generated_cards.id
+root = base_id
 metadata = { ...card_template_info... }
 ```
 **Ý nghĩa:** Thiệp AI được tạo ra cho bó hoa bình thường, dựa vào `cardTemplate` mà người dùng chọn.
@@ -292,6 +293,7 @@ metadata = { ...card_template_info... }
 ```
 base_id = generated_flowers.id
 output_id = generated_cards.id
+root = client_histories(type=flower, output_id=base_id).base_id
 metadata = { ...card_template_info... }
 ```
 **Ý nghĩa:** Thiệp AI được tạo cho bó hoa AI, dựa vào `cardTemplate` mà người dùng chọn.
@@ -302,8 +304,9 @@ metadata = { ...card_template_info... }
 type = handmade_card
 base_id = product.id hoặc generated_flowers.id
 output_id = generated_cards.id
-system_prompt_id = null
-metadata = snapshot Template HandMade + Size + Calligraphy + provenance; không có `systemPrompt`
+root = product.id gốc theo cùng quy tắc Card AI
+system_form = null
+metadata = provenance + Template snapshot không gồm imageUrl; không có dữ liệu Size/Calligraphy/pricing/cardType
 ```
 
 Lineage đều nằm trong cùng bảng `client_histories`, không có bảng Flower History/Card History riêng:
@@ -311,36 +314,47 @@ Lineage đều nằm trong cùng bảng `client_histories`, không có bảng Fl
 ```text
 GeneratedCard
   -> client_histories(type=card hoặc handmade_card, output_id=GeneratedCardId)
+     root = ProductId gốc
      base_id = ProductId
      hoặc base_id = GeneratedFlowerId
         -> client_histories(type=flower, output_id=GeneratedFlowerId).base_id = ProductId
 ```
 
-Với dữ liệu cũ có Generated Flower đúng ownership và đủ ảnh nhưng không có record `client_histories(type=flower)` hợp lệ: vẫn cho tạo Card; metadata Card ghi `originProductId=null`, `provenanceStatus="unavailable"`. Regenerate vẫn được nếu snapshot Card đủ; Order bị chặn `SOURCE_PRODUCT_PROVENANCE_INVALID/409`.
+Với nguồn Generated Flower, service bắt buộc tìm đúng Flower History bằng `type="flower"` và `output_id=generatedFlowerId`, sau đó lấy `base_id` của Flower History làm `root`. Thiếu History, `base_id` thiếu hoặc bằng `Guid.Empty`, hoặc lineage không nhất quán thì trả `SOURCE_PRODUCT_PROVENANCE_INVALID/409`; không tạo Card/History và không gọi AI. Không dùng metadata để đoán Product ID thay thế.
 
 ### 3.4 Cấu trúc JSON
 
-#### Size Config
+#### Size Config — `key="card_config.sizes"`
 ```json
 {
-  "name": "A",
-  "width": 10,
-  "height": 15,
-  "basePrice": 100000,
-  "maxWords": 100
+  "group": "card_config",
+  "label": "Kích thước thiệp",
+  "value": "{\"items\":[{\"name\":\"Kích thước chung\",\"width\":15,\"height\":25,\"base_price\":15000,\"max_words\":150}]}",
+  "options": [],
+  "required": false,
+  "inputType": "json",
+  "validations": []
 }
 ```
 
-#### Calligraphy Words Config
+#### Calligraphy Words Config — `key="card_config.prices"`
 ```json
-[
-  { "minWords": 0, "maxWords": 35, "extraPrice": 0 },
-  { "minWords": 36, "maxWords": 70, "extraPrice": 39000 },
-  { "minWords": 71, "maxWords": 100, "extraPrice": 69000 }
-]
+{
+  "group": "card_config",
+  "label": "Bậc giá calligraphy",
+  "value": "{\"items\":[{\"min_words\":0,\"max_words\":35,\"extra_price\":0},{\"min_words\":36,\"max_words\":70,\"extra_price\":39000},{\"min_words\":71,\"max_words\":100,\"extra_price\":69000}]}",
+  "options": [],
+  "required": false,
+  "inputType": "json",
+  "validations": []
+}
 ```
 
-#### Card Template Snapshot
+Đây là schema cố định của hai payload: không thêm hoặc bớt field. Cột `Config.value` vẫn là `jsonb`, nhưng field `value` trong wrapper bắt buộc là chuỗi JSON và vì vậy service phải parse hai lớp. Các field bên trong chuỗi giữ nguyên snake_case như mẫu. `card_config.sizes.items` bắt buộc có đúng một phần tử dùng chung cho mọi Card; `name` chỉ là nhãn được snapshot vào `generated_cards.size_name`, không phải key để client chọn. Request không nhận trường chọn Size và `generated_cards` không lưu định danh lựa chọn Size.
+
+Khi tạo/cập nhật, service phải kiểm tra wrapper đúng schema, chuỗi `value` parse được và các item hợp lệ. Size yêu cầu `items` có đúng một phần tử với `name` không rỗng, `width > 0`, `height > 0`, `base_price >= 0`, `max_words > 0`. Price yêu cầu `items` không rỗng; `min_words >= 0`, `max_words >= min_words`, `extra_price >= 0`, sắp tăng dần, không chồng lấn và không có khoảng hở giữa các rule. Không bắt buộc `card_config.prices` phủ đến `max_words` của Size Config tại thời điểm Admin lưu; nếu request Card có `wordCount` không khớp rule nào thì trả lỗi nghiệp vụ và không tiếp tục.
+
+#### Card Template Snapshot dùng trong runtime
 ```json
 {
   "templateId": "uuid",
@@ -356,31 +370,40 @@ Với dữ liệu cũ có Generated Flower đúng ownership và đủ ảnh như
 {
   "schemaVersion": 2,
   "sourceType": "product|generated_flower",
-  "originProductId": "uuid-or-null",
+  "originProductId": "uuid",
   "generatedFlowerId": "uuid-or-null",
-  "provenanceStatus": "available|unavailable",
+  "provenanceStatus": "available",
   "cardTemplate": {
     "id": "uuid",
-    "name": "Template A",
-    "image": { "url": "https://...", "objectKey": "templates/a.png", "versionId": "v3", "sha256": "..." }
+    "name": "Template A"
   },
-  "sizeConfig": { "group": "card_size", "key": "size_A", "value": {} },
-  "calligraphyConfig": { "group": "card_config", "key": "calligraphy_words", "value": [] },
-  "systemPrompt": { "id": "uuid", "content": "Full prompt đã dùng", "sha256": "..." },
+  "sizeConfig": { "group": "card_config", "key": "card_config.sizes" },
   "validatedAt": "2026-08-28T08:00:00Z"
 }
 ```
 
-Với Card được tạo lại, `metadata` bổ sung `operation="regenerate"`, `regeneratedFromCardId` và snapshot của Effective Template thực tế. Cột `base_id` vẫn giữ nguồn Product/Generated Flower của history Card nguồn, không đổi thành ID Card nguồn. Field `systemPromptSource` có giá trị `current` hoặc `source_card_fallback` để phân biệt prompt hiện hành với prompt snapshot được dùng dự phòng.
+Snapshot runtime có ảnh để gọi AI. Khi persist, ảnh hiệu lực nằm ở `generated_cards.image_url`; `client_histories.metadata.cardTemplate` không lưu lại `templateImageUrl`.
 
-Với TDD-027, `metadata` bổ sung `operation="recreate_content"`, `recreatedFromCardId` và `referenceRawImage`; Template/Size là snapshot Card nguồn, Calligraphy/pricing là snapshot mới được tính tại admission. Cột `base_id` vẫn kế thừa `base_id` gốc của History nguồn; không đổi thành Card ID. Card nguồn thiếu `rawImage` trả `CARD_SOURCE_RAW_IMAGE_MISSING/409`.
+`client_histories.system_form` của Card AI:
+
+```json
+{
+  "type": "card",
+  "content": "Full prompt đã dùng"
+}
+```
+
+`metadata` không lặp `cardType`, `cardTemplate.imageUrl`, `sizeConfig.value`, `calligraphyRule`, `pricing`, System Prompt hoặc nội dung người dùng. Các dữ liệu đó lần lượt nằm ở `generated_cards` và `client_histories.system_form`.
+
+Với Card được tạo lại, `metadata` bổ sung `operation="regenerate"`, `regeneratedFromCardId` và phần Effective Template không trùng với `generated_cards`. Cột `base_id` và `root` đều kế thừa History Card nguồn; `base_id` không đổi thành ID Card nguồn và `root` tiếp tục là Product ID gốc. Field `systemPromptSource` có giá trị `current` hoặc `source_card_fallback` để phân biệt prompt hiện hành với prompt snapshot được dùng dự phòng.
+
+Với TDD-027, `metadata` bổ sung `operation="recreate_content"`, `recreatedFromCardId`, `referenceRawImage` và giữ phần định danh Template/Size không trùng. Giá trị Size, Calligraphy/pricing và nội dung hiệu lực nằm trong `generated_cards` mới. Cột `base_id` và `root` đều kế thừa History nguồn; `base_id` không đổi thành Card ID và `root` tiếp tục là Product ID gốc. Card nguồn thiếu `rawImage` trả `CARD_SOURCE_RAW_IMAGE_MISSING/409`.
 
 #### `client_histories.metadata` khi `type=handmade_card`
 
 ```json
 {
   "schemaVersion": 2,
-  "cardType": "handmade",
   "sourceType": "product|generated_flower",
   "originProductId": "uuid",
   "generatedFlowerId": "uuid-or-null",
@@ -389,27 +412,14 @@ Với TDD-027, `metadata` bổ sung `operation="recreate_content"`, `recreatedFr
     "id": "uuid",
     "name": "Mẫu thiệp viết tay",
     "templateType": "handmade",
-    "description": "...",
-    "imageUrl": "https://..."
+    "description": "..."
   },
-  "sizeConfig": { "group": "card_size", "key": "size_A", "value": {} },
-  "calligraphyRule": { "minWords": 36, "maxWords": 70, "extraPrice": 39000 },
-  "pricing": { "configuredSizeBasePrice": 100000, "chargedBasePrice": 0, "extraPrice": 39000, "totalPrice": 39000 },
+  "sizeConfig": { "group": "card_config", "key": "card_config.sizes" },
   "validatedAt": "2026-09-04T08:00:00Z"
 }
 ```
 
-HandMade không có `systemPrompt` trong metadata và không có các field snapshot dành riêng cho lần gọi AI.
-
-`client_histories.input` của regenerate chỉ ghi hành động client thực sự gửi:
-
-```json
-{
-  "operation": "regenerate",
-  "sourceCardId": "uuid",
-  "cardTemplateId": "uuid-or-null"
-}
-```
+HandMade có `system_form=null`; metadata không có `systemPrompt` và không có các field snapshot dành riêng cho lần gọi AI. `client_histories` không lưu input của Create, Regenerate, Recreate hoặc HandMade.
 
 ---
 
@@ -420,20 +430,20 @@ HandMade không có `systemPrompt` trong metadata và không có các field snap
 | Flow | Product | Generated Flower | Template | Size Config | Calligraphy Config |
 |---|---|---|---|---|---|
 | Card từ Product | Validate live lúc admission | N/A | Validate live | Validate live | Validate live nếu Calligraphy |
-| Card từ Generated Flower | Không revalidate Product/Mockup gốc | Tồn tại + ownership; ảnh đủ dùng | Validate live | Validate live | Validate live nếu Calligraphy |
+| Card từ Generated Flower | Không revalidate trạng thái Product/Mockup gốc; phải resolve Product ID để gán root | Tồn tại + ownership + ảnh + Flower History hợp lệ | Validate live | Validate live | Validate live nếu Calligraphy |
 | HandMade từ Product | Validate live lúc admission | N/A | Bắt buộc `templateType=handmade`, validate live | Validate live để snapshot, không thu base price | Validate live, luôn áp dụng |
 | HandMade từ Generated Flower | Không revalidate Product/Mockup gốc | Tồn tại + ownership + provenance | Bắt buộc `templateType=handmade`, validate live | Validate live để snapshot, không thu base price | Validate live, luôn áp dụng |
 | Regenerate | Không dùng trạng thái Product để chặn | Không revalidate nguồn hoa | Chỉ validate live khi client chọn ID Template khác nguồn; bỏ trống/null/đúng ID nguồn thì dùng snapshot nguồn, không validate live | Dùng snapshot Card nguồn, không validate live | Dùng snapshot Card nguồn, không validate live |
 | Recreate content (TDD-027) | Không dùng trạng thái Product để chặn | Không revalidate nguồn hoa | Khóa snapshot Card nguồn; request không được gửi Template | Khóa snapshot Card nguồn; request không được gửi Size | Validate live nếu form type hiệu lực là Calligraphy; tính giá/snapshot mới |
 | Order | Validate Product gốc live | Resolve lineage trong `client_histories` | Không quyết định tồn kho | Không quyết định tồn kho | Không quyết định tồn kho |
 
-Thứ tự endpoint Card Create: `auth/request → load Template để phân nhánh`. Nếu `templateType=ai`: `source Product hoặc Generated Flower → xác định base_id quota → validate Template AI → Size Config → Calligraphy Config → system prompt → reserve atomically quota ngày + quota theo base_id → CardGenerationSnapshot → AI`. Nếu `templateType=handmade`, tiếp tục theo thứ tự HandMade bên dưới.
+Thứ tự endpoint Card Create: `auth/request → load Template để phân nhánh`. Nếu `templateType=ai`: `source Product hoặc Generated Flower → xác định base_id và root → validate Template AI → Size Config → Calligraphy Config → system prompt → reserve atomically quota ngày + quota theo base_id → CardGenerationSnapshot → AI`. Nếu nguồn là Product thì `root=base_id`; nếu nguồn là Generated Flower thì service tìm Flower History và lấy `root=FlowerHistory.base_id`. Nếu không resolve được Product ID, trả lỗi trước quota/snapshot/AI. Nếu `templateType=handmade`, tiếp tục theo thứ tự HandMade bên dưới.
 
-Thứ tự Regenerate: `auth/request → ownership → source Card + client_histories snapshot → chặn handmade_card → lấy base_id kế thừa làm quota source key → resolve Effective Template (chỉ validate live nếu ID khác nguồn) → system prompt hiện hành hoặc source fallback → reserve atomically quota ngày + quota theo base_id → RegenerationSnapshot → AI`.
+Thứ tự Regenerate: `auth/request → ownership → source Card + client_histories snapshot → chặn handmade_card → kiểm tra và kế thừa base_id/root → lấy base_id kế thừa làm quota source key → resolve Effective Template (chỉ validate live nếu ID khác nguồn) → system prompt hiện hành hoặc source fallback → reserve atomically quota ngày + quota theo base_id → RegenerationSnapshot → AI`.
 
-Thứ tự Recreate content: `auth/request → source Card AI + History + ownership → rawImage nguồn → lấy cột base_id kế thừa làm quota source key → fallback/validate input hiệu lực → khóa Template/Size snapshot → Calligraphy/pricing live → system prompt current → reserve atomically quota ngày + quota theo base_id → CardRecreationSnapshot → AI trả raw+final → transaction Card/History`.
+Thứ tự Recreate content: `auth/request → source Card AI + History + ownership → rawImage nguồn → kiểm tra và kế thừa base_id/root → lấy cột base_id kế thừa làm quota source key → fallback/validate input hiệu lực → khóa Template/Size snapshot → Calligraphy/pricing live → system prompt current → reserve atomically quota ngày + quota theo base_id → CardRecreationSnapshot → AI trả raw+final → transaction Card/History`.
 
-Thứ tự HandMade: `auth/request → source Product hoặc Generated Flower → Template handmade → Size Config → Calligraphy Config/rule → snapshot → transaction generated_cards + client_histories`. Không có prompt/quota/AI/retry.
+Thứ tự HandMade: `auth/request → source Product hoặc Generated Flower → xác định base_id/root → Template handmade → Size Config → Calligraphy Config/rule → snapshot → transaction generated_cards + client_histories`. Không resolve được Product ID gốc thì trả `SOURCE_PRODUCT_PROVENANCE_INVALID/409`. Không có prompt/quota/AI/retry.
 
 - Validation nguồn/dependency chỉ một lần trước AI. Sau snapshot, Admin inactive/soft-delete dependency không hủy request, retry hoặc persist.
 - Một lần đầu + tối đa hai retry cùng dùng snapshot bất biến; không query lại availability và không tải lại URL ảnh live.
@@ -443,51 +453,46 @@ Thứ tự HandMade: `auth/request → source Product hoặc Generated Flower �
 #### Error taxonomy và thứ tự
 
 - Product: `PRODUCT_NOT_FOUND/404` → `PRODUCT_DELETED/410` → `PRODUCT_INACTIVE/409` → `PRODUCT_OUT_OF_STOCK/409`; `PRODUCT_NOT_SELLABLE/422`; `PRODUCT_AVAILABILITY_UNAVAILABLE/503`.
-- Generated Flower: không tồn tại hoặc khác owner → `GENERATED_FLOWER_NOT_FOUND/404`; thiếu ảnh cho AI → `GENERATED_FLOWER_INPUT_INVALID/409`. Thiếu provenance nhưng có ảnh không chặn Card.
+- Generated Flower: không tồn tại hoặc khác owner → `GENERATED_FLOWER_NOT_FOUND/404`; thiếu ảnh cho AI → `GENERATED_FLOWER_INPUT_INVALID/409`; thiếu Flower History/Product ID gốc hoặc lineage không nhất quán → `SOURCE_PRODUCT_PROVENANCE_INVALID/409`.
 - Template client chủ động chọn cho Create hoặc chọn ID khác nguồn khi Regenerate: `CARD_TEMPLATE_NOT_FOUND/404` → `CARD_TEMPLATE_DELETED/410` → `CARD_TEMPLATE_INACTIVE/409`. Regenerate bỏ trống/null hoặc truyền đúng ID Template nguồn thì dùng snapshot nguồn, không query hay kiểm tra trạng thái live.
-- Size: `CARD_SIZE_CONFIG_NOT_FOUND/404` → `CARD_SIZE_CONFIG_DELETED/410` → `CARD_SIZE_CONFIG_INACTIVE/409`.
-- Calligraphy: `CALLIGRAPHY_CONFIG_NOT_FOUND/404` → `CALLIGRAPHY_CONFIG_DELETED/410` → `CALLIGRAPHY_CONFIG_INACTIVE/409`.
+- Size singleton `card_config.sizes`: `CARD_SIZE_CONFIG_NOT_FOUND/404` → `CARD_SIZE_CONFIG_DELETED/410` → `CARD_SIZE_CONFIG_INACTIVE/409` → `CARD_SIZE_CONFIG_INVALID/409`. `items` không có đúng một Size chung cũng là Config không hợp lệ.
+- Calligraphy singleton `card_config.prices`: `CALLIGRAPHY_CONFIG_NOT_FOUND/404` → `CALLIGRAPHY_CONFIG_DELETED/410` → `CALLIGRAPHY_CONFIG_INACTIVE/409` → `CALLIGRAPHY_CONFIG_INVALID/409`; `wordCount` không thuộc rule nào → `CALLIGRAPHY_PRICE_RULE_NOT_FOUND/422`.
 - Card Create không có prompt hiện hành type `card` hoặc content rỗng/không hợp lệ → `SYSTEM_PROMPT_INVALID/409`. Regenerate chỉ trả lỗi history nếu cả prompt hiện hành và prompt snapshot nguồn đều không dùng được.
-- Nhiều Config active cùng `(group,key)` chỉ áp dụng cho Card Create; Regenerate không query Config live. Source Card thiếu snapshot regenerate → `CARD_SOURCE_HISTORY_INVALID/409`.
+- Hai Card Config là singleton; nếu dữ liệu legacy tạo nhiều record chưa xóa cùng key thì trả `CARD_CONFIG_AMBIGUOUS/409`, không chọn ngẫu nhiên. Regenerate không query Config live. Source Card thiếu snapshot, `base_id` hoặc `root` Product hợp lệ → `CARD_SOURCE_HISTORY_INVALID/409`.
 - Regenerate source có history `type="handmade_card"` → `HANDMADE_CARD_REGENERATE_NOT_SUPPORTED/409`.
 - TDD-027: source không phải Card AI → `HANDMADE_CARD_RECREATE_NOT_SUPPORTED/409`; thiếu `rawImage` usable → `CARD_SOURCE_RAW_IMAGE_MISSING/409`; request gửi Template/Size/source flower → `RECREATE_LOCKED_FIELD_NOT_ALLOWED/400`. Prompt hiện hành type `card` thiếu/rỗng/invalid → `SYSTEM_PROMPT_INVALID/409`.
 
-### 4.1 Logic xác định base_id cho thiệp
+### 4.1 Logic xác định `base_id` và `root` cho thiệp
 
-```csharp
-public Guid DetermineBaseId(Guid? flowerRequestId, Guid? generatedFlowerId, Product product)
-{
-    // Nếu có generatedFlowerId (bó hoa AI) -> base_id = generatedFlowerId
-    if (generatedFlowerId.HasValue)
-        return generatedFlowerId.Value;
+| Nguồn Card | `base_id` | `root` |
+|---|---|---|
+| Product/biến thể | Product ID nhận từ request | Bằng `base_id` |
+| Generated Flower | `generated_flowers.id` nhận từ request | Tìm `client_histories(type="flower", output_id=base_id)` và lấy `base_id` của Flower History |
+| Regenerate/Recreate Card AI | Kế thừa `base_id` của Card History nguồn | Kế thừa `root` của Card History nguồn |
 
-    // Nếu không có generatedFlowerId (bó hoa bình thường)
-    // -> base_id = product.id (combo không có biến thể HOẶC biến thể là con của biến thể cha)
-    return product.Id;
-}
-```
+`root` bắt buộc khác `Guid.Empty`. Không tìm được đúng một Flower History hợp lệ hoặc Product ID gốc thì trả lỗi, không dùng metadata để đoán và không persist một phần.
 
 - Khi source là Product có biến thể, request bắt buộc dùng đúng `productId` biến thể; không dùng ID cha. Card Create kiểm tra trạng thái và lượng bán của đúng ID nhận được. Việc kiểm tra cha active là rule Order, không chặn Card Generate.
-- Khi source là Generated Flower, chỉ kiểm tra record tồn tại/ownership/ảnh; không revalidate Product hoặc Mockup gốc.
+- Khi source là Generated Flower, kiểm tra record tồn tại/ownership/ảnh và Flower History để lấy Product ID gốc; không revalidate trạng thái live của Product hoặc Mockup gốc.
 
 ### 4.2 Regenerate snapshot policy
 
 - Mọi Card AI có history `type="card"` thuộc user đều có thể là Card nguồn. Card mới luôn có ID, ảnh kết quả và `createdAt` mới, lấy `userId` từ phiên đăng nhập; không ghi đè Card nguồn. History `handmade_card` bị chặn.
-- Effective Template là `cardTemplateId` client chọn, hoặc Template snapshot của Card nguồn khi request để trống. Người dùng được chọn lại Template AI cũ hoặc Template AI khác; không được chuyển sang HandMade. Mọi Template AI tương thích với mọi size và form type.
+- Effective Template là `cardTemplateId` client chọn, hoặc Template snapshot của Card nguồn khi request để trống. Người dùng được chọn lại Template AI cũ hoặc Template AI khác; không được chuyển sang HandMade. Mọi Template AI tương thích với Size chung và mọi form type.
 - Nếu client bỏ trống/null hoặc truyền đúng ID Template nguồn, dùng nguyên Template snapshot nguồn, không query live và không kiểm tra active/soft-delete. Chỉ khi client chọn ID Template khác nguồn, Template mới phải tồn tại, chưa soft-delete, active và có `templateType="ai"` tại admission; Template HandMade trả `CARD_TEMPLATE_TYPE_INVALID/409`. Trạng thái Template cũ không chặn request. Dependency mới đổi trạng thái sau snapshot không ảnh hưởng request đang chạy.
 - Dùng nguyên sender/receiver/message/attached image/form type/size, giá và Config snapshot của Card nguồn; không query hoặc validate Size/Calligraphy Config live và không lấy giá/rule mới.
-- Mỗi `system_prompts.type` (`flower`, `card`, `post`) có đúng một prompt hiện hành. Regenerate ưu tiên prompt hiện hành của type `card`; record không tồn tại hoặc có content rỗng/không hợp lệ đều được xem là không khả dụng. Khi đó dùng full prompt snapshot của Card nguồn, không kiểm tra trạng thái record prompt nguồn, và ghi `systemPromptSource="source_card_fallback"`.
-- Cột `base_id` history mới bằng `base_id` history Card nguồn; cột `output_id` bằng ID Card mới. `metadata.regeneratedFromCardId` giữ quan hệ Card cha-con.
+- Mỗi `system_prompts.type` (`flower`, `card`, `post`) có đúng một prompt hiện hành. Regenerate ưu tiên prompt hiện hành của type `card`; record không tồn tại hoặc có content rỗng/không hợp lệ đều được xem là không khả dụng. Khi đó dùng `system_form` của History Card nguồn, không kiểm tra trạng thái record prompt nguồn, và ghi `systemPromptSource="source_card_fallback"`.
+- Cột `base_id` và `root` của History mới lần lượt bằng `base_id` và `root` của History Card nguồn; cột `output_id` bằng ID Card mới. `metadata.regeneratedFromCardId` giữ quan hệ Card cha-con. Thiếu `root` Product hợp lệ trả `CARD_SOURCE_HISTORY_INVALID/409`.
 - Product gốc inactive/deleted/out-of-stock không chặn Regenerate; chỉ Order kiểm tra Product live.
 
 ### 4.3 HandMade Card policy
 
 - `cardTemplateId` phải trỏ tới Template có cột `template_type="handmade"`, tồn tại, chưa xóa và active. Template snapshot lưu đầy đủ nhưng `generated_cards.image_url` chỉ lưu trực tiếp URL Template hiện hành.
-- Request bắt buộc source, `cardTemplateId`, `sizeKey`, sender, receiver, message. Truyền `formType` → `HANDMADE_CARD_FORM_TYPE_NOT_ALLOWED/400`; truyền `attachedImageUrl` → `HANDMADE_CARD_ATTACHMENT_NOT_ALLOWED/400`.
+- Request bắt buộc source, `cardTemplateId`, sender, receiver, message. Truyền `formType` → `HANDMADE_CARD_FORM_TYPE_NOT_ALLOWED/400`; truyền `attachedImageUrl` → `HANDMADE_CARD_ATTACHMENT_NOT_ALLOWED/400`.
 - Server gán `formType="calligraphy"`; áp dụng cùng quy tắc field, đếm từ, `sizeMaxWords` và matching Calligraphy rule như Card AI.
 - `sizeBasePrice` snapshot đúng giá Config; `basePrice=0`; `extraPrice` bằng phụ phí rule số từ; `totalPrice=extraPrice`.
 - Với HandMade, không gọi API thì không có record; request thành công tạo Card/history trong một transaction.
-- History dùng `type="handmade_card"`, cột `system_prompt_id=null`, provenance đầy đủ, không có `systemPrompt`; cột `base_id` là Product hoặc Generated Flower trực tiếp, cột `output_id` là HandMade Generated Card mới.
+- History dùng `type="handmade_card"`, cột `system_form=null`, provenance đầy đủ, không có `systemPrompt`; cột `base_id` là Product hoặc Generated Flower trực tiếp, `root` là Product ID gốc theo mục 4.1, và `output_id` là HandMade Generated Card mới.
 - Không gọi AI, không dùng prompt, không retry và không reserve/consume quota AI.
 
 ### 4.4 Quy tắc đếm từ
@@ -546,21 +551,13 @@ Quota theo nguồn dùng chung cho cả hai loại Card AI: Card từ Product d�
 ### 6.1 Lấy cấu hình từ bảng Config
 
 ```csharp
-// Lấy cấu hình size
-var sizeConfigs = await _dbContext.Config
-    .Where(c => c.Group == "card_size" && c.Key == $"size_{size}" && c.Kind == "Setting" && !c.IsDeleted && c.IsPublic)
-    .ToListAsync();
-if (sizeConfigs.Count > 1) throw CardConfigAmbiguous();
-var sizeConfig = sizeConfigs.SingleOrDefault() ?? throw CardSizeConfigNotFound();
-// sizeConfig.Value: { "name": "A", "width": 10, "height": 15, "basePrice": 100000, "maxWords": 100 }
+// Mỗi key là singleton. Phải phân biệt not-found, soft-deleted và inactive trước khi parse.
+var sizesConfig = await GetCardConfigAsync("card_config.sizes");
+var sizeItems = ParseInnerItems<SizeItem>(sizesConfig.Value); // parse wrapper rồi parse chuỗi value
+var selectedSize = sizeItems.Single(); // validator bảo đảm đúng một Size chung
 
-// Lấy cấu hình calligraphy words
-var wordsConfigs = await _dbContext.Config
-    .Where(c => c.Group == "card_config" && c.Key == "calligraphy_words" && c.Kind == "Setting" && !c.IsDeleted && c.IsPublic)
-    .ToListAsync();
-if (wordsConfigs.Count > 1) throw CardConfigAmbiguous();
-var wordsConfig = wordsConfigs.SingleOrDefault() ?? throw CalligraphyConfigNotFound();
-// wordsConfig.Value: [ { "minWords": 0, "maxWords": 35, "extraPrice": 0 }, ... ]
+var pricesConfig = await GetCardConfigAsync("card_config.prices");
+var priceItems = ParseInnerItems<PriceItem>(pricesConfig.Value);
 ```
 
 ### 6.2 Tính giá
@@ -571,12 +568,12 @@ public async Task<decimal> CalculateExtraPriceAsync(string formType, int wordCou
     if (formType != "calligraphy")
         return 0;
 
-    var wordsConfig = await GetCalligraphyWordsConfigAsync();
-    var rules = JsonSerializer.Deserialize<List<WordRule>>(wordsConfig.Value);
+    var pricesConfig = await GetCardConfigAsync("card_config.prices");
+    var rules = ParseInnerItems<WordRule>(pricesConfig.Value);
 
     var rule = rules.FirstOrDefault(r => wordCount >= r.MinWords && wordCount <= r.MaxWords);
     if (rule is null)
-        throw ValidationError("Số từ trong lời chúc không nằm trong giới hạn cho phép của hình thức calligraphy.");
+        throw CalligraphyPriceRuleNotFound(); // CALLIGRAPHY_PRICE_RULE_NOT_FOUND/422
 
     return rule.ExtraPrice;
 }
@@ -588,29 +585,27 @@ public async Task<decimal> CalculateExtraPriceAsync(string formType, int wordCou
 ### 6.3 Ví dụ kết quả Card AI
 
 **Input:**
-- size: "A"
 - `formType`: `"calligraphy"`
 - `messageContent`: `"Chúc bạn sinh nhật vui vẻ, hạnh phúc và thành công trong cuộc sống"`
 
 **Xử lý:**
-1. Size config (`Group="card_size"`, `Key="size_A"`): `{ "name": "A", "width": 10, "height": 15, "basePrice": 100000, "maxWords": 100 }`
+1. Lấy Size chung duy nhất từ `Group="card_config"`, `Key="card_config.sizes"`: `{ "name": "Kích thước chung", "width": 15, "height": 25, "base_price": 15000, "max_words": 150 }`
 2. Word count: 12
-3. Word rule: `{ "minWords": 0, "maxWords": 35, "extraPrice": 0 }`
+3. Chọn rule từ `Key="card_config.prices"`: `{ "min_words": 0, "max_words": 35, "extra_price": 0 }`
 
 **Generated Card:**
 ```json
 {
-  "sizeKey": "size_A",
-  "sizeName": "A",
-  "sizeWidth": 10,
-  "sizeHeight": 15,
-  "sizeBasePrice": 100000,
-  "sizeMaxWords": 100,
+  "sizeName": "Kích thước chung",
+  "sizeWidth": 15,
+  "sizeHeight": 25,
+  "sizeBasePrice": 15000,
+  "sizeMaxWords": 150,
   "wordCount": 12,
-  "wordConfigSnapshot": { "minWords": 0, "maxWords": 35, "extraPrice": 0 },
-  "basePrice": 100000,
+  "wordConfigSnapshot": { "min_words": 0, "max_words": 35, "extra_price": 0 },
+  "basePrice": 15000,
   "extraPrice": 0,
-  "totalPrice": 100000
+  "totalPrice": 15000
 }
 ```
 
@@ -638,7 +633,7 @@ public async Task<decimal> CalculateExtraPriceAsync(string formType, int wordCou
 ### TDD-021: Chọn và tạo thiệp HandMade
 - **Method**: POST
 - **Route**: `/api/ai-cards`
-- **Body**: source + `cardTemplateId` + `sizeKey` + sender/receiver/message; không nhận `formType` hoặc ảnh đính kèm
+- **Body**: source + `cardTemplateId` + sender/receiver/message; không nhận `formType` hoặc ảnh đính kèm
 
 ### Card Template list/admin
 
@@ -658,7 +653,7 @@ public async Task<decimal> CalculateExtraPriceAsync(string formType, int wordCou
 
 - Khi không truyền filter loại Card, danh sách Card history trả cả `type="card"` và `type="handmade_card"`.
 - Filter `type=card` chỉ trả Card AI; filter `type=handmade_card` chỉ trả HandMade Card.
-- History HandMade vẫn có `base_id`, `output_id`, input và metadata snapshot như quy định, nhưng `system_prompt_id=null`.
+- History HandMade vẫn có `base_id`, `root`, `output_id` và metadata provenance như quy định, nhưng `system_form=null`. `root` chỉ dùng nội bộ và không được thêm vào response công khai.
 
 ### Card Config CRUD (Sử dụng bảng Config có sẵn)
 | TDD | Chức năng | Method | Route | Quyền |
@@ -674,25 +669,25 @@ public async Task<decimal> CalculateExtraPriceAsync(string formType, int wordCou
 
 - **`source_flower_id` đã được bỏ khỏi `generated_cards`** - mối quan hệ được xác định qua `client_histories`
 - **thiệp không gắn logo** - ảnh kết quả được lưu dưới định dạng PNG mà không có logo
-- **Discriminator dạng string** - `template_type/card_type` dùng `ai|handmade`; history dùng `flower|card|handmade_card|post`
+- **Discriminator dạng string** - `template_type/card_type` dùng `ai|handmade`; History trong phạm vi hiện tại dùng `flower|card|handmade_card`; Post chưa sử dụng và nằm ngoài quy tắc `root`.
 - **Snapshot giá** - tất cả thông tin ảnh hưởng đến giá được lưu tại thời điểm tạo thiệp
 - **AI Module tách riêng** - các hàm xử lý logic gọi đến AI Module để thực hiện việc gọi AI
 - **Kết quả AI Card** - Card AI mới trả cặp field ảnh: `rawImage` (trước chèn chữ) và `imageUrl` (sau chèn chữ). Thiếu/upload lỗi một ảnh được xem là cả attempt thất bại, retry/release quota theo cùng policy.
-- **Input cho Card AI**: `senderName`, `receiverName`, `messageContent`, `formType`, `sizeKey`, `cardTemplateId`, `attachedImageUrl`, `cardSize` (từ Config), `cardConfig` (từ Config), `flowerInfo` (`imageUrl` của Product hoặc Generated Flower)
-- **Input cho HandMade Card**: đúng một source, `cardTemplateId`, `sizeKey`, `senderName`, `receiverName`, `messageContent`; server gán Calligraphy và không nhận `attachedImageUrl`
+- **Input cho Card AI**: `senderName`, `receiverName`, `messageContent`, `formType`, `cardTemplateId`, `attachedImageUrl`, `cardSize` chung (từ Config), `cardConfig` (từ Config), `flowerInfo` (`imageUrl` của Product hoặc Generated Flower)
+- **Input cho HandMade Card**: đúng một source, `cardTemplateId`, `senderName`, `receiverName`, `messageContent`; server gán Calligraphy, lấy Size chung từ Config và không nhận `attachedImageUrl`
 - **Input cho Regenerate**: `sourceCardId` ở route và `cardTemplateId` tùy chọn trong body; các dữ liệu còn lại lấy từ Card/history nguồn.
 - **Input cho Recreate content (TDD-027)**: `sourceCardId` ở route; chỉ sửa sender/receiver/message/form type/ảnh đính kèm. Dùng raw image Card nguồn làm reference, khóa Template/Size snapshot và tính lại Calligraphy/pricing.
 
 ### Order context và quyết định còn mở
 
-Order phải resolve `originProductId` trong metadata qua chuỗi `client_histories`, kiểm tra Product live và `sellableQuantity >= tổng quantity` rồi mới tiếp tục kiểm kho depot Nhanh.vn. Nếu không resolve được lineage, chặn `SOURCE_PRODUCT_PROVENANCE_INVALID/409`.
+Order lấy Product gốc từ `client_histories.root`, sau đó đối chiếu với lineage `base_id`/Flower History, kiểm tra Product live và `sellableQuantity >= tổng quantity` rồi mới tiếp tục kiểm kho depot Nhanh.vn. `metadata.originProductId` chỉ là dữ liệu audit, không phải nguồn quyết định. Nếu `root` thiếu, bằng `Guid.Empty` hoặc không nhất quán với lineage thì chặn `SOURCE_PRODUCT_PROVENANCE_INVALID/409`.
 
 Luồng context-only bắt buộc cho implementation Order tương lai:
 
 1. Direct Product: dùng đúng Product/variant trong item.
-2. Card từ Product: tìm `client_histories(type=card, output_id=GeneratedCardId).base_id`.
-3. Card từ Generated Flower: từ record `client_histories(type=card)` lấy `base_id=GeneratedFlowerId`, rồi tìm record `client_histories(type=flower, output_id=GeneratedFlowerId).base_id=ProductId`. Có thể dùng `originProductId` trong metadata để resolve nhanh nhưng vẫn phải kiểm tra consistency.
-4. Không resolve/không nhất quán: `SOURCE_PRODUCT_PROVENANCE_INVALID/409`; không tạo Order/OrderDetail và không chuẩn bị payment.
+2. Card từ Product: tìm `client_histories(type=card|handmade_card, output_id=GeneratedCardId)`; `root` phải bằng `base_id=ProductId`.
+3. Card từ Generated Flower: History Card có `base_id=GeneratedFlowerId`; tìm `client_histories(type=flower, output_id=GeneratedFlowerId)` và yêu cầu `HistoryCard.root=HistoryFlower.base_id=HistoryFlower.root=ProductId`.
+4. `root` thiếu, bằng `Guid.Empty`, không resolve hoặc không nhất quán: `SOURCE_PRODUCT_PROVENANCE_INVALID/409`; không tạo Order/OrderDetail và không chuẩn bị payment. Không fallback sang metadata để đoán Product ID.
 5. Product live giữ thứ tự not-found → deleted → inactive → quantity. Cộng gộp các dòng cùng Product và yêu cầu `sellableQuantity >= tổng Number`; thiếu lượng trả `PRODUCT_OUT_OF_STOCK/409`.
 6. Nếu ID là variant con: kiểm tra child active, sau đó parent; parent inactive chặn Order bằng `PRODUCT_INACTIVE/409`. Sau local `CalculateAvailableQty`, vẫn chạy kiểm kho depot Nhanh.vn; không xác minh được external inventory trả `PRODUCT_AVAILABILITY_UNAVAILABLE/503`.
 7. Vì hiện chưa reserve inventory, payment webhook dự kiến phải revalidate Product trước khi chuyển PAID/fulfillment; xử lý tiền đã nhận nhưng fail vẫn là open decision dưới đây.
