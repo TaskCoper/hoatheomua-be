@@ -34,11 +34,11 @@ public class ToggleMockupStatus
     }
 
     [Fact]
-    public async Task ToggleMockupStatus_UnknownId_ThrowsBadGatewayException()
+    public async Task ToggleMockupStatus_UnknownId_ThrowsNotFoundException()
     {
         await using var db = CreateDbContext();
 
-        var exception = await Assert.ThrowsAsync<BadGatewayException>(() =>
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateService(db).ToggleMockupStatus(Guid.NewGuid()));
 
         Assert.Equal("Mockup không hợp lệ hoặc đã bị xóa.", exception.Message);
@@ -53,7 +53,7 @@ public class ToggleMockupStatus
         await db.Mockups.AddAsync(mockup);
         await db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<BadGatewayException>(() => CreateService(db).ToggleMockupStatus(mockup.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => CreateService(db).ToggleMockupStatus(mockup.Id));
 
         var saved = await db.Mockups.SingleAsync(x => x.Id == mockup.Id);
         Assert.True(saved.IsActive);

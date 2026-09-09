@@ -52,7 +52,7 @@ public class DeleteMockup
         await db.Mockups.AddAsync(mockup);
         await db.SaveChangesAsync();
 
-        var exception = await Assert.ThrowsAsync<BadGatewayException>(() => CreateService(db).DeleteMockup(mockup.Id));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => CreateService(db).DeleteMockup(mockup.Id));
         var saved = await db.Mockups.SingleAsync(x => x.Id == mockup.Id);
 
         Assert.Equal("Mockup đã bị xóa trước đó.", exception.Message);
