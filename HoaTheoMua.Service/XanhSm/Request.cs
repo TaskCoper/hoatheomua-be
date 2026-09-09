@@ -117,8 +117,8 @@ public class XanhSmBookDeliveryRequest
     [JsonPropertyName("points")]
     public required List<XanhSmDeliveryPointRequest> Points { get; set; }
 
-    [JsonPropertyName("addons")]
-    public IReadOnlyList<XanhSmAddonRequest> Addons { get; init; } = [];
+    [JsonPropertyName("addon_ids")]
+    public IReadOnlyList<int> AddonIds { get; init; } = [];
 
     [JsonPropertyName("goods_value")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

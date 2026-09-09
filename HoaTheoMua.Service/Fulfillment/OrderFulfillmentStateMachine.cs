@@ -1,0 +1,279 @@
+using HoaTheoMua.Repository.Entity;
+using MassTransit;
+using Microsoft.Extensions.Logging;
+
+namespace HoaTheoMua.Service.Fulfillment;
+
+/// <summary>
+/// Orchestrates everything that used to run inline inside FulfillPaidOrder: dispatch the courier,
+/// create the POS order, purge the storefront cache - and undo whatever got booked when a step fails.
+/// </summary>
+/// <remarks>
+/// CorrelationId is the Order.Id, so an order can only ever have one saga; a redelivered webhook
+/// correlates onto the existing instance instead of starting a second fulfilment.
+///
+/// There is no message scheduler and no timeout: escalation is driven by the Fault&lt;T&gt; messages
+/// MassTransit publishes once a consumer exhausts its retry policy.
+/// </remarks>
+public sealed class OrderFulfillmentStateMachine : MassTransitStateMachine<OrderFulfillmentState>
+{
+    /// <summary>
+    /// Hard cap on saga-level compensation rounds. Each round is itself retried by the
+    /// compensate-fulfillment endpoint, so the real ceiling on outbound cancel calls is
+    /// MaxCompensationRounds x that endpoint's attempt count. Reaching the cap always transitions to
+    /// Failed, which ignores further faults - there is no path that loops forever.
+    /// </summary>
+    private const int MaxCompensationRounds = 3;
+
+    // Kept well under the 64-char CurrentState column.
+    public State DispatchingDelivery { get; private set; } = null!;
+    public State CreatingPosOrder { get; private set; } = null!;
+    public State Revalidating { get; private set; } = null!;
+    public State Compensating { get; private set; } = null!;
+
+    // Deliberately NOT MassTransit's built-in Final: two distinct terminal states let ops query
+    // "which orders need a manual refund" straight off CurrentState. Neither finalizes, so the row
+    // survives as an audit trail.
+    public State Fulfilled { get; private set; } = null!;
+    public State Failed { get; private set; } = null!;
+
+    public Event<OrderPaid> OrderPaid { get; private set; } = null!;
+    public Event<DeliveryDispatched> DeliveryDispatched { get; private set; } = null!;
+    public Event<PosOrderCreated> PosOrderCreated { get; private set; } = null!;
+    public Event<CacheRevalidated> CacheRevalidated { get; private set; } = null!;
+    public Event<FulfillmentCompensated> FulfillmentCompensated { get; private set; } = null!;
+
+    public Event<Fault<DispatchDelivery>> DispatchDeliveryFaulted { get; private set; } = null!;
+    public Event<Fault<CreatePosOrder>> CreatePosOrderFaulted { get; private set; } = null!;
+    public Event<Fault<RevalidateProductCache>> RevalidateProductCacheFaulted { get; private set; } = null!;
+    public Event<Fault<CompensateFulfillment>> CompensateFulfillmentFaulted { get; private set; } = null!;
+
+    public OrderFulfillmentStateMachine(ILogger<OrderFulfillmentStateMachine> logger)
+    {
+        InstanceState(x => x.CurrentState);
+
+        Event(() => OrderPaid, x =>
+        {
+            x.CorrelateById(context => context.Message.OrderId);
+            x.SelectId(context => context.Message.OrderId);
+        });
+        Event(() => DeliveryDispatched, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => PosOrderCreated, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => CacheRevalidated, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => FulfillmentCompensated, x => x.CorrelateById(context => context.Message.OrderId));
+
+        // Fault<T>.Message is the original command, so the order id sits one level deeper.
+        Event(() => DispatchDeliveryFaulted, x => x.CorrelateById(context => context.Message.Message.OrderId));
+        Event(() => CreatePosOrderFaulted, x => x.CorrelateById(context => context.Message.Message.OrderId));
+        Event(() => RevalidateProductCacheFaulted, x => x.CorrelateById(context => context.Message.Message.OrderId));
+        Event(() => CompensateFulfillmentFaulted, x => x.CorrelateById(context => context.Message.Message.OrderId));
+
+        Initially(
+            When(OrderPaid)
+                .Then(context =>
+                {
+                    context.Saga.Gateway = context.Message.Gateway;
+                    context.Saga.TransactionId = context.Message.TransactionId;
+                    context.Saga.CreatedAt = DateTimeOffset.UtcNow;
+                    context.Saga.UpdatedAt = DateTimeOffset.UtcNow;
+                })
+                .Publish(context => new DispatchDelivery { OrderId = context.Saga.CorrelationId })
+                .TransitionTo(DispatchingDelivery));
+
+        During(DispatchingDelivery,
+            When(DeliveryDispatched)
+                .Then(context =>
+                {
+                    // Recorded even when Dispatched is false: the failure branch reads it to decide
+                    // whether there is a courier to cancel at all.
+                    context.Saga.DeliveryDispatched = context.Message.Plan.Dispatched;
+                    context.Saga.ShippingGateway = context.Message.Plan.ShippingGateway;
+                    context.Saga.ShippingPartyOrderId = context.Message.Plan.ShippingPartyOrderId;
+                    context.Saga.UpdatedAt = DateTimeOffset.UtcNow;
+                })
+                .Publish(context => new CreatePosOrder
+                {
+                    OrderId = context.Saga.CorrelationId,
+                    Plan = context.Message.Plan
+                })
+                .TransitionTo(CreatingPosOrder),
+
+            // Nothing was created externally yet, so there is nothing to compensate.
+            When(DispatchDeliveryFaulted)
+                .Then(context =>
+                {
+                    RecordFailure(context.Saga, nameof(DispatchDelivery), Describe(context.Message.Exceptions));
+                    logger.LogCritical(
+                        "Fulfilment failed at DispatchDelivery for order {OrderId}: {Reason}",
+                        context.Saga.CorrelationId, context.Saga.FailureReason);
+                })
+                .Publish(context => ToMarkFailed(context.Saga))
+                .TransitionTo(Failed));
+
+        During(CreatingPosOrder,
+            When(PosOrderCreated)
+                .Then(context =>
+                {
+                    context.Saga.NhanhOrderId = context.Message.NhanhOrderId;
+                    context.Saga.UpdatedAt = DateTimeOffset.UtcNow;
+                })
+                .Publish(context => new RevalidateProductCache { OrderId = context.Saga.CorrelationId })
+                .TransitionTo(Revalidating),
+
+            When(CreatePosOrderFaulted)
+                .Then(context =>
+                {
+                    RecordFailure(context.Saga, nameof(CreatePosOrder), Describe(context.Message.Exceptions));
+                    logger.LogCritical(
+                        "Fulfilment failed at CreatePosOrder for order {OrderId} (ahamoveOrderId={ShippingPartyOrderId}): {Reason}",
+                        context.Saga.CorrelationId, context.Saga.ShippingPartyOrderId, context.Saga.FailureReason);
+                })
+                .IfElse(
+                    context => HasOutstandingBooking(context.Saga),
+                    compensate => compensate
+                        .Then(context => context.Saga.CompensationAttempts++)
+                        .Publish(context => new CompensateFulfillment
+                        {
+                            OrderId = context.Saga.CorrelationId,
+                            ShippingGateway = context.Saga.ShippingGateway,
+                            ShippingPartyOrderId = context.Saga.ShippingPartyOrderId,
+                            // Always null on this branch today: NhanhOrderId is only ever set by the
+                            // PosOrderCreated handler, which moves the saga to Revalidating, where
+                            // CreatePosOrderFaulted is no longer handled. Passed through anyway so a
+                            // future step added AFTER the POS step compensates both legs unchanged.
+                            NhanhOrderId = context.Saga.NhanhOrderId,
+                            Reason = context.Saga.FailureReason ?? "POS order creation failed"
+                        })
+                        .TransitionTo(Compensating),
+                    // Scheduled order: no courier was booked, so go straight to Failed.
+                    nothingBooked => nothingBooked
+                        .Publish(context => ToMarkFailed(context.Saga))
+                        .TransitionTo(Failed)));
+
+        During(Compensating,
+            // Both branches land in Failed. A compensation that could not complete must still be
+            // visible to ops rather than retrying forever - FailureReason carries what happened.
+            When(FulfillmentCompensated)
+                .Then(context =>
+                {
+                    context.Saga.UpdatedAt = DateTimeOffset.UtcNow;
+
+                    if (!context.Message.DeliveryCleared || !context.Message.PosOrderCleared)
+                    {
+                        context.Saga.FailureReason = Truncate(
+                            $"{context.Saga.FailureReason} | compensation incomplete: {context.Message.Details}");
+                    }
+
+                    logger.LogCritical(
+                        "Compensation finished for order {OrderId}: deliveryCleared={DeliveryCleared} "
+                        + "posOrderCleared={PosOrderCleared} ({Details}). Manual refund required.",
+                        context.Saga.CorrelationId, context.Message.DeliveryCleared,
+                        context.Message.PosOrderCleared, context.Message.Details);
+                })
+                .Publish(context => ToMarkFailed(context.Saga))
+                .TransitionTo(Failed),
+
+            // The endpoint retry policy has already given up by the time this arrives. Reissuing the
+            // command starts a fresh round with its own retries, and survives a process restart -
+            // the round counter lives in Postgres, the endpoint's does not.
+            When(CompensateFulfillmentFaulted)
+                .Then(context =>
+                {
+                    context.Saga.UpdatedAt = DateTimeOffset.UtcNow;
+                    context.Saga.FailureReason = Truncate(
+                        $"{context.Saga.FailureReason} | compensation round {context.Saga.CompensationAttempts} "
+                        + $"faulted: {Describe(context.Message.Exceptions)}");
+                })
+                .IfElse(
+                    context => context.Saga.CompensationAttempts < MaxCompensationRounds,
+                    retry => retry
+                        .Then(context =>
+                        {
+                            context.Saga.CompensationAttempts++;
+                            logger.LogWarning(
+                                "Compensation round {Round}/{Max} for order {OrderId} after a fault",
+                                context.Saga.CompensationAttempts, MaxCompensationRounds, context.Saga.CorrelationId);
+                        })
+                        .Publish(context => new CompensateFulfillment
+                        {
+                            OrderId = context.Saga.CorrelationId,
+                            ShippingGateway = context.Saga.ShippingGateway,
+                            ShippingPartyOrderId = context.Saga.ShippingPartyOrderId,
+                            NhanhOrderId = context.Saga.NhanhOrderId,
+                            Reason = context.Saga.FailureReason ?? "compensation retry"
+                        }),
+                    // Stays in Compensating implicitly - no TransitionTo, so no self-transition.
+
+                    giveUp => giveUp
+                        .Then(context => logger.LogCritical(
+                            "Compensation gave up after {Max} rounds for order {OrderId} "
+                            + "(ahamoveOrderId={ShippingPartyOrderId} nhanhOrderId={NhanhOrderId}). Manual cleanup required.",
+                            MaxCompensationRounds, context.Saga.CorrelationId,
+                            context.Saga.ShippingPartyOrderId, context.Saga.NhanhOrderId))
+                        .Publish(context => ToMarkFailed(context.Saga))
+                        .TransitionTo(Failed)));
+
+        During(Revalidating,
+            When(CacheRevalidated)
+                .Then(context => context.Saga.UpdatedAt = DateTimeOffset.UtcNow)
+                .TransitionTo(Fulfilled),
+
+            // Deliberately NOT compensating. A failed storefront cache purge is not a reason to
+            // cancel a courier who is already on the way; the order really is fulfilled.
+            When(RevalidateProductCacheFaulted)
+                .Then(context =>
+                {
+                    context.Saga.UpdatedAt = DateTimeOffset.UtcNow;
+                    logger.LogError(
+                        "Cache revalidation failed for order {OrderId}, order still counts as fulfilled: {Reason}",
+                        context.Saga.CorrelationId, Describe(context.Message.Exceptions));
+                })
+                .TransitionTo(Fulfilled));
+
+        // Redeliveries landing after the saga is done are expected traffic, not errors. Without
+        // this they would fault with "not accepted in state" and end up in the _error queue.
+        During(Fulfilled, Failed,
+            Ignore(OrderPaid),
+            Ignore(DeliveryDispatched),
+            Ignore(PosOrderCreated),
+            Ignore(CacheRevalidated),
+            Ignore(FulfillmentCompensated),
+            Ignore(DispatchDeliveryFaulted),
+            Ignore(CreatePosOrderFaulted),
+            Ignore(RevalidateProductCacheFaulted),
+            Ignore(CompensateFulfillmentFaulted));
+    }
+
+    // "Outstanding" means a real booking exists on someone else's system that we are responsible
+    // for clearing up.
+    private static bool HasOutstandingBooking(OrderFulfillmentState saga)
+        => (saga.DeliveryDispatched && !string.IsNullOrWhiteSpace(saga.ShippingPartyOrderId))
+           || saga.NhanhOrderId.HasValue;
+
+    private static void RecordFailure(OrderFulfillmentState saga, string step, string reason)
+    {
+        saga.FailedStep = step;
+        saga.FailureReason = Truncate(reason);
+        saga.UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    private static MarkFulfillmentFailed ToMarkFailed(OrderFulfillmentState saga) => new()
+    {
+        OrderId = saga.CorrelationId,
+        Step = saga.FailedStep ?? "Unknown",
+        Reason = saga.FailureReason ?? "Unknown failure",
+        ShippingGateway = saga.ShippingGateway,
+        ShippingPartyOrderId = saga.ShippingPartyOrderId,
+        NhanhOrderId = saga.NhanhOrderId
+    };
+
+    private static string Describe(ExceptionInfo[]? exceptions)
+        => exceptions is { Length: > 0 }
+            ? string.Join(" | ", exceptions.Select(x => $"{x.ExceptionType}: {x.Message}"))
+            : "Unknown failure";
+
+    // FailureReason is capped at 1000 chars in the EF configuration; a NhanhVn rejection body can
+    // easily run longer than that and would otherwise fail the saga's own SaveChanges.
+    private static string Truncate(string value)
+        => value.Length <= 1000 ? value : value[..1000];
+}

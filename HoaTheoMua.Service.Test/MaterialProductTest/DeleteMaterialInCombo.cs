@@ -19,7 +19,7 @@ public class DeleteMaterialInCombo
     private static readonly Guid MissingMatId = Guid.Parse("99999999-9999-9999-9999-999999999999");
 
     private const string ParentNhanhProductId = "nhanh-combo-a";
-    private const string MaterialLabel = "Thành phần";
+    private const string MaterialLabel = "Vật liệu";
 
     [Fact]
     public async Task DeleteMaterialInCombo_ValidSupportMaterial_SoftDeletesParentAndChildrenSpecifications()

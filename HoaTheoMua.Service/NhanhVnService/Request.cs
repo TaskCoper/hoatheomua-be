@@ -27,7 +27,7 @@ public class ProductLabelFilter
 public class RequestPaginator  
 {  
     [JsonPropertyName("size")]  
-    public int Size { get; set; }  
+    public int? Size { get; set; }  
 }
 //
 public class OrderLabelRequest
@@ -233,6 +233,9 @@ public class NhanhProductDetailDto
 
     [JsonPropertyName("status")]
     public int? Status { get; set; }
+
+    [JsonPropertyName("tagIds")]
+    public List<int>? TagIds { get; set; }
 
     // Webhook productAdd/productUpdate chỉ gửi id phẳng (categoryId/brandId), KHÔNG gửi object
     // `category`/`brand` như response của /api/product/search. Giữ cả hai dạng để không phá code cũ.

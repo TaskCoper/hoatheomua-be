@@ -30,7 +30,7 @@ public class Service : IService
     {
         ValidateConfiguration(includeCredentials: true);
 
-        var cacheKey = $"{_options.TokenUrl}|{_options.ClientId}|{_options.Scope}";
+        var cacheKey = TokenCacheKey;
         if (TryGetCachedToken(cacheKey, out var cachedToken))
         {
             return cachedToken;
@@ -61,14 +61,19 @@ public class Service : IService
                 Content = new FormUrlEncodedContent(tokenParameters)
             };
 
+            var requestedAt = DateTimeOffset.UtcNow;
             var token = await SendAsync<XanhSmTokenResponse>(request, requiresAuthentication: false, cancellationToken);
             if (string.IsNullOrWhiteSpace(token.AccessToken))
             {
                 throw new BadGatewayException("XanhSM token response did not contain an access token");
             }
 
-            var cacheLifetime = TimeSpan.FromSeconds(Math.Max(token.ExpiresIn - 300, 60));
-            TokenCache[cacheKey] = new CachedToken(token, DateTimeOffset.UtcNow.Add(cacheLifetime));
+            if (token.ExpiresIn > 0)
+            {
+                var safetyMargin = Math.Min(300d, token.ExpiresIn * 0.1d);
+                TokenCache[cacheKey] = new CachedToken(token,
+                    requestedAt.AddSeconds(token.ExpiresIn - safetyMargin));
+            }
             return token;
         }
         finally
@@ -110,7 +115,18 @@ public class Service : IService
     {
         ArgumentNullException.ThrowIfNull(request);
         ValidateDoorToDoorPoints(request.Points);
-        ValidateDoorToDoorAddon(request.Addons);
+        if (request.AddonIds is null || request.AddonIds.Count != 1 || request.AddonIds[0] <= 0)
+        {
+            throw new BadRequestException("Exactly one positive XanhSM Door-to-door addon ID is required");
+        }
+        if (request.PartnerTripId?.Length > 32)
+        {
+            throw new BadRequestException("XanhSM partner_trip_id must not exceed 32 characters");
+        }
+        if (request.GoodsValue < 0)
+        {
+            throw new BadRequestException("XanhSM goods_value must be non-negative");
+        }
         return PostAsync<XanhSmBookDeliveryRequest, XanhSmApiResponse<XanhSmDelivery>>(
             "create-order",
             request,
@@ -295,7 +311,7 @@ public class Service : IService
                 ServiceType = quote.ServiceType,
                 FeeId = quote.FeeId,
                 Points = points.ToList(),
-                Addons = CreateDoorToDoorAddon(quote.AddonId),
+                AddonIds = [quote.AddonId],
                 GoodsValue = goodsValue,
                 PartnerTripId = partnerTripId
             },
@@ -334,10 +350,24 @@ public class Service : IService
         return request;
     }
 
+    private string TokenCacheKey => $"{_options.TokenUrl}|{_options.ClientId}|{_options.Scope}";
+
+    private void InvalidateToken(string? rejectedToken)
+    {
+        var key = TokenCacheKey;
+        if (TokenCache.TryGetValue(key, out var cached) && cached.Token.AccessToken == rejectedToken)
+        {
+            // Remove only this version: a concurrent request may already have refreshed it.
+            ((ICollection<KeyValuePair<string, CachedToken>>)TokenCache)
+                .Remove(new KeyValuePair<string, CachedToken>(key, cached));
+        }
+    }
+
     private async Task<TResponse> SendAsync<TResponse>(
         HttpRequestMessage request,
         bool requiresAuthentication,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool retryOnUnauthorized = true)
         where TResponse : class
     {
         if (requiresAuthentication)
@@ -346,7 +376,33 @@ public class Service : IService
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
         }
 
+        // Buffer before sending so a rejected POST can be replayed byte-for-byte.
+        var requestBody = requiresAuthentication && retryOnUnauthorized && request.Content is not null
+            ? await request.Content.ReadAsByteArrayAsync(cancellationToken)
+            : null;
         using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (requiresAuthentication && response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            InvalidateToken(request.Headers.Authorization?.Parameter);
+            if (retryOnUnauthorized)
+            {
+                using var retry = new HttpRequestMessage(request.Method, request.RequestUri)
+                {
+                    Version = request.Version,
+                    VersionPolicy = request.VersionPolicy
+                };
+                foreach (var header in request.Headers)
+                    retry.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                if (requestBody is not null)
+                {
+                    retry.Content = new ByteArrayContent(requestBody);
+                    foreach (var header in request.Content!.Headers)
+                        retry.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+                response.Dispose();
+                return await SendAsync<TResponse>(retry, true, cancellationToken, retryOnUnauthorized: false);
+            }
+        }
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {

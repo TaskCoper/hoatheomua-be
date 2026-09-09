@@ -585,7 +585,7 @@ public class Service : IService
 
         if (response == null)
         {
-            throw new NotFoundException("PRODUCT_NOT_FOUND");
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
         }
 
         // Giai đoạn 2: Xác định sản phẩm cha nếu sản phẩm hiện tại là biến thể.
@@ -1654,7 +1654,7 @@ public class Service : IService
 
         if (product == null)
         {
-            throw new NotFoundException("PRODUCT_NOT_FOUND");
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
         }
 
         // ParentProductId của Nhanh.vn là NhanhProductId của sản phẩm cha,
@@ -1972,5 +1972,70 @@ public class Service : IService
         }
 
         return list.Count > 0 ? list : null;
+    }
+
+    public async Task<string> UpdateLabelProductNhanhVn(List<Request.UpdateLabelProductNhanhVnRequest> requests)
+    {
+        if (requests == null || requests.Count == 0)
+        {
+            throw new BadRequestException("Products are required");
+        }
+
+        var labelsByProductId = new Dictionary<Guid, List<string>>();
+
+        foreach (var request in requests)
+        {
+            if (string.IsNullOrWhiteSpace(request.Label))
+            {
+                throw new BadRequestException("Label is required");
+            }
+
+            if (request.ProductIds == null || request.ProductIds.Count == 0)
+            {
+                throw new BadRequestException($"ProductIds are required for label {request.Label}");
+            }
+
+            var label = request.Label.Trim();
+
+            foreach (var productIdValue in request.ProductIds.Distinct())
+            {
+                if (!Guid.TryParse(productIdValue, out var productId))
+                {
+                    throw new BadRequestException($"ProductId is invalid: {productIdValue}");
+                }
+
+                if (!labelsByProductId.TryGetValue(productId, out var labels))
+                {
+                    labels = new List<string>();
+                    labelsByProductId[productId] = labels;
+                }
+
+                if (!labels.Contains(label, StringComparer.OrdinalIgnoreCase))
+                {
+                    labels.Add(label);
+                }
+            }
+        }
+
+        var productIds = labelsByProductId.Keys.ToList();
+        var products = await _dbContext.Products
+            .Where(product => productIds.Contains(product.Id) && !product.IsDeleted)
+            .ToListAsync();
+
+        if (products.Count != productIds.Count)
+        {
+            throw new BadRequestException("One or more products were not found or have been deleted");
+        }
+
+        var updatedAt = DateTimeOffset.UtcNow;
+        foreach (var product in products)
+        {
+            product.ProductLabel = string.Join(", ", labelsByProductId[product.Id]);
+            product.UpdatedAt = updatedAt;
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        return "Cập nhật nhãn cho sản phẩm thành công";
     }
 }

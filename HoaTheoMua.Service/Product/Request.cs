@@ -216,6 +216,12 @@ public class Request
         public List<Guid> ProductIds { get; set; } = new();
     }
 
+    public class UpdateLabelProductNhanhVnRequest
+    {
+        public string Label { get; set; } = string.Empty;
+        public List<string> ProductIds { get; set; } = new();
+    }
+
     public class CheckInventoryAvailabilityRequest
     {
         public List<CartItem> Items { get; set; } = new();

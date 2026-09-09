@@ -3,8 +3,10 @@ using HoaTheoMua.Extentions;
 using HoaTheoMua.Filters;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
+using Npgsql;
 using AssemblyReference = HoaTheoMua.Service.AssemblyReference;
 using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
 using CategoryProductService = HoaTheoMua.Service.CategoryProduct;
@@ -25,6 +27,10 @@ using OrderNhanhVnImportService = HoaTheoMua.Service.OrderNhanhVnImport;
 using RevalidateService = HoaTheoMua.Service.Revalidate;
 using MaterialService = HoaTheoMua.Service.Material;
 using XanhSmService = HoaTheoMua.Service.XanhSm;
+using FulfillmentService = HoaTheoMua.Service.Fulfillment;
+using HoaTheoMua.Service.DependencyInjection.Extensions;
+using SystemPromptService = HoaTheoMua.Service.SystemPrompt;
+using MockupService = HoaTheoMua.Service.Mockup;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +43,8 @@ builder.Services.AddControllers(options =>
 }).AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -45,6 +53,9 @@ builder.Services.AddEndpointsApiExplorer();
 var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
 var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.EnableDynamicJson();
+dataSourceBuilder.MapEnum<SystemPromptType>("system_prompt_types");
+dataSourceBuilder.MapEnum<PlatformType>("platform_type");
+dataSourceBuilder.MapEnum<CardFormType>("form_type");
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -95,7 +106,22 @@ builder.Services.AddScoped<ProductImportService.IService, ProductImportService.S
 builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
+builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
 
+builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
+// Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
+// registering it with AddScoped would silently hand it the unnamed default HttpClient the way
+// Webhook.Service and Revalidate.Service currently get theirs.
+builder.Services.AddHttpClient<FulfillmentService.IService, FulfillmentService.Service>("FulfillmentService");
+
+
+// MassTransit + RabbitMQ: consumers, the fulfilment saga and the EF transactional outbox. Runs
+// in-process alongside the API, so the outbox shares this host's AppDbContext scope.
+builder.Services.AddMasstransitRabbitMqInfrastructure(builder.Configuration);
+
+// AddMassTransit registers a bus health check of its own, so /health reflects the RabbitMQ
+// connection as well as the app being up.
+builder.Services.AddHealthChecks();
 
 builder.Services.AddValidatorsFromAssembly(AssemblyReference.Assembly);
 builder.Services.AddAutoMapper(x => x.AddMaps(AssemblyReference.Assembly));
@@ -108,7 +134,10 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://localhost:3000",
                 "https://hoatheomua-dev-client.bentran1vn.com",
-                "https://www.hoatheomua.com"
+                "https://www.hoatheomua.com",
+                "https://hoatheomua-dev-fe-client.bentran1vn.com",
+                "https://taskcoper.hoatheomua.com",
+                "https://hoatheomua.com"
                 )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -144,5 +173,6 @@ app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

@@ -11,6 +11,99 @@ namespace HoaTheoMua.Service.Test.XanhSmServiceTest;
 
 public class ServiceTests
 {
+    [Fact]
+    public async Task Unauthorized_RefreshesTokenAndReplaysPostBody()
+    {
+        var tokenCalls = 0;
+        var requests = new List<CapturedRequest>();
+        var service = CreateService(async request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/token"))
+                return JsonResponse($$"""{"access_token":"token-{{++tokenCalls}}","token_type":"Bearer","expires_in":3600}""");
+            requests.Add(await CapturedRequest.FromAsync(request));
+            return requests.Count == 1
+                ? JsonResponse("{}", HttpStatusCode.Unauthorized)
+                : JsonResponse("""{"data":[]}""");
+        });
+
+        await service.GetAvailableServicesAsync(new XanhSmAvailableServicesRequest
+        {
+            Pickups = [new XanhSmCoordinatePoint { Latitude = 10.8, Longitude = 106.6 }]
+        });
+
+        Assert.Equal(2, tokenCalls);
+        Assert.Equal(2, requests.Count);
+        Assert.Equal("token-1", requests[0].AuthorizationParameter);
+        Assert.Equal("token-2", requests[1].AuthorizationParameter);
+        Assert.Equal(requests[0].Body, requests[1].Body);
+        Assert.Equal(requests[0].ContentType, requests[1].ContentType);
+        Assert.Equal(requests[0].Uri, requests[1].Uri);
+        Assert.Equal(requests[0].AcceptLanguage, requests[1].AcceptLanguage);
+        Assert.Equal("token-2", (await service.GetAccessTokenAsync()).AccessToken);
+        Assert.Equal(2, tokenCalls);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, 2)]
+    [InlineData(HttpStatusCode.Forbidden, 1)]
+    public async Task AuthenticationFailure_RetriesOnlyOneUnauthorized(HttpStatusCode status, int expectedCalls)
+    {
+        var tokenCalls = 0;
+        var apiCalls = 0;
+        var service = CreateService(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/token"))
+            {
+                tokenCalls++;
+                return Task.FromResult(TokenResponse());
+            }
+            apiCalls++;
+            return Task.FromResult(JsonResponse("{}", status));
+        });
+        await Assert.ThrowsAsync<BadGatewayException>(() => service.GetDeliveryDetailsAsync("ORDER-001"));
+        Assert.Equal(expectedCalls, apiCalls);
+        Assert.Equal(expectedCalls, tokenCalls);
+        await service.GetAccessTokenAsync();
+        Assert.Equal(status == HttpStatusCode.Unauthorized ? 3 : 1, tokenCalls);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task TokenWithoutPositiveLifetime_IsNotCached(int expiresIn)
+    {
+        var calls = 0;
+        var service = CreateService(_ =>
+        {
+            calls++;
+            return Task.FromResult(JsonResponse($$"""{"access_token":"token","token_type":"Bearer","expires_in":{{expiresIn}}}"""));
+        });
+        await service.GetAccessTokenAsync();
+        await service.GetAccessTokenAsync();
+        Assert.Equal(2, calls);
+    }
+
+    [Theory]
+    [InlineData("2126ca79-8b1d-4d93-a6fb-e610b8700ab1", 250000)]
+    [InlineData("2126ca798b1d4d93a6fbe610b8700ab1", -1)]
+    public async Task BookDeliveryAsync_InvalidReferenceOrGoodsValue_RejectsBeforeHttp(
+        string partnerTripId, long goodsValue)
+    {
+        var service = CreateService(_ => throw new InvalidOperationException("HTTP must not be called"));
+        await Assert.ThrowsAsync<BadRequestException>(() => service.BookDeliveryAsync(
+            new XanhSmBookDeliveryRequest
+            {
+                OrderTime = 1770350401,
+                ServiceId = 2100,
+                ServiceType = "EXPRESS-ONDEMAND",
+                FeeId = Guid.NewGuid().ToString(),
+                Points = [CreatePoint("PICK UP"), CreatePoint("DROP OFF")],
+                AddonIds = [5],
+                PartnerTripId = partnerTripId,
+                GoodsValue = goodsValue
+            }));
+    }
+
     [Theory]
     [InlineData("{\"order_time\":1770350401}")]
     [InlineData("{\"order_time\":\"1770350401\"}")]
@@ -208,7 +301,7 @@ public class ServiceTests
             ServiceId = 2099,
             ServiceType = "EXPRESS-ONDEMAND",
             FeeId = "fee-001",
-            Addons = [new XanhSmAddonRequest { Id = 5 }],
+            AddonIds = [5],
             Points =
             [
                 CreatePoint("PICK UP"),
@@ -221,8 +314,8 @@ public class ServiceTests
         using var body = JsonDocument.Parse(apiRequest.Body!);
         var root = body.RootElement;
         Assert.Equal("partner_pay", root.GetProperty("payment_method").GetString());
-        Assert.Equal(5, root.GetProperty("addons")[0].GetProperty("id").GetInt32());
-        Assert.True(root.GetProperty("addons")[0].GetProperty("apply").GetBoolean());
+        Assert.Equal("[5]", root.GetProperty("addon_ids").GetRawText());
+        Assert.False(root.TryGetProperty("addons", out _));
     }
 
     [Fact]
@@ -355,7 +448,8 @@ public class ServiceTests
         Assert.Equal("partner_pay", bookingBody.RootElement.GetProperty("payment_method").GetString());
         Assert.Equal("partner-order-001", bookingBody.RootElement.GetProperty("partner_trip_id").GetString());
         Assert.Equal(150000, bookingBody.RootElement.GetProperty("goods_value").GetInt64());
-        Assert.Equal(12, bookingBody.RootElement.GetProperty("addons")[0].GetProperty("id").GetInt32());
+        Assert.Equal("[12]", bookingBody.RootElement.GetProperty("addon_ids").GetRawText());
+        Assert.False(bookingBody.RootElement.TryGetProperty("addons", out _));
         var bookingPickup = bookingBody.RootElement.GetProperty("points")[0];
         Assert.Equal(5, bookingPickup.GetProperty("package_weight").GetInt32());
         Assert.Equal("LARGE", bookingPickup.GetProperty("package_size").GetString());
@@ -363,6 +457,18 @@ public class ServiceTests
 
         Assert.NotNull(estimateRequest);
         using var estimateBody = JsonDocument.Parse(estimateRequest.Body!);
+        Assert.Equal(
+            estimateBody.RootElement.GetProperty("order_time").GetInt64(),
+            bookingBody.RootElement.GetProperty("order_time").GetInt64());
+        Assert.Equal(
+            estimateBody.RootElement.GetProperty("payment_method").GetString(),
+            bookingBody.RootElement.GetProperty("payment_method").GetString());
+        Assert.Equal(
+            estimateBody.RootElement.GetProperty("points").GetRawText(),
+            bookingBody.RootElement.GetProperty("points").GetRawText());
+        Assert.Equal(
+            estimateBody.RootElement.GetProperty("service_ids")[0].GetProperty("addons")[0].GetProperty("id").GetInt32(),
+            bookingBody.RootElement.GetProperty("addon_ids")[0].GetInt32());
         Assert.Equal(
             12,
             estimateBody.RootElement.GetProperty("service_ids")[0].GetProperty("addons")[0]

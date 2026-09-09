@@ -16,7 +16,7 @@ public class Service : IService
         _dbContext = dbContext;
     }
 
-    private const string ComponentLabel = "Thành phần";
+    private const string ComponentLabel = "Vật liệu";
     private const string AuxiliaryLabel = "Phụ liệu";
     private const string ComboProductType = "Combo";
 
@@ -24,7 +24,16 @@ public class Service : IService
     private sealed record AddMaterialInfo(Guid Id, string? ProductLabel, string? Unit);
     
     private static bool HasLabel(string? value, string expected) =>
-        string.Equals(value?.Trim(), expected, StringComparison.OrdinalIgnoreCase);
+    !string.IsNullOrWhiteSpace(value) &&
+    value.Split(
+            ',',
+            StringSplitOptions.RemoveEmptyEntries |
+            StringSplitOptions.TrimEntries)
+        .Any(label =>
+            string.Equals(
+                label,
+                expected,
+                StringComparison.OrdinalIgnoreCase));
 
     private static bool IsMaterial(string? productLabel, string? productType) =>
         HasLabel(productLabel, ComponentLabel) ||
