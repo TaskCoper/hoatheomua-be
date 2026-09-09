@@ -57,13 +57,15 @@ public class DispatchDeliveryXanhSmTest
         // No HTTP responder: any outbound call (i.e. an Ahamove booking) fails the test.
         var service = CreateService(dbContext, xanhSm);
 
+        var beforeDispatch = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var plan = await service.DispatchDeliveryAsync(order.Id);
+        var afterDispatch = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         Assert.True(plan.Dispatched);
         Assert.Equal(ShippingGateway.XanhSm, plan.ShippingGateway);
         Assert.Equal(XanhSmDeliveryId, plan.ShippingPartyOrderId);
         Assert.Equal(XanhSmTrackingUrl, plan.ShippingTrackingUrl);
-        Assert.True(plan.DelayTimeUnix > 0);
+        Assert.InRange(plan.DelayTimeUnix, beforeDispatch + 3600, afterDispatch + 3600);
         Assert.Contains(294L, plan.TagIds);
         Assert.Contains("NN: Nguoi nhan - 0902222222", plan.PrivateDescription);
 
@@ -84,7 +86,7 @@ public class DispatchDeliveryXanhSmTest
                     point.Type == XanhSmConstants.DropOffPoint &&
                     point.Name == order.FullNameReceiver &&
                     point.PhoneNumber == "+84902222222")),
-            It.Is<long>(orderTime => orderTime > 0),
+            It.Is<long>(orderTime => orderTime == plan.DelayTimeUnix),
             (long)order.ProductFee,
             order.Id.ToString("N"),
             It.IsAny<CancellationToken>()), Times.Once);
