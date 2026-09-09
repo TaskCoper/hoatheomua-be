@@ -114,7 +114,7 @@ public class Service : IService
 
         if (mockup == null)
         {
-            throw new BadGatewayException("Mockup không hợp lệ hoặc đã bị xóa.");
+            throw new NotFoundException("Mockup không hợp lệ hoặc đã bị xóa.");
         }
 
         mockup.IsActive = !mockup.IsActive;
@@ -149,7 +149,7 @@ public class Service : IService
 
         if (mockup.IsDeleted)
         {
-            throw new BadGatewayException("Mockup đã bị xóa trước đó.");
+            throw new BadRequestException("Mockup đã bị xóa trước đó.");
         }
 
         mockup.IsDeleted = true;
