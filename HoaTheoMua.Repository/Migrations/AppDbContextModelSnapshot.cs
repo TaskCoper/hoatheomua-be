@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -21,6 +22,10 @@ namespace HoaTheoMua.Repository.Migrations
                 .HasAnnotation("ProductVersion", "8.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "CardFormType", new[] { "go_may", "calligraphy" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "ClientHistoryType", new[] { "flower", "card", "handmade_card", "post" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "PlatformType", new[] { "zalo", "facebook", "instagram" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "SystemPromptType", new[] { "flower", "card", "post" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Address", b =>
@@ -144,6 +149,92 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.BasePost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Content");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("ImageUrl");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BasePost", (string)null);
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("Description");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("ImageUrl");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("IsActive");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("Name");
+
+                    b.Property<string>("TemplateType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("TemplateType");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("UpdatedAt");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TemplateType", "IsActive", "CreatedAt")
+                        .IsDescending(false, false, true)
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("CardTemplate", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_card_templates_template_type", "\"TemplateType\" IN ('ai', 'handmade')");
+                        });
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>
@@ -327,6 +418,62 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("CategoryProductDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ClientHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<Guid>("BaseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("BaseId");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("Metadata");
+
+                    b.Property<Guid>("OutputId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("OutputId");
+
+                    b.Property<Guid>("RootID")
+                        .HasColumnType("uuid")
+                        .HasColumnName("RootID");
+
+                    b.Property<string>("SystemForm")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("SystemForm");
+
+                    b.Property<ClientHistoryType>("Type")
+                        .HasColumnType("ClientHistoryType")
+                        .HasColumnName("Type");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("UserId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Type", "OutputId")
+                        .IsUnique();
+
+                    b.HasIndex("BaseId", "Type", "CreatedAt")
+                        .IsDescending(false, false, true);
+
+                    b.HasIndex("UserId", "Type", "CreatedAt")
+                        .IsDescending(false, false, true);
+
+                    b.ToTable("ClientHistory", (string)null);
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.ComboSpecification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -476,7 +623,211 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasIndex("Group");
 
+                    b.HasIndex("Group", "Key")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false AND \"Kind\" = 'Setting' AND \"Group\" = 'card_config' AND \"Key\" IN ('card_config.sizes', 'card_config.prices')");
+
                     b.ToTable("Configs");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.GeneratedCard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<string>("AttachedImageUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("AttachedImageUrl");
+
+                    b.Property<decimal>("BasePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("BasePrice");
+
+                    b.Property<string>("CardType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("CardType");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Content");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<decimal>("ExtraPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("ExtraPrice");
+
+                    b.Property<CardFormType>("FormType")
+                        .HasColumnType("CardFormType")
+                        .HasColumnName("FormType");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("ImageUrl");
+
+                    b.Property<string>("MessageContent")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("MessageContent");
+
+                    b.Property<string>("RawImage")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("RawImage");
+
+                    b.Property<string>("ReceiverName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("ReceiverName");
+
+                    b.Property<string>("SenderName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("SenderName");
+
+                    b.Property<decimal>("SizeBasePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("SizeBasePrice");
+
+                    b.Property<decimal>("SizeHeight")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("SizeHeight");
+
+                    b.Property<int>("SizeMaxWords")
+                        .HasColumnType("integer")
+                        .HasColumnName("SizeMaxWords");
+
+                    b.Property<string>("SizeName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("SizeName");
+
+                    b.Property<decimal>("SizeWidth")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("SizeWidth");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("TotalPrice");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("UserId");
+
+                    b.Property<string>("WordConfigSnapshot")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("WordConfigSnapshot");
+
+                    b.Property<int>("WordCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("WordCount");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CardType", "CreatedAt")
+                        .IsDescending(false, true);
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .IsDescending(false, true);
+
+                    b.ToTable("GeneratedCard", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_generated_cards_ai_images", "\"CardType\" <> 'ai' OR (\"RawImage\" IS NOT NULL AND \"ImageUrl\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_generated_cards_card_type", "\"CardType\" IN ('ai', 'handmade')");
+
+                            t.HasCheckConstraint("CK_generated_cards_handmade", "\"CardType\" <> 'handmade' OR (\"FormType\" = 'calligraphy' AND \"AttachedImageUrl\" IS NULL AND \"RawImage\" IS NULL AND \"BasePrice\" = 0 AND \"TotalPrice\" = \"ExtraPrice\")");
+
+                            t.HasCheckConstraint("CK_generated_cards_non_negative_values", "\"SizeWidth\" >= 0 AND \"SizeHeight\" >= 0 AND \"SizeBasePrice\" >= 0 AND \"SizeMaxWords\" >= 0 AND \"WordCount\" >= 0 AND \"BasePrice\" >= 0 AND \"ExtraPrice\" >= 0 AND \"TotalPrice\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.GeneratedFlower", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("ImageUrl");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("UserId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .IsDescending(false, true);
+
+                    b.ToTable("GeneratedFlower", (string)null);
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.GeneratedPost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Content");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("ImageUrl");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("UserId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .IsDescending(false, true);
+
+                    b.ToTable("GeneratedPost", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
@@ -557,6 +908,61 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsUnique();
 
                     b.ToTable("JobDescriptions");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Mockup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("Description");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("ImageUrl");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("IsActive");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("Name");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("UpdatedAt");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("Mockup", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.News", b =>
@@ -774,6 +1180,12 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("GeneratedCard")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("GeneratedFlower")
+                        .HasColumnType("uuid");
 
                     b.Property<double>("Height")
                         .HasColumnType("double precision");
@@ -1355,6 +1767,76 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("OrderNhanhVnDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PlatformStandard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Description");
+
+                    b.Property<PlatformType>("Platform")
+                        .HasColumnType("PlatformType")
+                        .HasColumnName("Platform");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Platform");
+
+                    b.ToTable("PlatformStandard", (string)null);
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<Guid>("BaseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("BaseId");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Input")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("Input");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("Metadata");
+
+                    b.Property<Guid>("OutputId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("OutputId");
+
+                    b.Property<Guid>("SystemPromptId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("SystemPromptId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OutputId")
+                        .IsUnique();
+
+                    b.HasIndex("SystemPromptId");
+
+                    b.HasIndex("BaseId", "CreatedAt")
+                        .IsDescending(false, true);
+
+                    b.ToTable("PostHistory", (string)null);
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1686,6 +2168,39 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("JobDescriptionId");
 
                     b.ToTable("RecruitmentRequest", (string)null);
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.SystemPrompt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Content");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<SystemPromptType>("Type")
+                        .HasColumnType("SystemPromptType")
+                        .HasColumnName("Type");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Type")
+                        .IsUnique();
+
+                    b.ToTable("SystemPrompt", (string)null);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.Transaction", b =>
@@ -2039,6 +2554,15 @@ namespace HoaTheoMua.Repository.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("OrderNhanhVn");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostHistory", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.SystemPrompt", null)
+                        .WithMany()
+                        .HasForeignKey("SystemPromptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.RecruitmentRequest", b =>

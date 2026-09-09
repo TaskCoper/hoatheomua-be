@@ -3,8 +3,10 @@ using HoaTheoMua.Extentions;
 using HoaTheoMua.Filters;
 using HoaTheoMua.Middleware;
 using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
+using Npgsql;
 using AssemblyReference = HoaTheoMua.Service.AssemblyReference;
 using CategoryNewsService = HoaTheoMua.Service.CategoryNew;
 using CategoryProductService = HoaTheoMua.Service.CategoryProduct;
@@ -27,6 +29,9 @@ using MaterialService = HoaTheoMua.Service.Material;
 using XanhSmService = HoaTheoMua.Service.XanhSm;
 using FulfillmentService = HoaTheoMua.Service.Fulfillment;
 using HoaTheoMua.Service.DependencyInjection.Extensions;
+using SystemPromptService = HoaTheoMua.Service.SystemPrompt;
+using MockupService = HoaTheoMua.Service.Mockup;
+using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,6 +44,8 @@ builder.Services.AddControllers(options =>
 }).AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -47,6 +54,10 @@ builder.Services.AddEndpointsApiExplorer();
 var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
 var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.EnableDynamicJson();
+dataSourceBuilder.MapEnum<SystemPromptType>("SystemPromptType");
+dataSourceBuilder.MapEnum<PlatformType>("PlatformType");
+dataSourceBuilder.MapEnum<CardFormType>("CardFormType");
+dataSourceBuilder.MapEnum<ClientHistoryType>("ClientHistoryType");
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -101,7 +112,10 @@ builder.Services.AddScoped<ProductImportService.IService, ProductImportService.S
 builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
+builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
 
+builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
+builder.Services.AddScoped<CardTemplateService.IService, CardTemplateService.Service>();
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
 // registering it with AddScoped would silently hand it the unnamed default HttpClient the way
 // Webhook.Service and Revalidate.Service currently get theirs.

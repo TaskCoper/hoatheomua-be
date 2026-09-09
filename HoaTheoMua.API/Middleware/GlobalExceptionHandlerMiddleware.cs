@@ -51,7 +51,9 @@ public class GlobalExceptionHandlerMiddleware : IMiddleware
                 status: appEx.StatusCode,
                 detail: appEx.StatusCode >= 500 ? "An unexpected error occurred." : ex.Message,
                 messageCode: appEx.MessageCode,
-                errors: _environment.IsDevelopment() ? new { detail = ex.Message } : null, 
+                errors: ex is ValidationExceptionErrorV1 validationException
+                    ? validationException.Errors
+                    : _environment.IsDevelopment() ? new { detail = ex.Message } : null,
                 traceId: context.TraceIdentifier
             );
             
