@@ -102,7 +102,6 @@ public class GeneratedFlowerConfiguration : IEntityTypeConfiguration<GeneratedFl
         builder.Property(x => x.Id).HasColumnName("id");
         builder.Property(x => x.ImageUrl).HasColumnName("image_url").HasMaxLength(2048).IsRequired();
         builder.Property(x => x.UserId).HasColumnName("user_id");
-        builder.Property(x => x.InputSnapshot).HasColumnName("input_snapshot").HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
         builder.HasIndex(x => new { x.UserId, x.CreatedAt }).IsDescending(false, true);
     }

@@ -782,11 +782,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("character varying(2048)")
                         .HasColumnName("image_url");
 
-                    b.Property<string>("InputSnapshot")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("input_snapshot");
-
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
