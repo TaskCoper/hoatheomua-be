@@ -30,6 +30,7 @@ using XanhSmService = HoaTheoMua.Service.XanhSm;
 using FulfillmentService = HoaTheoMua.Service.Fulfillment;
 using HoaTheoMua.Service.DependencyInjection.Extensions;
 using SystemPromptService = HoaTheoMua.Service.SystemPrompt;
+using MockupService = HoaTheoMua.Service.Mockup;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -105,6 +106,7 @@ builder.Services.AddScoped<ProductImportService.IService, ProductImportService.S
 builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
+builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
 
 builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
