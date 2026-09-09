@@ -144,7 +144,6 @@ public class GeneratedCardConfiguration : IEntityTypeConfiguration<GeneratedCard
             .HasColumnName("form_type")
             .HasColumnType("form_type")
             .IsRequired();
-        builder.Property(x => x.SizeKey).HasColumnName("size_key").HasMaxLength(100).IsRequired();
         builder.Property(x => x.SenderName).HasColumnName("sender_name").HasMaxLength(500).IsRequired();
         builder.Property(x => x.ReceiverName).HasColumnName("receiver_name").HasMaxLength(500).IsRequired();
         builder.Property(x => x.MessageContent).HasColumnName("message_content").HasColumnType("text").IsRequired();
@@ -219,6 +218,7 @@ public class ClientHistoryConfiguration : IEntityTypeConfiguration<ClientHistory
         builder.Property(x => x.SystemForm).HasColumnName("system_form").HasColumnType("jsonb");
         builder.Property(x => x.Metadata).HasColumnName("metadata").HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
+        builder.Property(x => x.Root).HasColumnName("root").IsRequired();
         builder.Property(x => x.BaseId).HasColumnName("base_id");
         builder.Property(x => x.OutputId).HasColumnName("output_id");
 

@@ -443,6 +443,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("output_id");
 
+                    b.Property<Guid>("Root")
+                        .HasColumnType("uuid")
+                        .HasColumnName("root");
+
                     b.Property<string>("SystemForm")
                         .HasColumnType("jsonb")
                         .HasColumnName("system_form");
@@ -707,12 +711,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)")
                         .HasColumnName("size_height");
-
-                    b.Property<string>("SizeKey")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("size_key");
 
                     b.Property<int>("SizeMaxWords")
                         .HasColumnType("integer")
