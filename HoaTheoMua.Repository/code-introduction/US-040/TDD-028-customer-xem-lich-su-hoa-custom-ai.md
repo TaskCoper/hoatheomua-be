@@ -41,7 +41,7 @@
 - Mỗi lần generate thành công đã lưu một History và một Generated Flower; generate không có ảnh không xuất hiện trong danh sách.
 - Sắp xếp `generatedAt` giảm dần; khi trùng thời gian dùng `generatedFlowerId` giảm dần để kết quả ổn định.
 - Dùng phân trang server-side: `pageIndex >= 1`, `1 <= pageSize <= 100`.
-- `client_histories.base_id` được trả ra dưới tên `comboId`.
+- `client_histories.root` được trả ra dưới tên `comboId`; `base_id` chỉ là nguồn trực tiếp và có thể là Generated Flower của lần trước.
 - `imageUrl` rỗng không làm lỗi toàn bộ danh sách; FE hiển thị ảnh không khả dụng.
 - Không dùng `GroupBy`, không lưu draft/job và không kiểm tra trạng thái live của Combo/Mockup.
 
@@ -59,8 +59,7 @@
 
 **Ngoài phạm vi**
 
-- Không lấy ba kết quả gần nhất theo `comboId`.
-- Không lấy chi tiết một kết quả hoặc `inputSnapshot`.
+- Không nhóm ảnh theo `root` hoặc theo phiên generate/regenerate; hai API đó được mô tả riêng trong `US-040-introduction.md`.
 - Không generate, regenerate, tải ảnh hoặc gọi AI.
 - Không hiển thị job đang chạy; schema hiện tại không lưu draft/job.
 
@@ -165,6 +164,7 @@ erDiagram
         uuid user_id
         string type
         uuid base_id
+        uuid root
         uuid output_id
         json metadata
         datetime created_at
@@ -308,7 +308,7 @@ public async Task<BasePaginationResponse> GetAll(
         select new Response.FlowerHistoryItemResponse
         {
             GeneratedFlowerId = flower.Id,
-            ComboId = history.BaseId,
+            ComboId = history.Root,
             ImageUrl = flower.ImageUrl,
             GeneratedAt = flower.CreatedAt
         };
@@ -360,5 +360,5 @@ Không áp dụng. API không gọi AI, User Service hoặc Storage.
 
 ### ⋯ Bị ảnh hưởng
 
-- Nếu đổi tên `client_histories.type`, `base_id`, `output_id` hoặc schema `generated_flowers`, phải cập nhật query và response.
+- Nếu đổi tên `client_histories.type`, `base_id`, `root`, `output_id` hoặc schema `generated_flowers`, phải cập nhật query và response.
 - Nếu BA yêu cầu lại trạng thái job/draft, cần bổ sung cơ chế lưu job riêng; cơ chế đó không thuộc API này.

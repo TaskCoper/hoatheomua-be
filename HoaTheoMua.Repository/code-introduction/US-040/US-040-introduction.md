@@ -2,108 +2,24 @@
 
 ## I. Hiểu nhanh US
 
-US-040 dùng để customer xem các ảnh hoa AI đã tạo thành công; không tạo hoa, regenerate, tải ảnh, lưu draft hay hiển thị AI job đang chạy.
+US-040 chỉ đọc lịch sử hoa AI của customer, không tạo/re-generate ảnh, Checkout hay Order.
 
-Có 2 nhu cầu độc lập:
-
-```text
-Customer vào trang History
-→ FE gọi API lấy toàn bộ lịch sử có phân trang
-→ BE trả các ảnh mới nhất trước.
-
-FE cần gợi ý theo một combo
-→ FE gửi comboId
-→ BE trả tối đa 3 ảnh gần nhất của combo đó.
-
-Customer bấm một kết quả
-→ FE gửi generatedFlowerId
-→ BE trả chi tiết kết quả nếu thuộc customer hiện tại.
-```
-
-BE truy vấn chung theo quy tắc:
+1. `GET /api/v1/flower-histories?pageIndex=1&pageSize=20`: lấy tất cả ảnh, mới nhất trước.
+2. `GET /api/v1/flower-histories/{generatedFlowerId}/root-group`: lấy mọi ảnh cùng Combo nguồn; mỗi ảnh kèm Order đã dùng chính ảnh đó.
+3. `GET /api/v1/flower-histories/{generatedFlowerId}/session`: lấy các version của một phiên generate/regenerate.
 
 ```text
-client_histories của customer hiện tại
-→ type = flower
-→ join generated_flowers bằng output_id
-→ sắp xếp thời gian tạo giảm dần
+Root     = Combo nguồn chung.
+BaseId   = nguồn trực tiếp của lần generate.
+OutputId = Generated Flower tạo ra.
+
+CA → GF1 → GF2 → GF3  : một phiên.
+CA → GF4               : phiên generate mới, cùng Combo CA.
 ```
 
-Riêng API lấy 3 ảnh gần nhất có thêm:
-
-```text
-base_id = comboId → Take(3)
-```
-
-Ví dụ với `comboId = C01`:
-
-```text
-H01: base_id = C01, output_id = F01, created_at = 08:00
-H02: base_id = C01, output_id = F02, created_at = 09:00
-H03: base_id = C01, output_id = F03, created_at = 10:00
-H04: base_id = C01, output_id = F04, created_at = 11:00
-```
-
-- API History có thể trả cả `F04, F03, F02, F01` theo phân trang.
-- API gần nhất trả đúng `F04, F03, F02`.
-- Không API nào dùng `GroupBy`.
-
-Cần 3 API:
-
-```http
-GET /api/v1/flower-histories?pageIndex=1&pageSize=20
-```
-
-Lấy toàn bộ lịch sử hoa AI của customer hiện tại, có phân trang.
-
-```http
-GET /api/v1/flower-histories/latest?comboId={comboId}
-```
-
-Lấy tối đa 3 ảnh hoa AI gần nhất của một combo.
-
-```http
-GET /api/v1/flower-histories/{generatedFlowerId}
-```
-
-Lấy chi tiết một kết quả khi customer bấm vào ảnh.
-
-**Điểm quan trọng:**
-
-- `client_histories.base_id` là `comboId`.
-- `client_histories.output_id` là `generated_flowers.id`.
-- `userId` lấy từ JWT, không nhận từ FE.
-- Chỉ lấy record `type = flower` và chưa bị xóa.
-- Không kiểm tra `Products.IsActive/IsDeleted`: lịch sử vẫn tồn tại khi combo nguồn inactive hoặc bị xóa; dữ liệu nguồn đã được giữ trong `generated_flowers.input_snapshot`.
-- FE render trực tiếp `imageUrl`; một ảnh lỗi hiển thị placeholder và không làm lỗi toàn bộ danh sách.
-- Không có draft nên reload chỉ còn các lần generate đã lưu thành công.
-
-> Chốt mới này thay phần group theo “yêu cầu tạo mẫu hoa”, yêu cầu chưa generate và trạng thái job sau reload trong Story/System Test cũ.
-
-## II. Code implement từng API
-
-### DTO dùng chung
-
-**Request.cs**
+## II. DTO dùng chung
 
 ```csharp
-namespace HoaTheoMua.Service.FlowerHistory;
-
-public class Request
-{
-    public class GetFlowerHistoriesRequest
-    {
-        public int PageIndex { get; set; } = 1;
-        public int PageSize { get; set; } = 20;
-    }
-}
-```
-
-**Response.cs**
-
-```csharp
-namespace HoaTheoMua.Service.FlowerHistory;
-
 public class Response
 {
     public class FlowerHistoryItemResponse
@@ -111,113 +27,84 @@ public class Response
         public Guid GeneratedFlowerId { get; set; }
         public Guid ComboId { get; set; }
         public string? ImageUrl { get; set; }
-        public DateTime GeneratedAt { get; set; }
+        public DateTimeOffset GeneratedAt { get; set; }
     }
 
-    public class FlowerHistoryDetailResponse
+    public class FlowerRootGroupResponse
+    {
+        public Guid RootComboId { get; set; }
+        public List<FlowerRootGroupItemResponse> Items { get; set; } = new();
+    }
+
+    public class FlowerRootGroupItemResponse
     {
         public Guid GeneratedFlowerId { get; set; }
-        public Guid ComboId { get; set; }
+        public Guid BaseId { get; set; }
         public string? ImageUrl { get; set; }
-        public string? InputSnapshot { get; set; }
-        public DateTime GeneratedAt { get; set; }
+        public DateTimeOffset GeneratedAt { get; set; }
+        public List<FlowerOrderResponse> Orders { get; set; } = new();
+    }
+
+    public class FlowerOrderResponse
+    {
+        public Guid OrderId { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTimeOffset CreatedAt { get; set; }
+        public decimal TotalFee { get; set; }
+    }
+
+    public class FlowerSessionResponse
+    {
+        public Guid RootComboId { get; set; }
+        public Guid SessionStartGeneratedFlowerId { get; set; }
+        public List<FlowerVersionResponse> Items { get; set; } = new();
+    }
+
+    public class FlowerVersionResponse
+    {
+        public Guid GeneratedFlowerId { get; set; }
+        public Guid BaseId { get; set; }
+        public string? ImageUrl { get; set; }
+        public DateTimeOffset GeneratedAt { get; set; }
     }
 }
 ```
 
-### API 1 — Lấy toàn bộ lịch sử hoa AI
-
-**Vai trò:** dùng khi customer mở trang History; trả toàn bộ kết quả của chính customer theo từng trang, mới nhất trước.
-
-**Request**
+## III. API 1 — Lấy toàn bộ History
 
 ```http
 GET /api/v1/flower-histories?pageIndex=1&pageSize=20
 Authorization: Bearer {customer-token}
 ```
 
-**Response payload**
-
-```json
-{
-  "isSuccess": true,
-  "isFailed": false,
-  "error": null,
-  "value": {
-    "items": [
-      {
-        "generatedFlowerId": "f4000000-0000-0000-0000-000000000000",
-        "comboId": "c1000000-0000-0000-0000-000000000000",
-        "imageUrl": "https://res.cloudinary.com/.../f04.png",
-        "generatedAt": "2026-09-05T11:00:00Z"
-      }
-    ],
-    "pageIndex": 1,
-    "pageSize": 20,
-    "totalCount": 1,
-    "hasNextPage": false,
-    "hasPreviousPage": false
-  }
-}
-```
-
-Không có lịch sử thì trả `200 OK` với `items: []`.
-
-**IService.cs**
-
-```csharp
-using HoaTheoMua.Service.Models;
-
-namespace HoaTheoMua.Service.FlowerHistory;
-
-public interface IService
-{
-    Task<BasePaginationResponse> GetAll(
-        Request.GetFlowerHistoriesRequest request);
-}
-```
-
-**Service**
+`comboId` lấy từ `history.Root`, không lấy `history.BaseId`.
 
 ```csharp
 public async Task<BasePaginationResponse> GetAll(
     Request.GetFlowerHistoriesRequest request)
 {
-    if (request.PageIndex < 1 ||
-        request.PageSize < 1 ||
-        request.PageSize > 100)
-    {
-        throw new BadRequestException(
-            "PageIndex phải từ 1 và PageSize phải từ 1 đến 100");
-    }
+    request.PageIndex = request.PageIndex <= 0 ? 1 : request.PageIndex;
+    request.PageSize = request.PageSize <= 0 ? 20 : Math.Min(request.PageSize, 100);
 
     var userId = _currentUser.GetRequiredUserId();
-
-    var histories = _dbContext.ClientHistories
-        .AsNoTracking()
-        .Where(x =>
-            x.UserId == userId &&
-            x.Type == GenerationType.Flower &&
-            !x.IsDeleted);
-
-    var flowers = _dbContext.GeneratedFlowers
-        .AsNoTracking()
-        .Where(x => x.UserId == userId && !x.IsDeleted);
-
     var query =
-        from history in histories
-        join flower in flowers
+        from history in _dbContext.ClientHistories.AsNoTracking()
+        join flower in _dbContext.GeneratedFlowers.AsNoTracking()
             on history.OutputId equals flower.Id
+        where history.UserId == userId &&
+              history.Type == GenerationType.Flower &&
+              !history.IsDeleted &&
+              flower.UserId == userId &&
+              !flower.IsDeleted
         select new Response.FlowerHistoryItemResponse
         {
             GeneratedFlowerId = flower.Id,
-            ComboId = history.BaseId,
+            ComboId = history.Root,
             ImageUrl = flower.ImageUrl,
             GeneratedAt = flower.CreatedAt
         };
 
     var totalCount = await query.CountAsync();
-
     var items = await query
         .OrderByDescending(x => x.GeneratedAt)
         .ThenByDescending(x => x.GeneratedFlowerId)
@@ -226,205 +113,298 @@ public async Task<BasePaginationResponse> GetAll(
         .ToListAsync();
 
     return ApiResponseFactory.BasePagination(
-        items,
-        request.PageIndex,
-        request.PageSize,
-        totalCount);
+        items, request.PageIndex, request.PageSize, totalCount);
 }
 ```
 
-### API 2 — Lấy 3 mẫu hoa AI gần nhất theo combo
-
-**Vai trò:** dùng khi FE cần render nhanh 3 kết quả gần nhất của combo đang xem.
-
-**Request**
+## IV. API 2 — Lấy nhóm ảnh cùng Combo nguồn
 
 ```http
-GET /api/v1/flower-histories/latest?comboId=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+GET /api/v1/flower-histories/f2000000-0000-0000-0000-000000000002/root-group
 Authorization: Bearer {customer-token}
 ```
 
-`comboId` là query parameter đơn giản nên không cần Request DTO.
+Mỗi `orders` thuộc đúng ảnh ở item đó, qua quan hệ:
 
-**Response payload**
+```text
+OrderDetails.GeneratedFlower = GeneratedFlower.Id
+```
 
 ```json
 {
   "isSuccess": true,
   "isFailed": false,
   "error": null,
-  "value": [
-    {
-      "generatedFlowerId": "f4000000-0000-0000-0000-000000000000",
-      "comboId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-      "imageUrl": "https://res.cloudinary.com/.../f04.png",
-      "generatedAt": "2026-09-05T11:00:00Z"
-    },
-    {
-      "generatedFlowerId": "f3000000-0000-0000-0000-000000000000",
-      "comboId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-      "imageUrl": "https://res.cloudinary.com/.../f03.png",
-      "generatedAt": "2026-09-05T10:00:00Z"
-    },
-    {
-      "generatedFlowerId": "f2000000-0000-0000-0000-000000000000",
-      "comboId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-      "imageUrl": "https://res.cloudinary.com/.../f02.png",
-      "generatedAt": "2026-09-05T09:00:00Z"
-    }
-  ]
+  "value": {
+    "rootComboId": "ca000000-0000-0000-0000-000000000001",
+    "items": [
+      {
+        "generatedFlowerId": "f4000000-0000-0000-0000-000000000004",
+        "baseId": "ca000000-0000-0000-0000-000000000001",
+        "imageUrl": "https://res.cloudinary.com/demo/gf4.png",
+        "generatedAt": "2026-09-06T09:00:00Z",
+        "orders": []
+      },
+      {
+        "generatedFlowerId": "f3000000-0000-0000-0000-000000000003",
+        "baseId": "f2000000-0000-0000-0000-000000000002",
+        "imageUrl": "https://res.cloudinary.com/demo/gf3.png",
+        "generatedAt": "2026-09-05T11:00:00Z",
+        "orders": [
+          {
+            "orderId": "0a000000-0000-0000-0000-000000000010",
+            "status": "Paid",
+            "createdAt": "2026-09-06T10:00:00Z",
+            "totalFee": 520000
+          }
+        ]
+      },
+      {
+        "generatedFlowerId": "f2000000-0000-0000-0000-000000000002",
+        "baseId": "f1000000-0000-0000-0000-000000000001",
+        "imageUrl": "https://res.cloudinary.com/demo/gf2.png",
+        "generatedAt": "2026-09-05T10:30:00Z",
+        "orders": []
+      }
+    ]
+  }
 }
 ```
 
-Không có dữ liệu thì trả `200 OK` với `value: []`.
-
-**IService.cs**
-
 ```csharp
-Task<List<Response.FlowerHistoryItemResponse>> GetLatestByCombo(
-    Guid comboId);
-```
-
-**Service**
-
-```csharp
-public async Task<List<Response.FlowerHistoryItemResponse>> GetLatestByCombo(
-    Guid comboId)
+public async Task<Response.FlowerRootGroupResponse> GetRootGroup(
+    Guid generatedFlowerId)
 {
-    if (comboId == Guid.Empty)
-    {
-        throw new BadRequestException("ComboId không hợp lệ");
-    }
-
     var userId = _currentUser.GetRequiredUserId();
 
-    var histories = _dbContext.ClientHistories
+    var source = await _dbContext.ClientHistories
         .AsNoTracking()
         .Where(x =>
             x.UserId == userId &&
             x.Type == GenerationType.Flower &&
-            x.BaseId == comboId &&
-            !x.IsDeleted);
+            x.OutputId == generatedFlowerId &&
+            !x.IsDeleted)
+        .Select(x => new { x.Root })
+        .FirstOrDefaultAsync();
 
-    var flowers = _dbContext.GeneratedFlowers
-        .AsNoTracking()
-        .Where(x => x.UserId == userId && !x.IsDeleted);
+    if (source == null || source.Root == Guid.Empty)
+    {
+        throw new NotFoundException("Không tìm thấy lịch sử mẫu hoa");
+    }
 
-    return await (
-            from history in histories
-            join flower in flowers
+    var flowerRows = await (
+            from history in _dbContext.ClientHistories.AsNoTracking()
+            join flower in _dbContext.GeneratedFlowers.AsNoTracking()
                 on history.OutputId equals flower.Id
+            where history.UserId == userId &&
+                  history.Type == GenerationType.Flower &&
+                  history.Root == source.Root &&
+                  !history.IsDeleted &&
+                  flower.UserId == userId &&
+                  !flower.IsDeleted
             orderby flower.CreatedAt descending, flower.Id descending
-            select new Response.FlowerHistoryItemResponse
+            select new
             {
                 GeneratedFlowerId = flower.Id,
-                ComboId = history.BaseId,
+                BaseId = history.BaseId,
                 ImageUrl = flower.ImageUrl,
                 GeneratedAt = flower.CreatedAt
             })
-        .Take(3)
         .ToListAsync();
+
+    var generatedFlowerIds = flowerRows
+        .Select(x => x.GeneratedFlowerId)
+        .ToList();
+
+    var orderRows = await (
+            from detail in _dbContext.OrderDetails.AsNoTracking()
+            join order in _dbContext.Orders.AsNoTracking()
+                on detail.OrderId equals order.Id
+            where detail.GeneratedFlower.HasValue &&
+                  generatedFlowerIds.Contains(detail.GeneratedFlower.Value) &&
+                  !detail.IsDeleted &&
+                  order.UserId == userId &&
+                  !order.IsDeleted
+            select new
+            {
+                GeneratedFlowerId = detail.GeneratedFlower.Value,
+                OrderId = order.Id,
+                order.Status,
+                order.CreatedAt,
+                order.TotalFee
+            })
+        .ToListAsync();
+
+    var ordersByFlowerId = orderRows
+        .GroupBy(x => x.GeneratedFlowerId)
+        .ToDictionary(
+            group => group.Key,
+            group => group
+                .GroupBy(x => x.OrderId)
+                .Select(order => order.First())
+                .OrderByDescending(order => order.CreatedAt)
+                .ThenByDescending(order => order.OrderId)
+                .Select(order => new Response.FlowerOrderResponse
+                {
+                    OrderId = order.OrderId,
+                    Status = order.Status,
+                    CreatedAt = order.CreatedAt,
+                    TotalFee = order.TotalFee
+                })
+                .ToList());
+
+    var items = flowerRows
+        .Select(flower => new Response.FlowerRootGroupItemResponse
+        {
+            GeneratedFlowerId = flower.GeneratedFlowerId,
+            BaseId = flower.BaseId,
+            ImageUrl = flower.ImageUrl,
+            GeneratedAt = flower.GeneratedAt,
+            Orders = ordersByFlowerId.TryGetValue(
+                flower.GeneratedFlowerId, out var orders)
+                ? orders
+                : new List<Response.FlowerOrderResponse>()
+        })
+        .ToList();
+
+    return new Response.FlowerRootGroupResponse
+    {
+        RootComboId = source.Root,
+        Items = items
+    };
 }
 ```
 
-### API 3 — Lấy chi tiết một kết quả hoa AI
+Không query theo `OrderDetails.ProductId = rootComboId`: điều đó chỉ chứng minh Order mua Combo, không chứng minh Order đã dùng ảnh hoa AI nào.
 
-**Vai trò:** dùng khi customer bấm một ảnh trong History; trả ảnh và snapshot của đúng kết quả đó.
-
-**IService**
-
-```csharp
-Task<Response.FlowerHistoryDetailResponse> GetById(
-    Guid generatedFlowerId);
-```
-
-**Request**
+## V. API 3 — Lấy version trong một phiên generate/regenerate
 
 ```http
-GET /api/v1/flower-histories/f4000000-0000-0000-0000-000000000000
+GET /api/v1/flower-histories/f2000000-0000-0000-0000-000000000002/session
 Authorization: Bearer {customer-token}
 ```
 
-`generatedFlowerId` là route parameter đơn giản nên không cần Request DTO.
-
-**Response**
-
-```json
-{
-  "generatedFlowerId": "f4000000-0000-0000-0000-000000000000",
-  "comboId": "c1000000-0000-0000-0000-000000000000",
-  "imageUrl": "https://res.cloudinary.com/.../f04.png",
-  "inputSnapshot": "{...}",
-  "generatedAt": "2026-09-05T11:00:00Z"
-}
-```
-
-**Service**
+FE gửi `GF2` trong chuỗi `GF1 → GF2 → GF3` thì API trả `GF1, GF2, GF3`; không trả `GF4`.
 
 ```csharp
-public async Task<Response.FlowerHistoryDetailResponse> GetById(
-    Guid generatedFlowerId)
+private sealed class FlowerHistoryRow
 {
-    if (generatedFlowerId == Guid.Empty)
-    {
-        throw new BadRequestException(
-            "GeneratedFlowerId không hợp lệ");
-    }
+    public Guid RootComboId { get; init; }
+    public Guid BaseId { get; init; }
+    public Guid GeneratedFlowerId { get; init; }
+    public string? ImageUrl { get; init; }
+    public DateTimeOffset GeneratedAt { get; init; }
+}
 
+public async Task<Response.FlowerSessionResponse> GetSession(Guid generatedFlowerId)
+{
     var userId = _currentUser.GetRequiredUserId();
 
-    var result = await (
-        from history in _dbContext.ClientHistories.AsNoTracking()
-        join flower in _dbContext.GeneratedFlowers.AsNoTracking()
-            on history.OutputId equals flower.Id
-        where history.OutputId == generatedFlowerId &&
-              history.UserId == userId &&
-              history.Type == GenerationType.Flower &&
-              !history.IsDeleted &&
-              flower.UserId == userId &&
-              !flower.IsDeleted
-        select new Response.FlowerHistoryDetailResponse
-        {
-            GeneratedFlowerId = flower.Id,
-            ComboId = history.BaseId,
-            ImageUrl = flower.ImageUrl,
-            InputSnapshot = flower.InputSnapshot,
-            GeneratedAt = flower.CreatedAt
-        })
+    var selected = await (
+            from history in _dbContext.ClientHistories.AsNoTracking()
+            join flower in _dbContext.GeneratedFlowers.AsNoTracking()
+                on history.OutputId equals flower.Id
+            where history.UserId == userId &&
+                  history.Type == GenerationType.Flower &&
+                  history.OutputId == generatedFlowerId &&
+                  !history.IsDeleted &&
+                  flower.UserId == userId &&
+                  !flower.IsDeleted
+            select new FlowerHistoryRow
+            {
+                RootComboId = history.Root,
+                BaseId = history.BaseId,
+                GeneratedFlowerId = flower.Id,
+                ImageUrl = flower.ImageUrl,
+                GeneratedAt = flower.CreatedAt
+            })
         .FirstOrDefaultAsync();
 
-    if (result == null)
+    if (selected == null || selected.RootComboId == Guid.Empty)
     {
-        throw new NotFoundException(
-            "Không tìm thấy lịch sử mẫu hoa");
+        throw new NotFoundException("Không tìm thấy lịch sử mẫu hoa");
     }
 
-    return result;
+    var rows = await (
+            from history in _dbContext.ClientHistories.AsNoTracking()
+            join flower in _dbContext.GeneratedFlowers.AsNoTracking()
+                on history.OutputId equals flower.Id
+            where history.UserId == userId &&
+                  history.Type == GenerationType.Flower &&
+                  history.Root == selected.RootComboId &&
+                  !history.IsDeleted &&
+                  flower.UserId == userId &&
+                  !flower.IsDeleted
+            select new FlowerHistoryRow
+            {
+                RootComboId = history.Root,
+                BaseId = history.BaseId,
+                GeneratedFlowerId = flower.Id,
+                ImageUrl = flower.ImageUrl,
+                GeneratedAt = flower.CreatedAt
+            })
+        .ToListAsync();
+
+    var previousRows = new List<FlowerHistoryRow>();
+    var current = selected;
+    var visited = new HashSet<Guid> { selected.GeneratedFlowerId };
+
+    while (current.BaseId != current.RootComboId)
+    {
+        var parent = rows.SingleOrDefault(x => x.GeneratedFlowerId == current.BaseId);
+        if (parent == null || !visited.Add(parent.GeneratedFlowerId))
+        {
+            throw new BadRequestException("Chuỗi tạo mẫu hoa không hợp lệ");
+        }
+
+        previousRows.Add(parent);
+        current = parent;
+    }
+
+    previousRows.Reverse();
+    var sessionRows = new List<FlowerHistoryRow>(previousRows) { selected };
+    current = selected;
+
+    while (true)
+    {
+        var next = rows.SingleOrDefault(x => x.BaseId == current.GeneratedFlowerId);
+        if (next == null) break;
+        if (!visited.Add(next.GeneratedFlowerId))
+            throw new BadRequestException("Chuỗi tạo mẫu hoa không hợp lệ");
+
+        sessionRows.Add(next);
+        current = next;
+    }
+
+    return new Response.FlowerSessionResponse
+    {
+        RootComboId = selected.RootComboId,
+        SessionStartGeneratedFlowerId = sessionRows[0].GeneratedFlowerId,
+        Items = sessionRows.Select(x => new Response.FlowerVersionResponse
+        {
+            GeneratedFlowerId = x.GeneratedFlowerId,
+            BaseId = x.BaseId,
+            ImageUrl = x.ImageUrl,
+            GeneratedAt = x.GeneratedAt
+        }).ToList()
+    };
 }
 ```
 
-Ownership được lọc ngay trong query; ID thuộc customer khác không trả ảnh hoặc snapshot.
-
-### IService.cs hoàn chỉnh
+## VI. IService.cs
 
 ```csharp
-using HoaTheoMua.Service.Models;
-
-namespace HoaTheoMua.Service.FlowerHistory;
-
 public interface IService
 {
-    Task<BasePaginationResponse> GetAll(
-        Request.GetFlowerHistoriesRequest request);
-
-    Task<List<Response.FlowerHistoryItemResponse>> GetLatestByCombo(
-        Guid comboId);
-
-    Task<Response.FlowerHistoryDetailResponse> GetById(
-        Guid generatedFlowerId);
+    Task<BasePaginationResponse> GetAll(Request.GetFlowerHistoriesRequest request);
+    Task<Response.FlowerRootGroupResponse> GetRootGroup(Guid generatedFlowerId);
+    Task<Response.FlowerSessionResponse> GetSession(Guid generatedFlowerId);
 }
 ```
 
-Ba method được đặt trong cùng `Service : IService`, inject `AppDbContext` và `ICurrentUserService` qua constructor theo convention hiện tại.
+## VII. Dữ liệu cần đồng bộ trước khi implement
 
-API danh sách chỉ select field FE cần; riêng API chi tiết mới tải `input_snapshot`. Không gọi storage và không đưa binary ảnh qua BE.
+- Entity `ClientHistory` cần có mapping `Root`.
+- Generate đầu tiên lưu `baseId = root = comboId`.
+- Regenerate lưu `root` kế thừa Combo nguồn và `baseId = generatedFlowerId` trực tiếp được regenerate.
+- Khi customer đặt mẫu hoa AI, `OrderDetails.GeneratedFlower` phải lưu `GeneratedFlower.Id` đã chọn.

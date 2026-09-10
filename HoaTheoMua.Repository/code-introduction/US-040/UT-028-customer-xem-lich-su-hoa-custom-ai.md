@@ -31,7 +31,7 @@
 - **Loại**: Happy
 - **Precondition / Mock setup**:
   - JWT có `userId = customer-001`.
-  - `client_histories`: H01 và H02 có `user_id = customer-001`, `type = flower`, chưa xóa; `output_id = F01/F02`, `base_id = combo-001`.
+  - `client_histories`: H01 có `root = combo-001`, `base_id = combo-001`, `output_id = F01`; H02 là lần regenerate có `root = combo-001`, `base_id = F01`, `output_id = F02`.
   - `generated_flowers`: F01 và F02 cùng user, chưa xóa, có `image_url`.
   - Có H03 của customer-002 để kiểm tra ownership.
 - **Input**:
@@ -46,7 +46,7 @@ Authorization: Bearer <customer_token>
 ```text
 HTTP 200, response.isSuccess = true.
 response.value.items chỉ có F01 và F02 của customer-001.
-Mỗi item có generatedFlowerId, comboId, imageUrl, generatedAt.
+Mỗi item có generatedFlowerId, comboId, imageUrl, generatedAt. Cả F01 và F02 đều trả comboId = combo-001; F02 không được trả comboId = F01.
 value.pageIndex = 1, value.pageSize = 20, value.totalCount = 2.
 value.hasNextPage = false và value.hasPreviousPage = false.
 ```
