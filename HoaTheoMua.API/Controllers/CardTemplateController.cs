@@ -31,7 +31,7 @@ public class CardTemplateController : ControllerBase
     public async Task<IActionResult> GetCardTemplate(int pageIndex, int pageSize, bool? isActive, string? templateType, string? search = null)
     {
         var result = await _cardTemplateService.GetCardTemplate(pageIndex, pageSize, isActive, templateType, search);
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+        return Ok(result);
     }
     
     [HttpGet("{id}")]
