@@ -249,6 +249,14 @@ API này không join `OrderDetails`, nên một thiệp dùng cho nhiều Order 
 
 **Vai trò:** trả ảnh, toàn bộ snapshot và các Order liên quan khi customer bấm “Xem chi tiết”.
 
+Quan hệ Card với OrderDetail là:
+
+```text
+generatedCardId ∈ OrderDetails.GeneratedCardIds
+```
+
+`GeneratedCardIds` là mảng `uuid[]`; một Card được xem là đã dùng trong Order khi mảng đó chứa `generatedCardId` đang xem. Không còn query theo field đơn `OrderDetails.GeneratedCard`.
+
 **Request**
 
 ```http
@@ -361,6 +369,7 @@ public async Task<Response.CardHistoryDetailResponse> GetById(
             where order.UserId == userId &&
                   !order.IsDeleted &&
                   !detail.IsDeleted &&
+                  detail.GeneratedCardIds != null &&
                   detail.GeneratedCardIds.Contains(generatedCardId)
             select new Response.RelatedOrderResponse
             {
@@ -380,7 +389,7 @@ public async Task<Response.CardHistoryDetailResponse> GetById(
 
 Lọc ownership ngay trong query nên ID thuộc customer khác không trả ảnh, metadata hoặc Order liên quan. Thiệp chưa dùng cho Order nào trả `orders: []`.
 
-`GeneratedCardIds` là cột `uuid[]`, vì vậy không cần deserialize hoặc truy vấn JSON.
+`GeneratedCardIds` là cột `uuid[]`, vì vậy không cần deserialize hoặc truy vấn JSON. `Contains(generatedCardId)` được dịch thành điều kiện kiểm tra phần tử trong mảng PostgreSQL.
 
 ### IService.cs hoàn chỉnh
 
@@ -442,13 +451,13 @@ public class Service : IService
 
 ## III. DB còn thiếu
 
-Thay hai field đơn hiện tại bằng hai cột mảng trong `OrderDetails`:
+Trong `OrderDetails`, chỉ Card cần đổi từ field đơn sang mảng:
 
 ```text
 GeneratedCardIds uuid[] [not null, default: '{}']
-GeneratedFlowerIds uuid[] [not null, default: '{}']
+GeneratedFlower uuid? [giữ field đơn]
 ```
 
 - `GeneratedCardIds`: các thiệp được dùng trong OrderDetail.
-- `GeneratedFlowerIds`: các ảnh hoa AI được dùng trong OrderDetail.
+- `GeneratedFlower`: ảnh hoa AI được dùng trong OrderDetail; một OrderDetail vẫn dùng một GeneratedFlower.
 - `Metadata`: chỉ giữ snapshot combo, giá, nguyên liệu và dữ liệu cố định tại lúc đặt hàng; không dùng để chứa hai danh sách ID trên.

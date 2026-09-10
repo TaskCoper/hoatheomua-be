@@ -108,14 +108,14 @@ public class Service : IService
     {
         if (generatedCardId == Guid.Empty)
             throw new BadRequestException("GeneratedCardId khong hop le.");
-
+        var cardHistoryTypes = new[] { "card", "handmade-card" };
         var card = await (
             from history in _dbContext.ClientHistories.AsNoTracking()
             join generatedCard in _dbContext.GeneratedCards.AsNoTracking()
                 on history.OutputId equals generatedCard.Id
             where !history.IsDeleted &&
                   !generatedCard.IsDeleted &&
-                  history.Type == GenerationType.Card &&
+                  cardHistoryTypes.Contains(history.Type) &&
                   history.UserId == generatedCard.UserId &&
                   history.OutputId == generatedCardId
             select new
