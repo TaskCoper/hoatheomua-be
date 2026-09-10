@@ -91,6 +91,14 @@ public class Response
         public string? UnavailableReason { get; set; }
 
         public List<CategoryProductResponse> Categories { get; set; } = new List<CategoryProductResponse>();
+        public List<ComboSpecification> Materials { get; set; } = new List<ComboSpecification>();
+    }
+
+    public class ComboSpecification
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
     }
 
     public class PinnedProductResponse

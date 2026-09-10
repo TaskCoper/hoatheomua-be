@@ -223,6 +223,8 @@ public class Service : IService
             .AsNoTracking()
             .Include(p => p.CategoryProductDetails)
             .ThenInclude(cpd => cpd.CategoryProduct)
+            .Include(p => p.SubIds)
+            .ThenInclude(cs => cs.Mat)
             .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty) && x.IsActive);
@@ -236,7 +238,13 @@ public class Service : IService
             query = query.Where(x =>
                 (x.ProductName != null && x.ProductName.ToLower().Contains(normalizedSearch)) ||
                 (x.Barcode != null && x.Barcode.ToLower().Contains(normalizedSearch)) ||
-                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)));
+                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)) ||
+                _dbContext.Products.Any(child =>
+                    !child.IsDeleted &&
+                    child.ParentProductId == x.NhanhProductId &&
+                    ((child.ProductName != null && child.ProductName.ToLower().Contains(normalizedSearch)) ||
+                     (child.Barcode != null && child.Barcode.ToLower().Contains(normalizedSearch)) ||
+                     (child.NhanhProductId != null && child.NhanhProductId.ToLower().Contains(normalizedSearch)))));
         }
 
         if (request.priceFrom.HasValue)
@@ -394,7 +402,7 @@ public class Service : IService
             query = query.Where(x =>
                 (x.ProductName != null && x.ProductName.ToLower().Contains(normalizedSearch)) ||
                 (x.Barcode != null && x.Barcode.ToLower().Contains(normalizedSearch)) ||
-                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)) || 
+                (x.NhanhProductId != null && x.NhanhProductId.ToLower().Contains(normalizedSearch)) ||
                 (x.ProductCode != null && x.ProductCode.ToLower().Contains(normalizedSearch)));
         }
 
@@ -538,6 +546,8 @@ public class Service : IService
             .Include(p => p.CategoryProductDetails)
                 .ThenInclude(cpd => cpd.CategoryProduct)
                 .ThenInclude(c => c.ChildCategoryProducts)
+            .Include(p => p.SubIds)
+                .ThenInclude(cs => cs.Mat)
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -963,7 +973,16 @@ public class Service : IService
                         : new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
                 })
                 .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>(),
-        };
+            Materials = product.SubIds?
+                .Where(cs => !cs.IsDeleted && cs.Mat != null && !cs.Mat.IsDeleted)
+                .Select(cs => new Response.ComboSpecification
+                {
+                    Id = cs.Mat.Id,
+                    ProductName = cs.Mat.ProductName,
+                    CoverImage = cs.Mat.CoverImage
+                })
+                .ToList() ?? new List<Response.ComboSpecification>()
+            };
     }
 
     private class ProductQtyProjection
