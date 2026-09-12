@@ -73,7 +73,7 @@ flowchart LR
     FE -->|"POST /api/card-templates"| API["CardTemplatesController"]
     API --> Svc["CardTemplateService"]
     Svc --> EF["EF Core"]
-    EF --> DB[(card_templates)]
+    EF --> DB[(CardTemplate)]
 ```
 
 **Ghi chú**: Flow không gọi File Storage; URL ảnh phải được cung cấp sẵn trong request.
@@ -138,16 +138,16 @@ stateDiagram-v2
 
 ```mermaid
 erDiagram
-    card_templates {
-        uuid id PK
-        string name
-        text description
-        string image_url
-        string template_type "ai | handmade; required; immutable"
-        bool is_active "true"
-        bool is_deleted "false"
-        timestamp created_at
-        timestamp updated_at
+    CardTemplate {
+        uuid Id PK
+        string Name
+        text Description
+        string ImageUrl
+        string TemplateType "ai | handmade; required; immutable"
+        bool IsActive "true"
+        bool IsDeleted "false"
+        timestamp CreatedAt
+        timestamp UpdatedAt
     }
 ```
 

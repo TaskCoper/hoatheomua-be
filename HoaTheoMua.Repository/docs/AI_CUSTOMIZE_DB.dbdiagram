@@ -1,6 +1,6 @@
 // AI Customize Database Schema
 // Project: HTM_Flourist_AI
-// Date: 2026-09-09
+// Date: 2026-09-11
 //
 // Flower generation is synchronous. There are no flower_requests or
 // flower_ai_jobs tables: request data is passed to the AI module and only a
@@ -8,38 +8,45 @@
 
 Project HTM_Flourist_AI {
   database_type: 'PostgreSQL'
-  Note: 'AI Customize schema. Checkout and Order are outside the current scope.'
+  Note: 'AI Customize schema. Order workflow is outside TDD-006; OrderDetail.SnapshotCard is included because Card AI Create reads it.'
 }
 
-Enum platform_type {
+Enum PlatformType {
   zalo
   facebook
   instagram
 }
 
-Enum system_prompt_types {
+Enum SystemPromptType {
   flower
   card
   post
 }
 
-Enum form_type {
+Enum CardFormType {
   go_may
   calligraphy
 }
 
+Enum ClientHistoryType {
+  flower
+  card
+  handmade_card
+  post
+}
+
 // Prompt hệ thống cho từng loại generation
-Table system_prompts {
-  id uuid [pk]
-  type system_prompt_types [not null, unique]
-  content text
+Table SystemPrompt {
+  Id uuid [pk]
+  Type SystemPromptType [not null, unique]
+  Content text
 }
 
 // Tiêu chuẩn nội dung cho từng nền tảng
-Table platform_standards {
-  id uuid [pk]
-  platform platform_type
-  description text
+Table PlatformStandard {
+  Id uuid [pk]
+  Platform PlatformType
+  Description text
 }
 
 // Bảng có sẵn trong Core Database; dùng cho cấu hình thiệp.
@@ -55,20 +62,20 @@ Table Config {
   updated_at timestamp
   is_deleted boolean
   // Card dùng 2 singleton: card_config.sizes và card_config.prices; group/key/kind bất biến.
-  // card_config.sizes có đúng một Size chung; client không chọn Size.
+  // card_config.sizes là một record có items gồm một hoặc nhiều Size; client chọn theo items[].name.
 }
 
 // Template dùng cho flow AI hoặc mẫu thiệp HandMade do Admin tạo.
-Table card_templates {
-  id uuid [pk]
-  name varchar
-  description text
-  image_url varchar
-  template_type varchar [not null] // ai | handmade; lowercase and immutable
-  is_active boolean
-  created_at timestamp
-  updated_at timestamp
-  is_deleted boolean
+Table CardTemplate {
+  Id uuid [pk]
+  Name varchar
+  Description text
+  ImageUrl varchar
+  TemplateType varchar [not null] // ai | handmade; lowercase and immutable
+  IsActive boolean
+  CreatedAt timestamp
+  UpdatedAt timestamp
+  IsDeleted boolean
 }
 
 // Bảng products ở Core Database. sellableQuantity là derived value tính bằng
@@ -79,119 +86,131 @@ Table products {
   is_deleted boolean
 }
 
-Table base_posts {
-  id uuid [pk]
-  content text
-  image_url varchar
+// Bảng Core Database. SnapshotCard được chuẩn bị sau khi có Order/OrderDetail ở flow
+// ngoài TDD-006. Card AI Create chỉ đọc snapshot và không ghi Card ID ngược về đây.
+Table OrderDetail {
+  Id uuid [pk]
+  OrderId uuid
+  SnapshotCard json // nullable; immutable Order Card Snapshot khi dùng Card AI
 }
 
-Table generated_posts {
-  id uuid [pk]
-  content text
-  image_url varchar
-  user_id uuid
-  created_at timestamp
+Table BasePost {
+  Id uuid [pk]
+  Content text
+  ImageUrl varchar
+}
+
+Table GeneratedPost {
+  Id uuid [pk]
+  Content text
+  ImageUrl varchar
+  UserId uuid
+  CreatedAt timestamp
 }
 
 // Chỉ lưu kết quả tạo hoa thành công. Product/Mockup/cấu hình cần dùng lại nằm
-// trong metadata của client_histories(type=flower); userInput không được lưu.
-Table generated_flowers {
-  id uuid [pk]
-  image_url varchar
-  user_id uuid
-  created_at timestamp
+// trong metadata của ClientHistory(type=flower); userInput không được lưu.
+Table GeneratedFlower {
+  Id uuid [pk]
+  ImageUrl varchar
+  UserId uuid
+  CreatedAt timestamp
 }
 
-Table generated_cards {
-  id uuid [pk]
-  content text
-  image_url varchar // ảnh hoàn chỉnh sau khi AI chèn chữ
-  raw_image varchar // nullable cho dữ liệu cũ; ảnh gốc AI sinh trước khi chèn chữ
-  user_id uuid
-  created_at timestamp
-  card_type varchar [not null] // ai | handmade; lowercase
+Table GeneratedCard {
+  Id uuid [pk]
+  Content text
+  ImageUrl varchar // ảnh hoàn chỉnh sau khi AI chèn chữ
+  RawImage varchar // nullable cho dữ liệu cũ; ảnh gốc AI sinh trước khi chèn chữ
+  UserId uuid
+  CreatedAt timestamp
+  CardType varchar [not null] // ai | handmade; lowercase
 
-  form_type form_type
-  sender_name varchar
-  receiver_name varchar
-  message_content text
-  attached_image_url varchar // null with handmade
+  FormType FormType
+  SenderName varchar
+  ReceiverName varchar
+  MessageContent text
+  AttachedImageUrl varchar // null with handmade
 
-  size_name varchar
-  size_width decimal
-  size_height decimal
-  size_base_price decimal
-  size_max_words int
-  word_count int
-  word_config_snapshot json
+  SizeName varchar
+  SizeWidth decimal
+  SizeHeight decimal
+  SizeBasePrice decimal
+  SizeMaxWords int
+  WordCount int
+  WordConfigSnapshot json
 
-  base_price decimal
-  extra_price decimal
-  total_price decimal
+  BasePrice decimal
+  ExtraPrice decimal
+  TotalPrice decimal
 }
 
-Table post_histories {
-  id uuid [pk]
-  input json
-  base_id uuid
-  output_id uuid
-  system_prompt_id uuid
-  metadata json
-  created_at timestamp
+Table PostHistory {
+  Id uuid [pk]
+  Input json
+  BaseId uuid
+  OutputId uuid
+  SystemPromptId uuid
+  Metadata json
+  CreatedAt timestamp
 }
 
 // Mockup được quản lý ở Core Database.
-Table mockup {
-  id uuid [pk]
-  name varchar
-  description text
-  image_url varchar
-  is_active boolean
-  is_deleted boolean
-  created_at timestamp
-  updated_at timestamp
+Table Mockup {
+  Id uuid [pk]
+  Name varchar
+  Description text
+  ImageUrl varchar
+  IsActive boolean
+  IsDeleted boolean
+  CreatedAt timestamp
+  UpdatedAt timestamp
 }
 
 // Lịch sử kết quả thành công. Không lưu userInput. Với Flower, metadata schemaVersion=3
 // giữ product{name,attributes,image,observedStatus}, mockup, logoConfig, operation,
 // regeneratedFromFlowerId, systemPromptSource và validatedAt. Product ID nằm ở
-// base_id/root, Flower ID nằm ở output_id, System Prompt nằm ở system_form.
-// Với Card, metadata không lặp dữ liệu đã có trong generated_cards: không lưu card_type,
-// size value, Calligraphy rule, pricing hoặc image của Template. System Prompt snapshot
-// tách sang system_form và chỉ gồm các field của system_prompts ngoại trừ id.
-Table client_histories {
-  id uuid [pk]
-  user_id uuid
-  type varchar // flower | card | handmade_card; post currently unused
-  system_form json // nullable; {type, content} với AI, null với handmade_card
-  metadata json
-  created_at timestamp
-  root uuid [not null] // products.id gốc; service gán, không có FK
-  base_id uuid
-  output_id uuid
+// base_id/RootID, Flower ID nằm ở output_id, System Prompt nằm ở system_form.
+// Với Card, metadata không dùng schemaVersion và lưu operation, provenance,
+// source{type,id,imageUrl}, cardTemplate{id,name,templateType,imageUrl}, sizeConfig,
+// regeneratedFromCardId, systemPromptSource và validatedAt; không lưu orderDetailId.
+// Size/rule/pricing hiệu lực nằm ở GeneratedCard. System Prompt thực tế tách sang
+// system_form và chỉ gồm các field của SystemPrompt ngoại trừ id.
+Table ClientHistory {
+  Id uuid [pk]
+  UserId uuid
+  Type ClientHistoryType // flower | card | handmade_card; post currently unused
+  SystemForm json // nullable; {Type, content} với AI, null với handmade_card
+  Metadata json
+  CreatedAt timestamp
+  RootID uuid [not null] // products.Id gốc; service gán, không có FK
+  BaseId uuid
+  OutputId uuid
 }
 
 // Config card sử dụng group = "card_config", kind = "Setting".
 // key = "card_config.sizes" hoặc "card_config.prices"; value là wrapper JSON cố định,
 // trong đó field value là chuỗi JSON chứa items và phải được parse thêm một lớp.
-// Với card_config.sizes, items có đúng một phần tử; name chỉ là nhãn snapshot.
-// Before enabling NOT NULL, backfill existing card_templates.template_type and
-// generated_cards.card_type to "ai". For handmade cards: form_type=calligraphy,
+// Với card_config.sizes, items không rỗng và có thể có nhiều phần tử; name là giá trị client dùng để chọn Size.
+// Before enabling NOT NULL, backfill existing CardTemplate.TemplateType and
+// GeneratedCard.CardType to "ai". For handmade cards: FormType=calligraphy,
 // attached_image_url=null, base_price=0 and total_price=extra_price; size_base_price
 // keeps the configured Size price for audit.
-// raw_image chỉ áp dụng cho Card AI mới và phải có cùng image_url sau persist;
-// Card legacy có raw_image=null không đủ điều kiện làm nguồn TDD-027.
-// Backfill root: flower và Card trực tiếp dùng base_id; Card từ Generated Flower
+// raw_image chỉ áp dụng cho Card AI mới và phải có cùng image_url sau persist.
+// Regenerate lấy ảnh hoa từ ClientHistory.Metadata.source.imageUrl, không dùng raw_image.
+// Card legacy thiếu ảnh nguồn hoặc ảnh Template trong metadata không Regenerate được.
+// Backfill RootID: flower và Card trực tiếp dùng base_id; Card từ Generated Flower
 // dùng base_id của Flower History. Không dùng Guid.Empty; record không resolve được
-// Product ID gốc phải làm migration thất bại. root không nằm trong public API.
+// Product ID gốc phải làm migration thất bại. RootID không nằm trong public API.
 
-Ref: post_histories.system_prompt_id > system_prompts.id
+Ref: PostHistory.SystemPromptId > SystemPrompt.Id
 
-// Không khai báo Ref cho client_histories.base_id/root/output_id.
+// Không khai báo Ref cho ClientHistory.BaseId/RootID/output_id.
 // Đây là lineage đa hình do code quản lý, không phải FK.
 
-// Resolve lineage: generated_card -> client_histories(type=card|handmade_card); root luôn
+// Resolve lineage: generated_card -> ClientHistory(type=card|handmade_card); RootID luôn
 // là products.id gốc. Nếu base_id là generated_flower thì service tìm
-// client_histories(type=flower) bằng output_id và lấy base_id của Flower History làm root. Không thêm
-// generated_cards.source_flower_id. Soft-delete không xóa history/snapshot;
-// HandMade mới bắt buộc provenance đầy đủ và không hỗ trợ Regenerate.
+// ClientHistory(type=flower) bằng output_id và lấy base_id của Flower History làm RootID. Không thêm
+// GeneratedCard.source_flower_id. Soft-delete không xóa history/snapshot;
+// HandMade mới bắt buộc provenance đầy đủ và không hỗ trợ Regenerate. Card AI Create
+// dùng OrderDetail.SnapshotCard; Regenerate kế thừa BaseId/RootID từ Card History nguồn.

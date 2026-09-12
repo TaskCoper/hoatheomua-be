@@ -490,3 +490,5 @@
 
 **Rationale:**
 > Xác nhận khi lưu yêu cầu thất bại, khách hàng nhận được thông báo phù hợp, dữ liệu không bị lưu dở dang và có thể thử lại.
+
+

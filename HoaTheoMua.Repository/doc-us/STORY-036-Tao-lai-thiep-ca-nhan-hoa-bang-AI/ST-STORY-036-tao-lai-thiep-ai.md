@@ -58,7 +58,7 @@
 
 **Trace to:**
 - [STORY-036/AC-001](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338) · [STORY-036/AC-009](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338)
-- [STORY-036/BR-044](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338) · [STORY-036/BR-048](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338)
+- [BR-044](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338) · [BR-048](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338)
 
 **Rationale:**
 > Xác minh trải nghiệm khách hàng: khách hàng có thể Tạo lại thành công từ một thiệp thuộc lịch sử của mình; hệ thống tạo một quá trình tạo ảnh AI mới bằng nguyên dữ liệu của thiệp nguồn, tạo kết quả và mục lịch sử mới nhưng không ghi đè hoặc thay đổi thiệp nguồn.
@@ -116,7 +116,7 @@
 
 **Trace to:**
 - [STORY-036/AC-003](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338) · [STORY-036/AC-010](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338)
-- [STORY-036/BR-154](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338)
+- [BR-154](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338)
 
 **Rationale:**
 > Xác minh trải nghiệm khách hàng: thao tác Tạo lại không làm thay đổi dữ liệu đầu vào của thiệp nguồn, bao gồm Người gửi, Người nhận, Lời chúc và ảnh đính kèm nếu có.
@@ -150,6 +150,10 @@
 5. Quan sát lịch sử.
 6. Chọn **"Xác nhận"** tại thiệp B.
 7. Quan sát lại Checkout và lịch sử.
+
+**Test Data:**
+- Thiệp A (hiện tại trong Checkout).
+- Thiệp B (kết quả tạo lại mới).
 
 **Expected Result:**
 - Hệ thống tạo quá trình tạo ảnh AI mới.
@@ -191,6 +195,9 @@
 4. Quay lại màn hình liên quan.
 5. Quan sát trạng thái.
 6. Chờ quá trình tạo ảnh AI hoàn tất.
+
+**Test Data:**
+- —
 
 **Expected Result:**
 - Quá trình tạo ảnh AI tiếp tục chạy sau reload/rời trang.
@@ -251,7 +258,7 @@
 - Hiển thị: **"Bạn đã sử dụng hết số lượt tạo thiệp cho mẫu hoa này."**
 
 **Trace to:**
-- [STORY-036/BR-048](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338)
+- [BR-048](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338)
 - [STORY-036/EXC-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338) · [STORY-036/EXC-09](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338)
 
 **Rationale:**
@@ -283,6 +290,9 @@
 3. Chọn **"Tạo lại"**.
 4. Quan sát phản hồi.
 5. Quan sát quá trình tạo ảnh AI, lịch sử và lượt sử dụng.
+
+**Test Data:**
+- Thiệp nguồn có Template hoặc Size bị vô hiệu hóa trước khi Tạo lại.
 
 **Expected Result:**
 - Phát hiện dữ liệu không còn khả dụng.
@@ -375,6 +385,9 @@
 6. Quan sát lịch sử.
 7. Quan sát lượt sử dụng trong ngày và lượt mẫu hoa.
 
+**Test Data:**
+- Thao tác "Tạo lại" gửi liên tiếp nhiều lần cùng lúc.
+
 **Expected Result:**
 - Hệ thống nhận diện thao tác bị trùng.
 - Chỉ có tối đa **1 lần** gọi AI.
@@ -418,6 +431,9 @@
 **Steps — Tình huống B (Checkout không hợp lệ):**
 1. Thực hiện Tạo lại trong Checkout của khách hàng B, Checkout không tồn tại hoặc Checkout đã hoàn tất.
 2. Quan sát phản hồi.
+
+**Test Data:**
+- Khách hàng A, Khách hàng B, Thiệp B thuộc Khách hàng B.
 
 **Expected Result — Tình huống A:**
 - Khách hàng thấy thao tác bị từ chối.

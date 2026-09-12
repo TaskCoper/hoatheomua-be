@@ -1,369 +1,197 @@
-# US-039 — Cộng giá thiệp đã tạo vào CreateOrder
+# US-039 — API tính giá thiệp trước thanh toán
 
-## I. Các API cần làm
+## 1. Rule FE
 
-US-039 mở rộng API tạo Order hiện có để nhận danh sách thiệp đã tạo kèm số lượng trong từng dòng `items`, lấy `generated_cards.total_price` và cộng vào bill. Không tạo lại Card và không tính lại giá Card từ Config.
-
-Cần 1 API hiện có:
-
-1. `POST /api/v1/orders`
-   - FE gọi khi customer xác nhận tạo Order.
-   - Mỗi item có thể gửi `generatedFlowerId` và `generatedCards[]`.
-   - Mỗi phần tử `generatedCards[]` bắt buộc có `generatedCardId` và `quantity`.
-   - Service chỉ nhận Card thuộc đúng customer và có Product gốc trùng `items[].productId`; sau đó lấy giá snapshot, nhân số lượng, cộng bill và lưu snapshot Card–OrderDetail.
+Với mỗi bó hoa / mỗi OrderDetail, FE chọn đúng một option:
 
 ```text
-Customer xác nhận Checkout
-→ FE gửi từng item hoa và danh sách thiệp/số lượng của item đó
-→ CreateOrder lấy total_price của các Card
-→ CreateOrder cộng tiền hoa + tiền thiệp
-→ CreateOrder lưu Order, OrderDetails, OrderDetailCards
-→ Payment dùng TotalFee đã bao gồm giá Card
+Thiệp thường (HandMade)
+HOẶC
+Thiệp Custom AI
+HOẶC
+Thiệp từ History
 ```
 
-## II. Code từng API
+Nếu chọn `history`, FE vẫn được chọn/nhập lại toàn bộ thông tin Card như tạo mới:
 
-### API 1 — Tạo Order có thiệp đã tạo
-
-**Vai trò:** lấy `total_price` snapshot của Card và nhân đúng `quantity` FE gửi.
-
-### IService
-
-`IService.CreateOrder` giữ nguyên chữ ký; không cần API/service public mới.
-
-```csharp
-Task<CreateOrderResponse> CreateOrder(Request.CreateOrderRequest request);
+```text
+Template, formType, người gửi, người nhận, lời nhắn
 ```
 
-### Request
+Card History chỉ là nguồn để backend kiểm tra Card đó thuộc customer và đúng Product gốc của bó hoa. Giá và dữ liệu tạo Card mới không lấy cố định từ Card cũ.
+
+## 2. API quote giá
 
 ```http
-POST /api/v1/orders
-Authorization: Bearer {customer-token}
-Content-Type: application/json
+POST /api/v1/card-price
 ```
 
-`OrderDetails.Number` là số lượng hoa, không phải số lượng thiệp. Vì một dòng hoa có thể không có thiệp, hoặc có nhiều loại thiệp với số lượng khác nhau, request phải mang collection `GeneratedCards`.
-
-```csharp
-// HoaTheoMua.Service/AhamoveService/AhaMoveRequest.cs
-public class Items
-{
-    public int ItemId { get; set; }
-    public Guid ProductId { get; set; }
-    public int Number { get; set; }
-
-    public Guid? GeneratedFlowerId { get; set; }
-    public List<GeneratedCardItem> GeneratedCards { get; set; } = new();
-}
-
-public class GeneratedCardItem
-{
-    public Guid GeneratedCardId { get; set; }
-    public int Quantity { get; set; }
-}
-```
-
-Các field Card chỉ là dữ liệu Order nội bộ; mapper gọi Ahamove tiếp tục chỉ dùng `ItemId`, `ProductId`, `Number` như hiện tại.
-
-Ví dụ: customer mua 2 bó hoa Product `123`, trong đó cần 2 bản của Card A và 1 bản Card B; Product `456` không có thiệp.
+Request chung cho cả ba option:
 
 ```json
 {
-  "gateway": "Sepay",
-  "paymentGateway": "Sepay",
-  "shippingGateway": "Ahamove",
-  "paymentMethod": "VA",
-  "latitude": 10.7769,
-  "longitude": 106.7009,
-  "ward": 1,
-  "city": 79,
-  "address": "1 Nguyễn Huệ, Quận 1, TP.HCM",
-  "shortAddress": "Quận 1, TP.HCM",
-  "fullName": "Nguyễn Văn A",
-  "phone": "0900000000",
-  "remarks": "",
-  "orderTime": 0,
-  "phoneReceiver": "0900000000",
-  "fullNameReceiver": "Nguyễn Văn A",
-  "isExportInvoice": false,
-  "items": [
-    {
-      "itemId": 123,
-      "productId": "11111111-1111-1111-1111-111111111111",
-      "number": 2,
-      "generatedFlowerId": "22222222-2222-2222-2222-222222222222",
-      "generatedCards": [
-        {
-          "generatedCardId": "33333333-3333-3333-3333-333333333333",
-          "quantity": 2
-        },
-        {
-          "generatedCardId": "44444444-4444-4444-4444-444444444444",
-          "quantity": 1
-        }
-      ]
-    },
-    {
-      "itemId": 456,
-      "productId": "55555555-5555-5555-5555-555555555555",
-      "number": 1,
-      "generatedFlowerId": null,
-      "generatedCards": []
-    }
-  ]
+  "type": "history",
+  "sourceGeneratedCardId": "11111111-1111-1111-1111-111111111111",
+  "cardTemplateId": "22222222-2222-2222-2222-222222222222",
+  "formType": "calligraphy",
+  "senderName": "Minh",
+  "receiverName": "Lan",
+  "messageContent": "Chúc bạn luôn hạnh phúc"
 }
 ```
 
-`generatedCardId` là `generated_cards.id`, không phải `generated_flowers.id`. Card AI, HandMade và Card chọn từ History đều dùng bảng `generated_cards`.
+`sourceGeneratedCardId`:
 
-#### Rule bắt buộc giữa `generatedCards[]` và `productId`
+- Bắt buộc khi `type = history`.
+- Không gửi khi `type = standard` hoặc `type = custom_ai`.
+- Không dùng để lấy giá cũ.
 
-Mỗi `generatedCardId` phải có `client_histories` của chính customer với `type = "card"` hoặc `"handmade_card"`, `output_id = generatedCardId`, và `root = items[].productId`.
+Response:
+
+```json
+{
+  "isSuccess": true,
+  "isFailed": false,
+  "error": null,
+  "value": {
+    "basePrice": 20000,
+    "extraPrice": 39000,
+    "totalPrice": 59000
+  }
+}
+```
+
+## 3. Cách tính giá
+
+| Template được chọn hiện tại | Form | `basePrice` | `extraPrice` | `totalPrice` |
+|---|---|---:|---:|---:|
+| HandMade | Luôn viết tay | `0` | Bậc giá theo số từ hiện tại | `extraPrice` |
+| AI | Gõ máy | Giá Size hiện tại | `0` | `basePrice` |
+| AI | Viết tay | Giá Size hiện tại | Bậc giá theo số từ hiện tại | `basePrice + extraPrice` |
+
+Tất cả đều lấy Size Config và Calligraphy Price Config **hiện tại**. Không dùng `GeneratedCard.BasePrice`, `ExtraPrice` hay `TotalPrice` cũ.
+
+Thiệp thường là Template `handmade`, luôn viết tay. Mỗi bó hoa chỉ được tối đa một thiệp HandMade; History chọn lại với Template HandMade cũng tính vào rule này.
+
+## 4. Code đơn giản
+
+```csharp
+public enum CardChoiceType
+{
+    Standard,
+    CustomAi,
+    History
+}
+
+public class CalculateCardPriceRequest
+{
+    public CardChoiceType Type { get; set; }
+    public Guid? SourceGeneratedCardId { get; set; } // chỉ History
+    public Guid? CardTemplateId { get; set; }
+    public CardFormType? FormType { get; set; }
+    public string? SenderName { get; set; }
+    public string? ReceiverName { get; set; }
+    public string? MessageContent { get; set; }
+}
+
+public class CardPriceResponse
+{
+    public decimal BasePrice { get; set; }
+    public decimal ExtraPrice { get; set; }
+    public decimal TotalPrice { get; set; }
+}
+
+public async Task<CardPriceResponse> CalculateCardPrice(
+    CalculateCardPriceRequest request)
+{
+    // History chỉ validate Card nguồn. Không lấy giá hoặc nội dung cũ.
+    if (request.Type == CardChoiceType.History)
+    {
+        await ValidateOwnedHistoryCard(request.SourceGeneratedCardId);
+    }
+
+    // Cả ba option đều dùng Template và nội dung do FE chọn hiện tại.
+    var template = await GetActiveTemplate(request.CardTemplateId);
+    var size = await GetCurrentCardSize();
+    var priceRules = await GetCurrentCalligraphyPriceRules();
+
+    // Standard bắt buộc dùng template HandMade.
+    if (request.Type == CardChoiceType.Standard &&
+        template.TemplateType != CardTemplateType.Handmade)
+    {
+        throw new BadRequestException("STANDARD_CARD_TEMPLATE_MUST_BE_HANDMADE");
+    }
+
+    // Custom AI bắt buộc dùng template AI.
+    if (request.Type == CardChoiceType.CustomAi &&
+        template.TemplateType != CardTemplateType.Ai)
+    {
+        throw new BadRequestException("CUSTOM_AI_TEMPLATE_MUST_BE_AI");
+    }
+
+    // History được chọn lại hoàn toàn, nên Template hiện tại quyết định AI/HandMade.
+    var isAi = template.TemplateType == CardTemplateType.Ai;
+
+    // HandMade luôn viết tay. AI cho chọn gõ máy hoặc viết tay.
+    var formType = isAi
+        ? request.FormType
+            ?? throw new BadRequestException("CARD_FORM_TYPE_REQUIRED")
+        : CardFormType.Calligraphy;
+
+    var message = request.MessageContent?.Trim() ?? string.Empty;
+    var wordCount = CountWords(message);
+
+    if (wordCount > size.MaxWords)
+        throw new BadRequestException("CARD_MESSAGE_EXCEEDS_MAX_WORDS");
+
+    var isCalligraphy = !isAi || formType == CardFormType.Calligraphy;
+
+    var extraPrice = 0m;
+    if (isCalligraphy)
+    {
+        var rule = priceRules.SingleOrDefault(x =>
+            x.MinWords <= wordCount && wordCount <= x.MaxWords);
+
+        if (rule == null)
+            throw new BadRequestException("CALLIGRAPHY_PRICE_RULE_NOT_FOUND");
+
+        extraPrice = rule.ExtraPrice;
+    }
+
+    var basePrice = isAi ? size.BasePrice : 0m;
+
+    return new CardPriceResponse
+    {
+        BasePrice = basePrice,
+        ExtraPrice = extraPrice,
+        TotalPrice = basePrice + extraPrice
+    };
+}
+
+private static int CountWords(string message) =>
+    string.IsNullOrWhiteSpace(message)
+        ? 0
+        : message.Split(
+            [' ', '\t', '\r', '\n'],
+            StringSplitOptions.RemoveEmptyEntries).Length;
+```
+
+## 5. Dùng trong CreateOrder
+
+FE gọi API để preview. Khi customer bấm tạo Order, backend gọi lại đúng `CalculateCardPrice` bằng dữ liệu request để chốt tiền:
+
+```csharp
+var cardPrice = await CalculateCardPrice(request.Card);
+var finalProductFee = productFee + cardPrice.TotalPrice;
+```
+
+Trước payment, Order chỉ lưu lựa chọn Card và giá vừa quote. Không tạo AI, ảnh hoặc `GeneratedCard`.
+
+Sau `Payment SUCCESS`:
 
 ```text
-generated_cards.id = generatedCardId
-→ client_histories.output_id = generatedCardId
-→ client_histories.root phải bằng item.productId
+Đọc snapshot Card từ Order
+→ tạo Card mới bằng dữ liệu customer đã chọn
+→ nhận GeneratedCardId + imageUrl mới
+→ gắn GeneratedCardId mới vào OrderDetails.GeneratedCardIds
 ```
-
-Điều này áp dụng cho cả hai nguồn tạo Card:
-
-- Card tạo trực tiếp từ Product: `history.base_id = history.root = productId`.
-- Card tạo từ Generated Flower: `history.base_id = generatedFlowerId`, nhưng `history.root` vẫn là Product ID gốc và phải bằng `item.productId`.
-
-Vì vậy, Card của Product khác bị từ chối. Rule hiện tại đối chiếu Product gốc qua `root`; không bắt buộc Card phải được tạo từ chính `item.generatedFlowerId` nếu hai Card/Flower có cùng Product gốc.
-
-Thêm validation vào `CreateOrderRequestValidator`:
-
-```csharp
-RuleForEach(x => x.Items).ChildRules(item =>
-{
-    item.RuleForEach(x => x.GeneratedCards).ChildRules(card =>
-    {
-        card.RuleFor(x => x.GeneratedCardId)
-            .NotEmpty()
-            .WithMessage("GENERATED_CARD_ID_REQUIRED");
-
-        card.RuleFor(x => x.Quantity)
-            .GreaterThan(0)
-            .WithMessage("GENERATED_CARD_QUANTITY_MUST_BE_GREATER_THAN_ZERO");
-    });
-});
-```
-
-### Response
-
-Response `CreateOrderResponse` giữ nguyên. `TotalFee` và payment amount trả về đã bao gồm giá Card.
-
-### Service
-
-Thêm record và hàm private sau vào `HoaTheoMua.Service/Order/Service.cs`. Hàm chỉ đọc snapshot `GeneratedCard.TotalPrice`, không đọc `Config`/`CardTemplate` và không tính lại giá thiệp.
-
-```csharp
-private sealed record GeneratedCardPriceSnapshot(
-    int ItemId,
-    Guid GeneratedCardId,
-    int Quantity,
-    decimal UnitPrice)
-{
-    public decimal TotalPrice => UnitPrice * Quantity;
-}
-
-private async Task<IReadOnlyList<GeneratedCardPriceSnapshot>>
-    GetGeneratedCardPriceSnapshotsAsync(
-        IReadOnlyCollection<AhaMoveRequest.Items> items,
-        Guid userId)
-{
-    var requestedCards = items
-        .SelectMany(item => item.GeneratedCards.Select(card => new
-        {
-            item.ItemId,
-            item.ProductId,
-            card.GeneratedCardId,
-            card.Quantity
-        }))
-        .ToList();
-
-    if (requestedCards.Count == 0)
-    {
-        return Array.Empty<GeneratedCardPriceSnapshot>();
-    }
-
-    if (requestedCards.Any(x => x.GeneratedCardId == Guid.Empty || x.Quantity <= 0))
-    {
-        throw new BadRequestException("GENERATED_CARD_REQUEST_INVALID");
-    }
-
-    if (requestedCards
-        .GroupBy(x => new { x.ItemId, x.GeneratedCardId })
-        .Any(group => group.Count() > 1))
-    {
-        throw new BadRequestException("GENERATED_CARD_DUPLICATED_IN_ITEM");
-    }
-
-    var generatedCardIds = requestedCards
-        .Select(x => x.GeneratedCardId)
-        .Distinct()
-        .ToList();
-
-    var cards = await _dbContext.GeneratedCards
-        .AsNoTracking()
-        .Where(x => generatedCardIds.Contains(x.Id) && x.UserId == userId)
-        .Select(x => new { x.Id, x.TotalPrice })
-        .ToListAsync();
-
-    if (cards.Count != generatedCardIds.Count)
-    {
-        throw new BadRequestException("GENERATED_CARD_NOT_FOUND");
-    }
-
-    var cardHistories = await _dbContext.ClientHistories
-        .AsNoTracking()
-        .Where(x =>
-            x.UserId == userId &&
-            generatedCardIds.Contains(x.OutputId) &&
-            (x.Type == "card" || x.Type == "handmade_card"))
-        .Select(x => new { x.OutputId, x.Root })
-        .ToListAsync();
-
-    if (cardHistories.Count != generatedCardIds.Count)
-    {
-        throw new BadRequestException("GENERATED_CARD_HISTORY_NOT_FOUND");
-    }
-
-    var rootProductIdByCardId = cardHistories
-        .ToDictionary(x => x.OutputId, x => x.Root);
-
-    if (requestedCards.Any(x =>
-        rootProductIdByCardId[x.GeneratedCardId] == Guid.Empty ||
-        rootProductIdByCardId[x.GeneratedCardId] != x.ProductId))
-    {
-        throw new BadRequestException("GENERATED_CARD_PRODUCT_MISMATCH");
-    }
-
-    var unitPriceByCardId = cards.ToDictionary(x => x.Id, x => x.TotalPrice);
-
-    return requestedCards
-        .Select(x => new GeneratedCardPriceSnapshot(
-            x.ItemId,
-            x.GeneratedCardId,
-            x.Quantity,
-            unitPriceByCardId[x.GeneratedCardId]))
-        .ToList();
-}
-```
-
-Trong `CreateOrder`, gọi hàm sau `EnsureItemsInStockAsync(...)`. `generatedCardFee` là tổng `total_price × quantity` của tất cả thiệp trong request.
-
-```csharp
-var comboSnapshots = await EnsureItemsInStockAsync(request.Items);
-
-var generatedCardPriceSnapshots = await GetGeneratedCardPriceSnapshotsAsync(
-    request.Items,
-    userId);
-
-var generatedCardFee = generatedCardPriceSnapshots.Sum(x => x.TotalPrice);
-
-var companyAddress = await _dbContext.CompanyAddresses
-    .Where(x => x.IsDeleted == false)
-    .FirstOrDefaultAsync();
-
-var totalShippingFee = await EstimateShippingFeeAsync(
-    request,
-    products,
-    quantityByItemId,
-    companyAddress);
-
-var productFee = products.Sum(x => x.Prices.Retail * quantityByItemId[x.Id]);
-var totalProductFee = productFee + generatedCardFee;
-var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
-```
-
-`newOrder` dùng biến tổng mới:
-
-```csharp
-ProductFee = totalProductFee,
-TotalFee = totalProductFee + totalShippingFee + vatFee,
-```
-
-`GeneratedFlower` vẫn là một field của `OrderDetails`, vì một dòng hoa chỉ chọn tối đa một mẫu hoa AI. Không ghi `GeneratedCard` vào `OrderDetails` nữa: một dòng hoa nay có collection Card nên phải lưu ở `OrderDetailCards`.
-
-```csharp
-var requestItemByItemId = request.Items.ToDictionary(x => x.ItemId);
-
-var newOrderDetails = products.Select(x =>
-{
-    comboSnapshots.TryGetValue(x.Id, out var metadata);
-    var requestItem = requestItemByItemId[x.Id];
-
-    return new OrderDetails
-    {
-        Id = Guid.NewGuid(),
-        OrderId = newOrder.Id,
-        ProductId = productIdByItemId[x.Id],
-        Name = x.Name,
-        ItemId = x.Id,
-        Price = (int)x.Prices.Retail,
-        Number = quantityByItemId[x.Id],
-        Height = x.Shipping.Height,
-        Weight = x.Shipping.Weight,
-        Length = x.Shipping.Length,
-        Width = x.Shipping.Width,
-        GeneratedFlower = requestItem.GeneratedFlowerId,
-        Metadata = metadata == null
-            ? null
-            : JsonConvert.SerializeObject(metadata),
-        CreatedAt = DateTime.UtcNow
-    };
-}).ToList();
-
-var orderDetailIdByItemId = newOrderDetails.ToDictionary(x => x.ItemId, x => x.Id);
-
-var newOrderDetailCards = generatedCardPriceSnapshots
-    .Select(x => new OrderDetailCard
-    {
-        Id = Guid.NewGuid(),
-        OrderDetailId = orderDetailIdByItemId[x.ItemId],
-        GeneratedCardId = x.GeneratedCardId,
-        Quantity = x.Quantity,
-        UnitPrice = x.UnitPrice,
-        TotalPrice = x.TotalPrice,
-        CreatedAt = DateTime.UtcNow
-    })
-    .ToList();
-```
-
-Ở cả nhánh BaoKim và SePay, lưu thêm `OrderDetailCards` trong cùng lần save với Order và OrderDetails:
-
-```csharp
-await _dbContext.Orders.AddAsync(newOrder);
-await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
-await _dbContext.OrderDetailCards.AddRangeAsync(newOrderDetailCards);
-await _dbContext.SaveChangesAsync();
-```
-
-Ví dụ Card A có `total_price = 15_000`, `quantity = 2`; Card B có `total_price = 39_000`, `quantity = 1`. Hàm trả `generatedCardFee = 69_000`.
-
-## III. DB còn thiếu — cần thêm để lưu số lượng thiệp
-
-Hai field hiện có trên `OrderDetails` không thể biểu diễn nhiều Card và quantity. Giữ `GeneratedFlower`; thay field `GeneratedCard` bằng bảng con sau:
-
-```csharp
-public class OrderDetailCard
-{
-    public Guid Id { get; set; }
-    public Guid OrderDetailId { get; set; }
-    public Guid GeneratedCardId { get; set; }
-    public int Quantity { get; set; }
-    public decimal UnitPrice { get; set; }
-    public decimal TotalPrice { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-}
-```
-
-Thêm `DbSet<OrderDetailCard> OrderDetailCards` vào `AppDbContext`, mapping `order_detail_cards`, FK `order_detail_id → order_details.id`, và migration. `UnitPrice`/`TotalPrice` là snapshot tại thời điểm Order, để bill cũ không bị thay đổi nếu dữ liệu Card về sau thay đổi.
-
-`generated_cards.total_price` là nguồn để tính giá; `generated_flowers` không có giá thiệp.
-
-Rule đối chiếu Card–Product cần `client_histories.root`. Entity `ClientHistory` hiện tại chưa có property/mapping `Root`, nên cần bổ sung `Guid Root` và mapping `root` trước khi dùng đoạn validate trên.

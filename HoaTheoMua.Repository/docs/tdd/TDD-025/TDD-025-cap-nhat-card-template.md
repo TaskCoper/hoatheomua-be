@@ -38,7 +38,7 @@
 - **BR-021-06**: `imageUrl` mới nếu truyền phải là chuỗi URL hợp lệ, không rỗng và không dài quá 2048 ký tự. Không truyền thì giữ nguyên `imageUrl`; không hỗ trợ xóa URL ảnh khỏi Template.
 - **BR-021-07**: Nếu truyền `imageUrl` mới, service lưu trực tiếp URL đó vào column `image_url`; không nhận file và không gọi upload ảnh.
 - **BR-021-08**: Nếu DB update thất bại, record và `image_url` cũ được giữ nguyên; không có bước cleanup file.
-- **BR-021-09**: `isActive=false` làm Template biến mất khỏi danh sách Customer và không được chọn cho Create/Regenerate mới; dữ liệu lịch sử vẫn sử dụng được theo policy của TDD-007 từ `generated_cards` và phần Template metadata không trùng.
+- **BR-021-09**: `isActive=false` làm Template biến mất khỏi danh sách Customer và không được chọn làm Template mới trong Regenerate. TDD-006 Create dùng `OrderDetail.SnapshotCard`; Regenerate bỏ trống/null hoặc dùng đúng ID nguồn tiếp tục dùng Template snapshot nguồn mà không query trạng thái live.
 - **BR-021-10**: Cập nhật column `updated_at` bằng UTC khi persistence thực sự thay đổi dữ liệu; không đổi `created_at`, `id`, `template_type` hoặc `is_deleted`.
 - **BR-021-11**: Nếu request không có `imageUrl` và mọi giá trị hiệu lực của `name`, `description`, `isActive` đều giống dữ liệu hiện tại, trả HTTP 200 với resource hiện tại, không ghi DB và không đổi `updatedAt`. `imageUrl` được truyền nhưng giống URL hiện tại không tạo thay đổi hiệu lực.
 - **BR-021-12**: Request DTO/binder phải biểu diễn được sự vắng mặt của field; riêng `isActive` phải nullable để phân biệt “không truyền” với `false`, còn `description` phải kiểm tra sự hiện diện của key trong JSON request để phân biệt “không truyền” với chuỗi rỗng dùng để xóa. Chưa áp dụng optimistic concurrency; cập nhật đồng thời dùng last-write-wins trên các field được truyền.
@@ -75,10 +75,10 @@ flowchart LR
     FE -->|"PATCH /api/card-templates/{id}"| API["CardTemplatesController"]
     API --> Svc["CardTemplateService"]
     Svc --> EF["EF Core"]
-    EF --> DB[(card_templates)]
+    EF --> DB[(CardTemplate)]
 ```
 
-**Ghi chú**: Dữ liệu đã lưu trong `generated_cards` và Template metadata không trùng trong history không được update theo Template live; `cardTemplate.imageUrl` không được lưu trong metadata.
+**Ghi chú**: Dữ liệu đã lưu trong `GeneratedCard` và `ClientHistory` không được update theo Template live. Card AI History mới có `cardTemplate.imageUrl` để Regenerate dùng snapshot; URL đã snapshot không đổi khi Admin cập nhật Template.
 
 ### Sequence Diagram
 **Tiêu đề**: Cập nhật Template và URL ảnh
@@ -158,16 +158,16 @@ stateDiagram-v2
 
 ```mermaid
 erDiagram
-    card_templates {
-        uuid id PK "immutable"
-        string name "mutable"
-        text description "mutable"
-        string image_url "mutable"
-        string template_type "immutable"
-        bool is_active "mutable"
-        bool is_deleted "immutable in Update"
-        timestamp created_at "immutable"
-        timestamp updated_at "mutable"
+    CardTemplate {
+        uuid Id PK "immutable"
+        string Name "mutable"
+        text Description "mutable"
+        string ImageUrl "mutable"
+        string TemplateType "immutable"
+        bool IsActive "mutable"
+        bool IsDeleted "immutable in Update"
+        timestamp CreatedAt "immutable"
+        timestamp UpdatedAt "mutable"
     }
 ```
 
@@ -386,8 +386,8 @@ Response trả resource hiện tại; DB không update và `value.updatedAt` gi�
 
 ### ⚫ Trỏ vào tài liệu này
 - TDD-022 — Visibility danh sách thay đổi theo `isActive`.
-- TDD-006, TDD-007, TDD-021 — Admission validation của flow Card.
+- TDD-006, TDD-021 — Admission validation của flow Card.
 
 ### ⋯ Bị ảnh hưởng
-- TDD-006 và TDD-021 khi thay đổi ảnh/trạng thái Template dùng cho request mới.
-- TDD-007 không bị trạng thái live của Template nguồn làm hỏng snapshot cũ.
+- TDD-006 Regenerate khi chọn Template khác nguồn và TDD-021 khi dùng Template cho request mới; TDD-006 Create chỉ dùng snapshot đã có.
+- TDD-006 Regenerate không bị trạng thái live của Template nguồn làm hỏng snapshot cũ khi client không chọn Template khác.

@@ -223,7 +223,7 @@ Response:
 - Code hiện hành: `ConfigController.GetConfigSettingList`, `ConfigService.GetConfigSetting`, `ConfigResponse`.
 
 ### ⚫ Trỏ vào tài liệu này
-- TDD-006, TDD-007, TDD-021 và TDD-027 đọc Card Config.
+- TDD-021 và flow chuẩn bị `OrderDetail.SnapshotCard` đọc Card Config. TDD-006 chỉ dùng snapshot đã có, không đọc Config live.
 - TDD-009, TDD-010, TDD-011 quản trị Card Config.
 
 ### ⋯ Bị ảnh hưởng

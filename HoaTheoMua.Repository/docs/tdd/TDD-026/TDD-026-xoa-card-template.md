@@ -2,7 +2,7 @@
 
 ## Thông tin tài liệu
 - **Tiêu đề**: Admin xóa mềm Card Template
-- **Ghi chú**: API ngừng sử dụng Template cho flow mới nhưng giữ record, ảnh, dữ liệu trong `generated_cards` và phần Template metadata không trùng của history. Đây là thiết kế mục tiêu vì code Card Template chưa tồn tại.
+- **Ghi chú**: API ngừng sử dụng Template cho flow mới nhưng giữ record, ảnh, dữ liệu trong `GeneratedCard` và phần Template metadata không trùng của history. Đây là thiết kế mục tiêu vì code Card Template chưa tồn tại.
 
 ## Metadata quản trị tài liệu
 | Trường | Giá trị |
@@ -35,10 +35,10 @@
 - **BR-022-03**: Template không tồn tại trả `CARD_TEMPLATE_NOT_FOUND/404`.
 - **BR-022-04**: Template đã soft-delete trả `CARD_TEMPLATE_ALREADY_DELETED/410`; thao tác không được xem là thành công lặp lại.
 - **BR-022-05**: Có thể xóa Template Active hoặc Inactive.
-- **BR-022-06**: Không xóa file `image_url` tại thời điểm soft-delete để bảo toàn preview/audit và tránh ảnh hưởng dữ liệu lịch sử; `client_histories.metadata` không snapshot `cardTemplate.imageUrl`.
-- **BR-022-07**: Không update hoặc xóa `generated_cards` và `client_histories`; dữ liệu Card/ảnh đã lưu nằm trong `generated_cards`, còn history giữ provenance và phần Template metadata không trùng.
-- **BR-022-08**: Template đã xóa không xuất hiện trong danh sách và không được dùng cho Card Create hoặc làm Template mới khi Regenerate.
-- **BR-022-09**: Regenerate AI bỏ trống/null hoặc dùng đúng ID Template nguồn vẫn dùng dữ liệu nguồn đã lưu trong `generated_cards` và phần Template metadata không trùng, không query trạng thái record live, kể cả Template đã bị xóa.
+- **BR-022-06**: Không xóa file `image_url` tại thời điểm soft-delete để bảo toàn preview/audit và tránh làm hỏng URL ảnh Template đã snapshot trong `ClientHistory.Metadata` của Card AI.
+- **BR-022-07**: Không update hoặc xóa `GeneratedCard` và `ClientHistory`; Card AI History mới giữ provenance, ảnh nguồn hoa và Template snapshot gồm ảnh.
+- **BR-022-08**: Template đã xóa không xuất hiện trong danh sách, không được dùng để chuẩn bị Order Card Snapshot mới hoặc tạo HandMade và không được chọn làm Template khác nguồn khi TDD-006 Regenerate.
+- **BR-022-09**: TDD-006 Regenerate bỏ trống/null hoặc dùng đúng ID Template nguồn vẫn dùng Template snapshot trong History nguồn, không query trạng thái record live, kể cả Template đã bị xóa.
 - **BR-022-10**: Nếu persistence thất bại, record phải giữ nguyên `is_deleted=false` và `updated_at` cũ.
 
 ### Bối cảnh & Mục tiêu
@@ -72,7 +72,7 @@ flowchart LR
     FE -->|"DELETE /api/card-templates/{id}"| API["CardTemplatesController"]
     API --> Svc["CardTemplateService"]
     Svc --> EF["EF Core"]
-    EF --> DB[(card_templates)]
+    EF --> DB[(CardTemplate)]
 ```
 
 **Ghi chú**: File Storage không được gọi trong flow soft-delete.
@@ -109,7 +109,7 @@ sequenceDiagram
     end
 ```
 
-**Ghi chú**: Không kiểm tra ràng buộc với Generated Card vì dữ liệu nguồn đã nằm trong `generated_cards` và phần Template metadata không trùng của history.
+**Ghi chú**: Không kiểm tra ràng buộc với Generated Card vì dữ liệu nguồn đã nằm trong `GeneratedCard` và phần Template metadata không trùng của history.
 
 ### Activity Diagram
 **Tiêu đề**: Quyết định xóa Card Template
@@ -140,31 +140,31 @@ stateDiagram-v2
 
 ### Mô hình dữ liệu (Data Model / ERD)
 **Tiêu đề**: Soft-delete Card Template và dữ liệu lịch sử liên quan
-**Mô tả**: Không có FK bắt buộc từ history tới Template live; metadata chỉ giữ phần Template không trùng và không có `cardTemplate.imageUrl`. Các cột lineage đa hình `base_id`, `root`, `output_id` đều do code quản lý và không tạo quan hệ database.
+**Mô tả**: Không có FK bắt buộc từ History tới Template live. Card AI History mới giữ Template snapshot gồm `cardTemplate.imageUrl`; soft-delete không sửa snapshot đó. Các cột lineage đa hình `base_id`, `RootID`, `output_id` đều do code quản lý và không tạo quan hệ database.
 
 **Quy ước**: ERD bên dưới dùng đúng tên table/column PostgreSQL dạng `snake_case`; field response dùng `camelCase`.
 
 ```mermaid
 erDiagram
-    card_templates {
-        uuid id PK
-        string image_url "được giữ lại"
-        string template_type "immutable"
-        bool is_active
-        bool is_deleted
-        timestamp updated_at
+    CardTemplate {
+        uuid Id PK
+        string ImageUrl "được giữ lại"
+        string TemplateType "immutable"
+        bool IsActive
+        bool IsDeleted
+        timestamp UpdatedAt
     }
-    client_histories {
-        uuid id PK
-        string type
-        uuid base_id
-        uuid root "Product ID gốc, NOT NULL"
-        json metadata "Template metadata không trùng"
-        uuid output_id
+    ClientHistory {
+        uuid Id PK
+        ClientHistoryType Type
+        uuid BaseId
+        uuid RootID "Product ID gốc, NOT NULL"
+        json Metadata "Card AI có Template snapshot gồm imageUrl"
+        uuid OutputId
     }
 ```
 
-Sơ đồ không nối `card_templates` với `client_histories`: Template chỉ được ghi nhận trong metadata snapshot; `base_id`, `root` và `output_id` không có FK/navigation/cascade.
+Sơ đồ không nối `CardTemplate` với `ClientHistory`: Template chỉ được ghi nhận trong metadata snapshot; `base_id`, `RootID` và `output_id` không có FK/navigation/cascade.
 
 ---
 
@@ -248,8 +248,8 @@ Record và lịch sử giữ nguyên khi ví dụ 4 xảy ra.
 
 ### ⚫ Trỏ vào tài liệu này
 - TDD-022 — Loại record đã xóa khỏi danh sách.
-- TDD-006, TDD-007, TDD-021 — Admission behavior khi Template đã xóa.
+- TDD-006, TDD-021 — Admission behavior khi Template đã xóa.
 
 ### ⋯ Bị ảnh hưởng
-- TDD-006 và TDD-021 chặn Template đã xóa trong Create mới.
-- TDD-007 vẫn dùng Template snapshot nguồn nếu client không chọn Template mới.
+- TDD-021 chặn Template đã xóa; TDD-006 Create dùng Order Card Snapshot đã có, không query Template live.
+- TDD-006 Regenerate vẫn dùng Template snapshot nguồn nếu client không chọn Template mới.

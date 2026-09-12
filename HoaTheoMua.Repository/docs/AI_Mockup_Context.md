@@ -140,7 +140,7 @@ Admin chọn chức năng "Thêm Mockup".
 | Hiển thị | Không hiển thị trong danh sách Mockup mặc định của Admin |
 | Khách hàng | Không hiển thị cho khách hàng trong quy trình tạo mẫu hoa mới |
 | Sử dụng | Không được chọn cho request Flower mới hoặc làm Mockup được chọn mới khi Regenerate; snapshot lịch sử vẫn được dùng lại khi client không chọn Mockup |
-| Dữ liệu | Vẫn giữ dữ liệu, ảnh Preview, Mockup trong `client_histories.metadata` và kết quả lịch sử |
+| Dữ liệu | Vẫn giữ dữ liệu, ảnh Preview, Mockup trong `ClientHistory.Metadata` và kết quả lịch sử |
 
 ---
 
@@ -149,15 +149,15 @@ Admin chọn chức năng "Thêm Mockup".
 ### mockup
 
 ```sql
-Table mockup {
-  id uuid [pk]
-  name varchar(50)                  -- Tên Mockup (1-50 ký tự)
-  description text                   -- Mô tả (tối đa 200 ký tự, nullable)
-  image_url varchar                  -- URL ảnh Mockup
-  is_active boolean                 -- Trạng thái: true=Hoạt động, false=Không hoạt động
-  is_deleted boolean                -- Xóa mềm: true=đã xóa, false=chưa xóa
-  created_at timestamp
-  updated_at timestamp
+Table Mockup {
+  Id uuid [pk]
+  Name varchar(50)                  -- Tên Mockup (1-50 ký tự)
+  Description text                   -- Mô tả (tối đa 200 ký tự, nullable)
+  ImageUrl varchar                  -- URL ảnh Mockup
+  IsActive boolean                 -- Trạng thái: true=Hoạt động, false=Không hoạt động
+  IsDeleted boolean                -- Xóa mềm: true=đã xóa, false=chưa xóa
+  CreatedAt timestamp
+  UpdatedAt timestamp
 }
 ```
 
@@ -165,31 +165,31 @@ Table mockup {
 
 ```mermaid
 erDiagram
-    mockup {
-        uuid id PK
-        string name
-        string description
-        string image_url
-        bool is_active
-        bool is_deleted
-        timestamp created_at
-        timestamp updated_at
+    Mockup {
+        uuid Id PK
+        string Name
+        string Description
+        string ImageUrl
+        bool IsActive
+        bool IsDeleted
+        timestamp CreatedAt
+        timestamp UpdatedAt
     }
 
-    client_histories {
-        uuid id PK
-        uuid user_id
-        string type "flower | card | handmade_card; post hiện chưa dùng"
-        json system_form "type + content; null với handmade_card"
-        json metadata
-        uuid root "Product ID gốc; required; không có FK"
-        uuid base_id
-        uuid output_id
-        timestamp created_at
+    ClientHistory {
+        uuid Id PK
+        uuid UserId
+        ClientHistoryType Type "flower | card | handmade_card; post hiện chưa dùng"
+        json SystemForm "Type + content; null với handmade_card"
+        json Metadata
+        uuid RootID "Product ID gốc; required; không có FK"
+        uuid BaseId
+        uuid OutputId
+        timestamp CreatedAt
     }
 ```
 
-`client_histories` không có column `input`. `system_form` không có FK tới `system_prompts`; AI Flower/Card lưu `{type, content}` và HandMade lưu `null`. Với các History Flower/Card đang dùng, `root` là Product ID gốc do code gán và không có quan hệ database; Post nằm ngoài phạm vi thay đổi này.
+`ClientHistory` không có column `input`. `system_form` không có FK tới `SystemPrompt`; AI Flower/Card lưu `{type, content}` và HandMade lưu `null`. Với các History Flower/Card đang dùng, `RootID` là Product ID gốc do code gán và không có quan hệ database; Post nằm ngoài phạm vi thay đổi này.
 
 ---
 
@@ -236,11 +236,11 @@ erDiagram
 
 - Create Flower và Regenerate có ID Mockup khác nguồn đều validate theo thứ tự cố định: không tồn tại → `MOCKUP_NOT_FOUND/404`; `isDeleted=true` → `MOCKUP_DELETED/410`; chưa xóa nhưng `isActive=false` → `MOCKUP_INACTIVE/409`.
 - Regenerate bỏ trống/null hoặc truyền đúng ID Mockup nguồn dùng nguyên Mockup trong Flower History metadata, không đọc dữ liệu hiện tại và không kiểm tra active/soft-delete. Trạng thái record Mockup nguồn không chặn flow này.
-- Khi hợp lệ, service chuẩn bị nội dung ảnh bằng bytes đã tải hoặc `url + objectKey/versionId + sha256`. Flower History metadata lưu ID, tên, mô tả, ảnh và trạng thái Mockup đã dùng; `generated_flowers` không có `input_snapshot`.
+- Khi hợp lệ, service chuẩn bị nội dung ảnh bằng bytes đã tải hoặc `url + objectKey/versionId + sha256`. Flower History metadata lưu ID, tên, mô tả, ảnh và trạng thái Mockup đã dùng; `GeneratedFlower` không có `input_snapshot`.
 - Hàm gọi AI tự quản lý retry và phải dùng cùng dữ liệu; không tải lại URL hiện tại và không đọc lại Mockup.
-- Admin inactive/soft-delete Mockup sau khi dữ liệu đã được chuẩn bị không được hủy bước gọi AI, gắn logo hoặc lưu `generated_flowers`/History.
-- Generated Flower đã thành công vẫn được xem và dùng tạo Card dù Mockup gốc đổi trạng thái. Mockup không phải dependency tồn kho và không được dùng để chặn Checkout/Order.
-- Không có bảng `flower_requests`; toàn bộ Flower/Card history là các record phân loại bởi `client_histories.type`.
+- Admin inactive/soft-delete Mockup sau khi dữ liệu đã được chuẩn bị không được hủy bước gọi AI, gắn logo hoặc lưu `GeneratedFlower`/History.
+- Generated Flower đã thành công vẫn được xem và có thể được chụp làm nguồn trong `OrderDetail.SnapshotCard` dù Mockup gốc đổi trạng thái. TDD-006 chỉ dùng snapshot và Flower History để gán `RootID`; Mockup không phải dependency tồn kho và không được dùng để chặn Checkout/Order.
+- Không có bảng `flower_requests`; toàn bộ Flower/Card history là các record phân loại bởi `ClientHistory.Type`.
 
 ---
 

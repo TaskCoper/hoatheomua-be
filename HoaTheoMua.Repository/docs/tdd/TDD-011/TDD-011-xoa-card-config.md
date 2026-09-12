@@ -34,8 +34,8 @@
 - BR-011-03: Khi tìm thấy, service giữ cơ chế soft-delete `IsDeleted=true` và bổ sung `UpdatedAt=UtcNow`; không xóa vật lý.
 - BR-011-04: Response thành công giữ `ResponseDeleteConfig` hiện tại gồm `group`, `key`, được bọc trong `BaseResponse`, HTTP 200; không thêm field request/response.
 - BR-011-05: Controller tiếp tục gọi revalidation sau SaveChanges với `entity=config`, `group`, `key`; hành vi external failure hiện hành không đổi.
-- BR-011-06: Nếu record là `card_config.sizes`, mọi flow tạo Card mới đang cần Size Config phải phát hiện record đã xóa và trả `CARD_SIZE_CONFIG_DELETED/410` trước khi gọi AI hoặc persist Card/History.
-- BR-011-07: Nếu record là `card_config.prices`, flow Card mới cần calligraphy pricing phải trả `CALLIGRAPHY_CONFIG_DELETED/410` trước khi gọi AI hoặc persist Card/History.
+- BR-011-06: Nếu record là `card_config.sizes`, TDD-021 và flow chuẩn bị `OrderDetail.SnapshotCard` mới phải phát hiện record đã xóa và trả `CARD_SIZE_CONFIG_DELETED/410` trước khi tạo snapshot hoặc persist Card/History.
+- BR-011-07: Nếu record là `card_config.prices`, TDD-021 và flow chuẩn bị snapshot mới cần Calligraphy phải trả `CALLIGRAPHY_CONFIG_DELETED/410` trước khi tạo snapshot hoặc persist Card/History.
 - BR-011-08: Card/History đã tạo giữ nguyên snapshot; Delete Config không cập nhật hoặc xóa các record cũ.
 - BR-011-09: Config ngoài Card vẫn giữ luồng soft-delete/revalidation hiện hành; việc bổ sung mã lỗi Card chỉ áp dụng tại các flow Card đang tiêu thụ hai singleton.
 
@@ -47,7 +47,7 @@
 **Mục tiêu**
 - Giữ nguyên DELETE contract.
 - Cập nhật `UpdatedAt` khi soft-delete.
-- Phân biệt dependency Size/Price đã xóa trong các flow Card hiện có.
+- Phân biệt dependency Size/Price đã xóa trong TDD-021 và flow chuẩn bị Order Card Snapshot.
 - Bảo toàn snapshot đã tạo.
 
 **Ngoài phạm vi** (Out of scope)
@@ -62,7 +62,7 @@
 
 ### Kiến trúc tổng quan (Architecture)
 **Tiêu đề**: Xóa Card Config và ảnh hưởng lên Card admission
-**Mô tả**: ConfigController soft-delete như hiện tại; CardService ở các endpoint tạo hiện có kiểm tra singleton live và trả mã lỗi nếu dependency đã xóa.
+**Mô tả**: ConfigController soft-delete như hiện tại; TDD-021 và flow chuẩn bị Order Card Snapshot kiểm tra singleton live và trả mã lỗi nếu dependency đã xóa. TDD-006 không đọc Config live.
 
 ```mermaid
 flowchart LR
@@ -70,11 +70,11 @@ flowchart LR
     API --> ConfigSvc[ConfigService.DeleteConfig]
     ConfigSvc --> DB[(Config)]
     API --> R[Revalidation API]
-    CardClient[Card client] --> CardSvc[CardService existing flows]
+    CardClient[Card client] --> CardSvc[HandMade hoặc flow chuẩn bị SnapshotCard]
     CardSvc --> DB
     DB -->|"Card singleton IsDeleted=true"| CardSvc
 ```
-**Ghi chú**: Không tạo luồng Card mới; chỉ bổ sung lỗi vào bước kiểm tra Config của các flow đang có.
+**Ghi chú**: TDD-006 Create/Regenerate dùng snapshot đã có nên không đi qua nhánh này.
 
 ### Sequence Diagram
 **Tiêu đề**: Soft-delete và lần sử dụng Card Config tiếp theo
@@ -88,7 +88,7 @@ sequenceDiagram
     participant S as ConfigService
     participant DB as Database
     participant R as Revalidation API
-    participant Card as CardService
+    participant Card as HandMade hoặc Snapshot preparation
     Admin->>C: DELETE /api/v1/configs/{id}
     C->>S: DeleteConfig(id)
     S->>DB: Find undeleted Config
@@ -104,7 +104,7 @@ sequenceDiagram
     DB-->>Card: IsDeleted=true
     Card-->>Card: Trả *_CONFIG_DELETED/410, không persist
 ```
-**Ghi chú**: Card cũ không load lại Config để thay snapshot.
+**Ghi chú**: Card cũ và TDD-006 không load lại Config để thay snapshot.
 
 ### Activity Diagram (optional — chỉ điền nếu logic có nhiều nhánh điều kiện phức tạp)
 **Tiêu đề**: Kiểm tra dependency đã xóa
@@ -112,7 +112,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[Flow Card load Config] --> B{Key dependency}
+    A[HandMade hoặc flow chuẩn bị SnapshotCard load Config] --> B{Key dependency}
     B -->|card_config.sizes đã xóa| C[CARD_SIZE_CONFIG_DELETED/410]
     B -->|card_config.prices đã xóa| D[CALLIGRAPHY_CONFIG_DELETED/410]
     B -->|Config khả dụng| E[Tiếp tục admission]
@@ -142,10 +142,10 @@ erDiagram
         timestamp updated_at
     }
     GeneratedCard {
-        uuid id PK
-        string size_name
-        decimal size_base_price
-        json word_config_snapshot
+        uuid Id PK
+        string SizeName
+        decimal SizeBasePrice
+        json WordConfigSnapshot
     }
 ```
 
@@ -182,15 +182,15 @@ Response:
 
 #### Endpoint bị ảnh hưởng #2
 - **Method**: POST
-- **Endpoint**: Các endpoint tạo Card hiện có tại TDD-006/TDD-021/TDD-027
-- **Tên endpoint**: Card admission dùng Config live
-- **Mô tả**: Không đổi request; bổ sung mã lỗi khi dependency đã soft-delete.
+- **Endpoint**: `POST /api/handmade-cards` và flow chuẩn bị `OrderDetail.SnapshotCard`
+- **Tên endpoint**: Các flow admission dùng Config live
+- **Mô tả**: Config bị xóa ảnh hưởng HandMade và việc chuẩn bị snapshot mới; TDD-006 dùng snapshot đã có nên không đọc Config live.
 
 **Ví dụ 3 — Size Config đã xóa** — HTTP `410`, `CARD_SIZE_CONFIG_DELETED`.
 
 Request:
 ```http
-POST endpoint tạo Card hiện có với request hợp lệ; service tự lấy Size chung
+POST /api/handmade-cards với request hợp lệ và `sizeName` khớp một phần tử trong `card_config.sizes.items`
 ```
 
 Response:
@@ -202,7 +202,7 @@ Response:
 
 Request:
 ```http
-POST endpoint tạo Card calligraphy hiện có với nội dung hợp lệ
+POST /api/handmade-cards với nội dung Calligraphy hợp lệ
 ```
 
 Response:
@@ -230,7 +230,7 @@ Response:
 ## BƯỚC 4 — Tham chiếu
 
 ### 🔴 Tham chiếu đến
-- TDD-006, TDD-021, TDD-027 — các flow Card sử dụng Config live.
+- TDD-021 và flow chuẩn bị `OrderDetail.SnapshotCard` — các flow sử dụng Config live. TDD-006 chỉ tiêu thụ snapshot đã có.
 - TDD-009, TDD-010 — tạo/cập nhật singleton.
 - Code hiện hành: `ConfigService.DeleteConfig`, `ConfigController.DeleteConfig`, `ResponseDeleteConfig`.
 
@@ -238,4 +238,4 @@ Response:
 - Các UT Card admission cần kiểm tra mã lỗi dependency đã xóa.
 
 ### ⋯ Bị ảnh hưởng
-- Tất cả flow tạo Card mới; Card/History đã tạo không bị thay đổi vì dùng snapshot.
+- HandMade mới và việc chuẩn bị Order Card Snapshot mới; TDD-006 Create/Regenerate với snapshot đã có không bị ảnh hưởng.

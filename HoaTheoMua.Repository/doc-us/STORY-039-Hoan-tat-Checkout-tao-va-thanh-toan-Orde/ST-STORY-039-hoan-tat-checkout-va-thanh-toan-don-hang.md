@@ -50,8 +50,8 @@
 - [STORY-039/AC-002](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
 - [STORY-039/AC-003](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
 - [STORY-039/AC-004](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
-- [STORY-039/BR-087](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
-- [STORY-039/BR-088](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
+- [BR-087](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
+- [BR-088](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
 
 **Rationale:**
 > Xác minh trải nghiệm khách hàng: đơn hàng chỉ được tạo sau khi khách hàng bấm "Hoàn tất"; đơn hàng được tạo đúng một lần ở trạng thái chờ thanh toán và nếu Checkout có thiệp đã xác nhận thì thiệp được liên kết đúng với đơn hàng.
@@ -100,11 +100,11 @@
 
 ---
 
-## ST-039-03-01 — Thanh toán thất bại vẫn cho thử lại trong thời hạn 24 giờ
+## ST-01 / ST-039-03-01 — Thanh toán thất bại vẫn cho thử lại trong thời hạn 24 giờ
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | [ST-039-03-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/207f6ed9-8a13-43d8-999a-0e715a8d1dfc) |
+| **Test ID** | [ST-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/207f6ed9-8a13-43d8-999a-0e715a8d1dfc) (tức [ST-039-03-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/207f6ed9-8a13-43d8-999a-0e715a8d1dfc)) |
 | **Story** | STORY-039 |
 | **Loại** | 2 |
 | **Suite** | FULL |
@@ -188,8 +188,8 @@
 
 **Trace to:**
 - [STORY-039/AC-007](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
-- [STORY-039/BR-089](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
-- [STORY-039/BR-091](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
+- [BR-089](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
+- [BR-091](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
 
 **Rationale:**
 > Xác minh trải nghiệm khách hàng: đơn hàng chờ thanh toán chưa thanh toán thành công bị tự động hủy sau 24 giờ và tồn kho đã giữ được giải phóng đúng.
@@ -241,7 +241,7 @@
 **Trace to:**
 - [STORY-039/AC-008](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
 - [STORY-039/AC-009](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
-- [STORY-039/BR-093](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
+- [BR-093](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
 
 **Rationale:**
 > Xác minh trải nghiệm khách hàng: tồn kho được kiểm tra lại trước khi tạo đơn hàng; Core hết phải chặn đơn hàng, còn Support hết không chặn nếu Core vẫn đủ.
@@ -289,7 +289,7 @@
 **Trace to:**
 - [STORY-039/ALT-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
 - [STORY-039/ALT-04](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
-- [STORY-039/BR-092](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
+- [BR-092](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fc14ad2e-0f75-40f9-806d-f935e31d34f6)
 
 **Rationale:**
 > Xác minh trải nghiệm khách hàng: Checkout không có thiệp vẫn tạo được đơn hàng và bill được chốt theo dữ liệu tại đúng thời điểm Hoàn tất.

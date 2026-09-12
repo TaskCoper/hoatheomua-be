@@ -8,7 +8,7 @@
 | Trường | Giá trị |
 |---|---|
 | Mã tài liệu | TDD-010 |
-| Phiên bản | v0.7 |
+| Phiên bản | v0.8 |
 | Author | Codex |
 | Reviewer | |
 | Approver | Chưa chỉ định |
@@ -24,7 +24,7 @@
 - **Tính năng**: Cập nhật Card Config qua API Config
 - **Tác giả**: Codex
 - **Người review**:
-- **Phiên bản**: v0.7
+- **Phiên bản**: v0.8
 - **Cập nhật (YYYY-MM-DD)**: 2026-09-09
 - **Story liên quan**: Không có
 
@@ -178,7 +178,7 @@ erDiagram
 
 Request:
 ```json
-{"group":"card_config","key":"card_config.sizes","kind":"Setting","isPublic":true,"value":{"group":"card_config","label":"Kích thước thiệp","value":"{\"items\":[{\"name\":\"Kích thước chung\",\"width\":16,\"height\":26,\"base_price\":16000,\"max_words\":150}]}","options":[],"required":false,"inputType":"json","validations":[]}}
+{"group":"card_config","key":"card_config.sizes","kind":"Setting","isPublic":true,"value":{"group":"card_config","label":"Kích thước thiệp","value":"{\"items\":[{\"name\":\"Nhỏ\",\"width\":10,\"height\":15,\"base_price\":10000,\"max_words\":70},{\"name\":\"Lớn\",\"width\":16,\"height\":26,\"base_price\":16000,\"max_words\":150}]}","options":[],"required":false,"inputType":"json","validations":[]}}
 ```
 
 Response:
@@ -251,7 +251,7 @@ Response:
 |---|---|---|
 | `NOT_FOUND` | 404 | Target không tồn tại hoặc đã soft-delete |
 | `CARD_CONFIG_IDENTITY_IMMUTABLE` | 409 | Card request đổi group, key hoặc kind |
-| `CARD_SIZE_CONFIG_INVALID` | 400 | Size wrapper/inner không có đúng một Size chung hợp lệ |
+| `CARD_SIZE_CONFIG_INVALID` | 400 | Size wrapper/inner rỗng, có item sai cấu trúc hoặc có các item trùng `name` |
 | `CALLIGRAPHY_CONFIG_INVALID` | 400 | Price wrapper/inner ranges không hợp lệ |
 | `MissingAccessToken` / `ExpiredAccessToken` / `InvalidAccessToken` | 401 | JWT middleware từ chối |
 | Authorization middleware response | 403 | Không thỏa `AdminPolicy` |
@@ -272,7 +272,7 @@ Response:
 - Code hiện hành: `UpdateConfigRequest`, `ConfigService.UpdateConfig`, `ConfigController.UpdateConfig`.
 
 ### ⚫ Trỏ vào tài liệu này
-- TDD-006, TDD-007, TDD-021, TDD-027 đọc cấu hình hiện hành nhưng Card cũ dùng snapshot.
+- TDD-021 và flow chuẩn bị `OrderDetail.SnapshotCard` đọc cấu hình hiện hành. TDD-006 Create/Regenerate dùng snapshot và không bị thay đổi bởi Config live.
 - TDD-011 xóa mềm Config.
 
 ### ⋯ Bị ảnh hưởng

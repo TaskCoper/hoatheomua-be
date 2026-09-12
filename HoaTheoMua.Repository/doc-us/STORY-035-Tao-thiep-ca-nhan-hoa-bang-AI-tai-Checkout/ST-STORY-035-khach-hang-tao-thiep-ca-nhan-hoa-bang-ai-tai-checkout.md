@@ -6,68 +6,40 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-035-01-01 |
+| **Test ID** | [ST-035-01-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/6c66168b-37ce-4079-9412-6d93b2ec1250) |
 | **Story** | STORY-035 |
 | **Loại** | 1 |
 | **Suite** | SMOKE |
 | **Priority** | P1 |
 | **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
+| **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Khách hàng đã đăng nhập.
-- Checkout tồn tại, thuộc khách hàng hiện tại và chưa hoàn tất.
-- Checkout có mẫu hoa hiện tại đủ điều kiện tạo thiệp.
-- Có ít nhất 01 Template và 01 Size đang khả dụng từ Core DB.
-- Nếu Checkout/mẫu hoa hiện tại có Combo nguồn, Combo nguồn còn khả dụng tại thời điểm backend validate.
-- Khách hàng còn quota tạo thiệp trong ngày.
-- Mẫu hoa nguồn chưa sử dụng đủ 03 lượt generate thiệp AI.
-- AI service đang hoạt động bình thường.
+- Khách hàng đã đăng nhập. Checkout tồn tại, thuộc khách hàng hiện tại và chưa hoàn tất. Có ít nhất 1 Template đang khả dụng. Có ít nhất 1 Size đang khả dụng. Khách hàng chưa đạt giới hạn 10 lượt thiệp AI trong ngày. Mẫu hoa nguồn chưa đạt giới hạn 3 lượt tạo ảnh thiệp. AI service đang hoạt động bình thường.
 
 **Steps:**
-1. Khách hàng mở chức năng tạo thiệp tại Checkout.
-2. Khách hàng nhập Người gửi, Người nhận và Lời chúc hợp lệ.
-3. Khách hàng chọn Template, Size và Hình thức hợp lệ.
-4. Khách hàng chọn **"Tạo thiệp"**.
-5. Chờ AI tạo ảnh thiệp thành công.
-6. Khách hàng xem kết quả thiệp vừa tạo.
-7. Khách hàng chọn **"Xác nhận"** đối với kết quả muốn sử dụng.
-8. Khách hàng kiểm tra thiệp hiện tại trong Checkout và Order Summary.
+1. Mở Checkout A.
+2. Chọn chức năng “Tạo thiệp”.
+3. Quan sát danh sách Template và Size.
+4. Nhập đầy đủ Người gửi, Người nhận và Lời chúc.
+5. Chọn TEMPLATE-A, SIZE-A và hình thức Gõ máy.
+6. Chọn “Tạo thiệp”.
+7. Chờ AI xử lý thành công.
+8. Quan sát kết quả thiệp.
+9. Quan sát ảnh, mục lịch sử và số lượt đã sử dụng.
+10. Quan sát thiệp hiện tại của Checkout trước khi chọn “Xác nhận”.
 
 **Test Data:**
-- Người gửi: `Hào`.
-- Người nhận: `Mẹ`.
-- Lời chúc: `Chúc mẹ luôn vui vẻ và hạnh phúc.`
-- Template: `Template A` đang khả dụng.
-- Size: `Size A` đang khả dụng.
-- Hình thức: `Gõ máy`.
-- Ảnh đính kèm: không có.
-- Quota tạo thiệp trong ngày trước thao tác: còn ít nhất 1 lượt.
-- Số lượt generate thiệp của mẫu hoa nguồn trước thao tác: nhỏ hơn 3.
+- Checkout: Checkout A Template: TEMPLATE-A Size: SIZE-A Hình thức: Gõ máy Người gửi: Nguyễn An Người nhận: Trần Bình Lời chúc: Chúc bạn sinh nhật vui vẻ Ảnh đính kèm: Không Lượt sử dụng trong ngày trước tạo ảnh: 0/10 Lượt của mẫu hoa trước tạo ảnh: 0/3
 
 **Expected Result:**
-- Backend validate thành công Checkout, input, Template, Size, Combo nguồn nếu có, quota ngày và giới hạn 03 lượt của mẫu hoa nguồn.
-- Hệ thống tạo đúng 01 AI Job cho request hợp lệ.
-- Hệ thống ghi nhận đúng 01 lượt quota tạo thiệp trong ngày.
-- Hệ thống ghi nhận đúng 01 lượt generate thiệp của mẫu hoa nguồn.
-- AI tạo được ảnh output hợp lệ.
-- Hệ thống lưu ảnh kết quả chính thức dưới định dạng PNG và không gắn logo.
-- Hệ thống tạo đúng 01 History record mới.
-- Ảnh thiệp vừa generate chưa tự động trở thành thiệp hiện tại của Checkout khi khách hàng chưa xác nhận.
-- Sau khi khách hàng chọn **"Xác nhận"**, kết quả đó trở thành thiệp hiện tại của Checkout.
-- Order Summary hiển thị thiệp đã xác nhận và giá tạm tính tương ứng.
+- Danh sách Template và Size khả dụng được hiển thị đầy đủ. Hệ thống chấp nhận các thông tin Người gửi, Người nhận, Lời chúc, TEMPLATE-A, SIZE-A và hình thức Gõ máy hợp lệ. Khi khách hàng chọn “Tạo thiệp”, hệ thống khởi tạo một quá trình tạo ảnh AI. Quá trình tạo ảnh AI hoàn tất thành công và trả về đúng một ảnh thiệp PNG. Một mục lịch sử mới được tạo cho lần tạo ảnh thành công. Lượt sử dụng thiệp AI trong ngày tăng từ 0/10 lên 1/10. Lượt tạo ảnh thiệp của mẫu hoa tăng từ 0/3 lên 1/3. Kết quả thiệp được hiển thị cho khách hàng sau khi AI xử lý thành công. Thiệp vừa tạo chưa tự động trở thành thiệp hiện tại của Checkout trước khi khách hàng chọn “Xác nhận”.
 
 **Trace to:**
-- STORY-035/AC-001
-- STORY-035/AC-014
-- STORY-035/BR-048
-- STORY-035/BR-049
-- STORY-035/BR-050
-- STORY-035/BR-053
-- STORY-035/BR-054
+- [STORY-035/AC-001](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-048](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-049](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-050](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
 
 **Rationale:**
-> Xác minh luồng chính: khách hàng tạo được thiệp AI hợp lệ tại Checkout, hệ thống lưu ảnh và History đúng quy tắc, trừ đúng quota, và chỉ gắn thiệp vào Checkout sau khi khách hàng xác nhận.
+> Xác minh trải nghiệm khách hàng: khách hàng có thể tạo thành công một thiệp AI từ Checkout hợp lệ; hệ thống tạo quá trình tạo ảnh AI, ghi nhận đúng lượt sử dụng, lưu đúng một ảnh PNG và một mục lịch sử nhưng chưa tự động chọn kết quả làm thiệp hiện tại của Checkout.
 
 ---
 
@@ -75,671 +47,412 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-035-02-01 |
+| **Test ID** | [ST-035-02-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/557b7ff4-cfe3-42e6-a663-568cefd10fa4) |
 | **Story** | STORY-035 |
 | **Loại** | 4 |
 | **Suite** | FULL |
 | **Priority** | P1 |
 | **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
+| **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Khách hàng đã đăng nhập.
-- Checkout hợp lệ, thuộc khách hàng hiện tại và chưa hoàn tất.
-- Template, Size và Hình thức hợp lệ đang khả dụng.
-- Khách hàng còn quota tạo thiệp trong ngày.
-- Mẫu hoa nguồn chưa sử dụng đủ 03 lượt generate thiệp AI.
+- Checkout hợp lệ. Template và Size còn khả dụng. Khách hàng còn lượt sử dụng. Khách hàng đang ở màn tạo thiệp.
 
 **Steps:**
-1. Khách hàng mở form tạo thiệp tại Checkout.
-2. Khách hàng lần lượt nhập các bộ dữ liệu trong phần Test Data.
-3. Với mỗi bộ dữ liệu, khách hàng chọn **"Tạo thiệp"**.
-4. Kiểm tra lỗi hiển thị trên UI.
-5. Kiểm tra backend không tạo AI Job, không tạo History record và không trừ quota với dữ liệu không hợp lệ.
+1. Nhập lần lượt từng bộ Test Data.
+2. Hoàn thiện các trường còn lại bằng dữ liệu hợp lệ.
+3. Chọn “Tạo thiệp”.
+4. Quan sát validation.
+5. Quan sát việc tạo quá trình tạo ảnh AI, lịch sử và lượt sử dụng.
+6. Reset form trước dataset tiếp theo.
 
 **Test Data:**
-
-| # | Người gửi | Người nhận | Lời chúc | Kỳ vọng |
-|---|---|---|---|---|
-| 1 | _(rỗng)_ | `Mẹ` | `Chúc mẹ vui vẻ.` | Lỗi Người gửi |
-| 2 | `Hào` | _(rỗng)_ | `Chúc mẹ vui vẻ.` | Lỗi Người nhận |
-| 3 | `Hào` | `Mẹ` | _(rỗng)_ | Lỗi Lời chúc |
-| 4 | 21 từ | `Mẹ` | `Chúc mẹ vui vẻ.` | Lỗi Người gửi vượt 20 từ |
-| 5 | `Hào` | 21 từ | `Chúc mẹ vui vẻ.` | Lỗi Người nhận vượt 20 từ |
-| 6 | `Hào` | `Mẹ` | 101 từ | Lỗi Lời chúc vượt 100 từ |
-| 7 | `  Hào  ` | `  Mẹ  ` | `  Chúc mẹ vui vẻ.  ` | Hợp lệ sau khi trim |
-| 8 | `Hào` | `Mẹ` | Nội dung có nhiều khoảng trắng, tab, xuống dòng liên tiếp nhưng không vượt giới hạn từ | Hợp lệ |
+- | TH | Dữ liệu | Expected | |--------------|--------------------------------------|----------------------| | TD-01 | Người gửi rỗng | Reject | | TD-02 | Người nhận rỗng | Reject | | TD-03 | Lời chúc rỗng | Reject | | TD-04 | Người gửi 20 từ | Accept | | TD-05 | Người gửi 21 từ | Reject | | TD-06 | Người nhận 20 từ | Accept | | TD-07 | Người nhận 21 từ | Reject | | TD-08 | Lời chúc 100 từ | Accept | | TD-09 | Lời chúc 101 từ | Reject | | TD-10 | Nhiều space/tab/newline | Đếm theo rule | | TD-11 | Chỉ chứa khoảng trắng | Tính là 0 từ |
 
 **Expected Result:**
-- Hệ thống áp dụng đúng quy tắc đếm từ: trim khoảng trắng đầu/cuối, nhiều khoảng trắng/tab/xuống dòng liên tiếp được tính là một dấu phân tách.
-- Dấu câu đi liền với một từ không được tính thành từ riêng.
-- Nội dung chỉ gồm khoảng trắng được tính là 0 từ.
-- Với dữ liệu thiếu hoặc vượt giới hạn, backend từ chối request.
-- Với dữ liệu không hợp lệ, hệ thống không bắt đầu AI.
-- Với dữ liệu không hợp lệ, hệ thống không tạo History record.
-- Với dữ liệu không hợp lệ, hệ thống không trừ quota.
-- Hệ thống hiển thị lỗi tại trường tương ứng.
-- Với dữ liệu hợp lệ sau trim và không vượt giới hạn, hệ thống cho phép tiếp tục tạo thiệp.
+- Người gửi tối đa 20 từ. Người nhận tối đa 20 từ. Lời chúc tối đa 100 từ. Giá trị đúng boundary được chấp nhận. Giá trị vượt boundary bị từ chối. Nhiều khoảng trắng, tab hoặc newline liên tiếp chỉ được tính là dấu phân tách. Khoảng trắng đầu/cuối không được tính. Chuỗi chỉ chứa khoảng trắng được tính là 0 từ. thao tác không hợp lệ không thấy quá trình tạo ảnh AI bắt đầu. Không có ảnh AI mới được tạo. Không tạo mục lịch sử. Số lượt sử dụng còn lại không bị giảm. Hệ thống hiển thị lỗi tại trường tương ứng
 
 **Trace to:**
-- STORY-035/AC-004
-- STORY-035/EXC-02
-- STORY-035/BR-051
+- [STORY-035/AC-004](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/EXC-02](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-051](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
 
 **Rationale:**
-> Xác minh dữ liệu bắt buộc và giới hạn số từ được kiểm tra đúng ở cả Frontend và Backend trước khi cho phép tạo AI Job.
+> Xác minh trải nghiệm khách hàng: Hệ thống kiểm tra lại các trường bắt buộc và giới hạn số từ theo đúng quy tắc của Story trước khi tạo quá trình tạo ảnh AI.
 
 ---
 
-## ST-035-03-01 — Hình thức Gõ máy render nguyên văn nội dung lên ảnh thiệp
+## ST-035-03-01 — Ảnh đính kèm là tùy chọn và xử lý file đính kèm
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-035-03-01 |
-| **Story** | STORY-035 |
-| **Loại** | 1 |
-| **Suite** | FULL |
-| **Priority** | P1 |
-| **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
-
-**Precondition:**
-- Checkout hợp lệ và thuộc khách hàng hiện tại.
-- Khách hàng còn quota tạo thiệp trong ngày.
-- Template và Size đang khả dụng.
-- Khách hàng chọn Hình thức **Gõ máy**.
-- Người gửi, Người nhận và Lời chúc hợp lệ.
-
-**Steps:**
-1. Khách hàng mở chức năng tạo thiệp tại Checkout.
-2. Khách hàng nhập nội dung Người gửi, Người nhận và Lời chúc hợp lệ.
-3. Khách hàng chọn Hình thức **Gõ máy**.
-4. Khách hàng chọn **"Tạo thiệp"**.
-5. Chờ AI tạo thiệp thành công.
-6. Kiểm tra nội dung được render trên ảnh output.
-7. Kiểm tra dữ liệu được lưu trong History record.
-
-**Test Data:**
-- Người gửi: `Thiên Hào`.
-- Người nhận: `Khánh Linh`.
-- Lời chúc: `Chúc bạn một ngày thật vui và nhiều năng lượng.`
-- Hình thức: `Gõ máy`.
-
-**Expected Result:**
-- AI tạo thiệp thành công.
-- Ảnh output hiển thị nguyên văn Người gửi.
-- Ảnh output hiển thị nguyên văn Người nhận.
-- Ảnh output hiển thị nguyên văn Lời chúc.
-- Hệ thống không tự động sửa, rút gọn, dịch hoặc thay đổi Người gửi, Người nhận và Lời chúc.
-- History record lưu đúng nội dung khách hàng đã nhập.
-
-**Trace to:**
-- STORY-035/AC-003
-- STORY-035/BR-154
-- STORY-035/BR-057
-
-**Rationale:**
-> Xác minh khi khách hàng chọn Gõ máy, nội dung bắt buộc phải được render nguyên văn lên ảnh kết quả và không bị AI tự ý thay đổi.
-
----
-
-## ST-035-04-01 — Hình thức Calligraphy không render nội dung lên ảnh nhưng vẫn lưu History
-
-| Trường | Nội dung |
-|---|---|
-| **Test ID** | ST-035-04-01 |
-| **Story** | STORY-035 |
-| **Loại** | 1 |
-| **Suite** | FULL |
-| **Priority** | P1 |
-| **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
-
-**Precondition:**
-- Checkout hợp lệ và thuộc khách hàng hiện tại.
-- Khách hàng còn quota tạo thiệp trong ngày.
-- Template và Size đang khả dụng.
-- Khách hàng chọn Hình thức **Calligraphy**.
-- Người gửi, Người nhận và Lời chúc hợp lệ.
-
-**Steps:**
-1. Khách hàng mở chức năng tạo thiệp tại Checkout.
-2. Khách hàng nhập Người gửi, Người nhận và Lời chúc hợp lệ.
-3. Khách hàng chọn Hình thức **Calligraphy**.
-4. Khách hàng chọn **"Tạo thiệp"**.
-5. Chờ AI tạo thiệp thành công.
-6. Kiểm tra ảnh output.
-7. Kiểm tra History record của thiệp.
-
-**Test Data:**
-- Người gửi: `Thiên Hào`.
-- Người nhận: `Khánh Linh`.
-- Lời chúc: `Chúc bạn luôn hạnh phúc.`
-- Hình thức: `Calligraphy`.
-
-**Expected Result:**
-- AI tạo thiệp thành công.
-- Ảnh output không hiển thị Người gửi.
-- Ảnh output không hiển thị Người nhận.
-- Ảnh output không hiển thị Lời chúc.
-- Người gửi, Người nhận và Lời chúc vẫn được lưu cùng History record của thiệp.
-- Các nội dung này không bị mất để Staff/Admin có thể sử dụng khi viết tay lên thiệp.
-
-**Trace to:**
-- STORY-035/AC-013
-- STORY-035/BR-154
-
-**Rationale:**
-> Xác minh Hình thức Calligraphy không render nội dung bắt buộc lên ảnh output nhưng vẫn lưu đầy đủ dữ liệu để phục vụ thao tác xử lý thiệp sau đó.
-
----
-
-## ST-035-05-01 — Ảnh đính kèm hợp lệ được giữ nguyên nội dung khi tạo thiệp
-
-| Trường | Nội dung |
-|---|---|
-| **Test ID** | ST-035-05-01 |
-| **Story** | STORY-035 |
-| **Loại** | 1 |
-| **Suite** | FULL |
-| **Priority** | P1 |
-| **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
-
-**Precondition:**
-- Checkout hợp lệ và thuộc khách hàng hiện tại.
-- Khách hàng còn quota tạo thiệp trong ngày.
-- Template và Size đang khả dụng.
-- Khách hàng có 01 ảnh đính kèm hợp lệ.
-- AI service có thể tạo ảnh output hợp lệ.
-
-**Steps:**
-1. Khách hàng mở chức năng tạo thiệp tại Checkout.
-2. Khách hàng nhập đầy đủ thông tin bắt buộc hợp lệ.
-3. Khách hàng chọn Template, Size và Hình thức hợp lệ.
-4. Khách hàng upload 01 ảnh đính kèm hợp lệ.
-5. Khách hàng chọn **"Tạo thiệp"**.
-6. Chờ AI tạo thiệp thành công.
-7. Kiểm tra ảnh đính kèm trong output.
-
-**Test Data:**
-- Ảnh đính kèm: `attachment-a.png`.
-- Định dạng: `PNG`.
-- Dung lượng: nhỏ hơn hoặc bằng `10 MB`.
-- Số lượng ảnh: `1`.
-
-**Expected Result:**
-- Hệ thống chấp nhận ảnh đính kèm hợp lệ.
-- AI giữ nguyên nội dung gốc của ảnh.
-- AI không cắt mất chủ thể.
-- AI không xoay ảnh.
-- AI không đổi màu ảnh.
-- AI không thêm/xóa hoặc làm biến dạng nội dung ảnh.
-- AI được phép scale đồng dạng hoặc thêm khoảng đệm để phù hợp Template.
-- Ảnh output được lưu thành công cùng History record.
-
-**Trace to:**
-- STORY-035/AC-005
-- STORY-035/BR-052
-- STORY-035/BR-057
-
-**Rationale:**
-> Xác minh ảnh đính kèm hợp lệ được AI sử dụng trong phạm vi Template nhưng không bị thay đổi nội dung gốc.
-
----
-
-## ST-035-06-01 — File upload không hợp lệ bị từ chối và vẫn cho tiếp tục không có ảnh
-
-| Trường | Nội dung |
-|---|---|
-| **Test ID** | ST-035-06-01 |
-| **Story** | STORY-035 |
-| **Loại** | 4 |
-| **Suite** | FULL |
-| **Priority** | P1 |
-| **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
-
-**Precondition:**
-- Khách hàng đã đăng nhập.
-- Checkout hợp lệ và thuộc khách hàng hiện tại.
-- Khách hàng đang ở màn tạo thiệp tại Checkout.
-- Các dữ liệu bắt buộc còn lại hợp lệ.
-
-**Steps:**
-1. Khách hàng chọn ảnh đính kèm không hợp lệ.
-2. Kiểm tra thông báo lỗi.
-3. Khách hàng chọn lại ảnh khác hợp lệ.
-4. Khách hàng xóa ảnh đính kèm.
-5. Khách hàng tiếp tục tạo thiệp không có ảnh đính kèm.
-
-**Test Data:**
-
-| # | File upload | Kỳ vọng |
-|---|---|---|
-| 1 | File định dạng không phải PNG/JPG | Bị từ chối |
-| 2 | File PNG lớn hơn 10 MB | Bị từ chối |
-| 3 | File JPG lớn hơn 10 MB | Bị từ chối |
-| 4 | Upload nhiều hơn 01 ảnh | Bị từ chối |
-| 5 | Không chọn ảnh đính kèm | Vẫn được tạo thiệp nếu dữ liệu bắt buộc hợp lệ |
-
-**Expected Result:**
-- Hệ thống từ chối file không đúng định dạng.
-- Hệ thống từ chối file vượt quá 10 MB.
-- Hệ thống từ chối khi số lượng ảnh vượt quá 01 ảnh.
-- Hệ thống hiển thị lý do file không hợp lệ.
-- Hệ thống cho phép khách hàng chọn file khác.
-- Hệ thống cho phép khách hàng tiếp tục tạo thiệp không có ảnh đính kèm nếu các dữ liệu bắt buộc còn lại hợp lệ.
-- Với file không hợp lệ, hệ thống không gửi yêu cầu sang AI.
-- Với file không hợp lệ, hệ thống không tạo History record và không trừ quota.
-
-**Trace to:**
-- STORY-035/AC-006
-- STORY-035/AC-012
-- STORY-035/EXC-03
-- STORY-035/BR-052
-
-**Rationale:**
-> Xác minh quy tắc upload ảnh đính kèm: ảnh không bắt buộc, nhưng nếu upload thì phải đúng định dạng, dung lượng và số lượng cho phép.
-
----
-
-## ST-035-07-01 — Kiểm tra quota 10 lượt/ngày và giới hạn 03 lượt theo mẫu hoa nguồn
-
-| Trường | Nội dung |
-|---|---|
-| **Test ID** | ST-035-07-01 |
-| **Story** | STORY-035 |
-| **Loại** | 4 |
-| **Suite** | FULL |
-| **Priority** | P1 |
-| **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
-
-**Precondition:**
-- Khách hàng đã đăng nhập.
-- Checkout hợp lệ và thuộc khách hàng hiện tại.
-- Dữ liệu tạo thiệp hợp lệ.
-- Template và Size đang khả dụng.
-
-**Steps:**
-1. Thực hiện tạo thiệp khi khách hàng còn quota ngày và mẫu hoa nguồn còn lượt.
-2. Kiểm tra quota ngày và số lượt của mẫu hoa nguồn sau khi request được chấp nhận.
-3. Thiết lập khách hàng đã sử dụng đủ 10 lượt tạo thiệp trong ngày.
-4. Khách hàng thử tạo thiệp mới.
-5. Thiết lập mẫu hoa nguồn đã sử dụng đủ 03 lượt generate thiệp AI.
-6. Khách hàng thử tạo thiệp mới cho cùng mẫu hoa nguồn.
-
-**Test Data:**
-- Quota ngày tối đa: `10` lượt/khách hàng/ngày.
-- Giới hạn theo mẫu hoa nguồn: `03` lượt/mẫu hoa.
-- Scenario A: quota ngày còn lượt, mẫu hoa nguồn còn lượt.
-- Scenario B: quota ngày đã đủ `10/10`.
-- Scenario C: mẫu hoa nguồn đã đủ `3/3`.
-
-**Expected Result:**
-- Scenario A: hệ thống chấp nhận request hợp lệ và tạo AI Job.
-- Scenario A: hệ thống ghi nhận đúng 01 lượt vào quota ngày.
-- Scenario A: hệ thống ghi nhận đúng 01 lượt vào giới hạn của mẫu hoa nguồn.
-- Scenario B: hệ thống không tạo AI Job mới.
-- Scenario B: hệ thống không gửi yêu cầu sang AI.
-- Scenario B: hệ thống không tạo History record.
-- Scenario B: hệ thống không ghi nhận thêm lượt quota.
-- Scenario B: hệ thống thông báo khách hàng đã sử dụng hết quota tạo thiệp trong ngày.
-- Scenario C: hệ thống không tạo AI Job mới.
-- Scenario C: hệ thống không trừ quota ngày.
-- Scenario C: hệ thống không tạo History record.
-- Scenario C: hệ thống thông báo khách hàng đã sử dụng hết số lượt tạo thiệp cho mẫu hoa này.
-
-**Trace to:**
-- STORY-035/EXC-01
-- STORY-035/EXC-09
-- STORY-035/BR-048
-- STORY-035/BR-049
-
-**Rationale:**
-> Xác minh hệ thống áp dụng đồng thời quota 10 lượt/ngày của khách hàng và giới hạn 03 lượt generate thiệp AI theo mẫu hoa nguồn.
-
----
-
-## ST-035-08-01 — Template, Size, mẫu thiệp hoặc giá không còn khả dụng thì chặn tạo thiệp
-
-| Trường | Nội dung |
-|---|---|
-| **Test ID** | ST-035-08-01 |
-| **Story** | STORY-035 |
-| **Loại** | 4 |
-| **Suite** | FULL |
-| **Priority** | P1 |
-| **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
-
-**Precondition:**
-- Khách hàng đã đăng nhập.
-- Checkout hợp lệ và thuộc khách hàng hiện tại.
-- Khách hàng đã nhập dữ liệu bắt buộc hợp lệ.
-- Khách hàng còn quota tạo thiệp trong ngày.
-- Khách hàng đã chọn Template, Size và Hình thức.
-
-**Steps:**
-1. Khách hàng mở form tạo thiệp và chọn Template/Size khi dữ liệu còn khả dụng.
-2. Trước khi khách hàng gửi request, chuyển Template sang không còn khả dụng.
-3. Khách hàng chọn **"Tạo thiệp"**.
-4. Khôi phục dữ liệu để chạy scenario độc lập.
-5. Chuyển Size sang không còn khả dụng hoặc không tìm thấy giá hiện hành.
-6. Khách hàng chọn **"Tạo thiệp"**.
-7. Khôi phục dữ liệu để chạy scenario độc lập.
-8. Chuyển mẫu thiệp đã chọn sang Inactive hoặc xóa mềm.
-9. Khách hàng chọn **"Tạo thiệp"**.
-
-**Test Data:**
-- Template: `Template A`.
-- Size: `Size A`.
-- Mẫu thiệp: `Mẫu thiệp A`.
-- Scenario A: Template không còn khả dụng.
-- Scenario B: Size không còn khả dụng hoặc không có giá hiện hành.
-- Scenario C: Mẫu thiệp không còn Active hoặc đã bị xóa mềm.
-
-**Expected Result:**
-- Backend kiểm tra lại trạng thái khả dụng của Template và Size từ Core system.
-- Backend kiểm tra lại mẫu thiệp vẫn đang Active và chưa bị xóa mềm.
-- Nếu Template không còn khả dụng, hệ thống không bắt đầu AI.
-- Nếu Size không còn khả dụng hoặc không có giá hiện hành, hệ thống không cho tiếp tục tạo thiệp.
-- Nếu mẫu thiệp không còn khả dụng, hệ thống không tạo thiệp bằng mẫu đó.
-- Hệ thống không gửi yêu cầu sang AI.
-- Hệ thống không tạo History record.
-- Hệ thống không trừ quota.
-- Hệ thống yêu cầu khách hàng chọn Template, Size hoặc mẫu thiệp hiện còn khả dụng.
-- Hệ thống hiển thị thông báo phù hợp với nguyên nhân bị chặn.
-
-**Trace to:**
-- STORY-035/AC-007
-- STORY-035/AC-015
-- STORY-035/AC-016
-- STORY-035/EXC-04
-- STORY-035/EXC-010
-- STORY-035/EXC-011
-- STORY-035/BR-054
-
-**Rationale:**
-> Xác minh các dữ liệu cấu hình từ Core DB phải còn khả dụng tại thời điểm backend validate; nếu không, hệ thống không được tạo thiệp hoặc trừ quota.
-
----
-
-## ST-035-09-01 — Reload hoặc rời màn hình không hủy AI Job đang xử lý
-
-| Trường | Nội dung |
-|---|---|
-| **Test ID** | ST-035-09-01 |
+| **Test ID** | [ST-035-03-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/88fab531-4179-4f95-8516-4ced3239690b) |
 | **Story** | STORY-035 |
 | **Loại** | 2 |
 | **Suite** | FULL |
 | **Priority** | P1 |
 | **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
+| **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Checkout hợp lệ và thuộc khách hàng hiện tại.
-- Khách hàng đã gửi request tạo thiệp hợp lệ.
-- Backend đã tạo AI Job.
-- AI Job đang ở trạng thái **"Đang tạo"**.
-- Job chưa có ảnh output hợp lệ.
+- Checkout hợp lệ. Khách hàng còn lượt sử dụng. Các trường bắt buộc khác đều hợp lệ. Template và Size khả dụng.
 
 **Steps:**
-1. Khách hàng bắt đầu tạo thiệp AI.
-2. Hệ thống hiển thị trạng thái **"Đang tạo"**.
-3. Khách hàng reload hoặc rời khỏi màn hình.
-4. Khách hàng quay lại Checkout hoặc màn lịch sử liên quan.
-5. Kiểm tra trạng thái của AI Job.
-6. Chờ AI Job hoàn tất thành công.
-7. Kiểm tra History record và quota.
+--- Tình huống A
+2. Upload ảnh PNG hợp lệ.
+3. Tạo thiệp.
+4. Quan sát ảnh output.
+--- Tình huống B
+6. Không chọn ảnh.
+7. Nhập đầy đủ dữ liệu bắt buộc.
+8. Tạo thiệp.
+--- Tình huống C/D
+10. Chọn file không hợp lệ.
+11. Quan sát phản hồi.
+12. Chọn file khác hoặc bỏ ảnh.
 
 **Test Data:**
-- AI Job: `CARD-AI-JOB-A`.
-- Trạng thái ban đầu: **"Đang tạo"**.
+- - Scenario A 1 ảnh PNG hợp lệ ≤10 MB. - Scenario B Không có ảnh. - Scenario C File PDF. - Scenario D Ảnh PNG >10 MB.
 
 **Expected Result:**
-- Reload hoặc rời màn hình không làm hủy AI Job.
-- Hệ thống không khởi tạo lại AI Job mới.
-- AI Job tiếp tục xử lý ngầm.
-- Khi khách hàng quay lại, hệ thống hiển thị trạng thái **"Đang tạo"** tại màn lịch sử liên quan.
-- Khi chưa có ảnh output hợp lệ, hệ thống chưa tạo History item.
-- Lượt quota đã được trừ khi request được chấp nhận.
-- Nếu AI Job tạo ảnh thành công, hệ thống tạo đúng 01 History record và giữ nguyên lượt đã ghi nhận.
+- Ảnh hợp lệ được chấp nhận. AI giữ nguyên nội dung gốc của ảnh. Không cắt mất chủ thể, xoay, đổi màu, thêm/xóa hoặc làm biến dạng ảnh. Chỉ được phép scale đồng dạng hoặc thêm khoảng đệm để phù hợp Template. Không có ảnh đính kèm vẫn tạo thiệp bình thường. File sai định dạng hoặc >10 MB bị từ chối. Hệ thống hiển thị lý do file không hợp lệ. Khách hàng có thể chọn file khác hoặc tiếp tục không có ảnh. File bị từ chối không làm phát sinh quá trình tạo ảnh AI hoặc lượt sử dụng.
 
 **Trace to:**
-- STORY-035/AC-011
-- STORY-035/ALT-01
+- [STORY-035/AC-005](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/AC-006](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/AC-012](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-052](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-057](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/EXC-03](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
 
 **Rationale:**
-> Xác minh AI Job tạo thiệp đã được chấp nhận tiếp tục chạy độc lập với việc khách hàng còn mở màn hình hay không.
+> Xác minh trải nghiệm khách hàng: ảnh đính kèm là tùy chọn, file hợp lệ được sử dụng mà không làm thay đổi nội dung gốc, file không hợp lệ bị từ chối và khách hàng vẫn có thể tạo thiệp khi không có ảnh.
 
 ---
 
-## ST-035-10-01 — AI không tạo được ảnh sau retry thì hoàn quota đúng một lần
+## ST-035-04-01 — Xử lý khác nhau giữa Gõ máy và Calligraphy
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-035-10-01 |
+| **Test ID** | [ST-035-04-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/09fc76bd-508f-4e18-9f3e-592dce338594) |
+| **Story** | STORY-035 |
+| **Loại** | 1 |
+| **Suite** | FULL |
+| **Priority** | P1 |
+| **Owner** | Hoàng Thị Khánh Linh |
+| **Trạng thái** | Đã duyệt |
+
+**Precondition:**
+- Checkout hợp lệ. Khách hàng còn lượt sử dụng. Có Template và Size khả dụng. Dữ liệu Người gửi, Người nhận, Lời chúc hợp lệ.
+
+**Steps:**
+1. Tạo một thiệp với hình thức Gõ máy.
+2. Kiểm tra ảnh output.
+3. Tạo một thiệp khác với hình thức Calligraphy.
+4. Kiểm tra ảnh output và mục lịch sử.
+
+**Test Data:**
+- Người gửi: Nguyễn An Người nhận: Trần Bình Lời chúc: Chúc bạn luôn vui vẻ Tình huống A: Gõ máy Tình huống B: Calligraphy
+
+**Expected Result:**
+- - Gõ máy Ảnh output hiển thị nguyên văn Người gửi. Hiển thị nguyên văn Người nhận. Hiển thị nguyên văn Lời chúc. AI không tự sửa, dịch, rút gọn hoặc thay đổi các nội dung này. - Calligraphy Ảnh output không hiển thị Người gửi. Không hiển thị Người nhận. Không hiển thị Lời chúc. Các nội dung này vẫn được lưu trong mục lịch sử.
+
+**Trace to:**
+- [STORY-035/AC-003](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/AC-013](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-154](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
+
+**Rationale:**
+> Xác minh trải nghiệm khách hàng: nội dung Người gửi, Người nhận và Lời chúc được xử lý khác nhau đúng theo hình thức thiệp được chọn.
+
+---
+
+## ST-035-05-01 — Giá tạm tính theo Size, hình thức và số từ
+
+| Trường | Nội dung |
+|---|---|
+| **Test ID** | [ST-035-05-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/70a8582a-14e4-4edc-bae5-b570a55d5c15) |
+| **Story** | STORY-035 |
+| **Loại** | 1 |
+| **Suite** | FULL |
+| **Priority** | P1 |
+| **Owner** | Hoàng Thị Khánh Linh |
+| **Trạng thái** | Đã duyệt |
+
+**Precondition:**
+- Khách hàng đang ở Checkout hợp lệ. Có thể chọn Size thiệp. Có thể chọn hình thức Gõ máy hoặc Calligraphy.
+
+**Steps:**
+1. Chọn SIZE-A.
+2. Chọn Gõ máy.
+3. Quan sát giá tạm tính.
+4. Chuyển sang Calligraphy.
+5. Nhập nội dung ở các mốc số từ cần kiểm tra.
+6. Quan sát giá tạm tính sau mỗi thay đổi.
+
+**Test Data:**
+- SIZE-A: giá hiển thị 100.000đ Calligraphy: 35 từ. 36 từ. 70 từ. 71 từ. 100 từ.
+
+**Expected Result:**
+- Khi chọn Gõ máy, giá tạm tính hiển thị theo giá của Size đã chọn. Với Calligraphy 0-35 từ, giá tạm tính không cộng thêm phụ phí. Với Calligraphy 36-70 từ, giá tạm tính cộng thêm 39.000đ. Với Calligraphy 71-100 từ, giá tạm tính cộng thêm 69.000đ. Giá tạm tính thay đổi ngay khi khách hàng đổi Size, hình thức hoặc số từ. Nếu giá của Size chưa khả dụng, khách hàng thấy thông báo phù hợp và không thể tiếp tục tạo thiệp cho đến khi chọn dữ liệu hợp lệ.
+
+**Trace to:**
+- [BR-054](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
+
+**Rationale:**
+> Xác minh khách hàng luôn nhìn thấy giá tạm tính đúng với Size, hình thức thiệp và số từ đã chọn trước khi tiếp tục.
+
+---
+
+## ST-035-06-01 — Xác nhận thiệp mới thay thế thiệp cũ trong Checkout và giữ lịch sử
+
+| Trường | Nội dung |
+|---|---|
+| **Test ID** | [ST-035-06-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/72dc03ce-3e59-4cb8-91ad-3baad506393d) |
+| **Story** | STORY-035 |
+| **Loại** | 1 |
+| **Suite** | FULL |
+| **Priority** | P1 |
+| **Owner** | Hoàng Thị Khánh Linh |
+| **Trạng thái** | Đã duyệt |
+
+**Precondition:**
+- Checkout hợp lệ. Checkout đang có thiệp thiệp A. thiệp thiệp B vừa tạo ảnh thành công và đã có mục lịch sử.
+
+**Steps:**
+1. Mở kết quả thiệp thiệp B.
+2. Quan sát thiệp thiệp B chưa phải thiệp hiện tại.
+3. Chọn “Quan sát”.
+4. Quan sát Checkout.
+5. Quan sát lịch sử.
+6. Quan sát lượt sử dụng và số mục lịch sử.
+
+**Test Data:**
+- —
+
+**Expected Result:**
+- thiệp thiệp B trở thành thiệp hiện tại của Checkout. thiệp thiệp A bị gỡ khỏi Checkout. thiệp thiệp A vẫn tồn tại trong lịch sử. thiệp thiệp B vẫn giữ mục lịch sử của lần tạo ảnh. Checkout chỉ có tối đa một thiệp được chọn. Khi khách hàng chọn “Xác nhận”, hệ thống không tạo ảnh AI mới. Không tạo mục lịch sử mới. Không ghi nhận thêm lượt tạo ảnh. Đơn hàng Summary hiển thị thiệp được xác nhận và giá tạm tính tương ứng.
+
+**Trace to:**
+- [STORY-035/AC-014](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-053](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
+
+**Rationale:**
+> Xác minh trải nghiệm khách hàng: kết quả AI chỉ trở thành thiệp hiện tại sau khi khách hàng Xác nhận và việc thay thế thiệp không làm mất lịch sử cũ hoặc phát sinh tạo ảnh mới.
+
+---
+
+## ST-035-07-01 — Reload hoặc rời trang không hủy quá trình tạo ảnh AI
+
+| Trường | Nội dung |
+|---|---|
+| **Test ID** | [ST-035-07-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/e661b951-a574-4960-9c70-4d16516aa834) |
+| **Story** | STORY-035 |
+| **Loại** | 1 |
+| **Suite** | FULL |
+| **Priority** | P1 |
+| **Owner** | Hoàng Thị Khánh Linh |
+| **Trạng thái** | Đã duyệt |
+
+**Precondition:**
+- Một thao tác hợp lệ đã được chấp nhận. Quá trình tạo ảnh AI đang chạy.
+
+**Steps:**
+1. Tạo thiệp.
+2. Khi quá trình tạo ảnh AI đang xử lý, reload hoặc rời trang.
+3. Quay lại màn hình liên quan.
+4. Quan sát trạng thái.
+5. Chờ quá trình xử lý hoàn thành.
+
+**Test Data:**
+- —
+
+**Expected Result:**
+- quá trình tạo ảnh AI không bị hủy. Khách hàng không thấy quá trình tạo ảnh AI mới bị tạo thêm do reload. Hệ thống hiển thị trạng thái “Đang tạo”. Chưa có mục lịch sử khi chưa có ảnh hợp lệ. Lượt sử dụng đã được ghi nhận từ lúc thao tác được chấp nhận. Khi AI hoàn thành, kết quả được xử lý theo luồng chính.
+
+**Trace to:**
+- [STORY-035/AC-011](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/ALT-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
+
+**Rationale:**
+> Xác minh trải nghiệm khách hàng: quá trình tạo ảnh AI tiếp tục xử lý độc lập với trạng thái trang của khách hàng và không bị tạo lại khi reload.
+
+---
+
+## ST-035-08-01 — Kiểm tra giới hạn quota 10 lượt/ngày và 3 lượt/mẫu hoa nguồn
+
+| Trường | Nội dung |
+|---|---|
+| **Test ID** | [ST-035-08-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/c309aca5-9f80-4fd5-8d8e-5ebf90e76056) |
 | **Story** | STORY-035 |
 | **Loại** | 4 |
 | **Suite** | FULL |
 | **Priority** | P1 |
 | **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
+| **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Khách hàng đã gửi yêu cầu tạo thiệp hợp lệ.
-- Backend đã tạo AI Job và gửi yêu cầu sang AI.
-- Hệ thống đã ghi nhận quota ngày và lượt generate của mẫu hoa nguồn cho AI Job đó.
-- Môi trường test có khả năng mô phỏng AI không tạo được ảnh output hợp lệ.
+- Checkout hợp lệ. Dữ liệu tạo thiệp hợp lệ.
 
 **Steps:**
-1. Khách hàng gửi yêu cầu tạo thiệp hợp lệ.
-2. Hệ thống chấp nhận request và tạo AI Job.
-3. AI không tạo được ảnh output hợp lệ.
-4. Hệ thống tự động thử lại theo chính sách kỹ thuật.
-5. AI tiếp tục không tạo được ảnh sau toàn bộ số lần thử lại cho phép.
-6. Kiểm tra trạng thái AI Job, History record và quota.
-7. Kiểm tra việc hoàn quota khi cùng AI Job phát sinh nhiều lỗi kết thúc.
-
-**Test Data:**
-- Quota tạo thiệp trong ngày trước request: còn ít nhất 1 lượt.
-- Lượt generate thiệp của mẫu hoa nguồn trước request: nhỏ hơn 3.
-- AI Job thất bại sau toàn bộ retry.
-- Không có ảnh output hợp lệ.
-
-**Expected Result:**
-- Hệ thống kết thúc xử lý thất bại sau toàn bộ retry.
-- Hệ thống không tạo History record.
-- Hệ thống hoàn lại đúng 01 lượt quota tạo thiệp trong ngày.
-- Hệ thống hoàn lại đúng 01 lượt generate thiệp của mẫu hoa nguồn đã ghi nhận cho AI Job đó.
-- Mỗi AI Job chỉ được hoàn mỗi loại lượt tối đa 01 lần.
-- Hệ thống thông báo khách hàng thử lại sau.
-- Không có ảnh output được lưu làm kết quả chính thức.
-
-**Trace to:**
-- STORY-035/AC-002
-- STORY-035/EXC-05
-- STORY-035/BR-048
-- STORY-035/BR-049
-
-**Rationale:**
-> Xác minh lỗi AI không tạo được ảnh được xử lý bằng retry; nếu vẫn thất bại, hệ thống hoàn đúng quota đã ghi nhận và không tạo History record rỗng.
-
----
-
-## ST-035-11-01 — Request tạo thiệp bị gửi trùng chỉ xử lý một lần
-
-| Trường | Nội dung |
-|---|---|
-| **Test ID** | ST-035-11-01 |
-| **Story** | STORY-035 |
-| **Loại** | 4 |
-| **Suite** | FULL |
-| **Priority** | P1 |
-| **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
-
-**Precondition:**
-- Khách hàng đã đăng nhập.
-- Checkout hợp lệ và thuộc khách hàng hiện tại.
-- Dữ liệu tạo thiệp hợp lệ.
-- Khách hàng còn quota tạo thiệp trong ngày.
-- Mẫu hoa nguồn chưa sử dụng đủ 03 lượt generate thiệp AI.
-- Có cơ chế nhận diện request trùng theo idempotency.
-
-**Steps:**
-1. Khách hàng nhập đầy đủ dữ liệu tạo thiệp hợp lệ.
-2. Khách hàng nhấn **"Tạo thiệp"** nhiều lần liên tiếp hoặc cùng một request được gửi lại do lỗi mạng/trình duyệt.
-3. Backend nhận request tạo thiệp bị trùng.
-4. Kiểm tra số AI Job được tạo.
-5. Kiểm tra số lần gọi AI.
-6. Kiểm tra số ảnh, History record và quota được ghi nhận.
-
-**Test Data:**
-- Cùng một request hợp lệ được gửi lại nhiều lần.
-- Idempotency key/hash của các request trùng nhau.
-
-**Expected Result:**
-- Backend nhận diện request trùng theo cơ chế idempotent.
-- Hệ thống không gọi AI nhiều lần cho cùng một request hợp lệ.
-- Hệ thống không tạo nhiều AI Job cho cùng request.
-- Hệ thống không tạo nhiều ảnh.
-- Hệ thống không tạo nhiều History record.
-- Hệ thống không ghi nhận quota nhiều lần.
-- Hệ thống chỉ trả về kết quả tương ứng với request hợp lệ đã được xử lý.
-
-**Trace to:**
-- STORY-035/AC-009
-- STORY-035/EXC-07
-- STORY-035/BR-055
-
-**Rationale:**
-> Xác minh backend chống request trùng để không phát sinh nhiều job AI, ảnh, History record hoặc lượt quota cho cùng một thao tác tạo thiệp.
-
----
-
-## ST-035-12-01 — Checkout không hợp lệ hoặc không thuộc khách hàng thì từ chối tạo thiệp
-
-| Trường | Nội dung |
-|---|---|
-| **Test ID** | ST-035-12-01 |
-| **Story** | STORY-035 |
-| **Loại** | 4 |
-| **Suite** | FULL |
-| **Priority** | P1 |
-| **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
-
-**Precondition:**
-- Có khách hàng A và khách hàng B.
-- Có Checkout hợp lệ thuộc khách hàng B.
-- Khách hàng A đã đăng nhập.
-- Có thể mô phỏng Checkout không tồn tại hoặc đã hoàn tất.
-
-**Steps:**
-1. Khách hàng A thực hiện tạo thiệp với Checkout thuộc khách hàng B.
+1. Thực hiện tạo thiệp với Tình huống A.
 2. Quan sát phản hồi.
-3. Khách hàng A thực hiện tạo thiệp với Checkout không tồn tại.
-4. Quan sát phản hồi.
-5. Khách hàng A thực hiện tạo thiệp với Checkout đã hoàn tất.
-6. Quan sát phản hồi.
-7. Kiểm tra AI Job, History record và quota sau mỗi scenario.
+3. Chuyển sang tình huống B.
+4. Thực hiện tạo thiệp.
+5. Quan sát phản hồi.
 
 **Test Data:**
-- Người dùng hiện tại: `Khách hàng A`.
-- Checkout thuộc tài khoản khác: `CHECKOUT-B`.
-- Checkout không tồn tại: `CHECKOUT-NOT-FOUND`.
-- Checkout đã hoàn tất: `CHECKOUT-COMPLETED`.
+- Scenario A - Lượt sử dụng thiệp AI trong ngày: 10/10 - Lượt tạo thiệp của mẫu hoa nguồn: 1/3 Scenario B - Lượt sử dụng thiệp AI trong ngày: 5/10 - Lượt tạo thiệp của mẫu hoa nguồn: 3/3
 
 **Expected Result:**
-- Backend từ chối Checkout không tồn tại.
-- Backend từ chối Checkout không thuộc khách hàng hiện tại.
-- Backend từ chối Checkout đã hoàn tất.
-- Hệ thống không gửi yêu cầu sang AI.
-- Hệ thống không tạo AI Job.
-- Hệ thống không tạo History record.
-- Hệ thống không trừ quota.
-- Hệ thống hiển thị lỗi tương ứng với nguyên nhân Checkout không hợp lệ.
-- Hệ thống không để lộ dữ liệu của Checkout hoặc khách hàng khác.
+- Ở tình huống A, khách hàng không thấy quá trình tạo ảnh AI bắt đầu. Không có ảnh AI mới được tạo. Không xuất hiện mục mới trong lịch sử. Số lượt sử dụng hiển thị không tăng thêm. Hệ thống thông báo hết lượt sử dụng thiệp trong ngày. Ở tình huống B, khách hàng cũng không thấy quá trình tạo ảnh AI bắt đầu. Số lượt sử dụng còn lại không bị giảm. Hệ thống thông báo đã sử dụng hết số lượt tạo thiệp cho mẫu hoa này.
 
 **Trace to:**
-- STORY-035/AC-010
-- STORY-035/EXC-08
-- STORY-035/BR-056
+- [STORY-035/EXXC-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/EXC-09](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-048](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
 
 **Rationale:**
-> Xác minh backend bắt buộc kiểm tra ownership và trạng thái Checkout trước khi cho phép tạo thiệp trong Checkout.
+> Xác minh trải nghiệm khách hàng: đồng thời hai giới hạn tạo ảnh: tối đa 10 lượt thiệp AI/ngày/khách hàng và tối đa 3 lượt cho một mẫu hoa nguồn.
 
 ---
 
-## ST-035-13-01 — Combo nguồn chỉ được tham chiếu đúng phạm vi và xử lý đúng khi không còn khả dụng
+## ST-035-09-01 — Template hoặc Size không còn khả dụng thì chặn tạo thiệp
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-035-13-01 |
+| **Test ID** | [ST-035-09-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/11c1cd1f-2f80-4c5d-82c0-eb68a6bcc48e) |
 | **Story** | STORY-035 |
 | **Loại** | 4 |
 | **Suite** | FULL |
 | **Priority** | P1 |
 | **Owner** | Hoàng Thị Khánh Linh |
-| **Trạng thái** | Nháp |
+| **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Khách hàng đã đăng nhập.
-- Checkout hợp lệ và thuộc khách hàng hiện tại.
-- Mẫu hoa trong Checkout có Combo nguồn.
-- Template, Size, Hình thức và nội dung bắt buộc hợp lệ.
-- Khách hàng còn quota tạo thiệp trong ngày.
-- Mẫu hoa nguồn chưa sử dụng đủ 03 lượt generate thiệp AI.
+- Checkout hợp lệ. Template và Size đang khả dụng tại thời điểm khách hàng mở form tạo thiệp. Môi trường test cho phép thay đổi trạng thái khả dụng của Template hoặc Size tại nguồn dữ liệu trước khi gửi yêu cầu tạo thiệp.
 
 **Steps:**
-1. Khách hàng tạo thiệp khi Combo nguồn còn khả dụng.
-2. Kiểm tra input gửi sang AI và ảnh output.
-3. Chạy scenario Combo nguồn bị xóa mềm, hết hàng hoặc ngừng khả dụng trước khi backend validate.
-4. Khách hàng gửi yêu cầu tạo thiệp.
-5. Quan sát phản hồi.
-6. Chạy scenario backend đã validate thành công và đã tạo AI Job.
-7. Trong lúc AI đang xử lý, Admin xóa mềm hoặc ngừng khả dụng Combo nguồn.
-8. Chờ AI Job hoàn tất.
-9. Kiểm tra ảnh kết quả, History record và quota.
+1. Mở form tạo thiệp.
+2. Chọn Template và Size đang khả dụng.
+3. Nhập đầy đủ dữ liệu hợp lệ.
+4. Trước khi chọn “Tạo thiệp”, cập nhật dữ liệu hệ thống để Template hoặc Size vừa chọn không còn được xem là khả dụng.
+5. Chọn “Tạo thiệp”.
+6. Quan sát phản hồi của hệ thống.
 
 **Test Data:**
-- Combo nguồn: `Combo A`.
-- Template: `Template A`.
-- Size: `Size A`.
-- Hình thức: `Gõ máy`.
-- Scenario A: Combo nguồn còn khả dụng tại thời điểm validate.
-- Scenario B: Combo nguồn không còn khả dụng trước khi backend validate.
-- Scenario C: Combo nguồn bị xóa mềm/ngừng khả dụng sau khi backend đã validate và đã tạo AI Job.
+- Scenario A: - Template đã chọn: TEMPLATE-A - Size đã chọn: SIZE-A - Trước khi submit, TEMPLATE-A được thiết lập thành trạng thái không còn khả dụng. Scenario B: - Template đã chọn: TEMPLATE-A - Size đã chọn: SIZE-A - Trước khi submit, SIZE-A được thiết lập thành trạng thái không còn khả dụng.
 
 **Expected Result:**
-- Scenario A: AI được phép sử dụng thông tin Combo nguồn làm ngữ cảnh tham chiếu để tạo ảnh thiệp phù hợp với sản phẩm hoa.
-- Scenario A: Combo nguồn không được làm thay đổi Template.
-- Scenario A: Combo nguồn không được làm thay đổi Size.
-- Scenario A: Combo nguồn không được làm thay đổi Hình thức.
-- Scenario A: Combo nguồn không được làm thay đổi nội dung bắt buộc.
-- Scenario A: Combo nguồn không được làm thay đổi ảnh đính kèm của khách hàng.
-- Scenario B: hệ thống không tạo AI Job.
-- Scenario B: hệ thống không gửi yêu cầu sang AI.
-- Scenario B: hệ thống không tạo History record.
-- Scenario B: hệ thống không trừ quota.
-- Scenario B: hệ thống thông báo Combo nguồn không còn khả dụng và yêu cầu khách hàng chọn lại sản phẩm/mẫu hoa phù hợp.
-- Scenario C: hệ thống tiếp tục xử lý AI Job theo dữ liệu snapshot tại thời điểm validate.
-- Scenario C: nếu AI tạo được ảnh output hợp lệ, hệ thống lưu ảnh kết quả, tạo đúng 01 History record và giữ nguyên lượt generate đã ghi nhận.
-- Từ các request tạo thiệp mới sau đó, Combo nguồn đã xóa mềm/ngừng khả dụng không được validate là nguồn hợp lệ.
+- Ở Scenario A, hệ thống phát hiện TEMPLATE-A không còn khả dụng tại thời điểm xử lý yêu cầu. Ở Scenario B, hệ thống phát hiện SIZE-A không còn khả dụng tại thời điểm xử lý yêu cầu. Trong cả hai trường hợp: - Hệ thống không bắt đầu quá trình tạo ảnh AI. - Không có ảnh AI mới được tạo. - Không tạo mục lịch sử mới. - Số lượt sử dụng không bị giảm. - Hệ thống thông báo và yêu cầu khách hàng chọn lại Template hoặc Size đang còn khả dụng.
 
 **Trace to:**
-- STORY-035/AC-017
-- STORY-035/AC-018
-- STORY-035/AC-019
-- STORY-035/ALT-03
-- STORY-035/EXC-012
-- STORY-035/BR-057
+- [STORY-035/AC-007](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/EXC-04](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
 
 **Rationale:**
-> Xác minh Combo nguồn chỉ là ngữ cảnh tham chiếu cho AI, không được làm thay đổi dữ liệu khách hàng đã chọn; đồng thời hệ thống xử lý đúng khác biệt giữa Combo không còn khả dụng trước validate và sau khi AI Job đã bắt đầu.
+> Xác minh trải nghiệm khách hàng: Hệ thống kiểm tra lại Template và Size tại thời điểm gửi thao tác, không tin trạng thái cũ đã hiển thị ở frontend.
+
+---
+
+## ST-035-10-01 — AI không tạo được ảnh sau retry thì hoàn lượt đúng quy tắc
+
+| Trường | Nội dung |
+|---|---|
+| **Test ID** | [ST-035-10-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/1cbf97c4-3032-4073-ab4d-2810be7aca72) |
+| **Story** | STORY-035 |
+| **Loại** | 4 |
+| **Suite** | FULL |
+| **Priority** | P1 |
+| **Owner** | Hoàng Thị Khánh Linh |
+| **Trạng thái** | Đã duyệt |
+
+**Precondition:**
+- Thao tác hợp lệ. Lượt sử dụng trong ngày và giới hạn mẫu hoa đều còn lượt. Môi trường test có dữ liệu để quan sát AI không tạo được ảnh hợp lệ.
+
+**Steps:**
+1. Thực hiện thao tác tạo thiệp hợp lệ.
+2. Quan sát hai lượt được ghi nhận.
+3. Thực hiện tình huống AI thất bại.
+4. Chờ hệ thống thử lại cho đến khi có kết quả cuối cùng.
+5. Chờ quá trình xử lý kết thúc thất bại.
+6. Quan sát lịch sử và hai lượt sử dụng.
+
+**Test Data:**
+- lượt sử dụng trong ngày trước: 5/10 Mẫu hoa trước: 1/3
+
+**Expected Result:**
+- Hệ thống tự thử lại trong lúc khách hàng chờ kết quả. Không xuất hiện mục mới trong lịch sử nếu không có ảnh hợp lệ. Hoàn đúng 1 lượt sử dụng trong ngày. Hoàn đúng 1 lượt tạo ảnh của mẫu hoa nguồn. Mỗi loại lượt chỉ được hoàn tối đa một lần cho quá trình tạo ảnh AI. Không phát sinh thêm lượt sử dụng do quá trình thử lại. Hệ thống thông báo khách hàng thử lại sau.
+
+**Trace to:**
+- [STORY-035/AC-002](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/EXC-05](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-049](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
+
+**Rationale:**
+> Xác minh trải nghiệm khách hàng: quá trình xử lý thất bại không tạo lịch sử và hệ thống hoàn đúng các lượt đã ghi nhận sau khi toàn bộ thử lại kết thúc.
+
+---
+
+## ST-035-11-01 — Chống thao tác trùng (double submit)
+
+| Trường | Nội dung |
+|---|---|
+| **Test ID** | [ST-035-11-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/436e60c1-d874-4956-a6e2-484e846a2b1f) |
+| **Story** | STORY-035 |
+| **Loại** | 4 |
+| **Suite** | FULL |
+| **Priority** | P1 |
+| **Owner** | Hoàng Thị Khánh Linh |
+| **Trạng thái** | Đã duyệt |
+
+**Precondition:**
+- Checkout và dữ liệu hợp lệ. Khách hàng còn lượt sử dụng. Có khả năng gửi cùng thao tác nhiều lần.
+
+**Steps:**
+1. Thực hiện thao tác tạo thiệp hợp lệ.
+2. Thực hiện lại cùng thao tác đó nhiều lần liên tiếp.
+3. Chờ xử lý hoàn tất.
+4. Quan sát quá trình tạo ảnh AI.
+5. Quan sát ảnh.
+6. Quan sát lịch sử.
+7. Quan sát lượt sử dụng.
+
+**Test Data:**
+- —
+
+**Expected Result:**
+- Hệ thống nhận diện thao tác trùng. Tối đa chỉ có 1 lần gọi AI cho thao tác đó. Khách hàng chỉ thấy một ảnh kết quả cho thao tác này. Lịch sử chỉ hiển thị một mục mới cho thao tác này. Chỉ ghi nhận 1 lượt sử dụng trong ngày. Chỉ ghi nhận 1 lượt của mẫu hoa nguồn. Hệ thống trả kết quả tương ứng với thao tác hợp lệ đã được xử lý
+
+**Trace to:**
+- [STORY-035/AC-009](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/EXC-07](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-055](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
+
+**Rationale:**
+> Xác minh trải nghiệm khách hàng: cơ chế chống thao tác trùng ngăn cùng một thao tác tạo ra nhiều quá trình tạo ảnh AI, ảnh, mục lịch sử hoặc lượt lượt sử dụng.
+
+---
+
+## ST-035-12-01 — Bảo vệ Checkout hợp lệ và xử lý khi xác nhận thiệp thất bại
+
+| Trường | Nội dung |
+|---|---|
+| **Test ID** | [ST-035-12-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/2ab3a29d-a864-4bf5-9c3e-455f93131b6e) |
+| **Story** | STORY-035 |
+| **Loại** | 4 |
+| **Suite** | FULL |
+| **Priority** | P1 |
+| **Owner** | Hoàng Thị Khánh Linh |
+| **Trạng thái** | Đã duyệt |
+
+**Precondition:**
+- Có khách hàng A và khách hàng B. Có Checkout hợp lệ và Checkout của khách khác. Có Checkout đã hoàn tất. Có một kết quả thiệp AI đã tạo ảnh thành công. Checkout hiện tại có thể đã có một thiệp trước đó.
+
+**Steps:**
+- Tình huống A - Checkout không hợp lệ
+2. Đăng nhập bằng khách hàng A.
+3. Thực hiện thao tác tạo thiệp cho Checkout không tồn tại, Checkout của khách hàng B hoặc Checkout đã hoàn tất.
+4. Quan sát phản hồi.
+- Tình huống B - Quan sát thất bại
+6. Mở một kết quả thiệp AI thành công.
+7. Thực hiện tình huống lỗi cập nhật Checkout.
+8. Chọn “Quan sát”.
+9. Quan sát Checkout, lịch sử và lượt sử dụng.
+
+**Test Data:**
+- —
+
+**Expected Result:**
+- Tình huống A Khách hàng thấy thao tác bị từ chối. Khách hàng không thấy quá trình tạo ảnh AI bắt đầu. Không có ảnh AI mới được tạo. Không xuất hiện mục mới trong lịch sử. Số lượt sử dụng còn lại không bị giảm. Không làm lộ dữ liệu Checkout hoặc khách hàng khác. Tình huống B mục lịch sử của kết quả vừa tạo ảnh vẫn được giữ. Lượt sử dụng đã dùng vẫn được giữ nguyên. Checkout giữ thiệp trước đó nếu có. Kết quả mới chưa trở thành thiệp hiện tại. Hệ thống thông báo Xác nhận chưa thành công. Khách hàng có thể thử Xác nhận lại. Việc thử Xác nhận không gọi lại AI hoặc tạo lịch sử mới.
+
+**Trace to:**
+- [STORY-035/AC-008](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/AC-010](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/EXC-06](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [STORY-035/EXC-08](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
+
+**Rationale:**
+> Xác minh trải nghiệm khách hàng: hệ thống bảo vệ ownership/trạng thái Checkout khi tạo thiệp và không làm mất kết quả AI nếu thao tác Xác nhận thiệp vào Checkout thất bại.
 
 ---
 
@@ -747,7 +460,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-036-09-01 |
+| **Test ID** | [ST-036-09-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/fdc1f3d7-5002-4df1-99dd-a40e7625ef75) |
 | **Story** | STORY-036 |
 | **Loại** | 4 |
 | **Suite** | FULL |
@@ -756,44 +469,24 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Có khách hàng A và khách hàng B.
-- Có thiệp thiệp B thuộc khách hàng B.
-- Có Checkout của khách hàng B.
-- Có một Checkout đã hoàn tất.
-- Khách hàng A đang đăng nhập.
+- Có khách hàng A và khách hàng B. Có thiệp thiệp B thuộc khách hàng B. Có Checkout của khách hàng B. Có một Checkout đã hoàn tất. khách hàng A đang đăng nhập.
 
 **Steps:**
-- Tình huống A — Thiệp nguồn không thuộc khách hàng
-  1. Với khách hàng A, thực hiện thao tác Tạo lại từ thiệp thiệp B.
-  2. Quan sát phản hồi.
-- Tình huống B — Checkout không hợp lệ
-  1. Thực hiện Tạo lại trong Checkout của khách hàng B, Checkout không tồn tại hoặc Checkout đã hoàn tất.
-  2. Quan sát phản hồi.
+--- Tình huống A — Thiệp nguồn không thuộc khách hàng
+1. Với khách hàng A, thực hiện thao tác Tạo lại từ thiệp thiệp B.
+2. Quan sát phản hồi.
+--- Tình huống B — Checkout không hợp lệ
+1. Thực hiện Tạo lại trong Checkout của khách hàng B, Checkout không tồn tại hoặc Checkout đã hoàn tất.
+2. Quan sát phản hồi.
 
 **Test Data:**
-- _Không có_
+- —
 
 **Expected Result:**
-- Tình huống A:
-  - Khách hàng thấy thao tác bị từ chối.
-  - Không trả ảnh thiệp nguồn.
-  - Không trả metadata nhạy cảm.
-  - Khách hàng không thấy quá trình tạo ảnh AI bắt đầu.
-  - Không xuất hiện mục mới trong lịch sử.
-  - Số lượt sử dụng còn lại không bị giảm.
-- Tình huống B:
-  - Hệ thống từ chối thao tác Tạo lại.
-  - Không bắt đầu AI.
-  - Không xuất hiện mục mới trong lịch sử.
-  - Số lượt sử dụng còn lại không bị giảm.
-  - Không làm lộ dữ liệu Checkout hoặc khách hàng khác.
-  - Hiển thị lỗi phù hợp với nguyên nhân Checkout không hợp lệ.
+- Tình huống A Khách hàng thấy thao tác bị từ chối. Không trả ảnh thiệp nguồn. Không trả metadata nhạy cảm. Khách hàng không thấy quá trình tạo ảnh AI bắt đầu. Không xuất hiện mục mới trong lịch sử. Số lượt sử dụng còn lại không bị giảm. Tình huống B Hệ thống từ chối thao tác Tạo lại. Không bắt đầu AI. Không xuất hiện mục mới trong lịch sử. Số lượt sử dụng còn lại không bị giảm. Không làm lộ dữ liệu Checkout hoặc khách hàng khác. Hiển thị lỗi phù hợp với nguyên nhân Checkout không hợp lệ.
 
 **Trace to:**
-- STORY-036/AC-007
-- STORY-036/EXC-07
-- STORY-036/EXC-08
-- STORY-035/EXC-08
+- [STORY-036/AC-007](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338) · [STORY-036/EXC-07](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338) · [STORY-036/EXC-08](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a9328fef-ec31-4e66-beb6-569d5383a338) · [STORY-035/EXC-08](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43)
 
 **Rationale:**
 > Xác minh trải nghiệm khách hàng: Hệ thống bảo vệ quyền sở hữu của thiệp nguồn và Checkout, đồng thời không làm lộ ảnh hoặc metadata của khách hàng khác.
@@ -804,7 +497,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-057-09-01 |
+| **Test ID** | [ST-057-09-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/f8313002-bf72-4c01-a170-ee03bb2e6b22) |
 | **Story** | STORY-057 |
 | **Loại** | 1 |
 | **Suite** | FULL |
@@ -813,8 +506,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Core Database có nhiều mẫu thiệp với các trạng thái Active, Inactive và isDelete khác nhau.
-- Khách hàng có thể truy cập quy trình tạo thiệp mới.
+- Core Database có nhiều mẫu thiệp với các trạng thái Active, Inactive và isDelete khác nhau. Khách hàng có thể truy cập quy trình tạo thiệp mới.
 
 **Steps:**
 1. Chuẩn bị mẫu thiệp Active và có isDelete = false.
@@ -824,19 +516,13 @@
 5. Quan sát danh sách mẫu thiệp khả dụng.
 
 **Test Data:**
-- Mẫu thiệp 1: Active, isDelete = false.
-- Mẫu thiệp 2: Inactive, isDelete = false.
-- Mẫu thiệp 3: Active, isDelete = true.
+- Mẫu thiệp 1: Active, isDelete = false. Mẫu thiệp 2: Inactive, isDelete = false. Mẫu thiệp 3: Active, isDelete = true.
 
 **Expected Result:**
-- Hệ thống hiển thị mẫu thiệp Active và có isDelete = false cho khách hàng.
-- Hệ thống không hiển thị mẫu thiệp Inactive.
-- Hệ thống không hiển thị mẫu thiệp có isDelete = true.
+- Hệ thống hiển thị mẫu thiệp Active và có isDelete = false cho khách hàng. Hệ thống không hiển thị mẫu thiệp Inactive. Hệ thống không hiển thị mẫu thiệp có isDelete = true.
 
 **Trace to:**
-- STORY-057
-- STORY-035
-- BR-199
+- [STORY-057](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/35e0ce5f-145f-456e-be67-f8a2b8d950e5) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-199](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a733299c-59cf-4aa9-8f6e-8f90e358b7bc)
 
 **Rationale:**
 > Xác minh quy tắc chỉ các mẫu thiệp đang Active và chưa bị xóa mềm mới được sử dụng trong quy trình tạo thiệp mới.
@@ -847,7 +533,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-059-10-01 |
+| **Test ID** | [ST-059-10-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/9c6a1415-d719-4e54-98d2-8a2b56ec4103) |
 | **Story** | STORY-059 |
 | **Loại** | 1 |
 | **Suite** | FULL |
@@ -856,10 +542,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý mẫu thiệp.
-- Mẫu thiệp đang Active và có isDelete = false.
-- Khách hàng có thể truy cập quy trình tạo thiệp mới.
+- Admin đã đăng nhập. Admin có quyền quản lý mẫu thiệp. Mẫu thiệp đang Active và có isDelete = false. Khách hàng có thể truy cập quy trình tạo thiệp mới.
 
 **Steps:**
 1. Xác nhận mẫu thiệp Active đang khả dụng cho khách hàng.
@@ -869,19 +552,13 @@
 5. Quan sát danh sách mẫu thiệp.
 
 **Test Data:**
-- Một mẫu thiệp: Trạng thái ban đầu = Active, isDelete = false.
+- Một mẫu thiệp: Trạng thái ban đầu = Active. isDelete = false.
 
 **Expected Result:**
-- Sau khi chuyển trạng thái thành công, mẫu thiệp có trạng thái Inactive trong Core Database.
-- Mẫu thiệp Inactive không được hiển thị cho khách hàng khi tạo thiệp mới.
-- Mẫu thiệp vẫn tồn tại và có thể được hiển thị trong màn hình quản trị.
+- Sau khi chuyển trạng thái thành công, mẫu thiệp có trạng thái Inactive trong Core Database. Mẫu thiệp Inactive không được hiển thị cho khách hàng khi tạo thiệp mới. Mẫu thiệp vẫn tồn tại và có thể được hiển thị trong màn hình quản trị.
 
 **Trace to:**
-- STORY-059
-- STORY-059/MAIN
-- STORY-059/AC-009
-- STORY-035
-- BR-207
+- [STORY-059](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/75cb2abb-9eb0-40d9-8d7b-1033fbda15b8) · [STORY-059/MAIN](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/75cb2abb-9eb0-40d9-8d7b-1033fbda15b8) · [STORY-059/AC-009](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/75cb2abb-9eb0-40d9-8d7b-1033fbda15b8) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-207](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/6bf44083-df90-4065-b07a-f9dcf537adff)
 
 **Rationale:**
 > Xác minh tác động của trạng thái Inactive lên danh sách mẫu thiệp khả dụng của khách hàng.
@@ -892,7 +569,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-059-11-01 |
+| **Test ID** | [ST-059-11-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/df2c9dc9-980c-415d-95ee-2b1687a59a8a) |
 | **Story** | STORY-059 |
 | **Loại** | 2 |
 | **Suite** | FULL |
@@ -901,10 +578,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý mẫu thiệp.
-- Mẫu thiệp đang Inactive và có isDelete = false.
-- Khách hàng có thể truy cập quy trình tạo thiệp mới.
+- Admin đã đăng nhập. Admin có quyền quản lý mẫu thiệp. Mẫu thiệp đang Inactive và có isDelete = false. Khách hàng có thể truy cập quy trình tạo thiệp mới.
 
 **Steps:**
 1. Xác nhận mẫu thiệp Inactive không xuất hiện trong danh sách mẫu thiệp khả dụng của khách hàng.
@@ -914,18 +588,13 @@
 5. Quan sát danh sách mẫu thiệp.
 
 **Test Data:**
-- Một mẫu thiệp: Trạng thái ban đầu = Inactive, isDelete = false.
+- Một mẫu thiệp: Trạng thái ban đầu = Inactive. isDelete = false.
 
 **Expected Result:**
-- Sau khi chuyển trạng thái thành công, mẫu thiệp có trạng thái Active trong Core Database.
-- Mẫu thiệp Active có isDelete = false có thể được hiển thị cho khách hàng khi tạo thiệp mới.
+- Sau khi chuyển trạng thái thành công, mẫu thiệp có trạng thái Active trong Core Database. Mẫu thiệp Active có isDelete = false có thể được hiển thị cho khách hàng khi tạo thiệp mới.
 
 **Trace to:**
-- STORY-059
-- STORY-059/ALT-01
-- STORY-059/AC-004
-- STORY-035
-- BR-206
+- [STORY-059](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/75cb2abb-9eb0-40d9-8d7b-1033fbda15b8) · [STORY-059/ALT-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/75cb2abb-9eb0-40d9-8d7b-1033fbda15b8) · [STORY-059/AC-004](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/75cb2abb-9eb0-40d9-8d7b-1033fbda15b8) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-206](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/8a696b79-cdf0-4cec-89c3-b897955dfd13)
 
 **Rationale:**
 > Xác minh mẫu thiệp được đưa trở lại trạng thái khả dụng cho khách hàng sau khi Admin chuyển từ Inactive sang Active.
@@ -936,7 +605,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-060-08-01 |
+| **Test ID** | [ST-060-08-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/1333637c-aafe-4ed6-b2f0-91f3c3061b8b) |
 | **Story** | STORY-060 |
 | **Loại** | 1 |
 | **Suite** | FULL |
@@ -945,10 +614,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý mẫu thiệp.
-- Mẫu thiệp tồn tại và có isDelete = false.
-- Khách hàng có thể truy cập quy trình tạo thiệp mới.
+- Admin đã đăng nhập. Admin có quyền quản lý mẫu thiệp. Mẫu thiệp tồn tại và có isDelete = false. Khách hàng có thể truy cập quy trình tạo thiệp mới.
 
 **Steps:**
 1. Admin thực hiện xóa mềm mẫu thiệp.
@@ -961,16 +627,10 @@
 - Một mẫu thiệp ban đầu có: isDelete = false. Trạng thái = Active hoặc Inactive.
 
 **Expected Result:**
-- Sau khi xóa mềm, mẫu thiệp có isDelete = true.
-- Hệ thống không hiển thị mẫu thiệp đã xóa mềm cho khách hàng lựa chọn khi tạo thiệp mới.
-- Mẫu thiệp có isDelete = true không được trả về như mẫu thiệp khả dụng dù trạng thái quản lý trước đó là Active.
+- Sau khi xóa mềm, mẫu thiệp có isDelete = true. Hệ thống không hiển thị mẫu thiệp đã xóa mềm cho khách hàng lựa chọn khi tạo thiệp mới. Mẫu thiệp có isDelete = true không được trả về như mẫu thiệp khả dụng dù trạng thái quản lý trước đó là Active.
 
 **Trace to:**
-- STORY-060
-- STORY-060/MAIN
-- STORY-060/AC-006
-- STORY-035
-- BR-211
+- [STORY-060](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/070fba60-8f71-4071-8f6f-f2589395d57b) · [STORY-060/MAIN](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/070fba60-8f71-4071-8f6f-f2589395d57b) · [STORY-060/AC-006](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/070fba60-8f71-4071-8f6f-f2589395d57b) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-211](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/790d2764-23c2-47df-9553-5c69b117c987)
 
 **Rationale:**
 > Xác minh mẫu thiệp đã bị xóa mềm không còn được sử dụng trong quy trình tạo thiệp mới.
@@ -981,7 +641,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-060-10-01 |
+| **Test ID** | [ST-060-10-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/7b25dcef-0ac1-4398-807c-56633f49cf83) |
 | **Story** | STORY-060 |
 | **Loại** | 4 |
 | **Suite** | FULL |
@@ -990,10 +650,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Khách hàng đang thực hiện quy trình tạo thiệp.
-- Khách hàng đã chọn một mẫu thiệp khi mẫu thiệp có isDelete = false.
-- Khách hàng chưa hoàn thành tạo thiệp.
-- Admin đã đăng nhập và có quyền quản lý mẫu thiệp.
+- Khách hàng đang thực hiện quy trình tạo thiệp. Khách hàng đã chọn một mẫu thiệp khi mẫu thiệp có isDelete = false. Khách hàng chưa hoàn thành tạo thiệp. Admin đã đăng nhập và có quyền quản lý mẫu thiệp.
 
 **Steps:**
 1. Khách hàng chọn một mẫu thiệp khả dụng.
@@ -1008,18 +665,10 @@
 - Một mẫu thiệp ban đầu có: isDelete = false. Khách hàng đã chọn mẫu này trước khi Admin thực hiện xóa mềm.
 
 **Expected Result:**
-- Khi khách hàng hoàn thành tạo thiệp, hệ thống kiểm tra lại isDelete và trạng thái mẫu thiệp từ Core Database.
-- Hệ thống xác định mẫu thiệp đã bị xóa mềm.
-- Hệ thống không tạo thiệp mới với mẫu thiệp đó.
-- Hệ thống thông báo mẫu thiệp đã chọn không còn khả dụng.
-- Hệ thống yêu cầu khách hàng chọn một mẫu thiệp khác còn khả dụng.
+- Khi khách hàng hoàn thành tạo thiệp, hệ thống kiểm tra lại isDelete và trạng thái mẫu thiệp từ Core Database. Hệ thống xác định mẫu thiệp đã bị xóa mềm. Hệ thống không tạo thiệp mới với mẫu thiệp đó. Hệ thống thông báo mẫu thiệp đã chọn không còn khả dụng. Hệ thống yêu cầu khách hàng chọn một mẫu thiệp khác còn khả dụng.
 
 **Trace to:**
-- STORY-060
-- STORY-060/EXC-05
-- STORY-060/AC-012
-- STORY-035
-- BR-211
+- [STORY-060](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/070fba60-8f71-4071-8f6f-f2589395d57b) · [STORY-060/EXC-05](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/070fba60-8f71-4071-8f6f-f2589395d57b) · [STORY-060/AC-012](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/070fba60-8f71-4071-8f6f-f2589395d57b) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-211](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/790d2764-23c2-47df-9553-5c69b117c987)
 
 **Rationale:**
 > Xác minh hệ thống kiểm tra lại tính khả dụng của mẫu thiệp tại thời điểm xử lý cuối cùng để ngăn sử dụng mẫu đã bị Admin xóa mềm.
@@ -1030,7 +679,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-063-07-01 |
+| **Test ID** | [ST-063-07-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/93e5791f-1760-41de-9c10-be800c98a9de) |
 | **Story** | STORY-063 |
 | **Loại** | 1 |
 | **Suite** | FULL |
@@ -1039,10 +688,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý cấu hình thiệp.
-- Kích thước thiệp đang Active và có isDelete = false.
-- Khách hàng có thể truy cập quy trình tạo thiệp mới.
+- Admin đã đăng nhập. Admin có quyền quản lý cấu hình thiệp. Kích thước thiệp đang Active và có isDelete = false. Khách hàng có thể truy cập quy trình tạo thiệp mới.
 
 **Steps:**
 1. Xác nhận kích thước Active đang khả dụng cho khách hàng.
@@ -1052,18 +698,13 @@
 5. Quan sát danh sách kích thước thiệp.
 
 **Test Data:**
-- Một kích thước thiệp: Trạng thái ban đầu = Active, isDelete = false.
+- Một kích thước thiệp: Trạng thái ban đầu = Active. isDelete = false.
 
 **Expected Result:**
-- Sau khi chuyển trạng thái thành công, kích thước thiệp có trạng thái Inactive trong Core Database.
-- Kích thước Inactive không được hiển thị hoặc sử dụng trong danh sách kích thước khách hàng có thể chọn khi tạo thiệp mới.
-- Kích thước vẫn tồn tại và vẫn có thể hiển thị trong màn hình quản trị.
+- Sau khi chuyển trạng thái thành công, kích thước thiệp có trạng thái Inactive trong Core Database. Kích thước Inactive không được hiển thị hoặc sử dụng trong danh sách kích thước khách hàng có thể chọn khi tạo thiệp mới. Kích thước vẫn tồn tại và vẫn có thể hiển thị trong màn hình quản trị.
 
 **Trace to:**
-- STORY-063
-- STORY-063/MAIN
-- STORY-035
-- BR-225
+- [STORY-063](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/d9466330-5d1e-4348-9a43-ccc408ca7d1c) · [STORY-063/MAIN](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/d9466330-5d1e-4348-9a43-ccc408ca7d1c) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-225](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/98255c98-7f84-4115-be4a-69fcb75f6c1c)
 
 **Rationale:**
 > Xác minh tác động của trạng thái Inactive lên khả năng sử dụng kích thước trong quy trình tạo thiệp mới.
@@ -1074,7 +715,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-063-08-01 |
+| **Test ID** | [ST-063-08-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/56858ae5-a1ed-4512-95e6-7d14b44be557) |
 | **Story** | STORY-063 |
 | **Loại** | 2 |
 | **Suite** | FULL |
@@ -1083,10 +724,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý cấu hình thiệp.
-- Kích thước thiệp đang Inactive và có isDelete = false.
-- Khách hàng có thể truy cập quy trình tạo thiệp mới.
+- Admin đã đăng nhập. Admin có quyền quản lý cấu hình thiệp. Kích thước thiệp đang Inactive và có isDelete = false. Khách hàng có thể truy cập quy trình tạo thiệp mới.
 
 **Steps:**
 1. Xác nhận kích thước Inactive không khả dụng cho khách hàng.
@@ -1096,17 +734,13 @@
 5. Quan sát danh sách kích thước thiệp.
 
 **Test Data:**
-- Một kích thước thiệp: Trạng thái ban đầu = Inactive, isDelete = false.
+- Một kích thước thiệp: Trạng thái ban đầu = Inactive. isDelete = false.
 
 **Expected Result:**
-- Sau khi chuyển trạng thái thành công, kích thước thiệp có trạng thái Active trong Core Database.
-- Kích thước Active và có isDelete = false được phép sử dụng khi khách hàng tạo thiệp mới.
+- Sau khi chuyển trạng thái thành công, kích thước thiệp có trạng thái Active trong Core Database. Kích thước Active và có isDelete = false được phép sử dụng khi khách hàng tạo thiệp mới.
 
 **Trace to:**
-- STORY-063
-- STORY-063/ALT-01
-- STORY-035
-- BR-224
+- [STORY-063](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/d9466330-5d1e-4348-9a43-ccc408ca7d1c) · [STORY-063/ALT-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/d9466330-5d1e-4348-9a43-ccc408ca7d1c) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-224](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/b43fa5ea-94a1-46d9-9114-038e90875cd1)
 
 **Rationale:**
 > Xác minh kích thước được đưa trở lại trạng thái khả dụng sau khi chuyển từ Inactive sang Active.
@@ -1117,7 +751,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-063-11-01 |
+| **Test ID** | [ST-063-11-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/7348bbc0-ebb5-469c-bc83-4844bd700375) |
 | **Story** | STORY-063 |
 | **Loại** | 4 |
 | **Suite** | FULL |
@@ -1126,9 +760,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Có một kích thước thiệp trong Core Database.
-- Kích thước thiệp có trạng thái Active nhưng isDelete = true.
-- Khách hàng có thể truy cập quy trình tạo thiệp mới.
+- Có một kích thước thiệp trong Core Database. Kích thước thiệp có trạng thái Active nhưng isDelete = true. Khách hàng có thể truy cập quy trình tạo thiệp mới.
 
 **Steps:**
 1. Khách hàng tải danh sách kích thước thiệp khả dụng.
@@ -1136,16 +768,13 @@
 3. Thử sử dụng kích thước Active nhưng có isDelete = true nếu có thể gửi yêu cầu trực tiếp.
 
 **Test Data:**
-- Kích thước thiệp: Trạng thái = Active, isDelete = true.
+- Kích thước thiệp: Trạng thái = Active. isDelete = true.
 
 **Expected Result:**
-- Hệ thống không xem kích thước Active có isDelete = true là kích thước khả dụng.
-- Kích thước đó không được hiển thị hoặc sử dụng trong quy trình tạo thiệp mới.
+- Hệ thống không xem kích thước Active có isDelete = true là kích thước khả dụng. Kích thước đó không được hiển thị hoặc sử dụng trong quy trình tạo thiệp mới.
 
 **Trace to:**
-- STORY-063
-- STORY-035
-- BR-224
+- [STORY-063](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/d9466330-5d1e-4348-9a43-ccc408ca7d1c) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-224](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/b43fa5ea-94a1-46d9-9114-038e90875cd1)
 
 **Rationale:**
 > Xác minh điều kiện khả dụng yêu cầu đồng thời trạng thái Active và isDelete = false.
@@ -1156,7 +785,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-064-08-01 |
+| **Test ID** | [ST-064-08-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/9344cd6e-bff1-43ec-b9be-8ee77b3c9bec) |
 | **Story** | STORY-064 |
 | **Loại** | 1 |
 | **Suite** | FULL |
@@ -1165,10 +794,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý cấu hình giá thiệp.
-- Cấu hình phụ phí viết tay đang Active và có isDelete = false.
-- Cấu hình phù hợp với số lượng từ của một thiệp Calligraphy mới.
+- Admin đã đăng nhập. Admin có quyền quản lý cấu hình giá thiệp. Cấu hình phụ phí viết tay đang Active và có isDelete = false. Cấu hình phù hợp với số lượng từ của một thiệp Calligraphy mới.
 
 **Steps:**
 1. Xác nhận cấu hình Active đang được sử dụng để xác định phụ phí cho khoảng số lượng từ tương ứng.
@@ -1178,19 +804,13 @@
 5. Quan sát cấu hình được hệ thống sử dụng.
 
 **Test Data:**
-- Cấu hình: Khoảng số lượng từ = 1 đến 10, Giá phụ phí = 20000, Trạng thái ban đầu = Active, isDelete = false.
-- Thiệp Calligraphy mới có số lượng từ thuộc khoảng 1 đến 10.
+- Cấu hình: Khoảng số lượng từ = 1 đến 10. Giá phụ phí = 20000. Trạng thái ban đầu = Active. isDelete = false. Thiệp Calligraphy mới có số lượng từ thuộc khoảng 1 đến 10.
 
 **Expected Result:**
-- Sau khi chuyển trạng thái thành công, cấu hình có trạng thái Inactive trong Core Database.
-- Hệ thống không sử dụng cấu hình Inactive để xác định phụ phí cho thiệp Calligraphy mới.
-- Cấu hình Inactive vẫn được giữ trong Core Database và có thể hiển thị trong màn hình quản trị.
+- Sau khi chuyển trạng thái thành công, cấu hình có trạng thái Inactive trong Core Database. Hệ thống không sử dụng cấu hình Inactive để xác định phụ phí cho thiệp Calligraphy mới. Cấu hình Inactive vẫn được giữ trong Core Database và có thể hiển thị trong màn hình quản trị.
 
 **Trace to:**
-- STORY-064
-- STORY-064/MAIN
-- STORY-035
-- BR-229
+- [STORY-064](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/4d819b85-3da1-4375-a27e-5f6ed558f428) · [STORY-064/MAIN](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/4d819b85-3da1-4375-a27e-5f6ed558f428) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-229](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/bf136312-8a7a-434d-aedc-9278cc6797b2)
 
 **Rationale:**
 > Xác minh cấu hình Inactive không còn tham gia xác định phụ phí cho các yêu cầu thiệp Calligraphy mới.
@@ -1201,7 +821,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-064-09-01 |
+| **Test ID** | [ST-064-09-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/818bebb1-4427-401d-a14f-71651968c989) |
 | **Story** | STORY-064 |
 | **Loại** | 2 |
 | **Suite** | FULL |
@@ -1210,10 +830,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý cấu hình giá thiệp.
-- Cấu hình phụ phí viết tay đang Inactive và có isDelete = false.
-- Khoảng số lượng từ không chồng lấn với các cấu hình Active khác.
+- Admin đã đăng nhập. Admin có quyền quản lý cấu hình giá thiệp. Cấu hình phụ phí viết tay đang Inactive và có isDelete = false. Khoảng số lượng từ không chồng lấn với các cấu hình Active khác.
 
 **Steps:**
 1. Xác nhận cấu hình Inactive không được sử dụng để xác định phụ phí.
@@ -1223,18 +840,13 @@
 5. Quan sát cấu hình được sử dụng.
 
 **Test Data:**
-- Cấu hình: Khoảng số lượng từ = 11 đến 20, Giá phụ phí = 30000, Trạng thái ban đầu = Inactive, isDelete = false. Không có cấu hình Active khác chồng lấn khoảng 11 đến 20.
+- Cấu hình: Khoảng số lượng từ = 11 đến 20. Giá phụ phí = 30000. Trạng thái ban đầu = Inactive. isDelete = false. Không có cấu hình Active khác chồng lấn khoảng 11 đến 20.
 
 **Expected Result:**
-- Sau khi chuyển trạng thái thành công, cấu hình có trạng thái Active trong Core Database.
-- Cấu hình Active và có isDelete = false được phép sử dụng để xác định phụ phí cho thiệp Calligraphy mới có số lượng từ phù hợp.
+- Sau khi chuyển trạng thái thành công, cấu hình có trạng thái Active trong Core Database. Cấu hình Active và có isDelete = false được phép sử dụng để xác định phụ phí cho thiệp Calligraphy mới có số lượng từ phù hợp.
 
 **Trace to:**
-- STORY-064
-- STORY-064/ALT-01
-- STORY-035
-- BR-228
-- BR-239
+- [STORY-064](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/4d819b85-3da1-4375-a27e-5f6ed558f428) · [STORY-064/ALT-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/4d819b85-3da1-4375-a27e-5f6ed558f428) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-228](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/65ec4904-0028-4e84-8372-0867d48c6d87) · [BR-239](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/942296fb-57b0-429f-8ed5-72d919c9fdde)
 
 **Rationale:**
 > Xác minh cấu hình được đưa trở lại trạng thái khả dụng khi chuyển từ Inactive sang Active.
@@ -1245,7 +857,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-064-12-01 |
+| **Test ID** | [ST-064-12-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/7b1555ba-9c6e-490c-bf8e-b5e8816a4995) |
 | **Story** | STORY-064 |
 | **Loại** | 4 |
 | **Suite** | FULL |
@@ -1254,9 +866,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Có một cấu hình phụ phí viết tay trong Core Database.
-- Cấu hình có trạng thái Active nhưng isDelete = true.
-- Hệ thống đang xác định phụ phí cho thiệp Calligraphy mới.
+- Có một cấu hình phụ phí viết tay trong Core Database. Cấu hình có trạng thái Active nhưng isDelete = true. Hệ thống đang xác định phụ phí cho thiệp Calligraphy mới.
 
 **Steps:**
 1. Chuẩn bị thiệp Calligraphy có số lượng từ thuộc khoảng của cấu hình.
@@ -1264,17 +874,13 @@
 3. Quan sát cấu hình được hệ thống sử dụng.
 
 **Test Data:**
-- Cấu hình: Khoảng số lượng từ = 1 đến 10, Trạng thái = Active, isDelete = true.
-- Thiệp Calligraphy mới có số lượng từ thuộc khoảng 1 đến 10.
+- Cấu hình: Khoảng số lượng từ = 1 đến 10. Trạng thái = Active. isDelete = true. Thiệp Calligraphy mới có số lượng từ thuộc khoảng 1 đến 10.
 
 **Expected Result:**
-- Hệ thống không sử dụng cấu hình Active có isDelete = true để xác định phụ phí.
-- Chỉ cấu hình Active và có isDelete = false mới được xem là cấu hình khả dụng.
+- Hệ thống không sử dụng cấu hình Active có isDelete = true để xác định phụ phí. Chỉ cấu hình Active và có isDelete = false mới được xem là cấu hình khả dụng.
 
 **Trace to:**
-- STORY-064
-- STORY-035
-- BR-228
+- [STORY-064](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/4d819b85-3da1-4375-a27e-5f6ed558f428) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-228](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/65ec4904-0028-4e84-8372-0867d48c6d87)
 
 **Rationale:**
 > Xác minh điều kiện sử dụng cấu hình yêu cầu đồng thời trạng thái Active và isDelete = false.
@@ -1285,7 +891,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-065-17-01 |
+| **Test ID** | [ST-065-17-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/b54c3708-881f-44bb-beea-c9018d7441c3) |
 | **Story** | STORY-065 |
 | **Loại** | 1 |
 | **Suite** | FULL |
@@ -1294,9 +900,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý mẫu thiệp.
-- Mẫu thiệp đã từng được sử dụng cho thiệp, Checkout hoặc Order đã tồn tại.
+- Admin đã đăng nhập. Admin có quyền quản lý mẫu thiệp. Mẫu thiệp đã từng được sử dụng cho thiệp, Checkout hoặc Order đã tồn tại.
 
 **Steps:**
 1. Ghi nhận nội dung và ảnh của các thiệp, Checkout hoặc Order đã sử dụng mẫu thiệp.
@@ -1305,18 +909,13 @@
 4. Kiểm tra lại các thiệp, Checkout hoặc Order đã tồn tại.
 
 **Test Data:**
-- Một mẫu thiệp đã được sử dụng bởi ít nhất một trong các dữ liệu: Thiệp, Checkout, Order.
+- Một mẫu thiệp đã được sử dụng bởi ít nhất một trong các dữ liệu: Thiệp. Checkout. Order.
 
 **Expected Result:**
-- Thông tin mới của mẫu thiệp được lưu để sử dụng cho các lần tạo thiệp mới.
-- Các thiệp, Checkout hoặc Order đã tồn tại không bị thay đổi nội dung hoặc ảnh.
-- Dữ liệu lịch sử được giữ nguyên theo thông tin đã lưu tại thời điểm phát sinh.
+- Thông tin mới của mẫu thiệp được lưu để sử dụng cho các lần tạo thiệp mới. Các thiệp, Checkout hoặc Order đã tồn tại không bị thay đổi nội dung hoặc ảnh. Dữ liệu lịch sử được giữ nguyên theo thông tin đã lưu tại thời điểm phát sinh.
 
 **Trace to:**
-- STORY-065
-- STORY-065/MAIN
-- STORY-035
-- BR-236
+- [STORY-065](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/83f53cc7-53c0-444b-804b-b643a7388776) · [STORY-065/MAIN](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/83f53cc7-53c0-444b-804b-b643a7388776) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-236](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/df42784d-c617-4436-9d8f-7f8d00515a4c)
 
 **Rationale:**
 > Xác minh cập nhật mẫu thiệp không làm thay đổi dữ liệu lịch sử đã phát sinh.
@@ -1327,7 +926,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-066-07-01 |
+| **Test ID** | [ST-066-07-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/128ba548-026e-4295-848b-c1be26567c0f) |
 | **Story** | STORY-066 |
 | **Loại** | 1 |
 | **Suite** | FULL |
@@ -1336,10 +935,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý cấu hình giá thiệp.
-- Cấu hình phụ phí thiệp viết tay đang khả dụng và có isDelete = false.
-- Cấu hình phù hợp với số lượng từ của một thiệp Calligraphy mới.
+- Admin đã đăng nhập. Admin có quyền quản lý cấu hình giá thiệp. Cấu hình phụ phí thiệp viết tay đang khả dụng và có isDelete = false. Cấu hình phù hợp với số lượng từ của một thiệp Calligraphy mới.
 
 **Steps:**
 1. Xác nhận cấu hình đang được sử dụng cho khoảng số lượng từ tương ứng.
@@ -1349,20 +945,13 @@
 5. Quan sát cấu hình được hệ thống sử dụng.
 
 **Test Data:**
-- Cấu hình: Khoảng số lượng từ = 1 đến 10, Giá phụ phí = 20000, isDelete = false trước khi xóa.
-- Thiệp Calligraphy mới có số lượng từ thuộc khoảng 1 đến 10.
+- Cấu hình: Khoảng số lượng từ = 1 đến 10. Giá phụ phí = 20000. isDelete = false trước khi xóa. Thiệp Calligraphy mới có số lượng từ thuộc khoảng 1 đến 10.
 
 **Expected Result:**
-- Sau khi xóa thành công, cấu hình có isDelete = true.
-- Hệ thống không sử dụng cấu hình đã xóa mềm để xác định phụ phí cho thiệp Calligraphy mới.
-- Chỉ cấu hình có isDelete = false và thỏa điều kiện khả dụng mới được sử dụng.
+- Sau khi xóa thành công, cấu hình có isDelete = true. Hệ thống không sử dụng cấu hình đã xóa mềm để xác định phụ phí cho thiệp Calligraphy mới. Chỉ cấu hình có isDelete = false và thỏa điều kiện khả dụng mới được sử dụng.
 
 **Trace to:**
-- STORY-066
-- STORY-066/MAIN
-- STORY-066/AC-003
-- STORY-035
-- BR-247
+- [STORY-066](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a1979dd4-f275-4ac7-85c9-9afa7b079717) · [STORY-066/MAIN](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a1979dd4-f275-4ac7-85c9-9afa7b079717) · [STORY-066/AC-003](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a1979dd4-f275-4ac7-85c9-9afa7b079717) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-247](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/7c0d412a-add2-48a2-876c-d385faabb75c)
 
 **Rationale:**
 > Xác minh cấu hình đã xóa mềm không còn tham gia tính phụ phí cho các thiệp Calligraphy mới.
@@ -1373,7 +962,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-066-10-01 |
+| **Test ID** | [ST-066-10-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/860cbf12-4e4b-4b5b-8080-bd5b210f2f6f) |
 | **Story** | STORY-066 |
 | **Loại** | 1 |
 | **Suite** | FULL |
@@ -1382,10 +971,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý cấu hình giá thiệp.
-- Cấu hình phụ phí thiệp viết tay đã từng được sử dụng để xác định phụ phí.
-- Có thiệp, Checkout hoặc Order đã tồn tại với giá được xác định từ cấu hình đó.
+- Admin đã đăng nhập. Admin có quyền quản lý cấu hình giá thiệp. Cấu hình phụ phí thiệp viết tay đã từng được sử dụng để xác định phụ phí. Có thiệp, Checkout hoặc Order đã tồn tại với giá được xác định từ cấu hình đó.
 
 **Steps:**
 1. Ghi nhận giá và dữ liệu của thiệp, Checkout hoặc Order đã sử dụng cấu hình.
@@ -1394,21 +980,13 @@
 4. Kiểm tra lại giá và dữ liệu của thiệp, Checkout hoặc Order đã tồn tại.
 
 **Test Data:**
-- Một cấu hình đã từng được áp dụng cho ít nhất một trong các dữ liệu: Thiệp, Checkout, Order.
+- Một cấu hình đã từng được áp dụng cho ít nhất một trong các dữ liệu: Thiệp. Checkout. Order.
 
 **Expected Result:**
-- Hệ thống chỉ cập nhật trạng thái xóa mềm của cấu hình.
-- Hệ thống không tính lại giá của thiệp đã tồn tại.
-- Hệ thống không thay đổi giá hoặc dữ liệu của Checkout đã tồn tại.
-- Hệ thống không thay đổi giá hoặc dữ liệu của Order đã tồn tại.
-- Dữ liệu nghiệp vụ phát sinh trước thời điểm xóa được giữ nguyên.
+- Hệ thống chỉ cập nhật trạng thái xóa mềm của cấu hình. Hệ thống không tính lại giá của thiệp đã tồn tại. Hệ thống không thay đổi giá hoặc dữ liệu của Checkout đã tồn tại. Hệ thống không thay đổi giá hoặc dữ liệu của Order đã tồn tại. Dữ liệu nghiệp vụ phát sinh trước thời điểm xóa được giữ nguyên.
 
 **Trace to:**
-- STORY-066
-- STORY-066/MAIN
-- STORY-066/AC-008
-- STORY-035
-- BR-248
+- [STORY-066](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a1979dd4-f275-4ac7-85c9-9afa7b079717) · [STORY-066/MAIN](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a1979dd4-f275-4ac7-85c9-9afa7b079717) · [STORY-066/AC-008](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/a1979dd4-f275-4ac7-85c9-9afa7b079717) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-248](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/10c7fcf4-0616-45f7-b2df-dc75c7aaf952)
 
 **Rationale:**
 > Xác minh xóa mềm cấu hình không làm thay đổi dữ liệu nghiệp vụ hoặc giá đã phát sinh trước đó.
@@ -1419,7 +997,7 @@
 
 | Trường | Nội dung |
 |---|---|
-| **Test ID** | ST-068-20-01 |
+| **Test ID** | [ST-068-20-01](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/4013a769-d495-4752-afac-b99dcc3851c4) |
 | **Story** | STORY-068 |
 | **Loại** | 1 |
 | **Suite** | FULL |
@@ -1428,9 +1006,7 @@
 | **Trạng thái** | Đã duyệt |
 
 **Precondition:**
-- Admin đã đăng nhập.
-- Admin có quyền quản lý cấu hình giá thiệp.
-- Cấu hình đã từng được sử dụng để xác định phụ phí cho thiệp, Checkout hoặc Order đã tồn tại.
+- Admin đã đăng nhập. Admin có quyền quản lý cấu hình giá thiệp. Cấu hình đã từng được sử dụng để xác định phụ phí cho thiệp, Checkout hoặc Order đã tồn tại.
 
 **Steps:**
 1. Ghi nhận giá và dữ liệu của thiệp, Checkout hoặc Order đã sử dụng cấu hình.
@@ -1439,21 +1015,13 @@
 4. Kiểm tra lại các dữ liệu nghiệp vụ đã tồn tại.
 
 **Test Data:**
-- Một cấu hình đã được sử dụng bởi ít nhất một trong các dữ liệu: Thiệp, Checkout, Order.
+- Một cấu hình đã được sử dụng bởi ít nhất một trong các dữ liệu: Thiệp. Checkout. Order.
 
 **Expected Result:**
-- Thông tin cấu hình mới chỉ được sử dụng cho các lần xác định phụ phí mới.
-- Hệ thống không tính lại giá của thiệp đã tồn tại.
-- Hệ thống không thay đổi giá của Checkout đã tồn tại.
-- Hệ thống không thay đổi giá của Order đã tồn tại.
-- Dữ liệu lịch sử được giữ nguyên theo thông tin tại thời điểm phát sinh.
+- Thông tin cấu hình mới chỉ được sử dụng cho các lần xác định phụ phí mới. Hệ thống không tính lại giá của thiệp đã tồn tại. Hệ thống không thay đổi giá của Checkout đã tồn tại. Hệ thống không thay đổi giá của Order đã tồn tại. Dữ liệu lịch sử được giữ nguyên theo thông tin tại thời điểm phát sinh.
 
 **Trace to:**
-- STORY-068
-- STORY-068/MAIN
-- STORY-068/AC-011
-- STORY-035
-- BR-244
+- [STORY-068](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/ea36e44e-2ef0-4e8a-b2d3-01a31a2871e3) · [STORY-068/MAIN](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/ea36e44e-2ef0-4e8a-b2d3-01a31a2871e3) · [STORY-068/AC-011](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/ea36e44e-2ef0-4e8a-b2d3-01a31a2871e3) · [STORY-035](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/54a960a5-99fa-4037-b1d8-7e931f2b7e43) · [BR-244](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/3a150e28-1a62-4b82-a8f3-c838238d674a)
 
 **Rationale:**
 > Xác minh cập nhật cấu hình không làm thay đổi dữ liệu giá đã phát sinh trước đó.

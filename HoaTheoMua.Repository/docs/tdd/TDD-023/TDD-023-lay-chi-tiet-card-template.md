@@ -68,7 +68,7 @@ flowchart LR
     FE -->|"GET /api/card-templates/{id}"| API["CardTemplatesController"]
     API --> Svc["CardTemplateService"]
     Svc --> EF["EF Core"]
-    EF --> DB[(card_templates)]
+    EF --> DB[(CardTemplate)]
 ```
 
 **Ghi chú**: Không tải lại file ảnh; response chỉ trả `imageUrl` đã lưu.
@@ -88,7 +88,7 @@ sequenceDiagram
     Client->>C: GET /api/card-templates/{id}
     C->>S: GetByIdAsync(id, currentUser)
     Note over S: GIAI ĐOẠN 1: Validate quyền và ID
-    S->>DB: Find card_templates by id
+    S->>DB: Find CardTemplate by id
     DB-->>S: Record hoặc null
     alt Không tồn tại
         S-->>C: CARD_TEMPLATE_NOT_FOUND/404
@@ -125,22 +125,22 @@ flowchart TD
 
 ### Mô hình dữ liệu (Data Model / ERD)
 **Tiêu đề**: Card Template detail
-**Mô tả**: API đọc một record trong `card_templates`.
+**Mô tả**: API đọc một record trong `CardTemplate`.
 
 **Quy ước**: ERD bên dưới dùng đúng tên table/column PostgreSQL dạng `snake_case`; field response dùng `camelCase`.
 
 ```mermaid
 erDiagram
-    card_templates {
-        uuid id PK
-        string name
-        text description
-        string image_url
-        string template_type "ai | handmade"
-        bool is_active
-        bool is_deleted
-        timestamp created_at
-        timestamp updated_at
+    CardTemplate {
+        uuid Id PK
+        string Name
+        text Description
+        string ImageUrl
+        string TemplateType "ai | handmade"
+        bool IsActive
+        bool IsDeleted
+        timestamp CreatedAt
+        timestamp UpdatedAt
     }
 ```
 
@@ -226,10 +226,10 @@ GET /api/card-templates/template-hm-001
 
 ### 🔴 Tham chiếu đến
 - TDD-022 — Cùng visibility/filter của danh sách Card Template.
-- AI_DB_Diagram — Schema `card_templates`.
+- AI_DB_Diagram — Schema `CardTemplate`.
 
 ### ⚫ Trỏ vào tài liệu này
 - TDD-025 — Form Admin tải dữ liệu trước khi cập nhật.
 
 ### ⋯ Bị ảnh hưởng
-- TDD-006, TDD-007 và TDD-021 nếu thay đổi taxonomy trạng thái Template.
+- TDD-006 và TDD-021 nếu thay đổi taxonomy trạng thái Template.

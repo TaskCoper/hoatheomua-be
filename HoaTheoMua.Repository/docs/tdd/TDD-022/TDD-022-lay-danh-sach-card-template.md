@@ -64,7 +64,7 @@
 
 ### Kiến trúc tổng quan (Architecture)
 **Tiêu đề**: Trình tự lấy danh sách Card Template
-**Mô tả**: Frontend gửi filter và pagination; Controller xác thực quyền; Service áp dụng rule theo role; Repository/EF Core truy vấn `card_templates`.
+**Mô tả**: Frontend gửi filter và pagination; Controller xác thực quyền; Service áp dụng rule theo role; Repository/EF Core truy vấn `CardTemplate`.
 
 ```mermaid
 flowchart LR
@@ -72,7 +72,7 @@ flowchart LR
     FE -->|"GET /api/card-templates"| API["CardTemplatesController"]
     API --> Svc["CardTemplateService"]
     Svc --> EF["EF Core"]
-    EF --> DB[(card_templates)]
+    EF --> DB[(CardTemplate)]
 ```
 
 **Ghi chú**: Không có cache hoặc API bên thứ ba trong thiết kế hiện tại.
@@ -127,22 +127,22 @@ flowchart TD
 
 ### Mô hình dữ liệu (Data Model / ERD)
 **Tiêu đề**: Bảng Card Template dùng cho truy vấn danh sách
-**Mô tả**: Danh sách đọc trực tiếp từ `card_templates`; column `template_type` là string bắt buộc và bất biến.
+**Mô tả**: Danh sách đọc trực tiếp từ `CardTemplate`; column `template_type` là string bắt buộc và bất biến.
 
 **Quy ước**: ERD bên dưới dùng đúng tên table/column PostgreSQL dạng `snake_case`; field query và response dùng `camelCase`.
 
 ```mermaid
 erDiagram
-    card_templates {
-        uuid id PK
-        string name
-        text description
-        string image_url
-        string template_type "ai | handmade"
-        bool is_active
-        bool is_deleted
-        timestamp created_at
-        timestamp updated_at
+    CardTemplate {
+        uuid Id PK
+        string Name
+        text Description
+        string ImageUrl
+        string TemplateType "ai | handmade"
+        bool IsActive
+        bool IsDeleted
+        timestamp CreatedAt
+        timestamp UpdatedAt
     }
 ```
 
@@ -244,12 +244,12 @@ Response giữ cùng schema và chỉ chứa `templateType="ai"`, `isActive=fals
 
 ### 🔴 Tham chiếu đến
 - AI_Card_Context — Quy tắc phân loại `ai|handmade` và visibility cho flow Card.
-- AI_DB_Diagram — Schema `card_templates`.
+- AI_DB_Diagram — Schema `CardTemplate`.
 
 ### ⚫ Trỏ vào tài liệu này
-- TDD-006 — Chọn Template AI khi tạo Card.
+- TDD-006 — Chọn Template AI khác khi Regenerate; Create dùng Template đã có trong `OrderDetail.SnapshotCard`.
 - TDD-021 — Chọn Template HandMade.
 - TDD-023 — Lấy chi tiết Card Template.
 
 ### ⋯ Bị ảnh hưởng
-- TDD-006, TDD-007 và TDD-021 nếu thay đổi filter, trạng thái hoặc giá trị `templateType`.
+- TDD-006 và TDD-021 nếu thay đổi filter, trạng thái hoặc giá trị `templateType`.

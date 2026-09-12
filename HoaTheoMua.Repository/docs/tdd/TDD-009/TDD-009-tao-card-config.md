@@ -8,7 +8,7 @@
 | Trường | Giá trị |
 |---|---|
 | Mã tài liệu | TDD-009 |
-| Phiên bản | v0.8 |
+| Phiên bản | v0.9 |
 | Author | Codex |
 | Reviewer | |
 | Approver | Chưa chỉ định |
@@ -24,7 +24,7 @@
 - **Tính năng**: Tạo Card Config qua API Config
 - **Tác giả**: Codex
 - **Người review**:
-- **Phiên bản**: v0.8
+- **Phiên bản**: v0.9
 - **Cập nhật (YYYY-MM-DD)**: 2026-09-09
 - **Story liên quan**: Không có
 
@@ -37,7 +37,7 @@
 - BR-009-06: Mỗi Card key là singleton trên record chưa xóa, không phụ thuộc `IsPublic`; trùng trả `CARD_CONFIG_ALREADY_EXISTS/409`. Record đã soft-delete không chặn tạo lại.
 - BR-009-07: Wrapper `value` phải có đúng bảy field `group`, `label`, `value`, `options`, `required`, `inputType`, `validations`; `group=card_config`, label là string không rỗng, inner `value` là string JSON, `options=[]`, `required=false`, `inputType=json`, `validations=[]`.
 - BR-009-08: Inner string phải parse thành object chỉ có `items`; `items` là array không rỗng. Field/item thừa, thiếu hoặc sai kiểu là không hợp lệ.
-- BR-009-09: Với key sizes, `items` phải có đúng một Size chung. Item có đúng `name`, `width`, `height`, `base_price`, `max_words`; `name` trim không rỗng và chỉ là nhãn hiển thị, `width>0`, `height>0`, `base_price>=0`, `max_words>0`. Vi phạm BR-009-07/08/09 trả `CARD_SIZE_CONFIG_INVALID/400`.
+- BR-009-09: Với key sizes, `items` phải là danh sách không rỗng và được chứa một hoặc nhiều Size. Mỗi item có đúng `name`, `width`, `height`, `base_price`, `max_words`; `name` sau khi bỏ khoảng trắng đầu/cuối không được rỗng hoặc trùng với item khác vì client dùng chính tên này để chọn Size; `width>0`, `height>0`, `base_price>=0`, `max_words>0`. Vi phạm BR-009-07/08/09 trả `CARD_SIZE_CONFIG_INVALID/400`.
 - BR-009-10: Price item có đúng `min_words`, `max_words`, `extra_price`; `min_words>=0`, `max_words>=min_words`, `extra_price>=0`; array tăng dần, không chồng lấn và rule sau bắt đầu tại `max_words` trước + 1. Vi phạm BR-009-07/08/10 với key prices trả `CALLIGRAPHY_CONFIG_INVALID/400`.
 - BR-009-11: Card Config mới được gán `IsPublic=true`, `IsDeleted=false`, `CreatedAt=UtcNow`, `UpdatedAt=null`; frontend không cần thêm `isPublic` vào Create request.
 - BR-009-12: Thành công giữ HTTP 200 và `ConfigResponse` hiện có; Controller vẫn gọi revalidation sau khi SaveChanges.
@@ -123,7 +123,7 @@ flowchart TD
     B -->|Không| C[Logic Config hiện hành]
     B -->|Có| D{group/key/kind hợp lệ?}
     D -->|Không| E[Trả mã lỗi Card tương ứng]
-    D -->|Có, sizes| F[Validate wrapper + đúng một Size chung]
+    D -->|Có, sizes| F[Kiểm tra wrapper và danh sách một hoặc nhiều Size]
     D -->|Có, prices| G[Validate wrapper + Price ranges]
     F --> H{Singleton tồn tại?}
     G --> H
@@ -176,7 +176,7 @@ erDiagram
 
 Request:
 ```json
-{"group":"card_config","key":"card_config.sizes","kind":"Setting","value":{"group":"card_config","label":"Kích thước thiệp","value":"{\"items\":[{\"name\":\"Kích thước chung\",\"width\":15,\"height\":25,\"base_price\":15000,\"max_words\":150}]}","options":[],"required":false,"inputType":"json","validations":[]}}
+{"group":"card_config","key":"card_config.sizes","kind":"Setting","value":{"group":"card_config","label":"Kích thước thiệp","value":"{\"items\":[{\"name\":\"Nhỏ\",\"width\":10,\"height\":15,\"base_price\":10000,\"max_words\":70},{\"name\":\"Lớn\",\"width\":15,\"height\":25,\"base_price\":15000,\"max_words\":150}]}","options":[],"required":false,"inputType":"json","validations":[]}}
 ```
 
 Response:
@@ -296,7 +296,7 @@ Response:
 - Code hiện hành: `CreateConfigRequest`, `ConfigService.CreateConfig`, `ConfigController.CreateConfig`.
 
 ### ⚫ Trỏ vào tài liệu này
-- TDD-006, TDD-007, TDD-021, TDD-027 sử dụng hai singleton.
+- TDD-021 và flow chuẩn bị `OrderDetail.SnapshotCard` sử dụng hai singleton. TDD-006 không đọc Config live.
 - TDD-010 và TDD-011 quản lý vòng đời Config.
 
 ### ⋯ Bị ảnh hưởng

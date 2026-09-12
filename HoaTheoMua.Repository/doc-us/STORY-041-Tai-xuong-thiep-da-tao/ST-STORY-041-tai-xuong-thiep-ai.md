@@ -33,8 +33,8 @@
 
 **Trace to:**
 - [STORY-041/AC-001](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/44ac11ef-d8aa-4524-bfa7-6adaa0a5c12c)
-- [STORY-041/BR-103](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/44ac11ef-d8aa-4524-bfa7-6adaa0a5c12c)
-- [STORY-041/BR-104](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/44ac11ef-d8aa-4524-bfa7-6adaa0a5c12c)
+- [BR-103](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/44ac11ef-d8aa-4524-bfa7-6adaa0a5c12c)
+- [BR-104](https://document-first.vnzdna.com/projects/117393d8-1afc-4c89-baa9-9aeea430cdcd/documents/44ac11ef-d8aa-4524-bfa7-6adaa0a5c12c)
 
 **Rationale:**
 > Xác nhận khách hàng có thể tải đúng file thiệp đã tạo từ History với tên file đúng quy tắc.
