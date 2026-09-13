@@ -444,16 +444,16 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("OutputId");
 
-                    b.Property<Guid>("RootID")
+                    b.Property<Guid>("RootId")
                         .HasColumnType("uuid")
-                        .HasColumnName("RootID");
+                        .HasColumnName("RootId");
 
                     b.Property<string>("SystemForm")
                         .HasColumnType("jsonb")
                         .HasColumnName("SystemForm");
 
                     b.Property<ClientHistoryType>("Type")
-                        .HasColumnType("ClientHistoryType")
+                        .HasColumnType("\"ClientHistoryType\"")
                         .HasColumnName("Type");
 
                     b.Property<Guid>("UserId")
@@ -670,7 +670,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnName("ExtraPrice");
 
                     b.Property<CardFormType>("FormType")
-                        .HasColumnType("CardFormType")
+                        .HasColumnType("\"CardFormType\"")
                         .HasColumnName("FormType");
 
                     b.Property<string>("ImageUrl")
@@ -688,18 +688,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
                         .HasColumnName("RawImage");
-
-                    b.Property<string>("ReceiverName")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("ReceiverName");
-
-                    b.Property<string>("SenderName")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("SenderName");
 
                     b.Property<decimal>("SizeBasePrice")
                         .HasPrecision(18, 2)
@@ -1181,11 +1169,13 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("GeneratedCard")
-                        .HasColumnType("uuid");
+                    b.Property<List<Guid>>("GeneratedCardId")
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("GeneratedCard");
 
-                    b.Property<Guid?>("GeneratedFlower")
-                        .HasColumnType("uuid");
+                    b.Property<List<Guid>>("GeneratedFlowerId")
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("GeneratedFlower");
 
                     b.Property<double>("Height")
                         .HasColumnType("double precision");
@@ -1217,6 +1207,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("SnapshotCard")
+                        .HasColumnType("jsonb");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1780,7 +1773,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnName("Description");
 
                     b.Property<PlatformType>("Platform")
-                        .HasColumnType("PlatformType")
+                        .HasColumnType("\"PlatformType\"")
                         .HasColumnName("Platform");
 
                     b.HasKey("Id");
@@ -2189,7 +2182,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<SystemPromptType>("Type")
-                        .HasColumnType("SystemPromptType")
+                        .HasColumnType("\"SystemPromptType\"")
                         .HasColumnName("Type");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
