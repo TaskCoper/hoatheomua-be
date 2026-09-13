@@ -47,9 +47,10 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // base.OnModelCreating(modelBuilder);
-        modelBuilder.HasPostgresEnum<SystemPromptType>(name: "system_prompt_types");
-        modelBuilder.HasPostgresEnum<PlatformType>(name: "platform_type");
-        modelBuilder.HasPostgresEnum<CardFormType>(name: "form_type");
+        modelBuilder.HasPostgresEnum<SystemPromptType>(name: "SystemPromptType");
+        modelBuilder.HasPostgresEnum<PlatformType>(name: "PlatformType");
+        modelBuilder.HasPostgresEnum<CardFormType>(name: "CardFormType");
+        modelBuilder.HasPostgresEnum<ClientHistoryType>(name: "ClientHistoryType");
         modelBuilder.ApplyConfigurationsFromAssembly(AssemblyReference.Assembly);
 
         // MassTransit transactional outbox/inbox. All three are required: the webhook publishes

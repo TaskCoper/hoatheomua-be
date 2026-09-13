@@ -31,6 +31,7 @@ using FulfillmentService = HoaTheoMua.Service.Fulfillment;
 using HoaTheoMua.Service.DependencyInjection.Extensions;
 using SystemPromptService = HoaTheoMua.Service.SystemPrompt;
 using MockupService = HoaTheoMua.Service.Mockup;
+using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,9 +54,10 @@ builder.Services.AddEndpointsApiExplorer();
 var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
 var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.EnableDynamicJson();
-dataSourceBuilder.MapEnum<SystemPromptType>("system_prompt_types");
-dataSourceBuilder.MapEnum<PlatformType>("platform_type");
-dataSourceBuilder.MapEnum<CardFormType>("form_type");
+dataSourceBuilder.MapEnum<SystemPromptType>("SystemPromptType");
+dataSourceBuilder.MapEnum<PlatformType>("PlatformType");
+dataSourceBuilder.MapEnum<CardFormType>("CardFormType");
+dataSourceBuilder.MapEnum<ClientHistoryType>("ClientHistoryType");
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -90,6 +92,10 @@ builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
+builder.Services.AddScoped<XanhSmService.XanhSmWebhookService>();
+builder.Services.AddScoped<XanhSmService.XanhSmDeliveryCompletionService>();
+builder.Services.AddHttpClient<NhanhVnService.INhanhVnDeliveryStatusClient, NhanhVnService.NhanhVnDeliveryStatusClient>(
+    "NhanhVnDeliveryStatus", client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>("AhamoveService");
@@ -109,6 +115,7 @@ builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
 builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
 
 builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
+builder.Services.AddScoped<CardTemplateService.IService, CardTemplateService.Service>();
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
 // registering it with AddScoped would silently hand it the unnamed default HttpClient the way
 // Webhook.Service and Revalidate.Service currently get theirs.
