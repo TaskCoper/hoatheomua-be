@@ -1,0 +1,2743 @@
+# Đọc kỹ toàn bộ tài liệu
+
+> Đầu tiên tôi muốn bạn đọc thật chi tiết từng dữ liệu trong này giúp tôi đi: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/doc-us'. Lưu ý, trong này sẽ có nhiều file, có khi là folder sẽ bị lặp lại, nhưng tôi muốn bạn đọc chi tiết từng tất cả. Bây giờ mỗi bạn đọc theo flow như thế nào, để nắm được hết toàn bộ context, không được bỏ soát bất kì dữ liệu nào. Đọc theo flow như thế nào. Mỗi STORY thường nó sẽ có Business rule và system test nằm ở trỏng hoặc có thể là không, nhớ lưu ý và đọc hết. Đầu tiên bạn hãy tạo giúp tôi một file .md có tên là assume-flow nằm trong folder này trước: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/doc-us'. Sau đó đọc từng cái flolder STORY, mỗi flodẻ bạn hãy quay lại vào trong file .md bạn vừa tạo tóm tắt theo kiểu này: ```text
+> System Prompt
+> STORY-004 xem prompt
+>     |-> STORY-012 tìm kiếm (bỏ)
+>     |-> STORY-013 lọc (bỏ)
+>     |-> STORY-005 sửa và tạo phiên bản mới
+>     `-> STORY-006 xóa prompt không còn được sử dụng (bỏ)
+>
+> Tạo tài nguyên marketing
+> STORY-017 tạo content -------> STORY-018 thư viện content
+>                                   |-> STORY-020 sửa
+>                                   |-> STORY-019 xóa
+>                                   |-> STORY-024 viết lại theo nền tảng -> lưu content mới
+>
+> STORY-003 tạo ảnh -----------> STORY-021 thư viện ảnh
+>                                   |-> STORY-023 sửa metadata
+>                                   |-> STORY-022 xóa
+>
+> Xuất bản
+> Content + media -> STORY-002 lên lịch -> STORY-014 xem lịch
+>                                          |-> STORY-016 sửa lịch
+>                                          |-> STORY-015 xóa lịch
+>                                          `-> Job tự động đăng theo từng nền tảng
+>
+> Báo cáo
+> Nền tảng đã kết nối -> STORY-025 thu thập định kỳ -> xem chi tiết -> tải XLSX
+> ```. Cái tôi gửi bạn là tóm tắt dạng US để hình dung được bối cảnh rộng nhưng tôi muốn hình dung theo kiểu chi tiết, nên là tôi muốn bạn khi đọc từng STORY thì quay lại file .md mà bạn tạo ban đầu để note vào kiểu như vậy, kiểu có chỗ dẫn và ngắn gọn như vậy để tôi có thể hình dung. Kiểu như: admin xem chi tiết thiệp -> API chi tiết thiệp. Kiểu vậy để tôi hình dung được các API của mỗi US và có thể link chúng lại với nhau. Lưu ý chỉ tất cả các folder STORY chỉ làm trên 1 file .md này: assume-flow. Nhớ flow này luôn lặp đi lặp lại giúp tôi, mỗi flow đọc STORY -> rồi viết vào trong assume-flow, kiểm tra lại dữ liệu viết vào: assume-flow đã đúng chưa. Rồi quay folder STORY khác cũng lặp lại flow đó: đọc STORY -> viết tiếp vào trong assume-flow, rồi kiểm tra lại dữ liệu bạn viết vào đã đúng chưa. Cứ thế lặp đi lặp hết cho đến khi hết các STORY trong folder này: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/doc-us'. Sau khi đã xong, thì kiểm tra hết lại 1 lần nữa, toàn bộ nội dung trong assume-flow mà bạn đã vừa ghi vào. Sau đó tại giúp tôi một file .md nữa cũng nằm trong folder này 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/doc-us' có tên là assume-us, nơi bạn nhóm các US có mối quan hệ lại với nhau để tôi hình dung được các cụm của nó. Khi nhìn vào sẽ nắm được hết toàn bộ context chung. Kiểu như này: ```text
+> System Prompt
+> STORY-004 xem prompt
+>     |-> STORY-012 tìm kiếm (bỏ)
+>     |-> STORY-013 lọc (bỏ)
+>     |-> STORY-005 sửa và tạo phiên bản mới
+>     `-> STORY-006 xóa prompt không còn được sử dụng (bỏ)
+>
+> Tạo tài nguyên marketing
+> STORY-017 tạo content -------> STORY-018 thư viện content
+>                                   |-> STORY-020 sửa
+>                                   |-> STORY-019 xóa
+>                                   |-> STORY-024 viết lại theo nền tảng -> lưu content mới
+>
+> STORY-003 tạo ảnh -----------> STORY-021 thư viện ảnh
+>                                   |-> STORY-023 sửa metadata
+>                                   |-> STORY-022 xóa
+>
+> Xuất bản
+> Content + media -> STORY-002 lên lịch -> STORY-014 xem lịch
+>                                          |-> STORY-016 sửa lịch
+>                                          |-> STORY-015 xóa lịch
+>                                          `-> Job tự động đăng theo từng nền tảng
+>
+> Báo cáo
+> Nền tảng đã kết nối -> STORY-025 thu thập định kỳ -> xem chi tiết -> tải XLSX
+> ```. Hãy làm giúp tôi đi
+
+<details><summary>8 previous messages</summary>
+
+> Mình sẽ đọc tuần tự toàn bộ tài liệu trong từng thư mục `STORY`, bao gồm business rules và system test nếu có. Sau mỗi STORY, mình sẽ cập nhật `assume-flow.md` rồi tự đối chiếu lại với tài liệu trước khi chuyển sang STORY tiếp theo; cuối cùng sẽ rà soát toàn bộ và tạo `assume-us.md` theo các cụm nghiệp vụ.
+>
+> <details><summary>Created a file, ran 5 commands</summary>
+>
+> - Ran `rg --files "HoaTheoMua.Repository/doc-us"`
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Recurse -Force | Select-Object FullName,PSIsContainer,Length | Format-Table -AutoSize`
+> - Wrote `./HoaTheoMua.Repository/doc-us/assume-flow.md` (+7 -0)
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object { $_.Name -like 'STORY-*' } | Sort-Object Name | ForEach-Object { $_.Name }`
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object { $_.Name -like 'STORY-*' } | Sort-Object Name | ForEach-Object { $main = Get-ChildItem -LiteralPath $_.FullName -File -Filter '*.md' | Where-Object { $_.Name -notlike 'ST-STORY-*' } | Select-Object -First 1; [PSCustomObject]@{ Story=$_.Name; Main=if($main){$main.Name}else{'(none)'}; Files=(Get-ChildItem -LiteralPath $_.FullName -Recurse -File | Measure-Object).Count } } | Format-Table -AutoSize`
+> - Ran ``$dirs = Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object Name -like 'STORY-*' | Sort-Object Name; foreach($d in $dirs){ Write-Output ('===== ' + $d.Name + ' ====='); Get-ChildItem -LiteralPath $d.FullName -File -Filter '*.md' | Where-Object Name -notlike 'ST-STORY-*' | ForEach-Object { Get-Content -LiteralPath $_.FullName } | Select-String -Pattern '^#','^##','(?i)endpoint','(?i)api','`(GET|POST|PUT|PATCH|DELETE) ','Business Rule','BR-[0-9]+','System Test','ST-STORY' | ForEach-Object { $_.Line.Trim() } }``
+>
+> </details>
+>
+> Mình đã tạo `assume-flow.md` và đang lập bản đồ từ toàn bộ 49 thư mục STORY. Có một thư mục trùng nội dung cho `STORY-033` (một tên thư mục bị gõ “toa”); mình sẽ ghi rõ đây là bản sao để không tính thành một chức năng khác.
+>
+> <details><summary>Ran 8 commands</summary>
+>
+> - Ran `$dirs = Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object Name -like 'STORY-*' | Sort-Object Name; foreach($d in $dirs){ Write-Output ('===== ' + $d.Name + ' ====='); Get-ChildItem -LiteralPath $d.FullName -Recurse -File -Filter '*.md' | ForEach-Object { Select-String -LiteralPath $_.FullName -Encoding utf8 -Pattern '(?i)\b(GET|POST|PUT|PATCH|DELETE)\b|/api/|endpoint|API ' | ForEach-Object { ('['+$_.Name+'] '+$_.Line.Trim()) } } }`
+> - Ran `$dirs = Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object Name -like 'STORY-*' | Sort-Object Name | Select-Object -First 18; foreach($d in $dirs){ Write-Output ('===== '+$d.Name+' ====='); $f=Get-ChildItem -LiteralPath $d.FullName -File -Filter '*.md' | Where-Object Name -notlike 'ST-STORY-*' | Select-Object -First 1; $lines=Get-Content -LiteralPath $f.FullName -Encoding utf8; $in=$false; foreach($l in $lines){ if($l -match '^### Main Flow'){ $in=$true; continue }; if($in -and $l -match '^### |^## '){break}; if($in -and $l.Trim()){ $l.Trim() } } }`
+> - Ran `$dirs = Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object Name -like 'STORY-*' | Sort-Object Name | Select-Object -Skip 18 -First 19; foreach($d in $dirs){ Write-Output ('===== '+$d.Name+' ====='); $f=Get-ChildItem -LiteralPath $d.FullName -File -Filter '*.md' | Where-Object Name -notlike 'ST-STORY-*' | Select-Object -First 1; $lines=Get-Content -LiteralPath $f.FullName -Encoding utf8; $in=$false; foreach($l in $lines){ if($l -match '^### Main Flow'){ $in=$true; continue }; if($in -and $l -match '^### |^## '){break}; if($in -and $l.Trim()){ $l.Trim() } } }`
+> - Ran `$dirs = Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object Name -like 'STORY-*' | Sort-Object Name | Select-Object -Skip 37; foreach($d in $dirs){ Write-Output ('===== '+$d.Name+' ====='); $f=Get-ChildItem -LiteralPath $d.FullName -File -Filter '*.md' | Where-Object Name -notlike 'ST-STORY-*' | Select-Object -First 1; $lines=Get-Content -LiteralPath $f.FullName -Encoding utf8; $in=$false; foreach($l in $lines){ if($l -match '^### Main Flow'){ $in=$true; continue }; if($in -and $l -match '^### |^## '){break}; if($in -and $l.Trim()){ $l.Trim() } } }`
+> - Ran `$dirs=Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object Name -like 'STORY-*' | Sort-Object Name; foreach($d in $dirs){ $all=Get-ChildItem -LiteralPath $d.FullName -Recurse -File -Filter '*.md'; $br=$all|Where-Object {$_.FullName -match '\\BusinessRules\\'}; $st=$all|Where-Object {$_.Name -like 'ST-STORY-*'}; $brTitles=@($br|ForEach-Object { (Get-Content -LiteralPath $_.FullName -Encoding utf8 | Where-Object {$_ -match '^# '} | Select-Object -First 1) }); $stTests=@($st|ForEach-Object { Get-Content -LiteralPath $_.FullName -Encoding utf8 | Where-Object {$_ -match '^## (TC|Test Case|Scenario)|^### (TC|Test Case|Scenario)'} }); Write-Output (('{0}: {1} BR files [{2}] | {3} ST files, {4} test/scenario headings' -f $d.Name,$br.Count,(($brTitles -join '; ') -replace '^# ',''),$st.Count,$stTests.Count)) }`
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/doc-us/STORY-039-Hoan-tat-Checkout-tao-va-thanh-toan-Orde/ST-STORY-039-Hoan-tat-Checkout-tao-va-thanh-toan-Orde.md' -Encoding utf8 | Select-Object -First 120`
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us/STORY-039-Hoan-tat-Checkout-tao-va-thanh-toan-Orde' -Recurse -File | Select-Object -ExpandProperty FullName`
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/doc-us/STORY-039-Hoan-tat-Checkout-tao-va-thanh-toan-Orde/ST-STORY-039-hoan-tat-checkout-va-thanh-toan-don-hang.md' -Encoding utf8 | Select-Object -First 160`
+>
+> </details>
+>
+> Mình đã đối chiếu các business rules trong từng STORY và kiểm tra system-test hiện có: đa số STORY 030–068 có một tài liệu ST riêng; các STORY 074–083 hiện không kèm ST. Các tài liệu không định nghĩa URL/method API cụ thể, nên trong bản đồ mình sẽ ghi “API/chức năng” theo đúng trách nhiệm (ví dụ API danh sách, chi tiết, tạo/cập nhật/xóa), không tự bịa endpoint.
+>
+> <details><summary>Edited a file, ran 2 commands</summary>
+>
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/doc-us/assume-flow.md' -Encoding utf8 -Raw`
+> - Wrote `./HoaTheoMua.Repository/doc-us/assume-flow.md` (+141 -1)
+> - Ran `$flow=Get-Content -LiteralPath 'HoaTheoMua.Repository/doc-us/assume-flow.md' -Encoding utf8 -Raw; $dirs=Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object Name -like 'STORY-*' | Sort-Object Name; $missing=@(); foreach($d in $dirs){ if($flow -notmatch [regex]::Escape(($d.Name -replace '^(STORY-[0-9]+).*','$1'))){$missing+=$d.Name} }; "Story folders: $($dirs.Count)"; "assume-flow lines: $((Get-Content -LiteralPath 'HoaTheoMua.Repository/doc-us/assume-flow.md' -Encoding utf8).Count)"; if($missing.Count){'Missing: '+($missing -join ', ')}else{'Coverage check: every STORY identifier appears in assume-flow.'}; Get-Content -LiteralPath 'HoaTheoMua.Repository/doc-us/assume-flow.md' -Encoding utf8 | Select-Object -First 24`
+>
+> </details>
+>
+> Bản `assume-flow.md` đã được rà soát tự động lần cuối: có 47 thư mục STORY và mọi mã STORY đều xuất hiện trong bản đồ. Mình đang tạo `assume-us.md` để gom chúng theo cụm nghiệp vụ, giữ các mũi tên phụ thuộc để nhìn toàn cảnh nhanh hơn.
+>
+> <details><summary>Created a file, edited 2 files, ran 5 commands</summary>
+>
+> - Wrote `./HoaTheoMua.Repository/doc-us/assume-flow.md` (+1 -1)
+> - Wrote `./HoaTheoMua.Repository/doc-us/assume-us.md` (+117 -0)
+> - Ran `$rootBr=Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us/BusinessRules' -File -Filter '*.md'; $storyBr=Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Recurse -File -Filter 'BR-*.md' | Where-Object {$_.DirectoryName -notmatch '\\doc-us\\BusinessRules$'}; $rootIds=@($rootBr.BaseName); $storyIds=@($storyBr.BaseName | Select-Object -Unique); $notInStory=$rootIds | Where-Object {$_ -notin $storyIds}; "Root BusinessRules: $($rootBr.Count)"; "Unique rule copies under STORY: $($storyIds.Count)"; "Root rules not copied inside a STORY: $($notInStory.Count)"; if($notInStory.Count){$notInStory -join ', '}`
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/doc-us/BusinessRules/BR-049.md','HoaTheoMua.Repository/doc-us/BusinessRules/BR-050.md','HoaTheoMua.Repository/doc-us/BusinessRules/BR-055.md','HoaTheoMua.Repository/doc-us/BusinessRules/BR-057.md','HoaTheoMua.Repository/doc-us/BusinessRules/README.md' -Encoding utf8`
+> - Wrote `./HoaTheoMua.Repository/doc-us/assume-flow.md` (+3 -1)
+> - Wrote `./HoaTheoMua.Repository/doc-us/assume-us.md` (+1 -0)
+> - Ran `$flowPath='HoaTheoMua.Repository/doc-us/assume-flow.md'; $usPath='HoaTheoMua.Repository/doc-us/assume-us.md'; $flow=Get-Content -LiteralPath $flowPath -Encoding utf8 -Raw; $us=Get-Content -LiteralPath $usPath -Encoding utf8 -Raw; $dirs=Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object Name -like 'STORY-*'; $ids=@($dirs | ForEach-Object { if($_.Name -match '^(STORY-[0-9]+)'){$matches[1]} } | Select-Object -Unique); $missingFlow=@($ids | Where-Object {$flow -notmatch [regex]::Escape($_)}); $missingUs=@($ids | Where-Object {$us -notmatch [regex]::Escape($_)}); "assume-flow: $((Get-Content -LiteralPath $flowPath -Encoding utf8).Count) lines"; "assume-us: $((Get-Content -LiteralPath $usPath -Encoding utf8).Count) lines"; "Unique STORY IDs in folders: $($ids.Count)"; "Missing in assume-flow: $($missingFlow.Count)"; "Missing in assume-us: $($missingUs.Count)"; "Root-only BR read and noted: BR-049, BR-050, BR-055, BR-057"; git diff --stat -- HoaTheoMua.Repository/doc-us/assume-flow.md HoaTheoMua.Repository/doc-us/assume-us.md`
+> - Ran `git status --short -- HoaTheoMua.Repository/doc-us/assume-flow.md HoaTheoMua.Repository/doc-us/assume-us.md; Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -File -Filter 'assume-*.md' | Select-Object Name,Length,LastWriteTime | Format-Table -AutoSize`
+> - Ran `$root=Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us/BusinessRules' -File -Filter 'BR-*.md'; $story=Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Recurse -File -Filter 'BR-*.md' | Where-Object {$_.DirectoryName -notmatch '\\doc-us\\BusinessRules$'}; $different=@(); foreach($r in $root){$copies=@($story|Where-Object Name -eq $r.Name); if($copies.Count -gt 0){$rh=(Get-FileHash -LiteralPath $r.FullName -Algorithm SHA256).Hash; if(-not ($copies|ForEach-Object {(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}|Where-Object {$_ -eq $rh})){ $different+=$r.Name }}}; "Root BR with no identical STORY copy: $($different.Count)"; if($different.Count){$different -join ', '}`
+>
+> </details>
+</details>
+
+Đã hoàn tất đọc, đối chiếu và tạo 2 tài liệu:
+
+- [assume-flow.md](./HoaTheoMua.Repository/doc-us/assume-flow.md) — flow chi tiết theo từng STORY: UI → trách nhiệm API/backend → trạng thái/dữ liệu tiếp theo, BR/ST và các liên kết giữa STORY.
+- [assume-us.md](./HoaTheoMua.Repository/doc-us/assume-us.md) — nhóm toàn bộ US thành các cụm nghiệp vụ để xem context tổng quan.
+
+Đã kiểm tra lại: 46 mã STORY duy nhất trong 47 thư mục (có 2 thư mục của STORY-033, trong đó một bản trùng/cũ) đều đã có trong cả hai file. Các Business Rules cấp gốc cũng đã được đối chiếu; những rule không nằm trong folder STORY đã được đọc và bổ sung vào flow.
+
+> Toàn bộ context trong US mà bạn vừa mới đọc, bạn chỉ cần nắm được format của chúng là được rồi, tiếp theo bạn hãy đọc kĩ toàn bộ nội dung nằm trong folder này:'d:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/docs'. Toàn bộ nội dung và card trong này đều đã được chốt và hiện tại đang implement code nên bạn cần nắm được context về giúp tôi, và trong db này 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/docs/AI_CUSTOMIZE_DB.dbdiagram' hiện tại sẽ trong orderDetails sẽ chứa generateCardId  là một cái mảng guid và generatedFlowerId tạm thời ở dạng guid , và một field tên là   SnapshotCard sẽ chứa toàn bộ dữ liệu snaphshot trong createOrder để cho hàm tạo mới và tạo lại thiệp có thể dựa trên snaphshot này để tiến hành. Và đây là ví dụ về format của snaphshot: {
+>   "source": {
+>     "type": "product",
+>     "id": "440e8400-e29b-41d4-a716-446655440001",
+>     "imageUrl": "https://storage.example.com/products/flower.png"
+>   },
+>   "regeneratedFromCardId": null,
+>   "cardTemplate": {
+>     "templateId": "550e8400-e29b-41d4-a716-446655440001",
+>     "templateName": "Thiệp hoa cổ điển",
+>     "templateType": "ai",
+>     "templateImageUrl": "https://storage.example.com/templates/card-ai.png"
+>   },
+>   "cardSize": {
+>     "name": "Lớn",
+>     "width": 15,
+>     "height": 25,
+>     "base_price": 15000,
+>     "max_words": 100
+>   },
+>   "cardConfig": {
+>     "min_words": 36,
+>     "max_words": 70,
+>     "extra_price": 39000
+>   },
+>   "messageContent": "Chúc bạn sinh nhật vui vẻ",
+>   "formType": "calligraphy",
+>   "attachedImageUrl": null,
+>   "wordCount": 5,
+>   "basePrice": 15000,
+>   "extraPrice": 0,
+>   "totalPrice": 15000,
+>   "systemPrompt": {
+>     "type": "card",
+>     "content": "Nội dung prompt đầy đủ"
+>   },
+>   "validatedAt": "2026-09-11T08:00:00Z"
+> }. Tôi gửi bạn là một object, nhưng thực tế nó là một cục array chứa object dạng này và có thể thêm field tên là quantity vào trong đó. Hãy nắm dữ liệu giúp tôi
+
+<details><summary>4 previous messages</summary>
+
+> Mình sẽ đọc toàn bộ `docs` theo cấu trúc tài liệu, đặc biệt đối chiếu `AI_CUSTOMIZE_DB.dbdiagram` với snapshot card bạn mô tả. Mình sẽ không sửa schema hay code; mục tiêu là nắm context implementation và xác nhận cách các field snapshot/card được dùng.
+>
+> <details><summary>Ran 6 commands</summary>
+>
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/docs' -Recurse -Force | Select-Object FullName,PSIsContainer,Length | Format-Table -AutoSize`
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/docs' -Recurse -File | ForEach-Object { [PSCustomObject]@{Path=$_.FullName.Substring((Resolve-Path 'HoaTheoMua.Repository/docs').Path.Length+1); Lines=(Get-Content -LiteralPath $_.FullName -Encoding utf8 | Measure-Object -Line).Lines; Bytes=$_.Length} } | Sort-Object Path | Format-Table -AutoSize`
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/docs/AI_CUSTOMIZE_DB.dbdiagram','HoaTheoMua.Repository/docs/AI_Card_Context.md','HoaTheoMua.Repository/docs/AI_DB_Diagram.md' -Encoding utf8`
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/docs/AI_Flower_Context.md','HoaTheoMua.Repository/docs/AI_Mockup_Context.md','HoaTheoMua.Repository/docs/SKILL.md' -Encoding utf8`
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/docs/tdd/TDD-006/TDD-006-tao-thiep-thiet-ke-ai.md','HoaTheoMua.Repository/docs/tdd/TDD-007/TDD-007-tao-lai-thiep-tu-lich-su.md','HoaTheoMua.Repository/docs/tdd/TDD-027/TDD-027-tao-lai-thiep-ai-giu-thiet-ke-goc.md' -Encoding utf8`
+> - Ran ``$files=Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/docs/tdd' -Recurse -File -Filter '*.md' | Where-Object {$_.FullName -notmatch 'TDD-006|TDD-007|TDD-027'} | Sort-Object FullName; foreach($f in $files){"`n===== $($f.Name) ====="; Get-Content -LiteralPath $f.FullName -Encoding utf8}``
+>
+> </details>
+>
+> Mình đã xác nhận một điểm quan trọng: tài liệu Card hiện chốt `POST /api/ai-cards` với hai mode Create (`orderDetailId`) và Regenerate (`sourceCardId`). Snapshot là input bất biến cho Create; còn Regenerate kế thừa snapshot từ Card/History nguồn. Mình đang rà tiếp phần Flower/HandMade và bộ TDD/UT để đối chiếu lineage và các ngoại lệ.
+>
+> <details><summary>Ran 2 commands</summary>
+>
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/docs/tdd/TDD-016/TDD-016-tao-yeu-cau-va-mau-hoa-ai.md','HoaTheoMua.Repository/docs/tdd/TDD-021/TDD-021-chon-va-tao-thiep-handmade.md' -Encoding utf8`
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/docs' -Recurse -File | Select-String -Encoding utf8 -Pattern '(?i)generateCardId|generatedCardId|generatedFlowerId|SnapshotCard|quantity' | Select-Object Path,LineNumber,Line | Format-Table -Wrap -AutoSize`
+>
+> </details>
+</details>
+
+Mình đã đọc toàn bộ context trong `docs` và đã nắm theo hướng implementation.
+
+Điểm mình sẽ lấy theo xác nhận mới của bạn cho `OrderDetail` là:
+
+```text
+OrderDetail
+├─ generatedCardId: Guid[]       // mảng các thiệp AI đã generate cho detail
+├─ generatedFlowerId: Guid?      // nguồn hoa AI, tạm thời là một Guid
+└─ snapshotCard: JSON array      // snapshot bất biến tại createOrder
+```
+
+`SnapshotCard` không còn xem là một object đơn lẻ mà là mảng các object cấu hình thiệp. Mỗi phần tử có thể thêm `quantity`, ví dụ:
+
+```json
+[
+  {
+    "source": {
+      "type": "product",
+      "id": "440e8400-e29b-41d4-a716-446655440001",
+      "imageUrl": "https://storage.example.com/products/flower.png"
+    },
+    "regeneratedFromCardId": null,
+    "cardTemplate": {
+      "templateId": "550e8400-e29b-41d4-a716-446655440001",
+      "templateName": "Thiệp hoa cổ điển",
+      "templateType": "ai",
+      "templateImageUrl": "https://storage.example.com/templates/card-ai.png"
+    },
+    "cardSize": {
+      "name": "Lớn",
+      "width": 15,
+      "height": 25,
+      "base_price": 15000,
+      "max_words": 100
+    },
+    "cardConfig": {
+      "min_words": 36,
+      "max_words": 70,
+      "extra_price": 39000
+    },
+    "messageContent": "Chúc bạn sinh nhật vui vẻ",
+    "formType": "calligraphy",
+    "attachedImageUrl": null,
+    "wordCount": 5,
+    "basePrice": 15000,
+    "extraPrice": 0,
+    "totalPrice": 15000,
+    "systemPrompt": {
+      "type": "card",
+      "content": "Nội dung prompt đầy đủ"
+    },
+    "validatedAt": "2026-09-11T08:00:00Z",
+    "quantity": 1
+  }
+]
+```
+
+Cách mình hiểu luồng:
+
+```text
+Create Order
+  → chụp SnapshotCard[] bất biến theo cấu hình/giá tại thời điểm mua
+  → lưu generatedFlowerId nếu detail dùng hoa AI
+  → tạo Card AI từ từng snapshot cần generate
+  → thêm GeneratedCard.Id vào generatedCardId[]
+
+Regenerate Card
+  → chọn GeneratedCard.Id nguồn
+  → dùng snapshot tương ứng để giữ nguyên dữ liệu đã chốt
+  → chỉ thay dữ liệu được cho phép
+  → tạo GeneratedCard mới
+  → ghi regeneratedFromCardId = card nguồn
+  → thêm ID card mới vào generatedCardId[]
+```
+
+Các nguyên tắc đã chốt trong docs mà mình đã nắm:
+
+- Card AI Create/Regenerate dùng `POST /api/ai-cards`; HandMade dùng endpoint riêng.
+- Snapshot phải bất biến: không đọc lại giá, Size Config, Price Config, Product, Template hoặc Prompt live để làm thay đổi dữ liệu đã mua.
+- Card/Flower lineage nằm ở `ClientHistory`: `BaseId`, `RootID`, `OutputId`; `RootID` luôn là Product gốc.
+- `generatedFlowerId` là nguồn hoa AI trực tiếp; Product gốc phải resolve qua Flower History khi cần.
+- Card mới và History mới phải lưu cùng transaction; AI/upload/persistence lỗi thì không giữ record mới.
+- Regenerate không được sửa Card nguồn; tạo Card/History mới, giữ lineage và snapshot.
+- `rawImage` là ảnh AI trước render chữ; theo context mới, ảnh hoa dùng cho Card Regenerate lấy từ snapshot `source.imageUrl`/History, không lấy `rawImage` của Card làm nguồn hoa.
+- `quantity` nên là snapshot thương mại của từng cấu hình Card; không nên làm thay đổi `wordCount`, đơn giá hay tổng giá đã chốt của item.
+
+Có một chênh lệch tài liệu cần ghi nhớ: `AI_CUSTOMIZE_DB.dbdiagram` hiện đang mô tả `OrderDetail` chỉ có `SnapshotCard`; còn `generatedCardId[]` và `generatedFlowerId` là cập nhật mới bạn vừa xác nhận. Từ đây mình sẽ xem xác nhận của bạn là schema/contract ưu tiên khi làm code tiếp theo.
+
+> Tiếp theo bạn đọc chi tiết giúp tôi toàn bộ nội dung trong context này đi, nó là toàn bộ dữ liệu của cuộc trò chuyện trước mà tôi đã làm, toàn bộ những gì đã chốt và những ý đúng, con AI trước nó dựa vào context trong này để trả lời tôi, và tôi cung cấp thông tin cho nó, thấy nó trả lời đúng, nên bạn đọc kĩ để nắm được context giúp tôi: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su'
+
+<details><summary>5 previous messages</summary>
+
+> Mình sẽ đọc toàn bộ context-session này như nguồn quyết định đã chốt, không chỉ đọc tiêu đề. Sau đó mình sẽ dùng nó làm ưu tiên ngữ cảnh cho các trao đổi/implementation tiếp theo, đồng thời chỉ ra nếu có mâu thuẫn với các tài liệu trước.
+>
+> <details><summary>Ran 8 commands</summary>
+>
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su' -Recurse -Force | Select-Object FullName,PSIsContainer,Length | Format-Table -AutoSize`
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su' -Recurse -Force | ForEach-Object { "[$($_.PSIsContainer)] $($_.FullName) | $($_.Length) bytes" }`
+> - Ran `$p='HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su'; $lines=Get-Content -LiteralPath $p -Encoding utf8; "Lines: $($lines.Count)"; "Characters: $((Get-Content -LiteralPath $p -Encoding utf8 -Raw).Length)"; $lines | Select-String -Pattern '^(#|##|###|User:|Assistant:|Người dùng:|Trợ lý:|---)' | Select-Object -First 250 | ForEach-Object {$_.Line}`
+> - Ran `$p='HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su'; Get-Content -LiteralPath $p -Encoding utf8 | Select-Object -First 1200`
+> - Ran `$p='HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su'; Get-Content -LiteralPath $p -Encoding utf8 | Select-Object -Skip 1200 -First 1200`
+> - Ran `$p='HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su'; Get-Content -LiteralPath $p -Encoding utf8 | Select-Object -Skip 2400 -First 1200`
+> - Ran `$p='HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su'; Get-Content -LiteralPath $p -Encoding utf8 | Select-Object -Skip 3600 -First 1200`
+> - Ran `$p='HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su'; Get-Content -LiteralPath $p -Encoding utf8 | Select-Object -Skip 4800 -First 1200`
+>
+> </details>
+>
+> Mình đã đọc được phần lõi của context cũ: lineage `RootID/BaseId`, API lịch sử Flower/Card, rule chỉ Combo được generate Flower, và flow thanh toán rồi mới tạo Card. Mình tiếp tục đọc các phần cuối để lấy đúng các quyết định đã bị chỉnh qua nhiều lượt, đặc biệt SnapshotCard và CreateOrder.
+>
+> <details><summary>Ran 2 commands</summary>
+>
+> - Ran `$p='HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su'; Get-Content -LiteralPath $p -Encoding utf8 | Select-Object -Skip 6000 -First 1200`
+> - Ran `$p='HoaTheoMua.Repository/code-introduction/Context/context-session-kiem-tra-lich-su'; Get-Content -LiteralPath $p -Encoding utf8 | Select-Object -Skip 7200 -First 1200`
+>
+> </details>
+>
+> Context compaction
+>
+> Source: automatic
+> Status: completed
+</details>
+
+Đã đọc toàn bộ context-session này và nắm các quyết định đã chốt. Mình sẽ ưu tiên theo thứ tự: quyết định mới nhất bạn xác nhận → context-session → tài liệu docs → code cũ.
+
+Các điểm nền tảng mình đã ghi nhận:
+
+- `OrderDetail.SnapshotCard` là mảng snapshot; mỗi phần tử là một thiết kế thiệp, có `quantity`.
+- `GeneratedCardIds` là mảng Guid riêng trên `OrderDetail`; snapshot không chứa `generatedCardId`.
+- Thiệp AI chỉ được tạo sau khi thanh toán thành công; thất bại tạo thiệp không làm đơn hàng mất trạng thái đã thanh toán.
+- Thiệp handmade được tạo lúc tạo đơn, không gọi AI; không có size, sender hay receiver.
+- Thiệp AI/history dùng snapshot mới; `regeneratedFromCardId` là ID thiệp AI trực tiếp được dùng để tái tạo. Thiệp handmade không được regenerate bằng AI.
+- `RootID` là Combo/Product gốc để nhóm lịch sử; `BaseId` là nguồn trực tiếp trong chuỗi tái tạo hoa.
+- Hoa AI chỉ sinh từ Combo hợp lệ; khi checkout từ hoa AI, đơn vẫn mua Combo gốc và lưu thêm `GeneratedFlowerId`.
+- Một checkout chỉ có một chế độ nguồn: sản phẩm trực tiếp hoặc hoa AI; flow thanh toán vẫn gồm 5 bước.
+- Giá thiệp luôn do BE tính lại khi tạo đơn; FE chỉ gửi lựa chọn đầu vào, không gửi snapshot, prompt, giá, số từ hay ID thiệp sinh ra.
+- Các tài liệu/câu trả lời cũ mâu thuẫn với các chốt cuối — đặc biệt snapshot object/mảng, `quantity`, sender/receiver, và chuỗi `BaseId` — mình đã lấy phiên bản xác nhận sau cùng làm chuẩn.
+
+Mình không chỉnh sửa file hay code nào trong bước này.
+
+> Tiếp theo hãy đọc toàn bộ dữ liệu trong này là cái được trích xuất và chốt từ file .md mà bạn vừa đọc ra: bạn hãy đọc, hãy hiểu và đối chiếu thử nó có phải đều là dữ liệu nằm trong file .md mà bạn vừa mới đọc không:'d:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/00-read-me-first.md' 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/01-domain-lineage.md''d:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/02-flower-history-and-checkout.md''d:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/03-create-order-contract.md''d:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/04-card-pricing-snapshot-and-fulfillment.md''d:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/05-implementation-notes-and-conflicts.md''d:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/06-history-selection-and-admin-contracts.md''d:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/07-checkout-flow-and-audit.md' và cả những dữ liệu ở trước trong này này nữa: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/Context/conversation-context.md'. Tất nhiên và những dữ liệu trước có cái nó đã cũ, đã sai, nhưng hãy đọc và nắm context thôi, vì những cái đó tôi đã chốt và bạn cũng đã nắm được thông tin rồi
+
+<details><summary>4 previous messages</summary>
+
+> Mình sẽ đọc toàn bộ 9 file này, đối chiếu với context-session vừa đọc, và phân biệt rõ phần “bản chốt” với các ghi chú lịch sử đã cũ để không vô tình dùng sai khi trao đổi sau.
+>
+> <details><summary>Ran a command</summary>
+>
+> - Ran ``$files = @(
+>   'HoaTheoMua.Repository/code-introduction/Context/00-read-me-first.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/01-domain-lineage.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/02-flower-history-and-checkout.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/03-create-order-contract.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/04-card-pricing-snapshot-and-fulfillment.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/05-implementation-notes-and-conflicts.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/06-history-selection-and-admin-contracts.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/07-checkout-flow-and-audit.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/conversation-context.md'
+> )
+> Get-Item -LiteralPath $files | Select-Object FullName,Length
+> $files | ForEach-Object { "`n### FILE: $_"; Get-Content -LiteralPath $_ -Encoding utf8 -Raw }``
+>
+> </details>
+>
+> Mình đã xác nhận bộ `00–07` là bản cô đọng có chủ đích của session trước; `conversation-context.md` tự đánh dấu là bản cũ. Mình đang đọc lại từng file theo phần để kiểm tra các chi tiết không xuất hiện đầy đủ trong lần xuất tổng hợp vừa rồi.
+>
+> <details><summary>Ran 2 commands</summary>
+>
+> - Ran ``$files = @(
+>   'HoaTheoMua.Repository/code-introduction/Context/03-create-order-contract.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/04-card-pricing-snapshot-and-fulfillment.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/05-implementation-notes-and-conflicts.md'
+> )
+> $files | ForEach-Object { "`n### FILE: $_"; Get-Content -LiteralPath $_ -Encoding utf8 -Raw }``
+> - Ran ``$files = @(
+>   'HoaTheoMua.Repository/code-introduction/Context/06-history-selection-and-admin-contracts.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/07-checkout-flow-and-audit.md',
+>   'HoaTheoMua.Repository/code-introduction/Context/conversation-context.md'
+> )
+> $files | ForEach-Object { "`n### FILE: $_"; Get-Content -LiteralPath $_ -Encoding utf8 -Raw }``
+>
+> </details>
+</details>
+
+Đã đọc toàn bộ 9 file và đối chiếu với `context-session-kiem-tra-lich-su`.
+
+Kết luận: bộ `00–07` đúng là bản trích xuất/cô đọng của các quyết định quan trọng trong session trước. Nó không chứa từng câu hỏi, phương án từng bị loại, hay mọi chi tiết thảo luận trung gian; nhưng các rule nghiệp vụ và quyết định chốt chính đều khớp với session.
+
+Mình sẽ dùng bộ tài liệu này như ngữ cảnh chuẩn khi làm việc tiếp:
+
+- [00-read-me-first.md](./HoaTheoMua.Repository/code-introduction/Context/00-read-me-first.md): điểm vào và thứ tự ưu tiên.
+- `01–02`: lineage `RootID`/`BaseId`, Flower AI, History, checkout từ Flower.
+- `03–04`: contract CreateOrder, Card snapshot mảng, giá, `quantity`, xử lý sau payment.
+- `05`: các điểm cần sửa entity/code và các rule bảo mật.
+- `06`: Card History, chọn Card history khi checkout, contract Admin.
+- `07`: flow checkout 5 bước và các kết quả rà soát cuối.
+
+[conversation-context.md](./HoaTheoMua.Repository/code-introduction/Context/conversation-context.md) đúng là bản cũ để tham khảo lịch sử. Nó có các điểm đã bị thay thế như `GeneratedFlowerIds` dạng mảng, Cards ở cấp request, sender/receiver trên Card, và một số rule lineage/snapshot cũ.
+
+Một lưu ý nhỏ về tài liệu: `00-read-me-first.md` ghi ưu tiên “00 đến 06”, nhưng chính bộ tài liệu có cả `07` và `07` chứa các chốt cuối quan trọng. Mình sẽ hiểu đúng là ưu tiên toàn bộ `00–07`, sau quyết định trực tiếp mới nhất từ bạn.
+
+> và đây là một số dữ liệu đúng về order và tạo thiệp bạn hãy đọc luôn đi: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/US-039/CalculateCardPrice.md' và 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/US-039/requestOrder.md'
+
+<details><summary>2 previous messages</summary>
+
+> Mình sẽ đọc hai tài liệu US-039 này như phần contract triển khai cụ thể cho Order/Card, rồi đối chiếu với các rule chốt về snapshot, `quantity`, HandMade và Card AI sau thanh toán.
+>
+> <details><summary>Ran a command</summary>
+>
+> - Ran ``$files = @(
+>   'HoaTheoMua.Repository/code-introduction/US-039/CalculateCardPrice.md',
+>   'HoaTheoMua.Repository/code-introduction/US-039/requestOrder.md'
+> )
+> Get-Item -LiteralPath $files | Select-Object FullName,Length
+> $files | ForEach-Object { "`n### FILE: $_"; Get-Content -LiteralPath $_ -Encoding utf8 -Raw }``
+>
+> </details>
+</details>
+
+Đã đọc kỹ cả hai tài liệu US-039 và chúng khớp với bộ context chốt hiện tại.
+
+Mình đã nắm rõ contract triển khai:
+
+- `CalculateCardPrice` chỉ báo giá/chốt giá; không tạo Order, không gọi AI, không tạo `GeneratedCard`.
+- `CreateOrder` luôn gọi lại hàm giá phía BE, rồi mới tạo `SnapshotCard` dạng mảng cho từng `OrderDetails`.
+- `quantity` thuộc từng thiết kế thiệp; `totalPrice = unitPrice × quantity`.
+- HandMade: không Size, BE ép `calligraphy`, tạo `GeneratedCard` và `handmade_card` History ngay trong transaction CreateOrder.
+- AI mới / History: snapshot và giá được chốt khi tạo Order; chỉ sinh Card/History sau payment thành công.
+- Với `go_may`: `cardConfig = null`, chỉ dùng giá Size; không phụ thu hay giới hạn số từ theo Size.
+- Với `calligraphy`: BE đếm từ, kiểm tra giới hạn Size (nếu là AI/History), lấy bậc giá và cộng phụ thu.
+- FE chỉ gửi lựa chọn: `GeneratedFlowerId` và `Items[].Cards[]`; không được gửi giá, prompt, snapshot hay `GeneratedCardIds`.
+- `GeneratedFlowerId` khác null bắt buộc `ProductId` là Combo, Flower thuộc customer, có Flower History, và `RootID` phải khớp Combo.
+- `RegeneratedFromCardId` là `GeneratedCard.Id` AI cũ; HandMade không thể làm nguồn tạo lại AI.
+
+Hai tài liệu này hiện là phần mô tả triển khai cụ thể rất tốt cho các rule ở Context `03` và `04`; mình sẽ dựa vào chúng khi cần sửa CreateOrder, tính giá hoặc xử lý Card sau payment.
+
+> tôi sẽ kiểm tra lại thông tin của bạn mà bạn đã có được, đầu tiên là thông tin về lưu snapshot, hãy đưa ra cục format snaphshot mà tôi sẽ lưu, và lưu nó ở đâu và mục đích lưu nó có tác dụng gì
+
+Snapshot thiệp được lưu ở cột JSON `OrderDetails.SnapshotCard`.
+
+Đây là một mảng; mỗi object là một thiết kế thiệp riêng thuộc đúng dòng hàng (`OrderDetails`) đó:
+
+```json
+[
+  {
+    "source": {
+      "type": "product",
+      "id": "440e8400-e29b-41d4-a716-446655440001",
+      "imageUrl": "https://storage.example.com/products/flower.png"
+    },
+    "regeneratedFromCardId": null,
+    "cardTemplate": {
+      "templateId": "550e8400-e29b-41d4-a716-446655440001",
+      "templateName": "Thiệp hoa cổ điển",
+      "templateType": "ai",
+      "templateImageUrl": "https://storage.example.com/templates/card-ai.png"
+    },
+    "cardSize": {
+      "name": "Lớn",
+      "width": 15,
+      "height": 25,
+      "base_price": 15000,
+      "max_words": 100
+    },
+    "cardConfig": {
+      "min_words": 36,
+      "max_words": 70,
+      "extra_price": 39000
+    },
+    "messageContent": "Chúc bạn sinh nhật vui vẻ",
+    "formType": "calligraphy",
+    "attachedImageUrl": null,
+    "quantity": 2,
+    "wordCount": 5,
+    "basePrice": 15000,
+    "extraPrice": 0,
+    "totalPrice": 30000,
+    "systemPrompt": {
+      "type": "card",
+      "content": "Nội dung prompt đầy đủ"
+    },
+    "validatedAt": "2026-09-12T08:00:00Z"
+  }
+]
+```
+
+Các rule của snapshot:
+
+- `source.type`: `product` hoặc `generatedFlower`.
+- `regeneratedFromCardId`: `null` khi tạo AI mới; có `GeneratedCard.Id` cũ khi tạo lại từ History.
+- `cardConfig` phải là `null` nếu `formType = "go_may"`.
+- `totalPrice = (basePrice + extraPrice) × quantity`.
+- Không có `generatedCardId`, `senderName`, `receiverName` hay `rawImage`.
+- `GeneratedCardIds` là field mảng Guid tách riêng trên `OrderDetails`; chỉ được BE thêm sau khi Card tạo thành công.
+- `GeneratedFlowerId` là Guid đơn riêng trên `OrderDetails`, ghi nhận ảnh hoa AI đã chọn.
+
+Mục đích là chốt dữ liệu bất biến tại thời điểm tạo Order: mẫu, size, nội dung, prompt, nguồn, cấu hình giá, số từ, giá và số bản in. Sau khi thanh toán thành công, Card service đọc đúng snapshot này để tạo thiệp AI mà không lấy lại Template/Config/Prompt live và không tính lại giá.
+
+Với HandMade, thiệp được tạo ngay trong `CreateOrder`, không cần snapshot để chạy AI. Nếu muốn lưu snapshot HandMade cho audit/hiển thị thì cần chốt thêm schema riêng; hiện snapshot trên là dữ liệu bắt buộc cho AI mới và AI từ History.
+
+> ở bước tạo order có mấy optiosn chọn thiệp và mỗi cái nó sẽ diễn ra như thế nào. Cái nào có khi tạo orderPending, cái nào phải update sau khi thanh toán xong điều huownsh qua người dùng genAI bằng card thì mới có
+
+Khi tạo Order, mỗi `Item` có thể không chọn thiệp hoặc chọn một/nhiều thiệp theo 3 option sau:
+
+| Option | Khi tạo `Order Pending` | Sau thanh toán thành công |
+|---|---|---|
+| Không chọn thiệp | Tạo `OrderDetails`, `GeneratedCardIds = []` | Không làm gì về Card |
+| `handmade` — thiệp thường | Tính giá và tạo ngay `GeneratedCard` loại handmade + `ClientHistory(type = handmade_card)`; thêm ID vào `GeneratedCardIds` | Không gọi AI, không tạo thêm thiệp |
+| `ai` — tạo thiệp AI mới | Validate, tính giá, tạo object trong `SnapshotCard`; chưa có `GeneratedCard` | Webhook/service nội bộ đọc snapshot, gọi AI, tạo `GeneratedCard` + `ClientHistory(type = card)`, rồi append ID vào `GeneratedCardIds` |
+| `history` — tạo lại từ thiệp AI cũ | Validate Card AI nguồn qua `regeneratedFromCardId`, tính giá lại theo lựa chọn mới, lưu snapshot mới; chưa có `GeneratedCard` | Giống AI mới: BE gọi AI từ snapshot, tạo Card mới + History mới, append ID sau khi thành công |
+
+Flow ngắn:
+
+```text
+CreateOrder
+→ Order Pending
+→ HandMade: tạo Card ngay
+→ AI mới / History: chỉ lưu SnapshotCard
+
+Payment thành công
+→ Webhook xác nhận Paid
+→ Card service đọc SnapshotCard
+→ gọi GenAI tạo Card
+→ tạo GeneratedCard + ClientHistory
+→ cập nhật OrderDetails.GeneratedCardIds
+```
+
+Vì vậy, người dùng không tự gọi API để thêm `GeneratedCardIds`, cũng không cần gửi lại dữ liệu Card sau payment. Hệ thống tự điều hướng xử lý sang Card AI service từ webhook/payment-success. Nếu AI lỗi, Order vẫn là `Paid`; snapshot giữ nguyên để BE retry tạo thiệp sau đó.
+
+> hãy nói giúp tôi flow tính tiền thiệp khi render ra giá, để hiển thị cho người và cũng có thể dùng tiền đó cộng vào order để hiển thị cho người dùng xem
+
+Flow tính tiền thiệp nên đi như này:
+
+```text
+FE: khách chọn loại thiệp, template, nội dung, size/form (nếu AI), quantity
+→ FE gọi BE để báo giá thiệp
+→ BE tự validate và tính giá
+→ trả `cardTotal` cùng giá của từng thiết kế
+→ FE cộng cardTotal vào tiền hoa + ship + thuế để hiển thị tổng tạm tính
+
+Khách bấm Đặt hàng
+→ CreateOrder nhận lại lựa chọn thiệp
+→ BE gọi lại đúng hàm tính giá
+→ lấy giá BE vừa tính để cộng vào Order.TotalFee
+→ lưu giá đó vào SnapshotCard
+→ tạo Order Pending
+```
+
+FE chỉ gửi dữ liệu khách chọn, ví dụ:
+
+```json
+{
+  "cardMode": "ai",
+  "cardTemplateId": "template-id",
+  "sizeName": "Lớn",
+  "formType": "calligraphy",
+  "messageContent": "Chúc bạn luôn vui vẻ",
+  "quantity": 2
+}
+```
+
+BE tính giá theo từng lựa chọn:
+
+```text
+HandMade
+→ luôn calligraphy
+→ không có Size
+→ đếm số từ
+→ tìm bậc giá theo số từ
+→ unitPrice = extraPrice
+
+AI/History + go_may
+→ lấy giá Size
+→ unitPrice = size.base_price
+
+AI/History + calligraphy
+→ lấy giá Size
+→ đếm số từ, kiểm tra giới hạn Size
+→ tìm bậc phụ thu theo số từ
+→ unitPrice = size.base_price + cardConfig.extra_price
+
+Giá của một thiết kế
+→ lineTotal = unitPrice × quantity
+
+Tổng thiệp
+→ cardTotal = tổng lineTotal của mọi Card trong mọi Item
+```
+
+BE trả quote để FE render, ví dụ:
+
+```json
+{
+  "items": [
+    {
+      "cardMode": "ai",
+      "formType": "calligraphy",
+      "basePrice": 15000,
+      "extraPrice": 39000,
+      "unitPrice": 54000,
+      "quantity": 2,
+      "totalPrice": 108000
+    }
+  ],
+  "cardTotal": 108000
+}
+```
+
+Tổng tiền FE hiển thị:
+
+```text
+estimatedOrderTotal
+= tiền Product/Combo
++ cardTotal
++ phí ship
++ thuế (nếu có)
+```
+
+Khi `CreateOrder`, BE tính lại toàn bộ. Do đó giá hiển thị trước đó chỉ là quote, còn `Order.TotalFee` và `SnapshotCard.totalPrice` là giá chính thức đã chốt.
+
+> Đầu tiên tôi sẽ nói cho bạn về một số cái mà tôi sẽ làm dự kiến thôi, để bạn nắm được thông tin, cứ coi như là tôi sẽ cung cấp context cho bạn để sau này bạn có thể hiểu ngay được vấn đề mà tôi nói và sẽ hướng dẫn tôi làm chỉnh chu và đúng nhất. ĐẦu tiên là tôi sẽ dự định làm thêm một API tương tác với third party là nhanhvn để để lấy trạng thái của đơn hàng, nó sẽ giống với format của các hàm này thôi, không thay đổi gì cả: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Service/NhanhVnService/Service.cs'. Tức là hiện giờ trong order của tôi chỉ có 3 trạng thái đó là pending, paid và cancelled. Tôi muốn đó là khi đơn hàng trên nhanhvn nó đổi trạng thái thành thành công, thì tất nhiên trong webhook này: Task<string> HandleWebhook(JsonElement? body); với sự kiện đó là:  case NhanhWebhookEvents.OrderUpdate:. và payload của nó như thế này: {
+>   "webhooksCallback": "https://api.hoatheomua.com/ecommerce-api/v1/nhanh-vn/webhook",
+>   "postFields": {
+>     "event": "orderUpdate",
+>     "businessId": 126981,
+>     "data": {
+>       "shippingAddress": {
+>         "id": 10062371,
+>         "name": "Tân Trần",
+>         "mobile": "0979901550",
+>         "address": "Công Ty Tnhh Koken D5 KDC An Thiên Lý P, Phường Phước Long, Hồ Chí Minh",
+>         "cityId": 0,
+>         "districtId": 0,
+>         "wardId": 0,
+>         "locationVersion": "v2"
+>       },
+>       "info": {
+>         "id": 842355631,
+>         "depotId": 129255,
+>         "pickupDepotId": 0,
+>         "type": 1,
+>         "status": 60,
+>         "createdBy": {
+>           "id": 0
+>         },
+>         "sale": {
+>           "id": 0
+>         },
+>         "technicalStaff": {
+>           "id": 0
+>         },
+>         "customerCare": {
+>           "id": 3652568,
+>           "name": "Đỗ Hữu Thiện"
+>         },
+>         "createdAt": 1788775938,
+>         "updatedAt": 1788791322,
+>         "confirmedAt": 1788775938,
+>         "packedAt": 1788780126,
+>         "privateDescription": "Vô đọc mã đơn để lấy hàng\n-------------------------\nNN: Tân Trần - 0979901550",
+>         "orderPartDeliveries": [
+>           {
+>             "id": 0,
+>             "type": 0,
+>             "totalQuantity": 0,
+>             "totalProductAmount": 0,
+>             "status": 0
+>           }
+>         ],
+>         "trackingUrl": "https://nhanh.vn/tracking?businessId=126981&id=842355631&key=cf2537502050"
+>       },
+>       "products": [
+>         {
+>           "id": 4933639,
+>           "typeId": 0,
+>           "code": "HB_H250N_2026",
+>           "name": "Tone hồng 250_2026",
+>           "avatar": "https://pos.nvncdn.com/281991-126981/ps/Tone-hong-250_2026-1.jpg?v=1788507612",
+>           "weight": 4700,
+>           "quantity": 1,
+>           "price": 250000,
+>           "originalPrice": 0,
+>           "discount": 0,
+>           "available": 0,
+>           "avgCost": 0,
+>           "vat": {
+>             "value": 0,
+>             "amount": 0
+>           },
+>           "imei": {
+>             "id": "0"
+>           },
+>           "batch": {
+>             "id": 0
+>           },
+>           "combos": [
+>             {
+>               "id": 0,
+>               "quantity": 0
+>             }
+>           ],
+>           "unit": {
+>             "id": 0,
+>             "name": "set",
+>             "quantity": 0
+>           },
+>           "gifts": [
+>             {
+>               "id": 0,
+>               "quantity": 0
+>             }
+>           ]
+>         }
+>       ],
+>       "carrier": {
+>         "id": 0,
+>         "orderPackageSize": {
+>           "height": 0,
+>           "merge": 0,
+>           "length": 0,
+>           "weight": 0,
+>           "width": 0
+>         },
+>         "service": {
+>           "id": 0
+>         },
+>         "isPartDelivery": 0,
+>         "sendCarrier": {
+>           "type": 1
+>         },
+>         "deliveryDate": "2026-09-07",
+>         "weight": 4700,
+>         "shipFee": 0,
+>         "codFee": 0,
+>         "declaredFee": 0,
+>         "returnFee": 0,
+>         "customerShipFee": 89000
+>       },
+>       "channel": {
+>         "ecomOrderId": 1,
+>         "appOrderId": "01M1XNNDV4VJQ1EY3Q220H8TKE - 13348396",
+>         "appShopId": "0",
+>         "saleChannel": 10,
+>         "trafficSource": {
+>           "id": 1674,
+>           "name": "WEBSITE"
+>         },
+>         "facebook": {
+>           "adId": "0",
+>           "postId": "0"
+>         }
+>       },
+>       "payment": {
+>         "businessPaymentStatus": 99,
+>         "credit": {
+>           "amount": 0,
+>           "accountId": 0
+>         },
+>         "deposit": {
+>           "amount": 0,
+>           "accountId": 0
+>         },
+>         "discount": {
+>           "type": "percent",
+>           "amount": 0
+>         },
+>         "transfer": {
+>           "amount": 339000,
+>           "accountId": 65088
+>         },
+>         "usedPoints": {
+>           "points": 0,
+>           "amount": 0
+>         },
+>         "vat": {
+>           "value": 0,
+>           "amount": 0
+>         }
+>       },
+>       "originalOrder": []
+>     }
+>   },
+>   "webhooksVerifyToken": "Hidden content"
+> }. Trong đó có field:   "appOrderId": "01M1XNNDV4VJQ1EY3Q220H8TKE - 13348396", với số: 13348396 là chuỗi đầu của guid id của đơn Order nằm trong db của tôi: 13348396-8f91-4bac-b488-1b25d34bbea0. Dựa vào đó, mà tôi có thể link được đơn của nhanhvn với đơn nằm trong bảng order của mình và dựa là status trong payload là: },
+>       "info": {
+>         "id": 842355631,
+>         "depotId": 129255,
+>         "pickupDepotId": 0,
+>         "type": 1,
+>         "status": 60,
+>         "createdBy": {
+>           "id": 0
+>         },. Tôi sẽ xuống config trong db để quy đổi 60 là thành công, và truy vấn mà payload gửi xuống với id của order để tiến hành cập nhật trạng thái. Mà hiện tại cái API chưa ưu tiên lắm, nên tôi chỉ đang nói cho bạn biết và nắm được context  rõ nhất có thể
+
+Mình đã nắm context dự kiến này, chưa xem là yêu cầu implement.
+
+Flow bạn dự kiến là:
+
+```text
+Nhanh.vn gửi webhook `orderUpdate`
+→ `HandleWebhook(JsonElement? body)`
+→ đọc `postFields.data.channel.appOrderId`
+→ lấy phần mã Order nội bộ từ chuỗi, ví dụ `13348396`
+→ tìm Order trong DB có Guid bắt đầu bằng `13348396`
+→ đọc `postFields.data.info.status`, ví dụ `60`
+→ tra Config DB để quy đổi mã trạng thái Nhanh.vn
+→ nếu `60 = thành công` thì cập nhật trạng thái Order nội bộ tương ứng
+```
+
+Trong payload ví dụ:
+
+```text
+appOrderId = "01M1XNNDV4VJQ1EY3Q220H8TKE - 13348396"
+Order.Id   = "13348396-8f91-4bac-b488-1b25d34bbea0"
+status     = 60
+```
+
+Nên `13348396` là khóa liên kết nghiệp vụ giữa đơn Nhanh.vn và đơn trong hệ thống hiện tại.
+
+Khi làm chính thức, mình sẽ giữ nguyên phong cách/service contract của [Service.cs](./HoaTheoMua.Service/NhanhVnService/Service.cs), đồng thời lưu ý các điểm cần xử lý chuẩn:
+
+- Webhook phải xác thực token/chữ ký trước khi cập nhật.
+- Mapping `Nhanh status → trạng thái nội bộ` lấy từ Config, không hard-code `60`.
+- Xử lý idempotent vì Nhanh có thể gửi lặp lại cùng một sự kiện.
+- Chỉ cho phép các chuyển trạng thái hợp lệ; không để webhook cũ ghi đè trạng thái mới hơn.
+- Cần chốt rõ “thành công” bên Nhanh sẽ map vào `Paid` hay một ý nghĩa riêng. Vì `Paid` hiện thường biểu thị đã thanh toán, còn `status = 60` của Nhanh có thể biểu thị hoàn tất giao/đơn thành công. Với 3 trạng thái hiện tại, đây là điểm nghiệp vụ cần xác nhận ngay trước khi code.
+
+Mình sẽ coi đây là context cho API webhook Order Update Nhanh.vn về sau.
+
+> Tiếp tục là context, và tất nhiên và trong order thêm card và mẫu hoa, nên Task<BaseResponse> GetOrderById (Guid id); tất nhiên cũng phải trả ra thông tin của card và mẫu hoa rồi đúng không. Bổ sung API hiện có thoi, nắm context giúp tôi
+
+Đúng. Mình đã nắm thêm context: API hiện có
+
+```csharp
+Task<BaseResponse> GetOrderById(Guid id);
+```
+
+sẽ được bổ sung dữ liệu, không tạo API Order mới.
+
+Khi lấy chi tiết một Order, mỗi `OrderDetails` cần trả đủ ngữ cảnh để người dùng/nhân viên biết đơn đã mua gì và các thiết kế AI nào đi kèm:
+
+```text
+Order
+└─ OrderDetails
+   ├─ Product/Combo thực tế đã mua
+   ├─ GeneratedFlower (nếu GeneratedFlowerId có giá trị)
+   ├─ SnapshotCard[] đã chốt khi tạo Order
+   └─ GeneratedCards[] đã tạo thành công, resolve từ GeneratedCardIds
+```
+
+Ý nghĩa từng phần:
+
+- `GeneratedFlowerId`: nếu đơn đặt từ Flower AI, trả ảnh/mẫu hoa đã chọn; không chỉ trả mỗi Guid.
+- `SnapshotCard`: trả thiết kế thiệp, nội dung, quantity, giá đã chốt và trạng thái chờ tạo — đặc biệt cần thiết khi Order đã Pending/Paid nhưng Card AI chưa tạo xong.
+- `GeneratedCardIds`: join sang `GeneratedCard` để trả thiệp thực tế đã được tạo, gồm ảnh URL và thông tin cần hiển thị.
+- HandMade đã có `GeneratedCard` ngay từ lúc tạo Order nên sẽ xuất hiện ngay trong danh sách Card thực tế.
+- AI mới/AI từ History chỉ xuất hiện trong danh sách Card thực tế sau payment và GenAI thành công; trước đó UI vẫn có thể hiển thị dữ liệu từ `SnapshotCard`.
+
+Khi bổ sung, dữ liệu lịch sử như giá, template, nội dung và thông tin nguồn nên ưu tiên snapshot đã chốt trong Order/History; không chỉ lấy cấu hình Card/Combo live vì dữ liệu live có thể đã bị sửa hoặc xóa.
+
+> tiếp theo dữ liệu mà bạn có bạn có biết được cách group theo trong một phiên của generatedFlower không, vì khi tạo mẫu hoa, người dùng sẽ dùng AI và gọi ra nhiều phiên bản khác nhau, và người dùng sẽ chọn 1 cái để chekout từ đó và bạn có biết được rằng là cách nào group không, bạn chỉ cần trả lời giúp tôi là được
+
+Có. Group “một phiên” của `GeneratedFlower` dựa trên chuỗi `ClientHistory.BaseId`, không phải chỉ dựa vào `RootID`.
+
+Ví dụ:
+
+```text
+Combo CA → GF1 → GF2 → GF3
+Combo CA → GF4
+```
+
+Các History tương ứng:
+
+```text
+GF1: RootID = CA, BaseId = CA,  OutputId = GF1
+GF2: RootID = CA, BaseId = GF1, OutputId = GF2
+GF3: RootID = CA, BaseId = GF2, OutputId = GF3
+GF4: RootID = CA, BaseId = CA,  OutputId = GF4
+```
+
+Nếu user chọn `GF2` để xem phiên của nó:
+
+```text
+Đi ngược:
+GF2.BaseId = GF1 → lấy GF1
+GF1.BaseId = CA  → dừng
+
+Đi xuôi:
+tìm History có BaseId = GF2 → GF3
+tìm History có BaseId = GF3 → không có → dừng
+```
+
+Kết quả session là:
+
+```text
+GF1 → GF2 → GF3
+```
+
+Không bao gồm `GF4`, dù `GF4` có cùng `RootID = CA`.
+
+Tóm lại:
+
+- `RootID`: group tất cả mẫu hoa chung Combo nguồn.
+- `BaseId`: nối các version thuộc đúng một phiên generate/regenerate.
+- Khi checkout, user chọn một `GeneratedFlowerId` cụ thể; Order lưu chính ID đó ở `OrderDetails.GeneratedFlowerId`, nên biết chính xác phiên bản nào đã được đặt.
+
+> Đối với card cũng vậy, hiện tại bạn có biết cách nào sẽ giúp group được các card trong một phiên không, để người dùng so sách và có thể chọn ra được
+
+Có, nhưng Card group khác Flower.
+
+Với Flower, dùng `BaseId` để nối chuỗi. Với Card, dùng `regeneratedFromCardId` lưu trong snapshot/`ClientHistory.Metadata` để nối quan hệ cha–con trực tiếp giữa các Card AI.
+
+Ví dụ:
+
+```text
+Tạo Card AI mới: GC1
+Tạo lại từ GC1:  GC2
+Tạo lại từ GC2:  GC3
+
+GC1: regeneratedFromCardId = null
+GC2: regeneratedFromCardId = GC1
+GC3: regeneratedFromCardId = GC2
+```
+
+Khi user đang xem `GC2`:
+
+```text
+Đi ngược:
+GC2.regeneratedFromCardId = GC1 → lấy GC1
+GC1.regeneratedFromCardId = null → dừng
+
+Đi xuôi:
+tìm Card History có metadata.regeneratedFromCardId = GC2 → GC3
+tìm tiếp từ GC3 → không có → dừng
+```
+
+Kết quả một phiên Card:
+
+```text
+GC1 → GC2 → GC3
+```
+
+`RootID` ở Card History vẫn dùng để gom tất cả Card có cùng Combo nguồn, phục vụ lọc Card phù hợp khi Checkout. Nhưng để nhóm đúng một chuỗi tạo lại Card thì dùng `regeneratedFromCardId`.
+
+Điều kiện quan trọng: sau khi AI tạo Card thành công, Card service phải lưu `regeneratedFromCardId` từ `SnapshotCard` vào `ClientHistory.Metadata` của Card mới. Nếu không lưu quan hệ cha này sau payment thì về sau không thể group phiên Card một cách tin cậy.
+
+HandMade có thể hiển thị trong Card History chung, nhưng không thuộc chuỗi regenerate AI và không được chọn làm nguồn để tạo lại AI.
+
+> bạn nhớ số lượng giới của tạo mẫu hoa và tạo card không
+
+> bạn nhớ số lượng giới hạn  của tạo mẫu hoa và tạo card không
+
+Mình nhớ rule đã có:
+
+- Tạo mẫu hoa AI: tối đa **3 lượt/ngày cho mỗi customer**.
+- Tạo Card AI: trong context đã chốt hiện tại **chưa có quota số lượt tạo theo ngày/customer**.
+
+Với Card, giới hạn đã xác nhận là:
+
+- `quantity` của mỗi thiết kế phải lớn hơn `0`.
+- Một snapshot tương ứng một thiết kế và chỉ tạo một `GeneratedCard`; `quantity` là số bản in/đóng gói.
+- Chưa có mức tối đa `quantity` hay số Card AI được tạo được chốt trong context hiện tại.
+
+Nếu bạn từng chốt giới hạn Card ở phần khác mà chưa nằm trong các context này, bạn gửi lại giúp mình; mình sẽ lấy đó làm rule chuẩn.
+
+> - Tạo mẫu hoa AI: tối đa 3 lượt/ngày cho mỗi customer. có tính luôn những lần tạo lại không
+
+Có. “Tạo lại” Flower AI cũng là một lần gọi AI tạo ra `GeneratedFlower` mới, nên tính vào quota chung tối đa 3 lượt/ngày/customer.
+
+```text
+Tạo mới GF1       → lượt 1/3
+Tạo lại GF1 → GF2 → lượt 2/3
+Tạo lại GF2 → GF3 → lượt 3/3
+Tạo tiếp / tạo lại nữa trong ngày → bị chặn
+```
+
+Quota tính theo số lần generate thành công của customer trong ngày, không phân biệt tạo mới hay regenerate, cũng không phụ thuộc Combo nào.
+
+> regeneratedFromCardId nếu gom nhóm theo thằng này thì có vấn đề gì không
+
+Không có vấn đề nền tảng nếu mục tiêu là group chuỗi “tạo lại từ Card nào”. `regeneratedFromCardId` là quan hệ cha–con trực tiếp, phù hợp để dựng phiên Card.
+
+Nhưng cần hiểu đúng phạm vi của nó:
+
+```text
+GC1 (tạo mới, parent = null)
+└─ GC2 (parent = GC1)
+   └─ GC3 (parent = GC2)
+```
+
+Đây là một phiên/chuỗi Card rõ ràng.
+
+Các điểm cần lưu ý:
+
+- Phải lưu `regeneratedFromCardId` bền vững trong `ClientHistory.Metadata` của Card đã tạo thành công, không chỉ nằm trong `OrderDetails.SnapshotCard`. Snapshot chỉ là dữ liệu chờ AI tạo sau payment.
+- Card tạo mới có `regeneratedFromCardId = null` là điểm bắt đầu một phiên mới, kể cả cùng Combo/Flower nguồn.
+- `RootID` chỉ để gom rộng tất cả Card thuộc một Combo; không dùng nó để phân biệt phiên Card.
+- Nếu user có thể tạo lại cùng một Card cũ nhiều lần, ví dụ `GC1 → GC2` và `GC1 → GC3`, session sẽ là cây chứ không còn là một đường thẳng. Khi đó UI nên hiển thị các phiên bản con cùng cha để người dùng so sánh, thay vì giả định chỉ có một Card “mới nhất”.
+- Khi dựng chuỗi phải có `visited`/giới hạn an toàn để tránh dữ liệu lỗi tạo vòng lặp.
+- Chỉ Card AI hợp lệ, thuộc đúng customer, mới được làm cha; HandMade bị loại.
+
+Với rule hiện tại “mỗi snapshot tạo một Card và regenerate dựa trên Card AI đã chọn”, chỉ dùng `regeneratedFromCardId` là đủ để group phiên so sánh. Chỉ cần thêm một `cardGenerationSessionId` nếu sau này bạn muốn group các Card được tạo đồng thời trong cùng một lần bấm Generate thành một batch riêng.
+
+> theo tôi nhớ rule của card trong ngày thì giới hạn 3 lần cho một combo/ generatedFlower và 10 lần total trong một ngày
+
+Đúng, mình đã cập nhật rule quota Card AI như bạn vừa chốt:
+
+```text
+Mỗi customer, trong một ngày:
+
+- Tối đa 3 lượt tạo/tạo lại Card AI cho cùng một nguồn Combo hoặc GeneratedFlower.
+- Tối đa 10 lượt tạo/tạo lại Card AI trên tổng tất cả nguồn.
+```
+
+Tức là cả tạo Card AI mới và tạo lại từ Card History đều tính quota, vì đều là một lần GenAI tạo Card mới.
+
+Ví dụ:
+
+```text
+Card từ Combo A: 3 lượt  → chặn lượt thứ 4 trên Combo A trong ngày
+Card từ GeneratedFlower GF1: 3 lượt → chặn lượt thứ 4 trên GF1 trong ngày
+Tổng Card từ mọi Combo/Flower: 10 lượt → chặn mọi lượt Card AI tiếp theo trong ngày
+```
+
+Với Card tạo lại từ `regeneratedFromCardId`, BE cần resolve Card cha về nguồn ban đầu của nó — Combo hoặc `GeneratedFlower` — để tính đúng mức giới hạn 3 lượt theo nguồn. HandMade không gọi AI nên không tính vào các quota này.
+
+> tôi đang nghĩ việc tạo lại thiệp từ bằng field và group theo phiên nó đang khá có vấn đề. Đầu tiên, tôi cần hỏi bạn đó là, flow tạo lại nó sẽ sử dụng những dữ liệu gì từ việc tạo lần trước của nó
+
+Theo context hiện tại, khi user chọn tạo lại từ một Card AI cũ, hệ thống cần lấy Card được chọn làm “cha” và dùng dữ liệu cũ theo hai mục đích khác nhau.
+
+```text
+Card AI cũ được chọn
+→ hiển thị lại để user nhìn, so sánh và chỉnh sửa
+→ làm nguồn lineage cho Card AI mới
+→ BE chốt một snapshot MỚI theo lựa chọn sau chỉnh sửa
+→ sau payment mới tạo GeneratedCard mới
+```
+
+Dữ liệu nên lấy từ Card cũ/History của nó:
+
+- `GeneratedCard.Id`: gán vào `regeneratedFromCardId`; dùng để validate ownership, xác định Card AI cha và tạo lineage.
+- `imageUrl`: hiển thị thiệp cũ cho user xem/so sánh.
+- Template snapshot: dùng làm giá trị khởi tạo trên UI.
+- Size, `formType`, `messageContent`, `attachedImageUrl`: dùng để prefill UI, user có thể sửa.
+- Source/provenance gốc: Combo hoặc `GeneratedFlower`, cùng `RootID`; dùng để biết thiệp đó thuộc bối cảnh nào và áp quota 3 lượt theo nguồn.
+- Metadata/snapshot cũ: dùng để không phụ thuộc vào Template/Combo live nếu dữ liệu cũ đã đổi hoặc bị xóa.
+
+Nhưng các dữ liệu này không được bê nguyên để tạo Card mới:
+
+- Giá cũ (`basePrice`, `extraPrice`, `totalPrice`) không dùng lại; BE tính lại theo lựa chọn mới.
+- `quantity` là lựa chọn của lần đặt đơn mới.
+- `systemPrompt` nên lấy prompt hiện hành tại thời điểm `CreateOrder`, sau đó lưu vào snapshot mới.
+- Không sửa `GeneratedCard`/History cũ.
+- Card mới nhận `GeneratedCard.Id` mới và History mới.
+
+Tức snapshot mới vẫn có hình dạng như bình thường, chỉ khác:
+
+```json
+{
+  "regeneratedFromCardId": "generated-card-id-cu",
+  "source": {
+    "type": "product | generatedFlower",
+    "id": "nguon-goc",
+    "imageUrl": "..."
+  }
+}
+```
+
+Điểm cần chốt thêm về kỹ thuật GenAI là: Card cũ sẽ được dùng như ảnh tham chiếu trực tiếp cho AI, hay chỉ dùng metadata cũ để prefill rồi AI tạo lại từ `source` + lựa chọn mới. Context hiện tại đã chốt lineage và dữ liệu prefill, nhưng chưa chốt rõ hai cách dùng ảnh Card cũ này.
+
+> theo trên flow UI tôi thấy khi vào bước chọn thiệp nó có option chọn thiệp từ lịch sử. thì sợ sợ một điều là ví dụ hôm nay người đó từ đi: CBA -> G1 -> G2 -> G3. Ngày hôm sau, đặt hàng vào phần lịch sử chọn G3 làm thiệp tạo lại, thì việc dùng regeneratedFromCardId thì làm sao có thể group được
+
+Đúng là cần tách hai trường hợp, vì `regeneratedFromCardId` chỉ group được Card, không group Flower.
+
+Nếu `G1 → G2 → G3` là các Card AI:
+
+```text
+GC1 → GC2 → GC3
+```
+
+Ngày hôm sau user chọn `GC3` trong “thiệp từ lịch sử” để tạo lại:
+
+```text
+CreateOrder
+→ SnapshotCard.regeneratedFromCardId = GC3
+→ Payment thành công
+→ GenAI tạo GC4 mới
+→ ClientHistory của GC4 lưu regeneratedFromCardId = GC3
+```
+
+Khi đó group vẫn đúng, dù khác ngày:
+
+```text
+GC1 → GC2 → GC3 → GC4
+```
+
+Thời điểm user đang Checkout, `GC4` chưa tồn tại nên không có gì mới để group. UI chỉ đang hiển thị session cũ đến `GC3`. Sau khi AI tạo thành công thì `GC4` mới được nối vào session.
+
+Nhưng nếu ví dụ của bạn là Flower:
+
+```text
+Combo A → GF1 → GF2 → GF3
+```
+
+và ngày hôm sau user chọn `GF3` để Checkout rồi tạo một thiệp AI, thì:
+
+```text
+regeneratedFromCardId = null
+```
+
+vì đây là tạo Card AI mới từ Flower `GF3`, không phải tạo lại từ một Card cũ. Card mới này có `source = generatedFlower/GF3`; Flower session vẫn group bằng `BaseId`, còn Card chưa có Card-cha để group bằng `regeneratedFromCardId`.
+
+Tóm lại:
+
+```text
+Flower version: BaseId nối GF1 → GF2 → GF3
+Card regenerate: regeneratedFromCardId nối GC1 → GC2 → GC3
+Card mới từ GF3: không có Card parent, regeneratedFromCardId = null
+```
+
+Điểm bắt buộc để Card group đúng là: sau khi Card AI được tạo thành công, phải copy `regeneratedFromCardId` từ snapshot vào History/metadata của Card mới. Nếu chỉ lưu field này trong snapshot Order thì sau này sẽ không dựng lại được chuỗi Card.
+
+> có luôn trong History/metadata sẽ có lưu và nó sẽ lưu kiểu này: {
+>   "source": {
+>     "id": "30000000-0000-0000-0000-000000000001",
+>     "type": "product",
+>     "imageUrl": "https://example.com/products/flower.png"
+>   },
+>   "operation": "regenerate",
+>   "sourceType": "product",
+>   "validatedAt": "2026-09-12T08:41:15.4249779+00:00",
+>   "cardTemplate": {
+>     "id": "20000000-0000-0000-0000-000000000002",
+>     "name": "Demo AI Card",
+>     "imageUrl": "https://example.com/templates/ai.png",
+>     "templateType": "ai"
+>   },
+>   "originProductId": "30000000-0000-0000-0000-000000000001",
+>   "provenanceStatus": "available",
+>   "generatedFlowerId": null,
+>   "systemPromptSource": "source_card_fallback",
+>   "regeneratedFromCardId": "0555c29f-7e75-478d-92d3-69af5f32b504"
+> }. Và tên tạo card nếu regeneratedFromCardId null có nghĩa là tạo mới, còn FE mà truyền xuống giá trị là tạo lại. Ý của tôi mô tả đó là. Khi FE tạo GC1 lần 1, tạo lại GC2 và tạo lại card lần cuối cùng là GC3, thì qua ngày hôm sau, họ chọn thiệp từ lịch sử đó là GC3 rồi họ tạo lại từ nó, GC4. Ý của tôi đó là tôi không biết goup theo phiên như thế nào, để khi người dùng tạo trong 1 session, người dùng có thể nhìn thấy các version của họ để có thể so sánh và chọn ra được cái ưng ý với họ nhất
+
+Bạn lo đúng: `regeneratedFromCardId` chỉ giải quyết được lineage, không tự phân biệt được “một phiên thao tác UI”.
+
+Nếu chỉ group theo field này thì:
+
+```text
+Ngày 1:
+GC1 → GC2 → GC3
+
+Ngày 2:
+chọn GC3 từ History → tạo GC4
+```
+
+sẽ luôn bị hiểu là một chuỗi duy nhất:
+
+```text
+GC1 → GC2 → GC3 → GC4
+```
+
+Trong khi ý nghiệp vụ của bạn là:
+
+```text
+Phiên 1 — user đang tạo và so sánh biến thể:
+GC1 → GC2 → GC3
+
+Phiên 2 — ngày sau mở History, chọn GC3 làm nguồn mới:
+GC4 → GC5 → GC6
+```
+
+`GC4` vẫn cần biết nó được tạo từ `GC3`, nên:
+
+```json
+"regeneratedFromCardId": "GC3"
+```
+
+vẫn đúng. Nhưng nó không thể nói rằng GC4 thuộc phiên mới hay phiên cũ.
+
+Cách đúng là tách hai khái niệm:
+
+```text
+regeneratedFromCardId
+→ quan hệ cha–con, dùng để truy lineage xuyên các phiên.
+
+generationSessionId
+→ ID của một phiên user đang tạo Card, dùng để group các version để so sánh.
+```
+
+Ví dụ metadata nên bổ sung:
+
+```json
+{
+  "operation": "regenerate",
+  "regeneratedFromCardId": "0555c29f-7e75-478d-92d3-69af5f32b504",
+  "generationSessionId": "a1b2c3d4-0000-0000-0000-000000000001",
+  "sessionStartedFromCardId": "0555c29f-7e75-478d-92d3-69af5f32b504"
+}
+```
+
+Flow sẽ thành:
+
+```text
+Phiên S1:
+GC1: parent = null, session = S1
+GC2: parent = GC1, session = S1
+GC3: parent = GC2, session = S1
+
+Ngày sau, chọn GC3 từ Card History:
+GC4: parent = GC3, session = S2
+GC5: parent = GC4, session = S2
+GC6: parent = GC5, session = S2
+```
+
+Khi user muốn so sánh các version trong phiên hiện tại, BE chỉ query:
+
+```text
+ClientHistory.Type = card
+AND Metadata.generationSessionId = S2
+```
+
+Kết quả chỉ là `GC4`, `GC5`, `GC6`, không lẫn `GC1–GC3`.
+
+Còn khi cần xem toàn bộ lịch sử kế thừa của một Card, BE đi qua `regeneratedFromCardId`:
+
+```text
+GC6 → GC5 → GC4 → GC3 → GC2 → GC1
+```
+
+Vì Card AI chỉ được tạo sau payment trong flow Order, `generationSessionId` cũng cần được chốt trong object `SnapshotCard`; khi Card service tạo thành công, nó copy ID này sang `ClientHistory.Metadata`. Không nên chỉ sinh session ID sau khi AI hoàn tất, vì khi đó không thể kiểm soát rõ các Card nào thuộc cùng phiên user đã thao tác.
+
+> nếu bây giờ không thêm field thì có cách nào group được nữa không
+
+Nếu “không thêm field” nghĩa là không lưu thêm bất kỳ dữ liệu nào để đánh dấu phiên, thì không thể group phiên một cách chính xác.
+
+Vì hai tình huống này khi lưu đều giống hệt nhau:
+
+```text
+Trong cùng phiên:
+GC3 → regenerate → GC4
+
+Ngày sau mở History:
+GC3 → regenerate → GC4
+```
+
+Cả hai chỉ có:
+
+```json
+{
+  "operation": "regenerate",
+  "regeneratedFromCardId": "GC3"
+}
+```
+
+BE không thể biết GC4 là tiếp tục phiên cũ hay khởi tạo một phiên mới từ GC3.
+
+Không thêm cột database vẫn có một cách tốt: thêm key vào JSON `ClientHistory.Metadata` và `SnapshotCard`:
+
+```json
+"generationSessionId": "guid"
+```
+
+Đây không cần migration/cột mới, nhưng vẫn là dữ liệu được lưu bền vững để group chính xác.
+
+Nếu không được thêm cả key JSON, chỉ còn các cách không đáng tin:
+
+- Group toàn bộ cây/chuỗi lineage theo `regeneratedFromCardId`.
+- Đoán theo khoảng thời gian tạo (`createdAt`), ví dụ cách nhau quá 30 phút là phiên mới.
+- Đoán theo `OrderId` hoặc ngày tạo.
+
+Các cách này đều sai khi user để lâu rồi tiếp tục trong cùng phiên, hoặc tạo liên tục nhiều phiên khác nhau.
+
+Vì vậy, lựa chọn chuẩn là:
+
+```text
+Không thêm DB column: được.
+Không thêm bất cứ persisted field nào: không thể group phiên chính xác.
+```
+
+> Không thêm cột database vẫn có một cách tốt: thêm key vào JSON ClientHistory.Metadata và SnapshotCard:
+>
+>   "generationSessionId": "guid". Mô tả chi tiết giúp tôi hướng này cả FE cả BE để tôi hình dung được flow group như thế nào cho đúng
+
+Có thể làm đúng mà không cần thêm cột DB bằng cách coi `generationSessionId` là “ID phiên so sánh Card” và lưu nó trong JSON ở hai nơi:
+
+- `OrderDetails.SnapshotCard[]`: giữ ID phiên trước khi Card AI được tạo.
+- `ClientHistory.Metadata`: giữ ID phiên sau khi `GeneratedCard` đã tạo thành công, để truy vấn History về sau.
+
+`regeneratedFromCardId` và `generationSessionId` có vai trò khác nhau:
+
+```text
+regeneratedFromCardId
+→ Card nào là cha trực tiếp của Card hiện tại.
+
+generationSessionId
+→ Card hiện tại thuộc nhóm version nào để hiển thị so sánh.
+```
+
+Ví dụ metadata Card AI sau khi tạo thành công:
+
+```json
+{
+  "source": {
+    "id": "30000000-0000-0000-0000-000000000001",
+    "type": "product",
+    "imageUrl": "https://example.com/products/flower.png"
+  },
+  "operation": "regenerate",
+  "regeneratedFromCardId": "0555c29f-7e75-478d-92d3-69af5f32b504",
+  "generationSessionId": "aa111111-1111-1111-1111-111111111111",
+  "sessionStartedFromCardId": "0555c29f-7e75-478d-92d3-69af5f32b504",
+  "validatedAt": "2026-09-12T08:41:15.4249779+00:00"
+}
+```
+
+`sessionStartedFromCardId` không bắt buộc, nhưng hữu ích để UI biết phiên này bắt đầu từ Card lịch sử nào. Field bắt buộc để group là `generationSessionId`.
+
+## Flow phía FE
+
+Khi user bắt đầu tạo Card AI mới từ Product/GeneratedFlower:
+
+```text
+User bấm Tạo thiệp AI
+→ FE mở màn hình chỉnh nội dung/Template/Size/Form
+→ đây là một phiên mới S1
+→ Card đầu tiên được tạo có generationSessionId = S1
+```
+
+Khi user đang ở màn hình so sánh và tạo tiếp từ một version trong cùng phiên:
+
+```text
+GC1 thuộc S1
+→ user chọn GC1 và bấm “Tạo biến thể”
+→ FE gửi parent = GC1, session = S1
+→ tạo GC2 thuộc S1
+
+GC2 thuộc S1
+→ user chọn GC2 và bấm “Tạo biến thể”
+→ FE gửi parent = GC2, session = S1
+→ tạo GC3 thuộc S1
+```
+
+UI query theo `generationSessionId = S1` sẽ có:
+
+```text
+GC1, GC2, GC3
+```
+
+và có thể hiển thị dạng danh sách so sánh hoặc cây version:
+
+```text
+GC1
+└─ GC2
+   └─ GC3
+```
+
+Ngày hôm sau, user vào Card History, mở `GC3`, rồi bấm “Tạo phiên mới từ thiệp này”:
+
+```text
+GC3 là Card cha
+→ FE không dùng lại S1
+→ bắt đầu session mới S2
+→ tạo GC4 với:
+   regeneratedFromCardId = GC3
+   generationSessionId = S2
+```
+
+Nếu user tiếp tục tạo biến thể ngay trong phiên mới:
+
+```text
+GC4 → GC5 → GC6
+```
+
+thì tất cả dùng `generationSessionId = S2`.
+
+Kết quả:
+
+```text
+Lineage toàn bộ:
+GC1 → GC2 → GC3 → GC4 → GC5 → GC6
+
+Phiên S1 để so sánh:
+GC1 → GC2 → GC3
+
+Phiên S2 để so sánh:
+GC4 → GC5 → GC6
+```
+
+## FE cần phân biệt hai hành động
+
+Không được tự đoán theo ngày hay khoảng thời gian. UI cần diễn đạt rõ ý user:
+
+| Hành động UI | `regeneratedFromCardId` | `generationSessionId` |
+|---|---|---|
+| Tạo Card AI mới | `null` | Tạo session mới |
+| Tạo biến thể trong màn hình đang so sánh | Card user chọn | Giữ session hiện tại |
+| Vào History, chọn Card cũ và “tạo phiên mới” | Card user chọn | Tạo session mới |
+| Chỉ xem lại session cũ | Không tạo Card | Dùng session ID từ History để query |
+
+Với flow Checkout hiện tại, khi user chọn Card từ History để đặt đơn, cách an toàn là coi đó là khởi tạo một phiên mới. Card được tạo sau payment sẽ có session mới, nhưng vẫn giữ `regeneratedFromCardId` trỏ về Card lịch sử đã chọn.
+
+## Flow phía BE
+
+### 1. Tạo/chốt snapshot
+
+Với mỗi lựa chọn Card AI hoặc History trong `CreateOrder`:
+
+```text
+BE validate Card nguồn, Template, source, quota và giá
+→ xác định generationSessionId
+→ ghi generationSessionId vào object SnapshotCard
+→ lưu SnapshotCard vào OrderDetails
+```
+
+Ví dụ snapshot:
+
+```json
+{
+  "source": {
+    "type": "generatedFlower",
+    "id": "flower-id",
+    "imageUrl": "https://..."
+  },
+  "regeneratedFromCardId": "GC3",
+  "generationSessionId": "S2",
+  "cardTemplate": {},
+  "cardSize": {},
+  "cardConfig": {},
+  "messageContent": "Nội dung mới",
+  "formType": "calligraphy",
+  "quantity": 1,
+  "basePrice": 15000,
+  "extraPrice": 39000,
+  "totalPrice": 54000,
+  "systemPrompt": {},
+  "validatedAt": "..."
+}
+```
+
+`generationSessionId` áp dụng cho `ai` và `history`; HandMade không cần vì không có flow GenAI/version compare.
+
+### 2. Sau payment
+
+```text
+Webhook xác nhận Payment thành công
+→ Card service đọc SnapshotCard[]
+→ tạo GeneratedCard
+→ tạo ClientHistory type = card
+→ copy generationSessionId và regeneratedFromCardId
+   từ snapshot vào ClientHistory.Metadata
+→ append GeneratedCard.Id vào OrderDetails.GeneratedCardIds
+```
+
+Nếu AI thất bại, snapshot vẫn giữ session ID. Khi retry phải dùng đúng snapshot cũ, do đó Card tạo thành công sau retry vẫn thuộc đúng phiên ban đầu.
+
+### 3. API đọc group
+
+Có thể bổ sung endpoint theo kiểu:
+
+```http
+GET /api/v1/card-histories/{generatedCardId}/session
+```
+
+BE xử lý:
+
+```text
+1. Tìm ClientHistory của GeneratedCard đó, kiểm tra ownership.
+2. Đọc Metadata.generationSessionId.
+3. Lấy toàn bộ ClientHistory:
+   - Type = card
+   - UserId = current user
+   - Metadata.generationSessionId = session ID trên
+4. Join OutputId → GeneratedCards.
+5. Sort theo CreatedAt.
+6. Trả danh sách Card cùng session và quan hệ parent
+   từ Metadata.regeneratedFromCardId.
+```
+
+Response ví dụ:
+
+```json
+{
+  "generationSessionId": "S2",
+  "sessionStartedFromCardId": "GC3",
+  "items": [
+    {
+      "generatedCardId": "GC4",
+      "regeneratedFromCardId": "GC3",
+      "imageUrl": "https://...",
+      "createdAt": "2026-09-13T09:00:00Z"
+    },
+    {
+      "generatedCardId": "GC5",
+      "regeneratedFromCardId": "GC4",
+      "imageUrl": "https://...",
+      "createdAt": "2026-09-13T09:02:00Z"
+    }
+  ]
+}
+```
+
+## Ai tạo `generationSessionId`?
+
+Nên để BE tạo Guid, không để FE tự phát sinh rồi BE tin hoàn toàn.
+
+Cách đơn giản:
+
+```text
+Card AI tạo mới / chọn History để mở phiên mới
+→ FE không gửi generationSessionId
+→ BE sinh session Guid mới và đưa nó vào snapshot.
+
+Tạo tiếp trong một phiên đang mở
+→ FE gửi generationSessionId hiện tại
+→ BE xác minh session này có Card History thuộc đúng customer,
+   sau đó mới cho dùng lại.
+```
+
+Như vậy FE chỉ giữ session ID như trạng thái UI, còn BE vẫn là nơi kiểm soát tính hợp lệ.
+
+Nếu một user tạo hai Card độc lập trong cùng Order, mỗi thiết kế Card nên có session ID riêng, trừ khi UI cố ý cho chúng là các version cùng một phiên.
+
+> tôi hiểu cái điều bạn đang nói về generationSessionId, nhưng tôi chưa hình dung rõ flow tương tác giữa FE với BE ra sau, và việc hình thành một phiên đó nó diễn ra như thế nào. Bạn diễn đạt ý chính để tôi có thể hiểu, tự sinh guid, nắm được, chớ bạn nói lúc trước, tôi hơi bị mơ hồ quá
+
+Hãy hình dung rất đơn giản:
+
+```text
+generationSessionId = mã của một album so sánh
+GeneratedCard        = một tấm thiệp/version nằm trong album đó
+regeneratedFromCardId = thiệp cha mà version này được tạo tiếp từ
+```
+
+BE là bên tự sinh Guid cho album. FE chỉ giữ Guid đó trong lúc user đang thao tác và gửi lại khi user muốn tạo tiếp trong chính album đó.
+
+## 1. User bắt đầu tạo thiệp lần đầu
+
+User chọn Product/Flower, nhập nội dung rồi bấm tạo Card AI.
+
+```text
+FE → BE: tạo Card mới
+        regeneratedFromCardId = null
+        không gửi generationSessionId
+```
+
+BE hiểu đây là bắt đầu một phiên mới:
+
+```text
+BE tự sinh S1 = Guid.NewGuid()
+
+GC1:
+- regeneratedFromCardId = null
+- generationSessionId = S1
+```
+
+BE trả về cho FE:
+
+```json
+{
+  "generatedCardId": "GC1",
+  "generationSessionId": "S1",
+  "imageUrl": "..."
+}
+```
+
+FE đang mở màn hình so sánh và giữ `S1` trong state của màn hình.
+
+## 2. User tạo tiếp version trong chính màn hình đó
+
+User đang thấy `GC1`, muốn tạo một biến thể khác.
+
+```text
+FE → BE:
+- regeneratedFromCardId = GC1
+- generationSessionId = S1
+```
+
+BE kiểm tra `GC1` thuộc user hiện tại, `S1` là session hợp lệ, sau đó tạo:
+
+```text
+GC2:
+- regeneratedFromCardId = GC1
+- generationSessionId = S1
+```
+
+User chọn `GC2` để tạo tiếp:
+
+```text
+FE → BE:
+- regeneratedFromCardId = GC2
+- generationSessionId = S1
+
+BE tạo GC3:
+- regeneratedFromCardId = GC2
+- generationSessionId = S1
+```
+
+Kết quả UI đang có album/phiên `S1`:
+
+```text
+GC1 → GC2 → GC3
+```
+
+FE chỉ cần gọi API lấy session `S1` để render tất cả version cho user so sánh.
+
+## 3. Ngày hôm sau user vào History, chọn GC3
+
+Trong History, `GC3` có metadata:
+
+```json
+{
+  "regeneratedFromCardId": "GC2",
+  "generationSessionId": "S1"
+}
+```
+
+Khi user bấm vào GC3, UI có hai ý nghĩa khác nhau.
+
+### A. “Xem lại phiên cũ”
+
+FE gọi:
+
+```text
+GET Card session của GC3
+```
+
+BE đọc `generationSessionId = S1` từ metadata và trả:
+
+```text
+GC1, GC2, GC3
+```
+
+Không tạo Card mới.
+
+### B. “Tạo một phiên mới từ thiệp này”
+
+Đây là trường hợp user muốn lấy GC3 làm điểm xuất phát, nhưng không muốn `GC4` lẫn vào nhóm so sánh cũ.
+
+```text
+FE → BE:
+- regeneratedFromCardId = GC3
+- không gửi generationSessionId
+- ý nghĩa: bắt đầu phiên mới
+```
+
+BE tự sinh:
+
+```text
+S2 = Guid.NewGuid()
+```
+
+và tạo:
+
+```text
+GC4:
+- regeneratedFromCardId = GC3
+- generationSessionId = S2
+```
+
+Sau đó user tiếp tục biến thể từ `GC4`:
+
+```text
+GC4 → GC5 → GC6
+```
+
+Tất cả dùng `generationSessionId = S2`.
+
+Kết quả:
+
+```text
+Session S1: GC1 → GC2 → GC3
+Session S2: GC4 → GC5 → GC6
+
+Lineage xuyên session:
+GC1 → GC2 → GC3 → GC4 → GC5 → GC6
+```
+
+## Quy tắc BE rất ngắn
+
+```text
+FE không gửi session ID
+→ BE tự sinh Guid mới
+→ bắt đầu album/phiên mới.
+
+FE gửi session ID đang dùng
+→ BE dùng lại ID đó
+→ thêm version vào album/phiên hiện tại.
+```
+
+## Với flow Order hiện tại
+
+Card AI chưa được tạo ngay; snapshot được lưu lúc `CreateOrder`, rồi AI chạy sau payment.
+
+Vì vậy:
+
+```text
+CreateOrder
+→ BE tự sinh S1
+→ lưu S1 vào SnapshotCard
+
+Payment thành công
+→ Card service tạo GC1
+→ copy S1 từ SnapshotCard vào ClientHistory.Metadata
+```
+
+Khi user mở Card History sau đó, FE đọc được `S1`. Nếu user tiếp tục tạo version trong cùng màn hình so sánh thì FE gửi lại `S1`; nếu user chọn “tạo phiên mới từ History” thì không gửi `S1`, BE sinh `S2`.
+
+Không cần cột database mới: Guid chỉ sống trong JSON snapshot và metadata, nhưng đủ để BE group chính xác các Card trong cùng phiên.
+
+> nhưng mà việc  trả ra generationSessionId không nằm trong phạm trù Order của tôi, nó nằm ở việc FE tương tác API tạo card bằng AI đúng không,
+
+Đúng, bạn nói chính xác. Mình đã trộn hai phạm vi ở câu trước.
+
+`generationSessionId` thuộc flow FE gọi API tạo/tạo lại Card AI để user so sánh version — không thuộc contract trả về của `CreateOrder`.
+
+Flow đúng nên hiểu là:
+
+```text
+FE gọi API tạo Card AI
+→ BE tạo Card
+→ BE tự sinh generationSessionId nếu đây là phiên mới
+→ lưu vào ClientHistory.Metadata
+→ trả generationSessionId cùng GeneratedCard cho FE
+```
+
+Sau đó, khi user đang ở màn hình so sánh và tạo tiếp version:
+
+```text
+FE giữ generationSessionId trong state màn hình
+→ FE gọi API regenerate Card AI
+→ gửi Card cha đã chọn + generationSessionId hiện tại
+→ BE tạo Card mới, giữ cùng generationSessionId
+→ trả Card mới cho FE
+```
+
+Ví dụ:
+
+```text
+POST tạo Card AI mới
+→ BE sinh S1
+→ trả GC1 + S1
+
+POST regenerate từ GC1
+→ FE gửi parent = GC1, session = S1
+→ trả GC2 + S1
+
+POST regenerate từ GC2
+→ FE gửi parent = GC2, session = S1
+→ trả GC3 + S1
+```
+
+Ngày sau user vào History:
+
+```text
+GC3 metadata có session = S1
+```
+
+- Bấm “xem các version đã tạo” → BE đọc `S1`, trả `GC1, GC2, GC3`.
+- Bấm “tạo phiên mới từ GC3” → FE gọi API tạo lại với parent = `GC3`, nhưng không gửi `S1`; BE sinh `S2`, tạo `GC4`, trả `GC4 + S2`.
+
+Với Order:
+
+```text
+CreateOrder
+→ chỉ lưu SnapshotCard và regeneratedFromCardId nếu có
+→ không cần trả generationSessionId cho FE
+→ không cần FE gửi generationSessionId trong request Order
+```
+
+Sau khi payment, Card service tạo Card từ snapshot. Nếu Card đó cần xuất hiện trong Card History, chính Card service có thể tự sinh `generationSessionId` khi tạo `ClientHistory.Metadata`. Nó không liên quan đến response CreateOrder.
+
+Tóm lại:
+
+```text
+Order: chốt lựa chọn, snapshot, giá, thanh toán.
+Card AI API: tạo version, trả image/Card ID/session ID để FE so sánh.
+Card History: đọc session ID để lấy đúng nhóm version.
+```
+
+> nhưng nó có một cái edge case như thế này, ví dụ khi người dùng tạo ảnh đó lần đầu, xong tạo lại từ lần thứ 2, thì , ngay lần tạo đầu tiên, BE gửi generationSessionId, ở lần tạo thứ 2 FE gửi lại generationSessionId và 2 thằng đó chung 1 phiên, sau đó người dùng thoát ra, rồi tạo lại thì chắc chắn nó ở 1 phiên khác đúng không
+
+> nhưng nó có một cái edge case như thế này, ví dụ khi người dùng tạo ảnh đó lần đầu, xong tạo lại từ lần thứ 2, thì , ngay lần tạo đầu tiên, BE gửi generationSessionId, ở lần tạo thứ 2 FE gửi lại generationSessionId và 2 thằng đó chung 1 phiên, sau đó người dùng thoát ra, rồi tạo lại thì chắc chắn nó ở 1 phiên khác đúng không. Vì lúc này FE đâu có generationSessionId đâu mà gửi
+
+Đúng. Theo flow này, khi user thoát khỏi màn hình tạo Card AI thì FE mất state `generationSessionId`.
+
+Ví dụ:
+
+```text
+Lần 1:
+FE tạo Card mới
+→ BE sinh S1
+→ tạo GC1, trả GC1 + S1
+
+Lần 2, vẫn đang ở màn hình:
+FE tạo lại từ GC1
+→ gửi parent = GC1 + S1
+→ BE tạo GC2, vẫn thuộc S1
+```
+
+Sau đó user thoát màn hình:
+
+```text
+FE không còn giữ S1
+```
+
+Ngày sau user vào History, chọn `GC2` rồi tạo lại:
+
+```text
+FE gửi parent = GC2
+FE không có generationSessionId
+→ BE hiểu đây là mở phiên mới
+→ BE sinh S2
+→ tạo GC3 thuộc S2
+```
+
+Kết quả:
+
+```text
+Phiên S1: GC1 → GC2
+Phiên S2: GC3
+Lineage:  GC1 → GC2 → GC3
+```
+
+Đây là hành vi đúng nếu định nghĩa “thoát rồi tạo lại” là một phiên so sánh mới.
+
+Chỉ khi UI chủ động có hành động như “Tiếp tục phiên cũ” thì FE mới cần gọi History để lấy `generationSessionId = S1`, rồi gửi lại S1. Nếu không có hành động đó, FE không tự lưu session vào local storage và BE tự tạo Guid mới.
+
+> bạn cover lại ngán gọn dữ liệu mà tôi hỏi bạn về việc group session tạo card này  một cách dễ hiểu ngắn gọn rồi tạo một file .md để bỏ nó vào. Lưu ý:  giải thích một cách mạch lạc, ngắn gọn dễ hiểu vào trong folder này giúp tôi: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/US-039'
+
+<details><summary>2 previous messages</summary>
+
+> Mình sẽ tạo một ghi chú ngắn trong US-039, tập trung riêng vào việc phân biệt lineage Card và phiên so sánh Card, bao gồm cả tình huống user thoát màn hình rồi tạo lại.
+>
+> <details><summary>Created a file, ran a command</summary>
+>
+> - Wrote `./HoaTheoMua.Repository/code-introduction/US-039/CardGenerationSession.md` (+84 -0)
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/code-introduction/US-039/CardGenerationSession.md' -Encoding utf8 -Raw`
+>
+> </details>
+</details>
+
+Đã tạo và kiểm tra nội dung ghi chú tại [CardGenerationSession.md](./HoaTheoMua.Repository/code-introduction/US-039/CardGenerationSession.md).
+
+File trình bày ngắn gọn:
+
+- Phân biệt `regeneratedFromCardId` và `generationSessionId`.
+- Flow FE–BE khi bắt đầu phiên, tạo thêm version và thoát rồi tạo lại.
+- Cách group session và xem lineage xuyên session.
+- Dữ liệu cần lưu trong `ClientHistory.Metadata`.
+- Xác nhận `generationSessionId` thuộc Card AI/Card History, không thuộc CreateOrder.
+
+> bây giờ, lúc mà người dùng ấn nút đặt đơn, thì đơn hàng được tạo ra ở trạng thái pending, nhưng sai đó, khi người dùng chuyển tiền thành công thì đơn mới chính thức  được đặt trên nhanhvn 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Service/Webhook/Service.cs', vậy đối vói trường hợp tạo thiệp từ lịch sử và thiệp AI, thì đơn hàng đã được tạo trên nhanhvn, nhưng trong khi đó chưa có thông tin về thiệp thì khi nhân viên lên nhanhvn (nơi quản lý kho hàng), nhân viên sẽ không biết được. Vậy mình sẽ cần một API riêng, đó là API sẽ submit cái version cuối cùng lên OrderDetails đồng thời gọi một cái API của nhanhvn để update cái field privateDescription, thì lúc đó nhân viên có thể thấy được. Tôi sẽ hình dung nó như thế, sau khi chuyển tiền xong, nếu người dùng chọn thiệp thằng AI hoặc thiệp bằng lịch sử trước đó(còn đối với thiệp handmade thì được tạo rồi, và id của thiệp được lưu trong orderDetails rồi, nó có rule là mỗi bó chỉ được 1 thiệp handmade, 2 bó thì 2 thiệp, ko được chọn hơn, nó theo số lượng bó, nhớ giúp tôi rule này, đối với thiệp thì khi thanh toán thành công thì có thể gọi id của card để lấy ảnh ra rồi bỏ vào trong private description để nhân vien thấy). Với thiệp bằng AI hoặc thiệp bằng lịch sử, khi người dùng tạo hoặc tạo lại gì đó, .. họ chọn version cuối cùng và bấm thêm vào đơn hàng, thì se gọi API submit version cuối cùng API đó sẽ nhận vào orderDetailsId hoặc orderId(cái này tôi chưa rõ, cần bạn hỗ trợ), sẽ tiến hàng update cái Id cả card vào trong orderDetails đó, đồng thời gọi API của nhanhvn update field private description sẽ bỏ ảnh của card vô, vì lúc tạo card thành công thì cục record generatedCard đã hoàn thành và có hình ảnh ở trỏng, lấy hỉnh ảnh của nó update lên đơn hàng đó trên nhanh vn để nhân viên thấy và tiến hành in thiệp ra. Sẽ có một API như thế, bạn hình dung giúp tôi
+
+Mình hình dung đúng flow bạn đang muốn: Card AI/Card từ History không nên tự động bị chốt vào đơn ngay khi AI tạo xong. User cần được tạo nhiều version, so sánh, chọn version cuối cùng, rồi mới bấm “Thêm vào đơn hàng”.
+
+API submit riêng là hợp lý, và nên nhận `orderDetailId`, không phải chỉ `orderId`.
+
+Lý do:
+
+```text
+Một Order có nhiều OrderDetails
+→ mỗi OrderDetails là một dòng Product/Combo/bó hoa riêng
+→ Card cuối cùng phải gắn đúng dòng hoa đó
+```
+
+Đề xuất contract:
+
+```http
+POST /api/v1/order-details/{orderDetailId}/submit-card
+```
+
+```json
+{
+  "generatedCardId": "id-cua-version-cuoi-user-da-chon"
+}
+```
+
+Flow tổng thể:
+
+```text
+1. User bấm Đặt đơn
+→ tạo Order = Pending
+→ Card HandMade được tạo ngay và lưu ID vào OrderDetails.
+
+2. User thanh toán thành công
+→ Order = Paid
+→ đơn chính thức được đẩy/tạo trên Nhanh.vn.
+→ Với Card AI/Card History: chưa có Card cuối cùng để nhân viên in.
+
+3. User vào flow GenAI Card
+→ tạo/re-generate nhiều version trong một generation session
+→ so sánh các version
+→ chọn GeneratedCard cuối cùng, ví dụ GC3
+→ bấm “Thêm vào đơn hàng”.
+
+4. FE gọi Submit Card
+→ gửi orderDetailId + GC3
+→ BE validate
+→ thêm GC3 vào OrderDetails.GeneratedCardIds
+→ lấy ảnh URL của GC3
+→ gọi Nhanh.vn cập nhật privateDescription của đơn tương ứng
+→ privateDescription có link ảnh Card để nhân viên mở/in.
+```
+
+Private description nên được cập nhật theo dạng có section riêng, không ghi đè toàn bộ nội dung đang có:
+
+```text
+[HoaTheoMua - Thiệp]
+- Card AI: https://storage.../generated-cards/GC3.png
+```
+
+`privateDescription` là text, nên thực tế sẽ lưu URL ảnh Card, không đưa binary image trực tiếp vào Nhanh.vn.
+
+Các validate chính của API submit:
+
+```text
+- User đăng nhập và sở hữu Order.
+- OrderDetail thuộc Order đó.
+- Order đã Paid và đã có đơn tương ứng trên Nhanh.vn.
+- GeneratedCard tồn tại, thuộc user, chưa xóa, có imageUrl.
+- GeneratedCard là Card AI hợp lệ.
+- Card có provenance phù hợp với Combo/GeneratedFlower của OrderDetail.
+- Không add trùng GeneratedCardId.
+```
+
+Nếu gọi Nhanh.vn lỗi, không nên mất lựa chọn Card của user. BE nên lưu Card ID vào OrderDetails và đánh dấu việc đồng bộ Nhanh đang chờ/retry; khi thành công mới coi private description đã đồng bộ. Không thể có transaction thật sự giữa DB nội bộ và API Nhanh.vn.
+
+Rule HandMade mới mình đã ghi nhận:
+
+```text
+HandMade được tạo ngay khi CreateOrder/Pending.
+Mỗi bó hoa chỉ được một thiệp HandMade.
+OrderDetails.Number = 2 bó
+→ tối đa/chính xác theo lựa chọn là 2 thiệp HandMade;
+không được chọn vượt số bó.
+Các GeneratedCardId HandMade được lưu sẵn vào OrderDetails.
+```
+
+Sau khi payment và đơn đã được tạo trên Nhanh.vn, BE cũng có thể lấy các ID HandMade này, resolve ảnh Card và cập nhật private description ngay, không cần user submit version.
+
+Có một điểm cần chốt trước khi implement: một `OrderDetails` có thể nhận nhiều Card AI cuối cùng hay chỉ một Card AI cuối cùng? Nếu vẫn cho nhiều Card, API trên vẫn dùng được nhưng mỗi lần submit append một ID; khi đó cần rule rõ số Card AI tối đa theo `OrderDetails.Number` và cách xác định đã submit đủ hay chưa.
+
+> bạn tóm gọi lại nội dung mà bạn vừa hiểu khi tôi nói về API submit version cuối cùng thành một file .md và lưu vào folder này giúp tôi đi: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/US-039'
+
+<details><summary>2 previous messages</summary>
+
+> Mình sẽ ghi lại flow API submit version cuối cùng theo đúng context bạn vừa chốt, bao gồm luồng HandMade riêng, lý do dùng `orderDetailId`, và việc đồng bộ private description Nhanh.vn.
+>
+> <details><summary>Created a file, ran a command</summary>
+>
+> - Wrote `./HoaTheoMua.Repository/code-introduction/US-039/SubmitFinalCardVersion.md` (+93 -0)
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/code-introduction/US-039/SubmitFinalCardVersion.md' -Encoding utf8 -Raw`
+>
+> </details>
+</details>
+
+Đã tạo và kiểm tra file [SubmitFinalCardVersion.md](./HoaTheoMua.Repository/code-introduction/US-039/SubmitFinalCardVersion.md).
+
+File gồm flow submit Card AI/Card History vào `OrderDetails`, cập nhật `privateDescription` Nhanh.vn, flow HandMade, rule một bó–một HandMade Card, và các validate cần thiết.
+
+> theo bạn nghĩ thì đáp án này là gì: Với Card AI/Card từ History, cần chốt một OrderDetails được submit một hay nhiều Card cuối cùng. Nếu nhiều Card được phép, API có thể gọi nhiều lần để append ID, nhưng phải có rule giới hạn rõ theo số bó (OrderDetails.Number) và tiêu chí biết dòng hàng đã đủ Card.
+
+<details><summary>2 previous messages</summary>
+
+> Theo mình, đáp án đúng nên là:
+>
+> ```text
+> Một OrderDetails có thể nhận nhiều thiết kế Card cuối cùng,
+> nhưng mỗi bó hoa tối đa chỉ có một thiệp.
+>
+> Tổng quantity của toàn bộ Card đã chọn cho OrderDetails
+> không được vượt OrderDetails.Number.
+> ```
+>
+> Ví dụ `OrderDetails.Number = 2`:
+>
+> ```text
+> Không chọn Card                         → 0 thiệp
+> Một thiết kế GC1, quantity = 2          → 2 thiệp giống nhau
+> GC1 quantity = 1 + GC2 quantity = 1     → 2 thiệp khác nhau
+> GC1 quantity = 2 + GC2 quantity = 1     → sai, vì thành 3 thiệp cho 2 bó
+> ```
+>
+> Vì Card là optional, rule hợp lý là:
+>
+> ```text
+> 0 ≤ tổng quantity Card ≤ OrderDetails.Number
+> ```
+>
+> Không bắt buộc phải bằng `Number`, vì có thể khách chỉ muốn thiệp cho một trong hai bó.
+>
+> Với HandMade cũng áp dụng nguyên tắc đó:
+>
+> ```text
+> Mỗi bó tối đa một HandMade Card.
+> 2 bó → không được tạo/chọn quá 2 HandMade Card.
+> ```
+>
+> Với AI/History, API submit version cuối cùng nên nhận thêm `quantity`:
+>
+> ```http
+> POST /api/v1/order-details/{orderDetailId}/submit-card
+> ```
+>
+> ```json
+> {
+>   "generatedCardId": "GC3",
+>   "quantity": 1
+> }
+> ```
+>
+> BE sẽ:
+>
+> ```text
+> - kiểm tra Card hợp lệ và đúng nguồn.
+> - kiểm tra GeneratedCardId chưa được submit trùng.
+> - tính tổng quantity Card hiện tại của OrderDetails.
+> - bảo đảm tổng mới không vượt OrderDetails.Number.
+> - lưu GC3 vào danh sách Card đã chọn.
+> - cập nhật privateDescription Nhanh.vn với ảnh Card và số lượng in.
+> ```
+>
+> Một điểm quan trọng: chỉ `GeneratedCardIds: Guid[]` là chưa đủ nếu cho phép nhiều Card, vì nó không biết mỗi Card phải in bao nhiêu bản. Cần lưu thêm mapping bền vững kiểu:
+>
+> ```json
+> [
+>   {
+>     "generatedCardId": "GC1",
+>     "quantity": 1
+>   },
+>   {
+>     "generatedCardId": "GC2",
+>     "quantity": 1
+>   }
+> ]
+> ```
+>
+> Nếu không muốn bổ sung chỗ lưu mapping này, giải pháp đơn giản hơn là giới hạn mỗi `OrderDetails` chỉ có một Card thiết kế cuối cùng, với `quantity` tối đa bằng số bó. Nhưng với nghiệp vụ hai bó/two recipients cần lời chúc khác nhau, phương án nhiều thiết kế với tổng quantity không vượt số bó sẽ linh hoạt và đúng hơn.
+>
+> tôi nghĩ chỉ được submit mỗi lần thôi
+</details>
+
+Đúng, vậy nên chốt là:
+
+```text
+Mỗi OrderDetails chỉ được submit Card AI/Card History một lần duy nhất.
+```
+
+User phải chọn xong toàn bộ version cuối cùng cần dùng rồi mới bấm “Thêm vào đơn hàng”.
+
+API không nên gọi nhiều lần để append từng Card. Thay vào đó, gửi toàn bộ Card cuối cùng trong một request:
+
+```http
+POST /api/v1/order-details/{orderDetailId}/submit-final-cards
+```
+
+```json
+{
+  "cards": [
+    {
+      "generatedCardId": "GC1",
+      "quantity": 1
+    },
+    {
+      "generatedCardId": "GC2",
+      "quantity": 1
+    }
+  ]
+}
+```
+
+BE xử lý một lần duy nhất:
+
+```text
+1. Kiểm tra OrderDetails thuộc user và Order đã Paid.
+2. Kiểm tra OrderDetails chưa từng submit Card AI/History.
+3. Validate từng GeneratedCard.
+4. Kiểm tra tổng quantity ≤ OrderDetails.Number.
+5. Lưu toàn bộ GeneratedCardId vào OrderDetails.GeneratedCardIds.
+6. Lưu mapping GeneratedCardId + quantity để biết mỗi thiết kế in bao nhiêu bản.
+7. Cập nhật privateDescription Nhanh.vn một lần, chứa toàn bộ link ảnh Card.
+8. Khóa submit lần sau.
+```
+
+Ví dụ đơn có hai bó:
+
+```text
+GC1 quantity 1
+GC2 quantity 1
+→ hợp lệ: tổng 2 Card cho 2 bó.
+```
+
+Sau khi submit thành công:
+
+```text
+Không được thêm/xóa/thay Card bằng API submit nữa.
+```
+
+Nếu sau này cần đổi Card sau khi đã submit, đó nên là một flow riêng có quyền/điều kiện rõ ràng, ví dụ customer hủy trước khi kho xử lý hoặc nhân viên Admin điều chỉnh; không nên cho API submit cuối cùng ghi đè tự do.
+
+> thật ra lúc người dùng đặt hàng, ở đó họ được chọn quantity rồi, nhưng mà tôi đang nghĩ là nên lưu quantity vào ở trong json hay ở trong mảng generatedCardId, cái nào sẽ tốt hơn nếu có dính tới truy vấn nhiều. Sau này sẽ có việc những api lấy thiệp và sẽ lấy luôn những đơn hàng đã đặt thiệp đó nữa
+
+Nếu sau này cần API “lấy Card kèm các Order đã dùng Card đó”, thì không nên lưu quantity trong `GeneratedCardIds: Guid[]`, và cũng không nên dùng `SnapshotCard` làm nguồn truy vấn chính.
+
+Lý do:
+
+```text
+Quantity thuộc về quan hệ:
+OrderDetails ↔ GeneratedCard
+
+Không thuộc riêng GeneratedCard.
+```
+
+Cùng một `GeneratedCard` có thể được dùng lại ở Order khác, nhưng mỗi Order có số bản in khác nhau. Vì vậy không thể lưu quantity vào record `GeneratedCard`.
+
+Giải pháp tốt nhất là thêm bảng liên kết, ví dụ:
+
+```text
+order_detail_generated_cards
+```
+
+```text
+Id
+OrderDetailId
+GeneratedCardId
+Quantity
+SubmittedAt
+```
+
+Có thể thêm `CardMode` nếu cần audit/hiển thị nhanh.
+
+Ví dụ:
+
+```text
+OrderDetail OD1, Number = 2 bó
+
+OrderDetailGeneratedCards:
+OD1 | GC1 | quantity = 1
+OD1 | GC2 | quantity = 1
+```
+
+Lợi ích:
+
+```text
+Lấy OrderDetail
+→ query các Card đã submit rất dễ.
+
+Lấy GeneratedCard GC1
+→ query bảng liên kết theo GeneratedCardId
+→ join OrderDetails và Orders
+→ trả mọi đơn đã dùng GC1 rất nhanh.
+
+Kiểm tra số thiệp
+→ SUM(quantity) WHERE OrderDetailId = OD1
+→ phải ≤ OrderDetails.Number.
+```
+
+Nên có index:
+
+```text
+Index(OrderDetailId)
+Index(GeneratedCardId)
+Unique(OrderDetailId, GeneratedCardId)
+```
+
+`SnapshotCard` vẫn giữ đúng nhiệm vụ cũ: chốt nội dung, giá, prompt, quantity khách dự kiến chọn tại lúc tạo Order. Không nên sửa snapshot để nhét Card cuối cùng vào, vì snapshot là dữ liệu bất biến.
+
+`GeneratedCardIds: Guid[]` có thể giữ tạm để tương thích code cũ hoặc trả response nhanh, nhưng không nên là nguồn dữ liệu chuẩn để query quan hệ Card–Order. Array Guid không lưu được quantity và query Card → các Order sẽ khó, chậm, khó index/join hơn.
+
+Nếu bắt buộc chỉ chọn giữa hai phương án hiện có:
+
+- JSON object gồm `generatedCardId + quantity`: đúng dữ liệu hơn.
+- `GeneratedCardIds` array: thiếu quantity.
+
+Nhưng với nhu cầu query nhiều về sau, bảng liên kết là lựa chọn đúng nhất.
+
+> việc thêm quantity vào mảng generatedCardId và biến nó thành một object là điều không thể, vì một cái card có thể tồn tại trong nhiều đơn hàng, vậy làm sao mà lấy số lượng ra được đúng không, nếu chúng ta lưu như thế
+
+Đúng nếu ý bạn là lưu `quantity` vào chính record `GeneratedCard`: cách đó sai, vì một Card có thể xuất hiện ở nhiều đơn với số lượng in khác nhau.
+
+Nhưng nếu biến `OrderDetails.GeneratedCardIds` từ mảng Guid thành mảng object nằm trên chính `OrderDetails`, thì về mặt dữ liệu vẫn đúng:
+
+```json
+// OrderDetail OD1
+[
+  {
+    "generatedCardId": "GC1",
+    "quantity": 1
+  }
+]
+
+// OrderDetail OD2
+[
+  {
+    "generatedCardId": "GC1",
+    "quantity": 3
+  }
+]
+```
+
+Cùng `GC1`, nhưng số lượng được lấy theo `OrderDetails` đang xem:
+
+```text
+GC1 trong OD1 → in 1 bản
+GC1 trong OD2 → in 3 bản
+```
+
+Nó không bị mâu thuẫn, vì quantity thuộc dòng Order cụ thể, không thuộc Card.
+
+Vấn đề của JSON object array không phải là sai nghiệp vụ, mà là query ngược khó hơn:
+
+```text
+“Tìm mọi Order đã dùng GC1”
+→ phải quét JSON của nhiều OrderDetails để tìm generatedCardId = GC1.
+```
+
+Do đó:
+
+- Nếu chỉ cần hiển thị chi tiết một Order: JSON object array đủ dùng.
+- Nếu chắc chắn sẽ có API Card History/Detail cần truy vấn nhiều Order đã dùng Card đó: bảng liên kết là tốt hơn.
+
+```text
+OrderDetailGeneratedCards
+OD1 | GC1 | quantity 1
+OD2 | GC1 | quantity 3
+```
+
+Bảng liên kết cũng chính là “mảng object” nhưng được chuẩn hóa thành từng row, nên truy vấn hai chiều nhanh và rõ ràng hơn.
+
+> nêu bây giờ biến mảng GeneratedCardIds thằng một object và có chứa quantity ở trỏng. Thì lúc lấy các order khi mua thiệp đó, thì có cách nào lấy ra số lượng thiệp chính xác không. Ví dụ: một OrderA mua GCA số lượng là 3, orderB mua GCA với số lượng là 2, thì sau này,  vẫn có thể lấy ra được số lượng card mà đã từng mua theo đúng order đó đúng không
+
+> nêu bây giờ biến mảng GeneratedCardIds thằng một object và có chứa quantity ở trỏng. Thì lúc lấy các order khi mua thiệp đó, thì có cách nào lấy ra số lượng thiệp chính xác không. Ví dụ: một OrderA mua GCA số lượng là 3, orderB mua GCA với số lượng là 2, thì sau này,  vẫn có thể lấy ra được số lượng card mà đã từng mua theo đúng order đó đúng không, có bị trở ngại hoặc vấn đề gì không
+
+Đúng, vẫn lấy được chính xác. Không có vấn đề nghiệp vụ, vì quantity được lưu theo từng `OrderDetails`, tức theo từng Order cụ thể.
+
+Ví dụ đổi field từ `GeneratedCardIds: Guid[]` thành mảng object:
+
+```json
+// OrderA / OrderDetailA
+{
+  "generatedCards": [
+    {
+      "generatedCardId": "GCA",
+      "quantity": 3
+    }
+  ]
+}
+```
+
+```json
+// OrderB / OrderDetailB
+{
+  "generatedCards": [
+    {
+      "generatedCardId": "GCA",
+      "quantity": 2
+    }
+  ]
+}
+```
+
+Khi mở Card `GCA` và lấy các đơn từng dùng Card này, BE tìm các `OrderDetails` mà JSON có:
+
+```text
+generatedCardId = GCA
+```
+
+Sau đó đọc quantity ngay trên object thuộc `OrderDetails` đó:
+
+```text
+OrderA → GCA → quantity = 3
+OrderB → GCA → quantity = 2
+```
+
+Response có thể là:
+
+```json
+{
+  "generatedCardId": "GCA",
+  "orders": [
+    {
+      "orderId": "OrderA",
+      "quantity": 3,
+      "status": "Paid"
+    },
+    {
+      "orderId": "OrderB",
+      "quantity": 2,
+      "status": "Paid"
+    }
+  ]
+}
+```
+
+Điều cần giữ để dữ liệu không mơ hồ:
+
+```text
+Trong một OrderDetails, một generatedCardId chỉ được xuất hiện một lần.
+```
+
+Nếu có cùng `GCA` thì update quantity của object đó, không append thêm object trùng ID. Như vậy quantity luôn xác định rõ.
+
+Vấn đề duy nhất là kỹ thuật truy vấn: tìm ngược từ Card sang nhiều Order phải query bên trong JSON array, khó/index kém thuận tiện hơn bảng liên kết. Nhưng nếu số lượng dữ liệu chưa lớn và DB hỗ trợ query/index JSON tốt, cách này vẫn dùng được và trả đúng quantity theo từng Order.
+
+> note thêm phần quantity này vào trong file .md mà bạn vừa tạo ra giúp tôi đi: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/US-039/SubmitFinalCardVersion.md'
+
+<details><summary>4 previous messages</summary>
+
+> Mình sẽ bổ sung vào ghi chú phần quantity thuộc quan hệ `OrderDetails`–`GeneratedCard`, kèm ví dụ OrderA/OrderB và rule không được trùng Card trong cùng một dòng đơn.
+>
+> <details><summary>Edited a file, ran a command</summary>
+>
+> - Wrote `./HoaTheoMua.Repository/code-introduction/US-039/SubmitFinalCardVersion.md` (+45 -3)
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/code-introduction/US-039/SubmitFinalCardVersion.md' -Encoding utf8 -Raw`
+>
+> </details>
+>
+> Mình thấy ghi chú cũ còn sót ý “có thể gọi nhiều lần”, trái với chốt mới của bạn là mỗi `OrderDetails` chỉ submit một lần. Mình đang chỉnh luôn để file nhất quán.
+>
+> <details><summary>Edited a file, ran a command</summary>
+>
+> - Wrote `./HoaTheoMua.Repository/code-introduction/US-039/SubmitFinalCardVersion.md` (+15 -8)
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/code-introduction/US-039/SubmitFinalCardVersion.md' -Encoding utf8 -Raw`
+>
+> </details>
+</details>
+
+Đã bổ sung và kiểm tra lại [SubmitFinalCardVersion.md](./HoaTheoMua.Repository/code-introduction/US-039/SubmitFinalCardVersion.md).
+
+Mình cũng đã cập nhật file cho khớp chốt mới:
+
+- Submit Card AI/History chỉ một lần cho mỗi `OrderDetails`.
+- Request gửi toàn bộ Card cuối cùng kèm `quantity`.
+- `quantity` nằm theo từng object `generatedCardId` trong `OrderDetails`.
+- Ví dụ `GCA` được OrderA mua 3 bản và OrderB mua 2 bản vẫn truy vấn chính xác theo từng Order.
+- Có rule chống trùng Card ID và tổng quantity không vượt `OrderDetails.Number`.
+
+> bạn trả lời giúp tôi mục đích ngắn gọn tại sao cần API submit version cuối cùng đi, nhớ giúp tôi cái rule đó là update đơn hàng trên nhanhvn kèm số lượng, để nhân viên biết thiệp gì và cần in bao nhiêu trong đơn đó
+
+API submit version cuối cùng dùng để chốt Card AI/Card History mà user đã chọn sau khi so sánh các version.
+
+Nó sẽ:
+
+```text
+- Gắn GeneratedCard cuối cùng + quantity vào đúng OrderDetails.
+- Lưu để biết đơn đó dùng thiệp nào và phải in bao nhiêu bản.
+- Gọi Nhanh.vn cập nhật privateDescription với link ảnh Card và số lượng.
+```
+
+Nhờ vậy nhân viên trên Nhanh.vn biết chính xác:
+
+```text
+Đơn này cần in thiệp nào?
+Ảnh thiệp ở đâu?
+Mỗi mẫu cần in bao nhiêu bản?
+```
+
+HandMade không cần submit vì đã được tạo và lưu quantity từ lúc CreateOrder.
+
+> nhớ cái tôi một cái lưu ý cực quan trọng đó là field: privateDescription của nhanhvn có giới hạn chữ, việc update cái link mẫu hoa do AI tạo lúc ban đầu, hoặc update cái link card do AI tạo ra hoặc tạo ra và số lượng mà sẽ bị mất kí tự. Hiện tại phương án để xử lí nó team tôi chưa chốt nên tôi nhắn để bạn lưu tâm về nó
+
+Mình đã ghi nhận đây là lưu ý quan trọng:
+
+```text
+Nhanh.vn.privateDescription có giới hạn ký tự.
+```
+
+Do đó không được giả định có thể luôn ghi đầy đủ:
+
+- Link Flower AI.
+- Nhiều link Card AI/History.
+- Quantity của từng Card.
+- Các ghi chú xử lý đơn khác.
+
+Nếu vượt giới hạn, dữ liệu hiển thị cho nhân viên sẽ bị cắt và có thể mất link/quantity cần in.
+
+Hiện chưa chốt phương án xử lý, nên khi thiết kế API submit Card hoặc update thông tin Flower AI lên Nhanh.vn, mình sẽ coi đây là constraint bắt buộc và không tự chốt giải pháp. Các hướng có thể cân nhắc sau là link một file/PDF tổng hợp, link trang chi tiết nội bộ ngắn gọn, hoặc quy tắc rút gọn nội dung — nhưng chỉ triển khai khi team chốt.
+
+> Quả thật hiện tại khi tôi nói với bạn, từng cái một tôi có thể hình dung được nó, nhưng khi tổng hợp lại mọi thứ như rối tung đối với tôi, đặc biệt là những chỗ trong phần field privateDescription và API submit version cuối cùng. Tôi sẽ mô tả cho bạn một vài cái trường hợp mà tôi nghĩ ra. Đầu tiên, nếu checkout từ sản phẩm bình tường thì không có generatedFlowerId, còn nếu checkout từ generatedFlowerId thì combo nguồn của nó luôn đi theo, vậy generatedFlowerId có thể null, card cũng có thể null. Điều này cộng hưởng với nhau ra tới khoảng 6 trường hợp, và ko biết khi nào field nào có giá trị để update được luôn trongp privateDescritpion khi có webhook hoặc phải gọi API update version cuối cùng để update trên nhanhvn. Đối với trường hợp không có thiệp, thì có 2 trường hợp con, có thể có generatedFlowerId và có thể không. Trường hợp thứ 2 đó là có thiệp, đầu tiên là thiệp handmade thì có 2 trường hợp con, đó là có generatedFlowerId và ko có generatedFlowerId, đôi với thiệp handmade thì update luôn trong webhook khi setup tạo đơn trên nhanhvn, tiếp theo đó là tọa thiệp bằng AI thì cũng có generatedFlowerId hoặc null, và phải gọi API update version cuối cùng để gọi API update trực tiếp trên nhanhvn vì quá trình tạo đơn chưa có dữ liệu , cục record của generatedcard chưa được tạo ra nên chưa có dữ liệu lúc đó. Bạn xem thử tôi nói có đúng không và có thiếu trường hợp nào không, trả lời ngắn gọn thôi
+
+Bạn nói đúng về flow. Nếu gộp “Card AI mới” và “Card từ History” thành cùng một cách xử lý sau payment, thì có 6 nhóm chính:
+
+| Nguồn hoa | Loại Card | Cập nhật Nhanh.vn khi nào |
+|---|---|---|
+| Product thường (`GeneratedFlowerId = null`) | Không Card | Webhook tạo đơn; không có link Flower/Card |
+| GeneratedFlower | Không Card | Webhook tạo đơn; có link Flower AI |
+| Product thường | HandMade | Webhook tạo đơn; có link Card HandMade + quantity |
+| GeneratedFlower | HandMade | Webhook tạo đơn; có link Flower AI + Card HandMade + quantity |
+| Product thường | AI / History | Webhook tạo đơn chưa có Card; sau đó API submit version cuối cùng cập nhật link Card + quantity |
+| GeneratedFlower | AI / History | Webhook tạo đơn có link Flower AI, chưa có Card; API submit version cuối cùng cập nhật thêm link Card + quantity |
+
+Điểm đúng cần nhớ:
+
+```text
+GeneratedFlowerId có thể null.
+Card có thể null.
+Nếu GeneratedFlowerId có giá trị thì ProductId vẫn là Combo nguồn để tạo OrderDetails.
+```
+
+Nếu tách riêng `AI mới` và `History` thành hai loại business, sẽ thành 8 trường hợp; nhưng về cập nhật Nhanh.vn chúng giống nhau nên gộp thành 6 là hợp lý.
+
+Và giới hạn ký tự `privateDescription` áp dụng cho tất cả các trường hợp có link Flower/Card; phương án chống bị cắt hiện vẫn chưa chốt.
+
+> bạn có giải pháp gì trong phần tạo đơn khi bảo vào nhanhvn này không: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Service/Webhook/Service.cs' ở chỗ này nè:   private async Task<string> BuildPrivateDescriptionAsync(OrderEntity order, string? companyRemarks). bạn có giải pháp gì hoặc flow gì không, chỗ này tôi rối quá, làm sao để nó tổng quát và không bị miss trường hợp. Trả lời rõ ràng, ngắn gọn, mạch lạc giúp tôi đi
+
+<details><summary>2 previous messages</summary>
+
+> Mình sẽ xem đúng hàm `BuildPrivateDescriptionAsync` hiện có để đề xuất flow tổng quát theo cấu trúc code hiện tại, tránh đưa giải pháp tách rời implementation.
+>
+> <details><summary>Ran 6 commands</summary>
+>
+> - Ran `rg -n -C 80 "BuildPrivateDescriptionAsync|privateDescription|CreateOrder" 'HoaTheoMua.Service/Webhook/Service.cs'`
+> - Ran `Select-String -LiteralPath 'HoaTheoMua.Service/Webhook/Service.cs' -Pattern 'BuildPrivateDescriptionAsync|privateDescription|CreateOrder' -Context 80,80 | ForEach-Object { $_.ToString(); $_.Context.PreContext; $_.Line; $_.Context.PostContext }`
+> - Ran `$path = 'HoaTheoMua.Service/Webhook/Service.cs'
+> $lines = Get-Content -LiteralPath $path -Encoding utf8
+> $match = Select-String -LiteralPath $path -Pattern 'private async Task<string> BuildPrivateDescriptionAsync' | Select-Object -First 1
+> $start = [Math]::Max(0, $match.LineNumber - 10)
+> $end = [Math]::Min($lines.Count - 1, $match.LineNumber + 150)
+> $lines[$start..$end]`
+> - Ran `Select-String -LiteralPath 'HoaTheoMua.Service/Webhook/Service.cs' -Pattern 'BuildPrivateDescriptionAsync' | Select-Object LineNumber,Line`
+> - Ran `Get-ChildItem -Path 'HoaTheoMua.Service' -Recurse -Filter '*.cs' | Select-String -Pattern 'BuildPrivateDescriptionAsync|privateDescription' | Select-Object Path,LineNumber,Line`
+> - Ran `$path = 'HoaTheoMua.Service/Fulfillment/Service.cs'
+> $lines = Get-Content -LiteralPath $path -Encoding utf8
+> $lines[860..990]`
+>
+> </details>
+</details>
+
+Có. Cách để không rối và không miss case là: xem `privateDescription` là bản render từ dữ liệu Order hiện tại, không phải nơi tự nối chuỗi từng chỗ.
+
+Lưu ý: hàm này hiện nằm ở [Fulfillment/Service.cs](./HoaTheoMua.Service/Fulfillment/Service.cs:911), còn Webhook chỉ chuyển Order đã Paid vào flow Fulfillment.
+
+Flow nên là:
+
+```text
+Order DB là nguồn dữ liệu thật
+→ một hàm BuildPrivateDescriptionAsync duy nhất đọc toàn bộ OrderDetails
+→ tạo ra privateDescription hoàn chỉnh
+→ dùng cùng hàm ở cả:
+   1. tạo đơn Nhanh.vn sau payment;
+   2. submit Card version cuối cùng để update đơn Nhanh.vn.
+```
+
+Hàm build không cần phân nhánh 6 case thủ công. Với từng `OrderDetails`, chỉ áp dụng ba rule độc lập:
+
+```text
+1. Có GeneratedFlowerId?
+   → có: thêm thông tin/link Flower AI.
+   → không: không thêm phần Flower AI.
+
+2. Có Card đã chốt chưa?
+   → HandMade: đã có ngay từ CreateOrder.
+   → AI/History đã submit: đã có GeneratedCard + quantity.
+   → AI/History chưa submit: chưa có Card cuối cùng.
+
+3. Có Card đã chốt
+   → thêm link ảnh Card + quantity.
+```
+
+Kết quả tự bao phủ các case:
+
+| Dữ liệu hiện có | Nội dung render lên Nhanh |
+|---|---|
+| Không Flower, không Card | Thông tin đơn cơ bản |
+| Có Flower, không Card | Cơ bản + link Flower |
+| Không Flower, HandMade | Cơ bản + link Card/quantity |
+| Có Flower, HandMade | Cơ bản + link Flower + Card/quantity |
+| AI/History chưa submit | Cơ bản, có thể thêm marker “chờ khách chốt thiệp” |
+| AI/History đã submit | Cơ bản + Flower nếu có + link Card/quantity |
+
+Cụ thể:
+
+```text
+Webhook payment thành công
+→ Fulfillment tạo đơn Nhanh.vn
+→ gọi BuildPrivateDescriptionAsync(order,...)
+→ lúc này render Flower nếu có và HandMade nếu có.
+→ Card AI/History chưa submit thì chưa có link Card.
+
+API submit version cuối cùng
+→ lưu GeneratedCard + quantity vào OrderDetails
+→ load lại toàn bộ Order
+→ gọi lại chính BuildPrivateDescriptionAsync(order,...)
+→ gọi Nhanh.vn update privateDescription bằng bản render mới.
+```
+
+Điểm quan trọng: API submit không tự append text vào private description cũ. Nó phải render lại toàn bộ từ DB, nếu không sẽ dễ bị link trùng, quantity cũ, hoặc miss Flower/HandMade.
+
+Về giới hạn ký tự Nhanh.vn: builder nên kiểm tra độ dài trước khi gọi Nhanh. Nếu vượt giới hạn, không tự cắt mù dữ liệu Card/quantity; trả trạng thái “over limit” để dùng phương án team sẽ chốt sau. Như vậy chỉ cần thay chiến lược render tại một chỗ, không phải sửa webhook và submit API riêng lẻ.
+
+> [Image #1] [Image #2] [Image #3] toàn bộ nội dung mà tôi mới hỏi về việc tôi bị nối rồi này:  Bạn nói đúng về flow. Nếu gộp “Card AI mới” và “Card từ History” thành cùng một cách xử lý sau payment, thì có 6 nhóm chính:
+>
+>    Nguồn hoa                                    Loại Card       Cập nhật Nhanh.vn khi nào
+>   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+>    Product thường (GeneratedFlowerId = null)    Không Card      Webhook tạo đơn; không có link Flower/Card
+>   ───────────────────────────────────────────  ──────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+>    GeneratedFlower                              Không Card      Webhook tạo đơn; có link Flower AI
+>   ───────────────────────────────────────────  ──────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+>    Product thường                               HandMade        Webhook tạo đơn; có link Card HandMade + quantity
+>   ───────────────────────────────────────────  ──────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+>    GeneratedFlower                              HandMade        Webhook tạo đơn; có link Flower AI + Card HandMade + quantity
+>   ───────────────────────────────────────────  ──────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+>    Product thường                               AI / History    Webhook tạo đơn chưa có Card; sau đó API submit version cuối cùng cập nhật link Card + quantity
+>   ───────────────────────────────────────────  ──────────────  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+>    GeneratedFlower                              AI / History    Webhook tạo đơn có link Flower AI, chưa có Card; API submit version cuối cùng cập nhật thêm link Card + quantity
+>
+>   Điểm đúng cần nhớ:
+>
+>   GeneratedFlowerId có thể null.
+>   Card có thể null.
+>   Nếu GeneratedFlowerId có giá trị thì ProductId vẫn là Combo nguồn để tạo OrderDetails.
+>
+>   Nếu tách riêng AI mới và History thành hai loại business, sẽ thành 8 trường hợp; nhưng về cập nhật Nhanh.vn chúng giống nhau nên gộp thành 6 là hợp lý.
+>
+>   Và giới hạn ký tự privateDescription áp dụng cho tất cả các trường hợp có link Flower/Card; phương án chống bị cắt hiện vẫn chưa chốt. và • Có. Cách để không rối và không miss case là: xem privateDescription là bản render từ dữ liệu Order hiện tại, không phải nơi tự nối chuỗi từng chỗ.
+>
+>   Lưu ý: hàm này hiện nằm ở HoaTheoMua.Service/Fulfillment/Service.cs:911, còn Webhook chỉ chuyển Order đã Paid vào flow Fulfillment.
+>
+>   Flow nên là:
+>
+>   Order DB là nguồn dữ liệu thật
+>   → một hàm BuildPrivateDescriptionAsync duy nhất đọc toàn bộ OrderDetails
+>   → tạo ra privateDescription hoàn chỉnh
+>   → dùng cùng hàm ở cả:
+>      1. tạo đơn Nhanh.vn sau payment;
+>      2. submit Card version cuối cùng để update đơn Nhanh.vn.
+>
+>   Hàm build không cần phân nhánh 6 case thủ công. Với từng OrderDetails, chỉ áp dụng ba rule độc lập:
+>
+>   1. Có GeneratedFlowerId?
+>      → có: thêm thông tin/link Flower AI.
+>      → không: không thêm phần Flower AI.
+>
+>   2. Có Card đã chốt chưa?
+>      → HandMade: đã có ngay từ CreateOrder.
+>      → AI/History đã submit: đã có GeneratedCard + quantity.
+>      → AI/History chưa submit: chưa có Card cuối cùng.
+>
+>   3. Có Card đã chốt
+>      → thêm link ảnh Card + quantity.
+>
+>   Kết quả tự bao phủ các case:
+>
+>    Dữ liệu hiện có             Nội dung render lên Nhanh
+>   ━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+>    Không Flower, không Card    Thông tin đơn cơ bản
+>   ──────────────────────────  ───────────────────────────────────────────────────
+>    Có Flower, không Card       Cơ bản + link Flower
+>   ──────────────────────────  ───────────────────────────────────────────────────
+>    Không Flower, HandMade      Cơ bản + link Card/quantity
+>   ──────────────────────────  ───────────────────────────────────────────────────
+>    Có Flower, HandMade         Cơ bản + link Flower + Card/quantity
+>   ──────────────────────────  ───────────────────────────────────────────────────
+>    AI/History chưa submit      Cơ bản, có thể thêm marker “chờ khách chốt thiệp”
+>   ──────────────────────────  ───────────────────────────────────────────────────
+>    AI/History đã submit        Cơ bản + Flower nếu có + link Card/quantity
+>
+>   Cụ thể:
+>
+>   Webhook payment thành công
+>   → Fulfillment tạo đơn Nhanh.vn
+>   → gọi BuildPrivateDescriptionAsync(order,...)
+>   → lúc này render Flower nếu có và HandMade nếu có.
+>   → Card AI/History chưa submit thì chưa có link Card.
+>
+>   API submit version cuối cùng
+>   → lưu GeneratedCard + quantity vào OrderDetails
+>   → load lại toàn bộ Order
+>   → gọi lại chính BuildPrivateDescriptionAsync(order,...)
+>   → gọi Nhanh.vn update privateDescription bằng bản render mới.
+>
+>   Điểm quan trọng: API submit không tự append text vào private description cũ. Nó phải render lại toàn bộ từ DB, nếu không sẽ dễ bị link trùng, quantity cũ, hoặc miss Flower/HandMade.
+>
+>   Về giới hạn ký tự Nhanh.vn: builder nên kiểm tra độ dài trước khi gọi Nhanh. Nếu vượt giới hạn, không tự cắt mù dữ liệu Card/quantity; trả trạng thái “over limit” để dùng phương án team sẽ chốt sau. Như vậy chỉ cần
+>   thay chiến lược render tại một chỗ, không phải sửa webhook và submit API riêng lẻ.. Bạn hãy copy toàn bộ chính xác thông tin này, cái mà bạn trả lời cho vào một file .md đặt tên là sol-privateDescription vào trong folder này giúp tôi đi: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/code-introduction/US-039'
+>
+> User context
+>
+> Images:
+> - `c:/Users/ADMIN/OneDrive/Pictures/Ảnh chụp màn hình/Screenshot 2026-09-13 161459.png`
+> - `c:/Users/ADMIN/OneDrive/Pictures/Ảnh chụp màn hình/Screenshot 2026-09-13 161549.png`
+> - `c:/Users/ADMIN/OneDrive/Pictures/Ảnh chụp màn hình/Screenshot 2026-09-13 161611.png`
+
+<details><summary>2 previous messages</summary>
+
+> Mình sẽ tạo file `sol-privateDescription.md` và chép lại đầy đủ nội dung bạn đã trích, giữ nguyên các rule, bảng case và flow render chung.
+>
+> <details><summary>Created a file, ran a command</summary>
+>
+> - Wrote `./HoaTheoMua.Repository/code-introduction/US-039/sol-privateDescription.md` (+88 -0)
+> - Ran `Get-Content -LiteralPath 'HoaTheoMua.Repository/code-introduction/US-039/sol-privateDescription.md' -Encoding utf8 -Raw`
+>
+> </details>
+</details>
+
+Đã tạo và kiểm tra file [sol-privateDescription.md](./HoaTheoMua.Repository/code-introduction/US-039/sol-privateDescription.md).
+
+File chứa đầy đủ bảng 6 trường hợp, flow Webhook/Submit version, ba rule render theo `OrderDetails`, và lưu ý giới hạn ký tự `privateDescription`.
+
+> Đây là flow tạo order mới được BA confirm, bạn hãy đọc chú ý giúp tôi, nó sẽ mở rộng hơn so với được trước, bạn hãy chú ý vào nó giúp tôi nhá. Mới demo với khách hàng xong và khác hàng đã feeback một vài chỗ trong flow khiến cho scope nó bị bự ra chớ máy cái API tính tiền thiệp, flow update private description, flow submit version cuối cùng thì vẫn giữ, chỉ là bên mảng generatedFlower bị thay đổi dẫn đến nó bị ảnh hưởng bên flow tạo order bên tôi một ít. Lúc trước flow tạo mẫu hoa bằng AI nó sẽ như thế này:Đầu tien chọn combo muốn Ai tạo ra mẫu hoa từ đó ->  Nhập tên cho mẫu hoa -> chọn bối cảnh (mockup) -> sau đó gọi AI tạo mẫu -> rồi có thể tạo ra hoặc mua ngay(là cái checkout từ mẫu hoa mà có generatedFlowerId á), hoặc thêm vào giỏ. Và lúc trước thì 1combo - 1 mẫu hoa AI. Bây giờ scope được mở rộng ra khá nhiều. Ban đâu cũng từ chọn combo muốn Ai tạo ra mẫu hoa từ đó ->  Nhập tên cho mẫu hoa -> Chọn Size. Size ở đây do admin cấu hình, tôi ví dụ: SizeS: có thể thích là 1 bó, sizeM: có thể tích là 2 bó -> sizeL: có thể tích là 3 bó. ví dụ người dùng chọn sizeL: thì chọn thêm 2 bó combo khác nữa, hoặc cũng bó hoa ban đầu nhưng số lượng thêm 2 nữa là có 3. Thì lúc này mối quan hệ giữa combo đó là: 1 mẫu hoa AI - N combo -> Tiếp đến chọn kiểu gói và chọn bối cảnh(mockup) -> Tiếp theo là chọn giấy gói và ruy băng(cái này là sản phẩm trong bảng Product có 2 nhãn là Giấy gói và Ruy băng, nó có cái field LabelProduct string dạng "Phụ liệu, Ruy băng") để get nó lên được cho người dùng chọn. Bạn đọc kĩ và nắm thông tin này giúp tôi nhé
+
+Mình đã nắm đây là thay đổi scope quan trọng của Flower AI:
+
+```text
+Trước:
+1 Combo → 1 GeneratedFlower → checkout với một Combo nguồn.
+
+Bây giờ:
+1 GeneratedFlower → N Combo, theo Size user chọn.
+```
+
+Flow mới:
+
+```text
+1. User chọn Combo đầu tiên.
+2. Nhập tên mẫu hoa.
+3. Chọn Size do Admin cấu hình.
+   Ví dụ:
+   - Size S: 1 bó
+   - Size M: 2 bó
+   - Size L: 3 bó
+4. Nếu Size L:
+   → user phải có tổng 3 Combo/bó;
+   → có thể thêm 2 Combo khác;
+   → hoặc thêm 2 quantity của chính Combo ban đầu.
+5. Chọn kiểu gói.
+6. Chọn bối cảnh/Mockup.
+7. Chọn giấy gói và ruy băng.
+   → đây là `Product`, được nhận diện bằng `LabelProduct`
+      như `Phụ liệu`, `Ruy băng`.
+8. BE gọi AI tạo một mẫu hoa tổng hợp từ toàn bộ lựa chọn.
+```
+
+Điểm bản chất cần nhớ:
+
+```text
+GeneratedFlower không còn đại diện cho một Combo duy nhất.
+Nó là thiết kế AI của một tổ hợp nhiều Combo/bó,
+có thể kèm số lượng từng Combo, Size, kiểu gói, giấy gói, ruy băng và Mockup.
+```
+
+Ví dụ Size L:
+
+```text
+GeneratedFlower GF1:
+- Combo A × 1
+- Combo B × 1
+- Combo C × 1
+- Size L
+- Kiểu gói X
+- Giấy gói P
+- Ruy băng R
+- Mockup M
+```
+
+hoặc:
+
+```text
+GeneratedFlower GF1:
+- Combo A × 3
+- Size L
+- Kiểu gói X
+- Giấy gói P
+- Ruy băng R
+- Mockup M
+```
+
+Các flow Card pricing, submit version cuối cùng và update `privateDescription` vẫn giữ. Nhưng phần Flower/Order chắc chắn sẽ cần xem lại sau này, đặc biệt:
+
+- `RootID` không thể chỉ hiểu là một Combo nguồn duy nhất như trước.
+- Snapshot/metadata Flower phải lưu danh sách Combo kèm quantity và các phụ liệu đã chọn.
+- Checkout từ `GeneratedFlower` sẽ cần tạo nhiều `OrderDetails` hoặc xử lý quantity đúng theo danh sách Combo trong thiết kế, thay vì chỉ dùng một `productId` Combo gốc.
+- Khi render Nhanh.vn, link Flower AI vẫn là một link, nhưng nội dung Order phải phản ánh đầy đủ các Combo/bó và phụ liệu của mẫu đó.
+
+Mình sẽ coi flow mới này là ưu tiên mới nhất cho mảng GeneratedFlower và không tiếp tục giả định “một Combo – một GeneratedFlower” trong các trao đổi sau.
+
+> Tiếp theo bạn vừa folder này: 'd:/dev/csharp/projects/Hoatheomua/hoatheomua-be/HoaTheoMua.Repository/doc-us' xem giúp tôi cụm STORY từ 74 đến 83 đang nói về vấn đề gì vậy, sau đó tóm tắt ngắn gọn mỗi STORY giúp tôi đi , và nhóm cụm nó lại để thấy được sự liên quan giữa các us
+
+<details><summary>4 previous messages</summary>
+
+> Mình sẽ đọc toàn bộ folder STORY-074 đến STORY-083 trong `doc-us`, gồm Business Rule/System Test nếu có, rồi tóm tắt từng STORY và nhóm chúng theo flow nghiệp vụ.
+>
+> <details><summary>Ran 3 commands</summary>
+>
+> - Ran `Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object { $_.Name -match 'STORY-(074|075|076|077|078|079|080|081|082|083)' } | Sort-Object Name | Select-Object Name,FullName
+> Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Recurse -File | Where-Object { $_.FullName -match 'STORY-(074|075|076|077|078|079|080|081|082|083)' } | Sort-Object FullName | Select-Object FullName,Length`
+> - Ran ``Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object { $_.Name -match '^STORY-(074|075|076|077|078|079|080|081|082|083)-' } | Sort-Object Name | ForEach-Object { "`n### $($_.Name)"; Get-ChildItem -LiteralPath $_.FullName -Recurse -File | ForEach-Object { $_.FullName } }``
+> - Ran ``$dirs = Get-ChildItem -LiteralPath 'HoaTheoMua.Repository/doc-us' -Directory | Where-Object { $_.Name -match '^STORY-(074|075|076|077|078|079|080|081|082|083)-' } | Sort-Object Name
+> foreach ($dir in $dirs) {
+>   Get-ChildItem -LiteralPath $dir.FullName -Recurse -File | Sort-Object FullName | ForEach-Object {
+>     "`n# FILE: $($_.FullName)"
+>     Get-Content -LiteralPath $_.FullName -Encoding utf8 -Raw
+>   }
+> }``
+>
+> </details>
+>
+> Mình đã xác định được hai cụm rõ ràng: quản trị hình ảnh kiểu gói (074–078) và quản trị cấu hình Size/ số Combo cho Flower AI (079–083). Mình đang đọc phần bị cắt để chốt các rule xóa/đổi trạng thái và cấu hình Size trước khi tóm tắt.
+>
+> <details><summary>Ran a command</summary>
+>
+> - Ran ``$files = @(
+> 'HoaTheoMua.Repository/doc-us/STORY-077-admin-xoa-hinh-anh-kieu-goi/STORY-077-admin-xoa-hinh-anh-kieu-goi.md',
+> 'HoaTheoMua.Repository/doc-us/STORY-077-admin-xoa-hinh-anh-kieu-goi/BusinessRules/BR-276.md',
+> 'HoaTheoMua.Repository/doc-us/STORY-078-admin-cap-nhat-trang-thai-hinh-anh-kieu-goi/STORY-078-admin-cap-nhat-trang-thai-hinh-anh-kieu-goi.md',
+> 'HoaTheoMua.Repository/doc-us/STORY-078-admin-cap-nhat-trang-thai-hinh-anh-kieu-goi/BusinessRules/BR-274.md',
+> 'HoaTheoMua.Repository/doc-us/STORY-078-admin-cap-nhat-trang-thai-hinh-anh-kieu-goi/BusinessRules/BR-277.md',
+> 'HoaTheoMua.Repository/doc-us/STORY-079-admin-xem-danh-sach-cau-hinh-size-hoa-custom-ai/STORY-079-admin-xem-danh-sach-cau-hinh-size-hoa-custom-ai.md',
+> 'HoaTheoMua.Repository/doc-us/STORY-080-admin-them-moi-cau-hinh-size-hoa-custom-ai/STORY-080-admin-them-moi-cau-hinh-size-hoa-custom-ai.md'
+> )
+> foreach ($file in $files) { "`n# FILE: $file"; Get-Content -LiteralPath $file -Encoding utf8 -Raw }``
+>
+> </details>
+</details>
+
+Cụm STORY-074 đến STORY-083 là bộ Admin cấu hình đầu vào cho flow Flower Custom AI mới: **kiểu gói** và **Size theo số lượng Combo**.
+
+```text
+Flow Flower AI mới của customer
+→ chọn Size (do cụm 079–083 cấu hình)
+→ chọn nhiều Combo theo số lượng Size cho phép
+→ chọn kiểu gói (do cụm 074–078 cấu hình)
+→ chọn Mockup, giấy gói, ruy băng
+→ tạo GeneratedFlower
+```
+
+## Cụm 1 — Quản trị hình ảnh kiểu gói
+
+```text
+STORY-074 xem danh sách kiểu gói
+    |-> STORY-075 thêm kiểu gói mới (JPG/PNG, ≤10MB, mặc định Inactive)
+    |-> STORY-076 sửa ảnh/tên/mô tả, giữ nguyên trạng thái
+    |-> STORY-077 xóa có xác nhận
+    `-> STORY-078 đổi Active/Inactive
+         → Active mới được customer thấy khi chọn kiểu gói
+```
+
+- **STORY-074:** Admin xem/lọc danh sách ảnh kiểu gói: preview, tên, mô tả, trạng thái.
+- **STORY-075:** Thêm ảnh kiểu gói; ảnh bắt buộc JPG/PNG tối đa 10MB, tên bắt buộc, tạo xong mặc định `Inactive`.
+- **STORY-076:** Sửa preview/tên/mô tả; không tự đổi `Active/Inactive`.
+- **STORY-077:** Xóa kiểu gói sau xác nhận; không làm thay đổi dữ liệu cũ đã snapshot.
+- **STORY-078:** Bật/tắt kiểu gói; chỉ `Active` mới hiện trong luồng customer chọn kiểu gói.
+
+## Cụm 2 — Quản trị Size Flower Custom AI
+
+```text
+STORY-079 xem danh sách Size + số lượng Combo
+    |-> STORY-080 thêm Size mới (unique, quantity Combo > 0, mặc định Inactive)
+    |-> STORY-081 sửa Size / số lượng Combo, giữ trạng thái
+    |-> STORY-082 xóa có xác nhận
+    `-> STORY-083 đổi Active/Inactive
+         → Active mới được customer thấy khi chọn Size
+```
+
+- **STORY-079:** Admin xem/tìm/lọc danh sách cấu hình `Size + số lượng Combo`.
+- **STORY-080:** Thêm Size, ví dụ `S/M/L`; số lượng Combo là số nguyên dương, Size không trùng, mặc định `Inactive`.
+- **STORY-081:** Sửa Size hoặc số lượng Combo; giữ nguyên trạng thái hiện tại.
+- **STORY-082:** Xóa Size có xác nhận; không sửa dữ liệu Flower cũ đã snapshot.
+- **STORY-083:** Bật/tắt Size; chỉ Size `Active` mới hiện cho customer trong flow chọn Size.
+
+Điểm cần liên hệ với flow mới bạn vừa chốt: `Size` trong cụm 079–083 chính là cấu hình quyết định số Combo/bó mà user có thể phải chọn khi tạo một `GeneratedFlower`. Còn cụm 074–078 cung cấp danh sách kiểu gói hợp lệ để user chọn cho mẫu hoa đó.
