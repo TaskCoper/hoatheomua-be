@@ -30,6 +30,7 @@ using XanhSmService = HoaTheoMua.Service.XanhSm;
 using FulfillmentService = HoaTheoMua.Service.Fulfillment;
 using HoaTheoMua.Service.DependencyInjection.Extensions;
 using SystemPromptService = HoaTheoMua.Service.SystemPrompt;
+using PostCoreService = HoaTheoMua.Service.PostCore;
 using MockupService = HoaTheoMua.Service.Mockup;
 using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 
@@ -113,6 +114,7 @@ builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImpor
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
 builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
+builder.Services.AddScoped<PostCoreService.IService, PostCoreService.Service>();
 
 builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
 builder.Services.AddScoped<CardTemplateService.IService, CardTemplateService.Service>();

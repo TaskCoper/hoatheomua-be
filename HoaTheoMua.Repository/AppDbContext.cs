@@ -22,9 +22,13 @@ public class AppDbContext : DbContext
     public virtual DbSet<RecruitmentRequest> RecruitmentRequests { get; set; }
     public virtual DbSet<Address> Addresses { get; set; }
     public virtual DbSet<SystemPrompt> SystemPrompts { get; set; }
-    public virtual DbSet<PlatformStandard> PlatformStandards { get; set; }
     public virtual DbSet<CardTemplate> CardTemplates { get; set; }
     public virtual DbSet<BasePost> BasePosts { get; set; }
+    public virtual DbSet<BasePostImage> BasePostImages { get; set; }
+    public virtual DbSet<PlatformPost> PlatformPosts { get; set; }
+    public virtual DbSet<GeneratedPostImage> GeneratedPostImages { get; set; }
+    public virtual DbSet<PlatformPostImage> PlatformPostImages { get; set; }
+
     public virtual DbSet<GeneratedPost> GeneratedPosts { get; set; }
     public virtual DbSet<GeneratedFlower> GeneratedFlowers { get; set; }
     public virtual DbSet<GeneratedCard> GeneratedCards { get; set; }
