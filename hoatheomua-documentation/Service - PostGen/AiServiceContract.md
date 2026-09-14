@@ -1,107 +1,100 @@
-# PostGen — Contract AI Service (đề xuất, chưa xác nhận)
+# PostGen — Contract AI proxy
 
-## Contract với AI Service
+Cập nhật 2026-09-14 theo contract người dùng cung cấp. Mốc 3 đã hiện thực typed `HttpClient` tại `HoaTheoMua.Service/AiService/`. Nội dung và ảnh dùng chung endpoint chat completions; luồng ảnh sẽ triển khai ở mốc 4.
 
-Đăng ký theo tiền lệ `XanhSm`: typed `HttpClient` (`AddHttpClient<AiService.IService, AiService.Service>("AiService", c => c.Timeout = ...)`), option POCO bind bằng `configuration.GetSection(nameof(AiOption)).Bind(...)`.
+## Endpoint và cấu hình
 
-| Khoá `AiOption` | Mặc định | |
+`POST https://proxy.hoatheomua.com/v1/chat/completions`, `Content-Type: application/json`. Hiện không cần API key.
+
+| Option / biến môi trường | Mặc định | Ý nghĩa |
 | --- | --- | --- |
-| `BaseUrl` | — | bắt buộc |
-| `ApiKey` | — | gửi qua `Authorization: Bearer` |
-| `TimeoutSeconds` | 120 | |
-| `ContentPath` | `/v1/paraphrase` | |
-| `ImagePath` | `/v1/image-ratio` | |
-| `MaxParallelImageRequests` | 3 | |
-| `MaxImagesPerGeneration` | 12 | |
-| `ImageRetryCount` | 1 | chỉ áp dụng cho item ảnh |
-| `ContentModel` / `ImageModel` | — | |
+| `AiOption__ChatCompletionsUrl` | `https://proxy.hoatheomua.com/v1/chat/completions` | URL đầy đủ |
+| `AiOption__Model` | `chatgpt/gpt-5.6` | Model gửi trong request |
+| `AiOption__ApiKey` | trống | Khi có giá trị, client hỗ trợ gửi `Authorization: Bearer`; cơ chế auth thực tế cần đối chiếu khi proxy bật key |
+| `AiOption__TimeoutSeconds` | `120` | Timeout mỗi lời gọi, giá trị hợp lệ 1–180 giây |
 
-Trong Docker các khoá này vào bằng env `AiOption__*`. Một số khoá đổi được lúc chạy không cần deploy qua bảng `Config` group `postgen`: `postgen.enabled`, `postgen.max_images_per_generation`, `postgen.content_model`, `postgen.image_model`, `postgen.image_instruction` (dùng `ConfigHelper.GetConfigsByGroupsAsync`).
+Không log API key, prompt hoặc dữ liệu nguồn. Không tự follow redirect. Buffer response tối đa 1 MiB ở HttpClient đã đăng ký trong API. Không gửi `response_format`, tool hoặc tham số riêng chưa được proxy xác nhận.
 
-### Sinh nội dung
+Runtime đọc `Config(postgen.enabled)` nếu có: JSON boolean `false` chặn trước khi gọi AI. Ba Config prompt (content và isActive) đọc bằng Group/Key, không lọc UserId. Model hiện lấy từ AiOption; chưa hiện thực override bằng Config.
 
-`POST {BaseUrl}{ContentPath}`
+## Sinh nội dung — đã triển khai
 
 ```json
-{ "requestId": "guid",
-  "platform": "facebook",
-  "systemPrompt": "<SystemPrompt(Post).Content + Config(postgen.platform.{platform}).Value.description>",
-  "source": { "title": "…", "content": "…", "hashtag": "#hoa #tet" },
-  "previousContent": null,
-  "feedback": null,
-  "constraints": { "maxLength": 2200, "language": "vi", "model": "…" } }
+{
+  "model": "chatgpt/gpt-5.6",
+  "messages": [
+    {"role": "system", "content": [
+      {"type": "text", "text": "<nguyên value.content của postgen.system-prompt.facebook>"}
+    ]},
+    {"role": "user", "content": [
+      {"type": "text", "text": "{\"platform\":\"facebook\",\"source\":{\"title\":\"Bó hoa Cảm Ơn\",\"content\":\"10 cành hồng...\",\"hashtag\":\"#HoaTheoMua\"},\"previousContent\":null,\"feedback\":null,\"constraints\":{\"language\":\"vi\"}}"}
+    ]}
+  ]
+}
 ```
 
-Trả về: `{ "requestId": "…", "title": "…", "content": "…", "hashtag": "…", "model": "…", "usage": { "inputTokens": 0, "outputTokens": 0 } }`
+Prompt được gửi nguyên văn, không ghép prompt Post cũ hoặc `description` chuẩn nền tảng. Không gửi constraints.maxLength: các giới hạn biên tập nằm trong prompt. isActive đọc ngay từ Config prompt trước khi gọi. Chưa xác minh giới hạn xuất bản chính thức. Lời gọi nội dung chỉ text, không gửi ảnh bài gốc.
 
-AI sinh **cả ba** phần riêng cho từng nền tảng: title, content, hashtag. Lời gọi **chỉ gửi text**, không đính kèm ảnh.
-
-**Lưu ý khi đăng bài (phase sau)**: Facebook, Instagram, Zalo OA đều không có trường title riêng — bài đăng chỉ là một khối nội dung. Nên lúc đăng phải ghép `Title` vào đầu `Content`. Quy tắc ghép (xuống dòng đơn hay đôi, hashtag đặt ở đâu) chốt ở `PublishingReserved.md`.
-
-### Sinh ảnh
-
-`POST {BaseUrl}{ImagePath}`, mỗi cặp (ảnh nguồn × tỷ lệ) một lời gọi:
+Proxy trả:
 
 ```json
-{ "requestId": "guid",
-  "sourceImageUrl": "https://…/v1.jpg",
-  "originalImageUrl": "https://…/original.jpg",
-  "targetRatio": { "code": "Portrait4x5", "width": 1080, "height": 1350 },
-  "instruction": "<Config: postgen.image_instruction>",
-  "preserve": { "product": true, "brandingText": true, "logo": true },
-  "feedback": "nền sáng hơn",
-  "constraints": { "model": "…" } }
+{
+  "id": "chatcmpl-example",
+  "model": "chatgpt/gpt-5.6",
+  "choices": [{
+    "index": 0,
+    "message": {"role": "assistant", "content": "{\"title\":\"Bó hoa Cảm Ơn\",\"content\":\"Nội dung bài đăng\",\"hashtag\":\"#HoaTheoMua\"}"},
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+}
 ```
 
-Trả về: `{ "requestId": "…", "imageUrl": "https://…", "width": 1080, "height": 1350, "model": "…", "expiresAt": null }`
+Đọc đúng một choice có `finish_reason=stop`, rồi parse JSON trong `message.content`. Chấp nhận một code fence JSON bao ngoài; không tìm/trích JSON tùy ý giữa lời giải thích. Bắt buộc `title`, `content`, `hashtag` là chuỗi; content không được rỗng. Title tối đa 500 ký tự, hashtag tối đa 1000 để phù hợp schema. Câu hỏi lại, Markdown ảnh, JSON hỏng hoặc kết quả bị cắt đều là lỗi, không tạo version.
 
-Hai trường ảnh có vai trò khác nhau:
+Lưu `id` → `AiRequestId`, `model` → `AiModel`, thời gian gọi → `DurationMs`. `SystemPromptConfigId` và `PromptSnapshot` lưu nguồn prompt và nội dung đã gửi. Không suy ra chi phí từ `usage` bằng 0 của proxy.
 
-- `sourceImageUrl` — **tấm cần dựng lại**. Bằng ảnh gốc ở lần sinh đầu, bằng ảnh của version cha khi paraphase tiếp lên một version.
-- `originalImageUrl` — **mốc nhận diện**, luôn là `BasePostImage.ImageUrl`. Để AI đối chiếu sản phẩm khi đã qua nhiều đời dựng lại. Ở lần sinh đầu hai trường bằng nhau.
+## Nội dung có ảnh — contract cho mốc 4
 
-Không có trường `platform`: theo quyết định #11 ảnh dùng chung mọi nền tảng nên lời gọi này không được mang thông tin riêng của nền tảng nào.
+Dùng cùng endpoint/model. `messages[].content` là **một danh sách có thứ tự**, không nhóm lại text và ảnh:
 
-### Xử lý lỗi và rủi ro của việc gọi đồng bộ
-
-Xử lý lỗi theo đúng `XanhSm/Service.cs`: một hàm `SendAsync<T>` tập trung, non-2xx / `JsonException` / thiếu field bắt buộc (`content`, `imageUrl`) → `BadGatewayException`.
-
-Mỗi lời gọi ghi **log ứng dụng** kèm `requestId`, `HttpStatus`, `DurationMs` và mã lỗi của provider — không ghi vào bảng nào (quyết định #14). **Không log `ApiKey`**, và không log nguyên văn payload chứa dữ liệu khách hàng ở mức log mặc định.
-
-Một lần sinh 3 nền tảng × 4 ảnh × 2 tỷ lệ là 24 lời gọi ảnh trong một HTTP request. Biện pháp:
-
-- **Chặn cứng ở validator**: `MaxImagesPerGeneration = 12` — đếm trên **số cặp `(ảnh gốc, tỷ lệ)` thực sự phải sinh sau khi đã gom và loại trùng toàn bộ nền tảng trong request**, không phải đếm theo từng nền tảng. Cặp nào đã có ảnh `Succeeded` trong kho thì không tính vì không gọi AI. Vượt ngưỡng là 422 ngay, không phải một request chạy lâu rồi chết giữa chừng.
-- Gọi ảnh song song có giới hạn bằng `SemaphoreSlim(MaxParallelImageRequests)`.
-- **Hai tầng timeout**: mỗi lời gọi dùng `HttpClient.Timeout` 120s (tiền lệ `AddHttpClient<…>("XanhSmService", c => c.Timeout = …)`); cả lượt sinh dùng thêm một tổng ngân sách — `CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted)` + `CancelAfter(180s)`. Ảnh nào chưa kịp xong khi hết ngân sách thì ghi `Status = Failed`, `ErrorMessage = "Generation budget exceeded"`, **không** làm hỏng cả request.
-- **Lưu ý hạ tầng**: API này chạy sau Cloudflare tunnel — tunnel/reverse proxy phải chịu được thời gian phản hồi lớn hơn tổng ngân sách, nếu không client nhận 524 trong khi backend vẫn đang ghi dữ liệu. Kiểm chứng trước khi bật.
-- **Partial failure không rollback**: ảnh lỗi lưu thành một dòng `GeneratedPostImage` với `Status = Failed` + `ErrorMessage`, ô `PlatformPostImage` tương ứng để `SelectedGeneratedPostImageId = null`, lượt gọi trả 200 với `status = Partial`. Chỉ ném `BadGatewayException` khi **lời gọi nội dung lỗi** hoặc **toàn bộ ảnh đều lỗi**. Người dùng sinh lại đúng ô lỗi bằng `POST .../images/regenerate`, không phải chạy lại cả lượt.
-- **Không có Polly** trong repo: tự retry đúng **một lần**, chỉ cho item ảnh, chỉ với timeout/429/5xx, không retry 4xx. Lời gọi nội dung không retry (tốn tiền và không idempotent). Hướng nâng cấp sau: `Microsoft.Extensions.Http.Resilience`.
-- **Thiết kế sao cho chuyển async không phải viết lại**: response của `generate` và của `GET /api/v1/posts/{id}` đã cùng shape, đều có kho `images` kèm `status` từng tấm. Phase sau chỉ cần đổi `POST generate` trả `202` rồi publish message MassTransit (RabbitMQ + outbox đã wired sẵn) — frontend vẫn poll đúng cái GET nó đang gọi, không đổi DTO.
-
-
-## Trạng thái
-
-Chưa triển khai `AiService/` hoặc endpoint gọi AI. Cần bên làm AI xác nhận endpoint/auth và request/response trước mốc 3. Các đường dẫn và model trong tài liệu là contract đề xuất.
-
-```mermaid
-sequenceDiagram
-    participant C as Controller
-    participant S as PostGeneration Service
-    participant D as PostgreSQL
-    participant A as AI Service
-    C->>S: Generate(post, platforms)
-    S->>D: Kiểm bài tồn tại, config, lấy guard Generating
-    S->>A: Paraphrase nội dung theo platform
-    A-->>S: Title, Content, Hashtag
-    S->>D: Lưu version, sau đó trỏ official
-    loop Cặp ảnh gốc × tỷ lệ đã loại trùng
-        S->>D: Tìm ảnh Succeeded có sẵn
-        opt Chưa có ảnh dùng lại
-            S->>A: Sinh ảnh (giới hạn song song)
-            A-->>S: Ảnh hoặc lỗi
-            S->>D: Lưu version Succeeded/Failed
-        end
-    end
-    S->>D: Lưu ô ảnh lần đầu và trạng thái
-    S-->>C: Detail gồm kho ảnh và các nền tảng
+```json
+[
+  {"type": "text", "text": "Ảnh MỘT:"},
+  {"type": "image_url", "image_url": {"url": "https://example.com/one.png"}},
+  {"type": "text", "text": "Ảnh HAI:"},
+  {"type": "image_url", "image_url": {"url": "https://example.com/two.png"}},
+  {"type": "text", "text": "MỘT màu gì, HAI màu gì?"}
+]
 ```
+
+DTO hiện giữ thứ tự này và đã có test serialization. Chưa có method/service gọi sinh ảnh.
+
+Response tạo ảnh do người dùng cung cấp có `message.content` dạng Markdown:
+
+```text
+![generated image](https://hcm.ss.bfcplatform.vn/taskcoper/general/example.png)
+```
+
+Mốc 4 sẽ trích URL ảnh HTTP/HTTPS từ nội dung này và kiểm kết quả trước khi lưu. Proxy không trả riêng `imageUrl`, width, height hoặc expiresAt. Không coi lời hỏi lại người dùng là kết quả tạo ảnh. Độ bền URL và kích thước ảnh cần kiểm trong mốc 4; việc dựng lại ảnh vẫn phải giữ sản phẩm/nhận diện và đúng tỷ lệ theo kế hoạch.
+
+## Lỗi, timeout và giao dịch
+
+| Trường hợp | Backend |
+| --- | --- |
+| Proxy HTTP 400/422 | 400 `AI service rejected the request` |
+| Proxy HTTP 401/403/429/5xx hoặc lỗi kết nối/timeout | 502 `AI service is unavailable` |
+| Envelope/JSON nội dung sai, thiếu trường, content rỗng, finish_reason khác stop | 502 `AI service returned an invalid response` |
+| Caller hủy request | Hủy lời gọi; thu hồi trạng thái Generating bằng token cleanup riêng |
+
+Không retry lời gọi nội dung. Tổng ngân sách một lượt sinh là 180 giây; từng lời gọi có timeout 120 giây mặc định. Sinh các nền tảng tuần tự, giữ kết quả trong bộ nhớ tới khi tất cả thành công. Lưu mọi GeneratedPost và cập nhật official trong một transaction; nếu một nền tảng lỗi, không ghi version mới cho bất kỳ nền tảng nào trong request. Bản official cũ vẫn giữ, các nền tảng đã claim chuyển Failed.
+
+Claim dùng transaction ngắn khóa BasePost như PostCore update/delete, sau đó đặt các nền tảng đích Generating và commit **trước** HTTP. Request khác sinh cùng nền tảng hoặc sửa/xóa bài đang sinh nhận 409. Không giữ transaction mở suốt lời gọi AI.
+
+Cleanup khi lỗi/cancel có ngân sách riêng 10 giây. Nếu process bị kill hoặc database mất kết nối khiến cleanup thất bại, có thể còn trạng thái Generating; hiện chưa có cơ chế tự phục hồi job. Reverse proxy cần cho phép request kéo dài theo ngân sách; chưa kiểm chứng thời gian chờ trên môi trường deployed.
+
+## Kiểm chứng
+
+- Mock HttpMessageHandler kiểm payload, prompt nguyên văn, optional auth, thứ tự text/ảnh, timeout/cancellation, HTTP lỗi, JSON sai và không retry.
+- PostgreSQL kiểm claim trùng, chặn sửa/xóa trong lúc sinh, rollback khi ghi official lỗi và giữ version trước.
+- Một lời gọi trực tiếp tới proxy bằng prompt Facebook và bài mẫu trả HTTP 200, `finish_reason=stop`, JSON đủ ba trường; provider ID `chatcmpl-98193ffb08d04da1aef8a3b1`. Đây là kiểm chứng contract text, chưa phải kiểm thử sinh ảnh hoặc toàn bộ chất lượng nội dung AI.

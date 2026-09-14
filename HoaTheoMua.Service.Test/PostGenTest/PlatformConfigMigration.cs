@@ -33,7 +33,7 @@ public class PlatformConfigMigration
             await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(source).Options);
             var migrator = db.GetService<IMigrator>();
             const string previous = "20260912053534_AddPostGenCore";
-            var current = db.Database.GetMigrations().Last();
+            const string current = "20260914055741_MovePlatformStandardsToConfig";
             await migrator.MigrateAsync(previous);
             await db.Database.OpenConnectionAsync();
             await ((NpgsqlConnection)db.Database.GetDbConnection()).ReloadTypesAsync();

@@ -1,6 +1,6 @@
 # PostGen — Hợp đồng API
 
-Cập nhật 2026-09-14: đã bỏ bảng PlatformStandard và cả API chuẩn nền tảng/preset riêng. Admin dùng [Config chuẩn nền tảng](PlatformConfig.md) và [Config ratio preset](RatioPresetConfig.md).
+Cập nhật 2026-09-14: đã bỏ bảng PlatformStandard và cả API chuẩn nền tảng/preset riêng. Đã bỏ key `postgen.platform.*`; Admin dùng [Config prompt theo nền tảng](PlatformConfig.md) và [Config ratio preset](RatioPresetConfig.md).
 
 ## Hợp đồng API
 
@@ -12,10 +12,10 @@ Các endpoint PostGen dưới đây dùng `[Authorize(Policy = JwtExtensions.Sta
 | --- | --- | --- | --- |
 | POST | `/api/v1/posts` | `CreatePostCore` | Title, Content, Hashtag, danh sách ảnh |
 | GET | `/api/v1/posts` | `GetPostCoreList` | phân trang + lọc `platform`, `keyword` |
-| GET | `/api/v1/posts/{id:guid}` | `GetPostCoreDetail` | kèm bài nền tảng + version |
+| GET | `/api/v1/posts/{id:guid}` | `GetPostCoreDetail` | kèm nội dung và ảnh chốt của nền tảng |
 | PUT | `/api/v1/posts/{id:guid}` | `UpdatePostCore` | |
 | DELETE | `/api/v1/posts/{id:guid}` | `DeletePostCore` | soft delete |
-| POST | `/api/v1/posts/{id:guid}/generate` | `GeneratePlatformPosts` | **heavy**, chọn nền tảng + tỷ lệ + map ảnh nguồn |
+| POST | `/api/v1/posts/{id:guid}/generate` | `GeneratePlatformPosts` | **heavy**, hiện sinh nội dung; tỷ lệ/ảnh ở mốc 4 |
 | POST | `/api/v1/posts/{id:guid}/platforms/{platform}/content/regenerate` | `RegenerateContent` | **heavy**, `sourceGenerationId` + `feedback` — chỉ nội dung |
 | PUT | `/api/v1/posts/{id:guid}/platforms/{platform}/content` | `EditPlatformContent` | sửa tay nội dung → tạo version `Manual` và chốt luôn |
 | GET | `/api/v1/posts/{id:guid}/platforms/{platform}/content/versions` | `GetContentVersions` | danh sách version nội dung |
@@ -28,6 +28,10 @@ Các endpoint PostGen dưới đây dùng `[Authorize(Policy = JwtExtensions.Sta
 Chừa sẵn, **ghi trong tài liệu nhưng không triển khai**: `POST .../platforms/{platform}/publish`, `POST .../platforms/{platform}/schedule`, `DELETE .../platforms/{platform}/schedule`, `GET /api/v1/post-gen/platform-accounts`.
 
 ### DTO chính
+
+**Mốc 3 đã chạy:** `{"platforms":[{"platform":"facebook"},{"platform":"instagram"}]}`. `usePreset=true` hoặc `ratios` có giá trị trả 422; chưa sinh ảnh. Response giữ shape PostCoreDetail. Xem [GeneratePlatformPosts.md](GeneratePlatformPosts.md).
+
+**Payload dự kiến mốc 4:**
 
 `POST /api/v1/posts/{id}/generate`
 
@@ -44,28 +48,44 @@ Chừa sẵn, **ghi trong tài liệu nhưng không triển khai**: `POST .../pl
 Server gom các cặp `(sourceBasePostImageId, ratioCode)` của **tất cả** nền tảng trong request lại, loại trùng, rồi mới gọi AI. Trong ví dụ trên nếu Instagram cũng chọn `Square1x1` với cùng ảnh A thì cặp đó chỉ sinh một lần và cả hai nền tảng trỏ vào chung một tấm.
 
 ```json
-{ "value": {
+{
+  "value": {
     "basePostId": "…",
-    "images": [
-      { "id": "…", "sourceBasePostImageId": "…A", "ratioCode": "Square1x1",
-        "versionNo": 1, "pixelWidth": 1080, "pixelHeight": 1080,
-        "imageUrl": "https://…", "status": "Succeeded" },
-      { "id": "…", "sourceBasePostImageId": "…B", "ratioCode": "Landscape16x9",
-        "versionNo": 1, "imageUrl": null,
-        "status": "Failed", "errorMessage": "AI service timed out" }
-    ],
     "platforms": [
-      { "platform": "facebook", "platformPostId": "…", "status": "Partial",
-        "content": { "generationId": "…", "versionNo": 1,
-                     "title": "…", "content": "…", "hashtag": "…" },
-        "images": [ { "sourceBasePostImageId": "…A", "ratioCode": "Square1x1",
-                      "selectedGeneratedPostImageId": "…", "sortOrder": 1 } ] }
-    ] },
-  "isSuccess": true, "isFailed": false, "error": null,
-  "traceId": "…", "timestampUtc": "…" }
+      {
+        "platform": "facebook",
+        "platformPostId": "…",
+        "status": "Partial",
+        "content": {
+          "generationId": "…",
+          "versionNo": 1,
+          "title": "…",
+          "content": "…",
+          "hashtag": "…"
+        },
+        "images": [
+          {
+            "sourceBasePostImageId": "…A",
+            "ratioCode": "Square1x1",
+            "selectedGeneratedPostImageId": "…",
+            "sortOrder": 1,
+            "imageUrl": "https://cdn.example.com/flowers/generated-square.jpg",
+            "pixelWidth": 1080,
+            "pixelHeight": 1080
+          }
+        ]
+      }
+    ]
+  },
+  "isSuccess": true,
+  "isFailed": false,
+  "error": null,
+  "traceId": "…",
+  "timestampUtc": "…"
+}
 ```
 
-Mảng `images` là kho ảnh dùng chung, mảng `platforms` là các ô ảnh trỏ vào kho đó. Trường `versionNo` **được tính lúc đọc**, không phải cột trong DB — mọi tham chiếu tới một version cụ thể đều dùng `id`. `GET /api/v1/posts/{id}` trả về đúng shape này, nên chuyển sang bất đồng bộ sau này không phải sửa DTO.
+Response không có `value.images` hoặc `platforms[].versions`. `baseImages` chứa ảnh nguồn; mỗi nền tảng có một object `content` chốt (hoặc null) và `images` chỉ gồm ảnh đã chốt thành công, kèm `imageUrl`, `pixelWidth`, `pixelHeight`, theo `sortOrder`. Ô chưa chọn ảnh hoặc ảnh lỗi không xuất hiện trong danh sách này. Kho lịch sử vẫn lưu trong database; API lịch sử nội dung/ảnh riêng dự kiến ở mốc 5/6. `versionNo` của nội dung được tính lúc đọc, định danh bằng `generationId`. Ví dụ trên rút gọn các trường bài gốc của `PostCoreDetail`.
 
 `POST .../platforms/{platform}/content/regenerate`
 
@@ -131,7 +151,9 @@ Response luôn bọc bằng `ApiResponseFactory.Base(...)` / `BasePagination(...
 | Version ảnh được chọn không đúng cặp (ảnh gốc, tỷ lệ) của ô đó | `BadRequestException` | `Selected image does not match the slot` |
 | Ảnh được chọn có `Status != Succeeded` | `BadRequestException` | `Selected image is not available` |
 | `sortOrder` trùng nhau | `BadRequestException` | `Duplicate image order` |
-| Chưa cấu hình System Prompt `Post` hoặc Config chuẩn của nền tảng | `BadRequestException` | `System prompt for platform {platform} is not configured` |
+| Thiếu/rỗng Config system prompt của nền tảng | `BadRequestException` | `System prompt for platform {platform} is not configured` |
+| Config prompt có isActive=false | `BadRequestException` | `Platform {platform} is disabled` |
+| Config prompt thiếu/sai kiểu isActive | `BadRequestException` | `System prompt for platform {platform} is not configured` |
 | AI trả 2xx nhưng JSON hỏng / thiếu field bắt buộc (`content`, `imageUrl`) | `BadGatewayException` | `AI service returned an invalid response` |
 | AI không gọi được / 5xx / timeout lời gọi nội dung | `BadGatewayException` | `AI service is unavailable` |
 | AI trả **400/422** (payload của ta sai) | `BadRequestException` | `AI service rejected the request` — log mã lỗi của provider, không dội nguyên văn ra client |
@@ -141,11 +163,11 @@ Response luôn bọc bằng `ApiResponseFactory.Base(...)` / `BasePagination(...
 
 ## Phần đã hiện thực
 
-Mốc 1–2: 5 API Post Core; chuẩn nền tảng và preset dùng API Config chung. Các API sinh AI, version và official trong bảng trên là contract đã thiết kế, chưa có route thực thi.
+Mốc 1–2: 5 API Post Core; prompt/bật tắt nền tảng và preset dùng API Config chung; không còn key standard riêng. Mốc 3 đã có POST generate nội dung, AiService proxy và snapshot prompt Config. Các API version/official và sinh ảnh còn là thiết kế mốc 4–7.
 
 - GET danh sách: `pageIndex` mặc định 1, `pageSize` mặc định 10, clamp tối đa 100; `platform=facebook|instagram|zalo`, `keyword` tìm trong title/content, không phân biệt hoa thường.
 - POST/PUT Post Core: `{title, content, hashtag, images: [{id?, imageUrl, sortOrder, width?, height?}]}`. `sortOrder` bắt đầu từ 1, không trùng. POST không nhận id ảnh có sẵn. PUT thay toàn bộ tập; id ảnh phải thuộc bài đang sửa, URL của id cũ không thay đổi. Bỏ id cũ và thêm ảnh không id để thay nguồn.
-- Detail dùng `basePostId`, `title/content/hashtag`, `createdAt/updatedAt`, `baseImages` (ảnh nguồn còn hiệu lực), `images` (mọi version ảnh), `platforms` (nội dung chính thức, `versions`, ô ảnh). Kho version không phân trang và vẫn gồm ảnh nguồn đã soft delete để không đứt lịch sử.
+- Detail dùng `basePostId`, `title/content/hashtag`, `createdAt/updatedAt`, `baseImages` (ảnh nguồn còn hiệu lực), `platforms` (một object `content` chính thức hoặc null, `images` chỉ gồm ảnh đã chốt thành công kèm URL/kích thước). Không có `value.images` hoặc `platforms[].versions`. Lịch sử vẫn lưu trong database; API lịch sử nội dung/ảnh riêng ở mốc 5/6.
 - Preset quản lý qua API Config chung với `AdminPolicy`; payload nằm trong `value`, đọc settings trả danh sách Config có `id`. Chi tiết tạo/đọc/sửa/xóa, quyền và giới hạn validation tại [RatioPresetConfig.md](RatioPresetConfig.md).
 - Bài không tồn tại hoặc đã xóa trả 404 `Post not found`; sửa URL trên ID ảnh cũ trả 400 `Existing image URL cannot be changed; add a new image instead`. Các lỗi FluentValidation trả 422. Error envelope theo middleware hiện có là `{title,status,detail,messageCode,errors,traceId,timestampUtc}`; success dùng `{value,isSuccess,isFailed,error,traceId,timestampUtc}`.
 

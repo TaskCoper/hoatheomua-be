@@ -14,6 +14,7 @@ public class GeneratedPost
     public string? Hashtag { get; set; }
     public string? FeedbackInput { get; set; }
     public Guid? SystemPromptId { get; set; }
+    public Guid? SystemPromptConfigId { get; set; }
     public string? PromptSnapshot { get; set; }
     public string? AiModel { get; set; }
     public string? AiRequestId { get; set; }

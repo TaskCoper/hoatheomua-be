@@ -60,19 +60,21 @@ public class GetPostCoreDetail
 
         Assert.Empty(db.ChangeTracker.Entries());
         Assert.Equal(new[] { 2, 3 }, result.BaseImages.Select(x => x.SortOrder));
-        Assert.Equal(image, Assert.Single(result.Images).Id);
+
         Assert.Equal(new[] { "facebook", "instagram" }, result.Platforms.Select(x => x.Platform));
         Assert.Equal("Partial", result.Platforms[0].Status);
         Assert.Equal("Facebook", result.Platforms[0].Content!.Content);
-        Assert.Equal(1, Assert.Single(result.Platforms[0].Versions).VersionNo);
-        Assert.Equal(new[] { 1, 2 }, result.Platforms[0].Images.Select(x => x.SortOrder));
+        Assert.Equal(1, result.Platforms[0].Content!.VersionNo);
+        var selectedImage = Assert.Single(result.Platforms[0].Images);
+        Assert.Equal(image, selectedImage.SelectedGeneratedPostImageId);
+        Assert.Equal("https://example.com/generated.jpg", selectedImage.ImageUrl);
+        Assert.Equal(1, selectedImage.SortOrder);
         Assert.Equal("Ready", result.Platforms[1].Status);
         Assert.Null(result.Platforms[1].Content);
-        Assert.Empty(result.Platforms[1].Versions);
-        Assert.Equal("Landscape16x9", Assert.Single(result.Platforms[1].Images).RatioCode);
+        Assert.Empty(result.Platforms[1].Images);
     }
     [Fact]
-    public async Task VersionsAreStablePerPlatformAndImagePairIncludingFailedAttempts()
+    public async Task OnlyOfficialContentIsReturnedWhileAllHistoryRemainsStored()
     {
         await using var db = CreateDb(); var user = Guid.NewGuid(); var service = CreateService(db);
         var post = await service.CreatePostCore(Input()); var platformId = Guid.NewGuid(); var now = DateTimeOffset.UtcNow;
@@ -81,13 +83,29 @@ public class GetPostCoreDetail
         db.GeneratedPosts.AddRange(new GeneratedPost { Id = second, PlatformPostId = platformId, Content = "new", Source = ContentSource.Manual, CreatedAt = now }, new GeneratedPost { Id = first, PlatformPostId = platformId, Content = "old", CreatedAt = now });
         db.GeneratedPostImages.AddRange(new GeneratedPostImage { Id = second, BasePostId = post.BasePostId, SourceBasePostImageId = post.BaseImages[0].Id, RatioCode = AspectRatioType.Square1x1, Status = ImageStatus.Failed, SourceImageUrl = "https://example.com/a.jpg", CreatedAt = now }, new GeneratedPostImage { Id = first, BasePostId = post.BasePostId, SourceBasePostImageId = post.BaseImages[0].Id, RatioCode = AspectRatioType.Square1x1, Status = ImageStatus.Succeeded, SourceImageUrl = "https://example.com/a.jpg", ImageUrl = "https://example.com/out.jpg", CreatedAt = now });
         await db.SaveChangesAsync();
+        db.PlatformPostImages.Add(new PlatformPostImage { Id = Guid.NewGuid(), PlatformPostId = platformId,
+            SourceBasePostImageId = post.BaseImages[0].Id, RatioCode = AspectRatioType.Square1x1,
+            SelectedGeneratedPostImageId = second, SortOrder = 1 }); // A failed image is never returned as official.
+        await db.SaveChangesAsync();
         var result = await service.GetPostCoreDetail(post.BasePostId);
         Assert.Equal("old", Assert.Single(result.Platforms).Content!.Content);
-        Assert.Equal(new[] { 1, 2 }, result.Platforms[0].Versions.Select(x => x.VersionNo));
-        Assert.Equal(new[] { first, second }, result.Images.Select(x => x.Id));
-        Assert.Equal(new[] { 1, 2 }, result.Images.Select(x => x.VersionNo));
+        Assert.Equal(1, result.Platforms[0].Content!.VersionNo);
+        var json = System.Text.Json.JsonSerializer.SerializeToElement(result, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        Assert.False(json.GetProperty("platforms")[0].TryGetProperty("versions", out _));
+        Assert.Equal(2, await db.GeneratedPosts.CountAsync()); // Response does not delete history.
+        (await db.PlatformPosts.SingleAsync()).OfficialGenerationId = second;
+        await db.SaveChangesAsync();
+        var selectedSecond = await service.GetPostCoreDetail(post.BasePostId);
+        Assert.Equal(second, selectedSecond.Platforms[0].Content!.GenerationId);
+        Assert.Equal(2, selectedSecond.Platforms[0].Content!.VersionNo);
+        (await db.PlatformPosts.SingleAsync()).OfficialGenerationId = null;
+        await db.SaveChangesAsync();
+        Assert.Null((await service.GetPostCoreDetail(post.BasePostId)).Platforms[0].Content);
+        Assert.False(json.TryGetProperty("images", out _));
+        Assert.Empty(result.Platforms[0].Images);
+        Assert.Equal(2, await db.GeneratedPostImages.CountAsync());
         var again = await service.GetPostCoreDetail(post.BasePostId);
-        Assert.Equal(result.Images.Select(x => (x.Id, x.VersionNo)), again.Images.Select(x => (x.Id, x.VersionNo)));
+        Assert.Empty(again.Platforms[0].Images);
     }
     private static AppDbContext CreateDb() => new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     private static CoreService CreateService(AppDbContext db) => new(db);

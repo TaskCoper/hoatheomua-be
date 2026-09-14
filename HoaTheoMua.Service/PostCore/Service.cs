@@ -66,22 +66,6 @@ public class Service(AppDbContext db) : IService
             {
                 Id = x.Id, ImageUrl = x.ImageUrl, SortOrder = x.SortOrder, Width = x.Width, Height = x.Height
             }).ToListAsync(cancellationToken);
-        // Project only response fields; prompt snapshots and provider metadata can be large.
-        var images = await db.GeneratedPostImages.AsNoTracking().Where(x => x.BasePostId == id)
-            .Select(x => new
-            {
-                x.Id, x.SourceBasePostImageId, x.RatioCode, x.ParentGeneratedPostImageId,
-                x.PixelWidth, x.PixelHeight, x.ImageUrl, x.Status, x.ErrorMessage, x.CreatedAt
-            }).ToListAsync(cancellationToken);
-        result.Images = images.GroupBy(x => new { x.SourceBasePostImageId, x.RatioCode })
-            .OrderBy(x => x.Key.SourceBasePostImageId).ThenBy(x => x.Key.RatioCode)
-            .SelectMany(group => group.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Select((x, index) => new Response.GeneratedImage
-            {
-                Id = x.Id, SourceBasePostImageId = x.SourceBasePostImageId, RatioCode = x.RatioCode.ToString(),
-                ParentGeneratedPostImageId = x.ParentGeneratedPostImageId, VersionNo = index + 1,
-                PixelWidth = x.PixelWidth, PixelHeight = x.PixelHeight, ImageUrl = x.ImageUrl,
-                Status = x.Status.ToString(), ErrorMessage = x.ErrorMessage, CreatedAt = x.CreatedAt
-            })).ToList();
         var platforms = await db.PlatformPosts.AsNoTracking().Where(x => x.BasePostId == id && !x.IsDeleted)
             .OrderBy(x => x.Platform)
             .Select(x => new { x.Id, x.Platform, x.Status, x.LastError, x.OfficialGenerationId })
@@ -90,25 +74,39 @@ public class Service(AppDbContext db) : IService
 
         // Separate collections avoid multiplying rows in a join of versions and image slots.
         var platformIds = platforms.Select(x => x.Id).ToList();
+        var officialIds = platforms.Where(x => x.OfficialGenerationId.HasValue).Select(x => x.OfficialGenerationId!.Value).ToArray();
+        // History IDs/timestamps determine versionNo; only load text for selected content.
         var versions = await db.GeneratedPosts.AsNoTracking().Where(x => platformIds.Contains(x.PlatformPostId))
             .Select(x => new
             {
                 x.PlatformPostId, x.Id, x.ParentGeneratedPostId, x.Source,
-                x.Title, x.Content, x.Hashtag, x.CreatedAt
+                Title = officialIds.Contains(x.Id) ? x.Title : null,
+                Content = officialIds.Contains(x.Id) ? x.Content : null,
+                Hashtag = officialIds.Contains(x.Id) ? x.Hashtag : null, x.CreatedAt
             }).ToListAsync(cancellationToken);
         var slots = await db.PlatformPostImages.AsNoTracking().Where(x => platformIds.Contains(x.PlatformPostId))
             .Select(x => new { x.PlatformPostId, x.SourceBasePostImageId, x.RatioCode, x.SelectedGeneratedPostImageId, x.SortOrder })
             .ToListAsync(cancellationToken);
+        var selectedIds = slots.Where(x => x.SelectedGeneratedPostImageId.HasValue)
+            .Select(x => x.SelectedGeneratedPostImageId!.Value).Distinct().ToArray();
+        var selectedImages = await db.GeneratedPostImages.AsNoTracking()
+            .Where(x => selectedIds.Contains(x.Id) && x.BasePostId == id && x.Status == ImageStatus.Succeeded && x.ImageUrl != null)
+            .Select(x => new { x.Id, x.SourceBasePostImageId, x.RatioCode, x.ImageUrl, x.PixelWidth, x.PixelHeight })
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
         var versionsByPlatform = versions.ToLookup(x => x.PlatformPostId);
         var slotsByPlatform = slots.ToLookup(x => x.PlatformPostId);
         result.Platforms = platforms.Select(p =>
         {
-            var contentVersions = versionsByPlatform[p.Id].OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
-                .Select((x, index) => new Response.ContentVersion
-                {
-                    GenerationId = x.Id, ParentGeneratedPostId = x.ParentGeneratedPostId, VersionNo = index + 1,
-                    Source = x.Source.ToString(), Title = x.Title, Content = x.Content, Hashtag = x.Hashtag, CreatedAt = x.CreatedAt
-                }).ToList();
+            var selected = versionsByPlatform[p.Id].OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
+                .Select((row, index) => new { Row = row, VersionNo = index + 1 })
+                .FirstOrDefault(x => x.Row.Id == p.OfficialGenerationId);
+            var content = selected == null ? null : new Response.ContentVersion
+            {
+                GenerationId = selected.Row.Id, ParentGeneratedPostId = selected.Row.ParentGeneratedPostId,
+                VersionNo = selected.VersionNo, Source = selected.Row.Source.ToString(),
+                Title = selected.Row.Title, Content = selected.Row.Content!, Hashtag = selected.Row.Hashtag,
+                CreatedAt = selected.Row.CreatedAt
+            };
             var platformSlots = slotsByPlatform[p.Id].OrderBy(x => x.SortOrder).ToList();
             return new Response.PlatformDetail
             {
@@ -116,13 +114,20 @@ public class Service(AppDbContext db) : IService
                 Status = p.Status is PlatformPostStatus.Generated or PlatformPostStatus.Ready
                     && platformSlots.Any(x => x.SelectedGeneratedPostImageId == null)
                     && platformSlots.Any(x => x.SelectedGeneratedPostImageId != null) ? "Partial" : p.Status.ToString(),
-                LastError = p.LastError, Versions = contentVersions,
-                Content = contentVersions.FirstOrDefault(x => x.GenerationId == p.OfficialGenerationId),
-                Images = platformSlots.Select(x => new Response.ImageSlot
-                {
-                    SourceBasePostImageId = x.SourceBasePostImageId, RatioCode = x.RatioCode.ToString(),
-                    SelectedGeneratedPostImageId = x.SelectedGeneratedPostImageId, SortOrder = x.SortOrder
-                }).ToList()
+                LastError = p.LastError, Content = content,
+                Images = platformSlots.Where(x => x.SelectedGeneratedPostImageId.HasValue
+                    && selectedImages.TryGetValue(x.SelectedGeneratedPostImageId.Value, out var image)
+                    && image.SourceBasePostImageId == x.SourceBasePostImageId && image.RatioCode == x.RatioCode)
+                    .Select(x =>
+                    {
+                        var image = selectedImages[x.SelectedGeneratedPostImageId!.Value];
+                        return new Response.OfficialImage
+                        {
+                            SourceBasePostImageId = x.SourceBasePostImageId, RatioCode = x.RatioCode.ToString(),
+                            SelectedGeneratedPostImageId = image.Id, SortOrder = x.SortOrder,
+                            ImageUrl = image.ImageUrl!, PixelWidth = image.PixelWidth, PixelHeight = image.PixelHeight
+                        };
+                    }).ToList()
             };
         }).ToList();
         return result;

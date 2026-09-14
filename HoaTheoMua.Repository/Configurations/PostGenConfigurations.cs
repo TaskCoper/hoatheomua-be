@@ -77,6 +77,7 @@ public class GeneratedPostConfiguration : IEntityTypeConfiguration<GeneratedPost
         b.HasOne<PlatformPost>().WithMany().HasForeignKey(x => x.PlatformPostId).OnDelete(DeleteBehavior.Cascade);
         b.HasOne<GeneratedPost>().WithMany().HasForeignKey(x => x.ParentGeneratedPostId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<SystemPrompt>().WithMany().HasForeignKey(x => x.SystemPromptId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Config>().WithMany().HasForeignKey(x => x.SystemPromptConfigId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => new { x.PlatformPostId, x.CreatedAt, x.Id });
         b.HasIndex(x => new { x.UserId, x.CreatedAt }).IsDescending(false, true);
     }
@@ -124,4 +125,3 @@ public class PlatformPostImageConfiguration : IEntityTypeConfiguration<PlatformP
         b.HasIndex(x => new { x.PlatformPostId, x.SortOrder });
     }
 }
-

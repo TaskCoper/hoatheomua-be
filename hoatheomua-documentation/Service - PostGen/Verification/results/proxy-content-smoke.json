@@ -1,0 +1,27 @@
+{
+  "date": "2026-09-14",
+  "endpoint": "https://proxy.hoatheomua.com/v1/chat/completions",
+  "http_status": 200,
+  "test_input": "Synthetic flower product text with the full seeded Facebook system prompt; no customer data",
+  "response": {
+    "id": "chatcmpl-98193ffb08d04da1aef8a3b1",
+    "object": "chat.completion",
+    "created": 1789370354,
+    "model": "chatgpt/gpt-5.6",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"title\":\"Bó hoa Cảm Ơn với 10 cành hồng màu hồng\",\"content\":\"Một bó hoa nhỏ gửi gắm lời cảm ơn chân thành với thiết kế từ 10 cành hồng màu hồng.\\n\\nBó hoa Cảm Ơn có giá 450.000đ/bó. Hoa Theo Mùa nhận đặt trước 1 ngày, giao tại TP.HCM. Giá chưa bao gồm phí giao hàng.\\n\\nNhắn tin để được tư vấn.\",\"hashtag\":\"#HoaTheoMua\"}"
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0
+    }
+  }
+}

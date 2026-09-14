@@ -126,8 +126,9 @@ Chỉ lo nội dung. Không còn dính dáng gì tới ảnh.
 | `Content` | text NOT NULL | giữ NOT NULL — mọi version nội dung đều có nội dung |
 | `Hashtag` | varchar(1000) NULL | **mới** — hashtag AI sinh riêng cho nền tảng này |
 | `FeedbackInput` | text NULL | **mới**, câu feedback khi paraphase lại |
-| `SystemPromptId` | uuid NULL | **mới**, FK → `SystemPrompt`, `Restrict`; null với version `Manual` |
-| `PromptSnapshot` | text NULL | **mới**, prompt thực tế đã gửi (đã ghép `Config(postgen.platform.{platform}).Value.description`) |
+| `SystemPromptId` | uuid NULL | Hiện có, FK → SystemPrompt; giữ cho lịch sử, không dùng cho version AI mới đọc prompt Config |
+| `SystemPromptConfigId` | uuid NULL | **Đã migration** `20260914065606_AddPostGenSystemPromptConfigs`, FK → Config, Restrict; version AI mới tham chiếu prompt riêng theo nền tảng, Manual để null |
+| `PromptSnapshot` | text NULL | **mới**, prompt thực tế đã gửi, lấy nguyên `Config(postgen.system-prompt.{platform}).Value.content` |
 | `AiModel` | varchar(100) NULL | **mới**; null với version `Manual` |
 | `AiRequestId` | varchar(200) NULL | **mới**, id đối soát với AI Service |
 | `ErrorMessage` | text NULL | **mới** |
@@ -157,7 +158,7 @@ Cách làm: `Source = Manual`, bản sửa tay là một dòng `GeneratedPost` n
 | **v3** | **`Manual`** | v2 | **B'** | `null` |
 | v4 | `Ai` | v3 | C | gemini-… |
 
-- Version `Manual` có `AiModel`, `PromptSnapshot`, `SystemPromptId`, `DurationMs` đều null — không có lời gọi AI nào xảy ra.
+- Version `Manual` có `AiModel`, `PromptSnapshot`, `SystemPromptId`, `SystemPromptConfigId`, `DurationMs` đều null — không có lời gọi AI nào xảy ra.
 - **Sửa tay xong tự động thành bản chính thức**: `OfficialGenerationId` trỏ ngay vào version `Manual` vừa tạo. Người dùng đã gõ tay thì hiển nhiên là muốn dùng nó.
 - Muốn quay lại bản sửa tay sau này thì trỏ `OfficialGenerationId` về v3, y hệt cách quay về mọi version khác — không có đường đi riêng.
 - **Chống đẻ version rác**: nếu version mới nhất đang là `Manual` **và** chưa có version nào trỏ vào nó (`ParentGeneratedPostId`) thì ghi đè `Content`/`Hashtag` tại chỗ, giữ nguyên dòng và `CreatedAt` nên số thứ tự đọc ra không đổi; ngược lại tạo version mới. Vừa giữ lịch sử sạch khi người dùng gõ vài chữ rồi lưu liên tục, vừa không phá tính bất biến của version đã bị tham chiếu.
@@ -308,23 +309,23 @@ WHERE   i."BasePostId" = @basePostId;
 ### Hai cái bẫy khi hiện thực hóa
 
 1. **FK vòng**: `PlatformPost.OfficialGenerationId → GeneratedPost` và `GeneratedPost.PlatformPostId → PlatformPost` trỏ lẫn nhau. `OfficialGenerationId` nullable + `Restrict`; `GeneratedPost.PlatformPostId` NOT NULL + `Cascade`, và service phải `SaveChanges` `GeneratedPost` trước, rồi mới gán `OfficialGenerationId` và lưu lần hai. Đây là chỗ dễ vấp nhất.
-2. **Chống chạy song song**: `generate` và `content/regenerate` bắt đầu bằng một `UPDATE` có điều kiện — `UPDATE "PlatformPost" SET "Status"='Generating' WHERE "Id"=@id AND "Status" IN ('Draft','Generated','Ready','Failed')`. Trả về 0 dòng nghĩa là có người đang sinh → `ConflictException`. Rẻ, không cần distributed lock. `images/regenerate` **không** dùng guard này vì nó không đổi trạng thái bài nền tảng nào.
+2. **Chống chạy song song**: generate hiện khóa dòng BasePost trong transaction ngắn (cùng khóa với PostCore update/delete), kiểm trạng thái các PlatformPost đích rồi đặt Generating trước khi commit và gọi HTTP. Trùng nền tảng đang sinh trả ConflictException; không giữ khóa trong lúc gọi AI. `content/regenerate` mốc 5 cần dùng cùng guard. `images/regenerate` không đổi trạng thái cả bài.
 
 Một cái bẫy thứ ba từng có — hai nền tảng cùng paraphase lại một ô rồi giành nhau `VersionNo` — đã được **loại bỏ bằng thiết kế**: không lưu số thứ tự thì không có gì để giành.
 
-### Chuẩn nền tảng — lưu trong Config
+### Cấu hình nền tảng — một Config prompt
 
-Bảng `PlatformStandard` đã được thay bằng ba Config: `postgen.platform.facebook`, `postgen.platform.instagram`, `postgen.platform.zalo`. Không có FK từ bài viết tới Config; nền tảng được nhận diện bằng enum `PlatformType` hiện có.
+Đã bỏ bảng PlatformStandard, các API riêng và namespace `postgen.platform.*`. Mỗi nền tảng dùng Config prompt để lưu bật/tắt và hướng dẫn biên tập; ratio preset vẫn riêng. Xem [PlatformConfig.md](PlatformConfig.md).
 
-`Group = postgen`, `Kind = Setting`, `IsPublic = false`. `Value` chứa `description`, `maxContentLength`, `maxHashtagCount`, `maxImageCount`, `isActive`; các giới hạn có thể null. Admin quản trị qua API Config chung. Xem payload, migration và rollback tại [PlatformConfig.md](PlatformConfig.md).
+### System prompt riêng theo nền tảng — thiết kế cập nhật
 
-### SystemPrompt — có dùng, không đổi schema
+Mỗi nền tảng có một prompt hoàn chỉnh trong Config: `postgen.system-prompt.facebook`, `postgen.system-prompt.instagram`, `postgen.system-prompt.zalo`. Dùng `Group = postgen`, `Kind = Setting`, `IsPublic = false`, `Value = {"isActive": true, "content": "..."}`. Không có prompt dùng chung tại runtime, không có Config chuẩn thứ hai. isActive=false chặn sinh nội dung; thiếu hoặc sai kiểu isActive cũng bị từ chối trước khi gọi AI. Backend chọn đúng key và chụp `value.content` vào `PromptSnapshot` trước khi gọi AI.
 
-Theo quyết định #8: giữ đúng một dòng `Type = Post`, khi gọi AI sinh **nội dung** thì ghép `SystemPrompt.Content` + `Config(postgen.platform.{platform}).Value.description` của nền tảng. Nhờ vậy **không phải đụng tới unique index trên `Type`, không phải `ALTER TYPE` native PG enum, không phải sửa `MapEnum` trong `Program.cs`**.
+API Config hiện có đã lưu được các payload này. Migration `20260914065606_AddPostGenSystemPromptConfigs` đã thêm seed, unique index cho ba key active và SystemPromptConfigId. Generate đã đọc nguyên prompt Config và lưu snapshot khi tạo version AI. Ba payload đầy đủ ở [ParaphrasePromptData.md](ParaphrasePromptData.md).
 
-Lời gọi sinh **ảnh** không dùng `SystemPrompt` và không dùng chuẩn nền tảng — theo quyết định #11 ảnh dùng chung nên chỉ dẫn sinh ảnh phải chung cho mọi nền tảng. Đặt nó ở bảng `Config`, group `postgen`, key `postgen.image_instruction` (admin sửa được, không cần migration).
+Bảng SystemPrompt và dòng Type=Post do migration cũ tạo được giữ lại cho tương thích. GeneratedPost.SystemPromptId hiện trỏ bảng đó; migration mới đã bổ sung SystemPromptConfigId nullable FK tới Config, Restrict, dành cho version AI mới. Không đổi đích FK cũ hay gán Config.Id vào SystemPromptId. Version Manual không có tham chiếu prompt.
 
-Đánh đổi cần biết: admin chỉ điều chỉnh được phần mô tả nối thêm, không điều chỉnh được **cấu trúc** prompt riêng cho từng nền tảng. Nếu sau này giọng văn Instagram và Zalo cần khác nhau nhiều hơn mức một đoạn mô tả, đường nâng cấp là thêm cột `Platform` nullable vào `SystemPrompt` + unique `(Type, Platform)` (và unique bộ phận cho `Platform IS NULL`) — vẫn không cần đụng PG enum.
+Sinh ảnh vẫn dùng `postgen.image_instruction`, không dùng ba system prompt sinh nội dung.
 
 ### PostHistory và ClientHistory — KHÔNG dùng
 
@@ -389,12 +390,11 @@ Không có mấy dòng này thì `generate` ném lỗi ngay từ lần gọi đ�
 
 | Bảng | Dòng cần có | Nội dung |
 | --- | --- | --- |
-| `SystemPrompt` | 1 dòng `Type = Post` | Prompt gốc cho việc paraphase nội dung |
-| `Config` | 3 key `postgen.platform.facebook`, `postgen.platform.instagram`, `postgen.platform.zalo` | `description` = mô tả đặc thù nền tảng (ghép vào prompt), `maxContentLength` = 63206 / 2200 / 2000, `maxHashtagCount` = 30 / 30 / 10, `maxImageCount` = 80 / 10 / 9 |
+| `Config` | 3 key `postgen.system-prompt.facebook`, `postgen.system-prompt.instagram`, `postgen.system-prompt.zalo` | Ba prompt hoàn chỉnh độc lập trong value.content; đã seed trong migration AddPostGenSystemPromptConfigs, giữ bản active đã có |
 | `Config` | `postgen.image_instruction` | Chỉ dẫn sinh ảnh dùng chung, group `postgen`, `UserId = Guid.Empty` |
 | `Config` | `postgen.enabled` | Cờ bật/tắt, mặc định `true` |
 
-Con số `MaxImageCount` và `MaxContentLength` ở trên là **giá trị tham khảo tại thời điểm viết tài liệu**, chưa kiểm chứng lại với tài liệu chính thức của từng nền tảng. Đợt này không validate theo chúng (quyết định #18) nên sai cũng chưa ảnh hưởng; phải xác nhận lại trước khi phase đăng bài dùng tới.
+Giới hạn biên tập nằm trong prompt. Giới hạn chính thức của từng nền tảng và kiểm tra trước khi xuất bản sẽ thiết kế ở phase đăng bài; không có Config standard riêng.
 
 ### Giới hạn validate
 
@@ -423,7 +423,7 @@ Rule URL http(s) hiện bị copy-paste ở `CardTemplate/Validate` và `Mockup/
 - `SystemPrompt(Post)` có thể đã được admin tạo. Seed dùng `INSERT ... ON CONFLICT ("Type") DO NOTHING` để giữ prompt hiện có. Migration cũ seed PlatformStandard và hai config toàn hệ thống; migration mới chuyển các chuẩn sang Config rồi bỏ bảng.
 - Thêm unique index `(Group, Key)` trên `Configs`, chỉ áp dụng cho preset PostGen còn hiệu lực. Index ngăn tạo trùng preset; việc tạo/sửa dùng API Config chung, không có upsert preset. Index `card_config` vẫn giữ nguyên.
 - `GeneratedPost.PlatformPostId` là NOT NULL; `PlatformPost.OfficialGenerationId` nullable. Chỉ chiều trỏ về version chính thức nullable. Khi sinh nội dung ở mốc sau, lưu version trước rồi cập nhật con trỏ chính thức.
-- `PlatformPost.Platform` xác định key `postgen.platform.{platform}` khi cần đọc chuẩn từ Config; không có FK tới Config.
+- `PlatformPost.Platform` xác định key `postgen.system-prompt.{platform}`. GeneratedPost.SystemPromptConfigId lưu tham chiếu prompt đã dùng.
 - PUT Post Core nhận toàn bộ tập ảnh hiện tại. Ảnh giữ lại có `id`; ảnh mới không có `id`. Không đổi URL trên ID cũ: thay ảnh bằng dòng mới để giữ nguồn của lịch sử. Ảnh bị bỏ đánh `IsDeleted = true`, version và ô nền tảng cũ được giữ nguyên.
 - Khi đảo thứ tự ảnh gốc, service khóa dòng bài gốc, tạm soft delete ảnh trong một lần flush rồi lưu tập cuối, tất cả nằm trong một transaction. Đọc bên ngoài transaction không thấy trạng thái tạm.
 - DELETE khóa bài gốc, soft delete bài, ảnh gốc và bài nền tảng; không xóa version. PUT/DELETE từ chối bài có nền tảng đang `Generating`.
@@ -431,11 +431,21 @@ Rule URL http(s) hiện bị copy-paste ở `CardTemplate/Validate` và `Mockup/
 
 ## Kiểm chứng và rollback
 
-Chạy migration trên PostgreSQL riêng, kiểm tra seed, index, FK vòng và CHECK. Không áp dụng vào DB dùng chung để kiểm thử. `Down` bỏ phần schema PostGen và chỉ xóa các seed có ID cố định của migration; việc downgrade sau khi đã dùng feature sẽ mất dữ liệu PostGen, cần sao lưu trước. Kiểm chứng thực tế ghi tại `Implementation.md`.
+Chạy migration trên PostgreSQL riêng, kiểm tra seed, index, FK vòng và CHECK. Không áp dụng vào DB dùng chung để kiểm thử. `Down` của AddPostGenSystemPromptConfigs giữ toàn bộ Config và từ chối bỏ cột nếu có SystemPromptConfigId khác null. `Down` của migration AddPostGenCore cũ bỏ schema PostGen và chỉ xóa các seed có ID cố định của migration; việc downgrade sau khi đã dùng feature sẽ mất dữ liệu PostGen, cần sao lưu trước. Kiểm chứng thực tế ghi tại `Implementation.md`.
 
 Mapping EF của bốn native enum sẵn có cũng dùng tên có quote (`\"PlatformType\"`, `\"SystemPromptType\"`, `\"CardFormType\"`, `\"ClientHistoryType\"`). Đây là sửa metadata để câu SQL so sánh enum không bị PostgreSQL đổi tên type thành chữ thường; không đổi schema hay giá trị enum.
 
 
 ## Migration chuẩn nền tảng sang Config (2026-09-14)
 
-`20260914055741_MovePlatformStandardsToConfig` chuyển dữ liệu trước khi drop bảng, giữ ID/metadata/xóa mềm và chặn xung đột key hoặc ID. Unique index `IX_Configs_PostGenPlatforms` áp dụng cho ba key còn hiệu lực. Down khôi phục bảng từ Config trong transaction và từ chối JSON không biểu diễn được hoặc nhiều bản ghi cùng nền tảng.
+`20260914055741_MovePlatformStandardsToConfig` chuyển dữ liệu trước khi drop bảng, giữ ID/metadata/xóa mềm và chặn xung đột key hoặc ID. Index `IX_Configs_PostGenPlatforms` từng áp dụng cho ba key; đã bị migration ConsolidatePostGenPlatformConfigs bỏ. Down khôi phục bảng từ Config trong transaction và từ chối JSON không biểu diễn được hoặc nhiều bản ghi cùng nền tảng.
+
+## Migration gộp Config (2026-09-14)
+
+`20260914073414_ConsolidatePostGenPlatformConfigs` bổ sung isActive vào prompt còn hiệu lực, giữ prompt/ID/FK/snapshot, xóa toàn bộ postgen.platform.* trong group postgen và bỏ index của các key đó. JSON không hợp lệ làm Up dừng nguyên transaction. Down bị chặn vì các mô tả/giới hạn đã loại bỏ; muốn quay lại phải khôi phục backup trước migration. Chi tiết quy tắc chuyển trạng thái ở [PlatformConfig.md](PlatformConfig.md).
+
+## Response nội dung chốt (cập nhật 2026-09-14)
+
+GeneratedPost tiếp tục lưu lịch sử các lần sinh. Response generate/GET PostCoreDetail chỉ trả một `platforms[].content` theo OfficialGenerationId (hoặc null), không trả `platforms[].versions`. VersionNo vẫn tính theo lịch sử và không đổi khi chọn bản cũ. API lịch sử riêng nằm ở mốc 5; thay đổi response này không cần migration.
+
+Response `PostCoreDetail` không trả `value.images`. `platforms[].images` chỉ chứa ảnh thành công đang được chọn, kèm URL và kích thước theo `SortOrder`; `baseImages` vẫn là ảnh nguồn. Kho ảnh và slot chưa chọn vẫn giữ trong database, không đổi schema. API lịch sử ảnh riêng dự kiến ở mốc 6.

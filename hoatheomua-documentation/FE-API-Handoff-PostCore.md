@@ -6,15 +6,15 @@ Ngày đối chiếu: **14/09/2026**. Nội dung dựa trên controller, DTO, se
 
 | Method | Endpoint | Chức năng / thay đổi | Quyền | Trạng thái code |
 | --- | --- | --- | --- | --- |
-| POST | `/api/v1/posts` | Tạo bài viết gốc và ảnh nguồn | Staff hoặc Admin | Đã triển khai trong workspace, chưa commit |
-| GET | `/api/v1/posts` | Danh sách bài viết, phân trang và lọc | Staff hoặc Admin | Đã triển khai trong workspace, chưa commit |
-| GET | `/api/v1/posts/{id}` | Chi tiết bài viết, ảnh và dữ liệu nền tảng | Staff hoặc Admin | Đã triển khai trong workspace, chưa commit |
-| PUT | `/api/v1/posts/{id}` | Cập nhật bài viết và thay toàn bộ danh sách ảnh nguồn | Staff hoặc Admin | Đã triển khai trong workspace, chưa commit |
-| DELETE | `/api/v1/posts/{id}` | Xóa mềm bài viết | Staff hoặc Admin | Đã triển khai trong workspace, chưa commit |
+| POST | `/api/v1/posts` | Tạo bài viết gốc và ảnh nguồn | Staff hoặc Admin | Đã triển khai, commit/push trên feature/post-gen |
+| GET | `/api/v1/posts` | Danh sách bài viết, phân trang và lọc | Staff hoặc Admin | Đã triển khai, commit/push trên feature/post-gen |
+| GET | `/api/v1/posts/{id}` | Chi tiết bài viết, ảnh và dữ liệu nền tảng | Staff hoặc Admin | Đã triển khai, commit/push trên feature/post-gen |
+| PUT | `/api/v1/posts/{id}` | Cập nhật bài viết và thay toàn bộ danh sách ảnh nguồn | Staff hoặc Admin | Đã triển khai, commit/push trên feature/post-gen |
+| DELETE | `/api/v1/posts/{id}` | Xóa mềm bài viết | Staff hoặc Admin | Đã triển khai, commit/push trên feature/post-gen |
 
-**Tổng: 5 endpoint PostCore đã triển khai trong workspace, chưa commit.** Trạng thái triển khai lên server chưa được xác minh trong lần tổng hợp này; FE cần dùng môi trường đã có code và migration tương ứng.
+**Tổng: 5 endpoint PostCore đã triển khai, commit/push trên feature/post-gen.** Trạng thái triển khai lên server chưa được xác minh trong lần tổng hợp này; FE cần dùng môi trường đã có code và migration tương ứng.
 
-Các API sinh AI, regenerate, chỉnh/chọn version nội dung hoặc ảnh, official, publish và schedule chưa có route thực thi trong phần PostCore hiện tại. Không dùng các route thiết kế đó để tích hợp ở đợt này. Cấu hình PostGen dùng API Config chung hiện có, không thuộc 5 endpoint trong tài liệu này.
+Mốc 3 đã thêm API generate nội dung trong workspace; xem [bàn giao PostGen mốc 3](FE-API-Handoff-PostGen-Milestone3.md). API regenerate theo feedback, chỉnh/chọn version, sinh ảnh, official, publish và schedule vẫn chưa triển khai. Tài liệu này tập trung vào 5 API PostCore. Cấu hình PostGen dùng API Config chung hiện có, không thuộc 5 endpoint trong tài liệu này.
 
 ## 2. Quy ước chung
 
@@ -106,7 +106,6 @@ Kiểu: `ApiResponse<PostCoreDetail>`. Tạo bài viết chỉ lưu nội dung v
         "height": 1080
       }
     ],
-    "images": [],
     "platforms": []
   },
   "isSuccess": true,
@@ -184,7 +183,6 @@ interface PostCoreSummary {
 
 interface PostCoreDetail extends PostCoreSummary {
   baseImages: BaseImage[];
-  images: GeneratedImage[];
   platforms: PlatformDetail[];
 }
 
@@ -200,20 +198,6 @@ type RatioCode =
   | "Square1x1" | "Portrait4x5" | "Portrait3x4"
   | "Story9x16" | "Landscape16x9";
 
-interface GeneratedImage {
-  id: Guid;
-  sourceBasePostImageId: Guid;
-  parentGeneratedPostImageId: Guid | null;
-  ratioCode: RatioCode;
-  versionNo: number;
-  pixelWidth: number;
-  pixelHeight: number;
-  imageUrl: string | null;
-  status: "Succeeded" | "Failed";
-  errorMessage: string | null;
-  createdAt: DateTimeString;
-}
-
 type PlatformStatus =
   | "Draft" | "Generating" | "Generated" | "Failed" | "Ready"
   | "Scheduled" | "Publishing" | "Published" | "PublishFailed" | "Partial";
@@ -224,8 +208,7 @@ interface PlatformDetail {
   status: PlatformStatus;
   lastError: string | null;
   content: ContentVersion | null;
-  versions: ContentVersion[];
-  images: ImageSlot[];
+  images: OfficialImage[];
 }
 
 interface ContentVersion {
@@ -239,10 +222,13 @@ interface ContentVersion {
   createdAt: DateTimeString;
 }
 
-interface ImageSlot {
+interface OfficialImage {
   sourceBasePostImageId: Guid;
   ratioCode: RatioCode;
-  selectedGeneratedPostImageId: Guid | null;
+  selectedGeneratedPostImageId: Guid;
+  imageUrl: string;
+  pixelWidth: number;
+  pixelHeight: number;
   sortOrder: number;
 }
 ```
@@ -250,12 +236,12 @@ interface ImageSlot {
 Lưu ý cho màn hình chi tiết:
 
 - `baseImages`: ảnh nguồn còn hiệu lực, sắp xếp theo `sortOrder`; dùng để điền form sửa bài.
-- `images` ở cấp bài viết: kho version ảnh sinh ra, có thể gồm lịch sử của ảnh nguồn đã xóa. Không phải danh sách ảnh nguồn để gửi lại khi PUT.
-- `platforms[].content`: nội dung chính thức được chọn, có thể null; `versions` là lịch sử nội dung.
-- `platforms[].images`: các ô ảnh tham chiếu vào kho ảnh qua `selectedGeneratedPostImageId`; ID này có thể null.
+- Không còn `value.images`; lịch sử ảnh vẫn ở database, API đọc lịch sử riêng dự kiến ở mốc 6.
+- `platforms[].content`: một object nội dung chính thức được chọn hoặc null. Không có mảng versions trong response chi tiết; API lịch sử riêng dự kiến ở mốc 5.
+- `platforms[].images`: ảnh đã chốt thành công theo `sortOrder`, có `selectedGeneratedPostImageId`, `imageUrl` và kích thước; không trả ô chưa chọn hoặc ảnh lỗi.
 - `versionNo` được tính lúc đọc. Dùng `id` / `generationId` để định danh version.
 - `Partial` được suy ra khi trạng thái là Generated/Ready và có cả ô đã chọn ảnh lẫn ô chưa chọn ảnh.
-- Kho ảnh và lịch sử version trong detail hiện không phân trang. Các trạng thái và DTO phục vụ đọc dữ liệu; không có nghĩa các thao tác sinh AI/đăng bài đã được triển khai.
+- Detail chỉ trả nội dung và ảnh chốt; lịch sử nội dung/ảnh không trả kèm detail. Các trạng thái và DTO phục vụ đọc dữ liệu; không có nghĩa các thao tác sinh AI/đăng bài đã được triển khai.
 
 Bài không tồn tại hoặc đã xóa trả HTTP 404, `detail: "Post not found"`.
 

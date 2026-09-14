@@ -18,7 +18,7 @@ public class CreatePostCore
         var result = await CreateService(db).CreatePostCore(Input());
         Assert.Equal(result.BasePostId, (await db.BasePosts.SingleAsync()).Id);
         Assert.Equal(new[] { 1, 2, 3 }, result.BaseImages.Select(x => x.SortOrder));
-        Assert.Empty(result.Images);
+        Assert.False(System.Text.Json.JsonSerializer.SerializeToElement(result, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)).TryGetProperty("images", out _));
         Assert.Empty(result.Platforms);
         Assert.Empty(db.PostHistories);
         Assert.Empty(db.ClientHistories);

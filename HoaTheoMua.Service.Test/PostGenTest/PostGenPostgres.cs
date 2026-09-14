@@ -51,7 +51,7 @@ public class PostGenPostgres
             await db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM \"BasePost\" WHERE \"Id\" = {legacyId}");
             var promptId = Guid.NewGuid();
             await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"SystemPrompt\" (\"Id\", \"Type\", \"Content\", \"IsDeleted\", \"CreatedAt\") VALUES ({promptId}, 'post', 'Existing custom prompt', false, now())");
-            await migrator.MigrateAsync(current);
+            await migrator.MigrateAsync("20260914065606_AddPostGenSystemPromptConfigs");
             await migrator.MigrateAsync(previous);
             await migrator.MigrateAsync(current);
             Assert.False(db.Database.HasPendingModelChanges());
@@ -59,7 +59,7 @@ public class PostGenPostgres
             await db.Database.OpenConnectionAsync();
             await ((NpgsqlConnection)db.Database.GetDbConnection()).ReloadTypesAsync();
             Assert.Equal("Existing custom prompt", (await db.SystemPrompts.SingleAsync(x => x.Type == SystemPromptType.Post)).Content);
-            Assert.Equal(3, await db.Configs.CountAsync(x => x.Group == "postgen" && x.Key.StartsWith("postgen.platform.")));
+            Assert.Equal(0, await db.Configs.CountAsync(x => x.Group == "postgen" && x.Key.StartsWith("postgen.platform.")));
             Assert.Null(db.Model.FindEntityType("HoaTheoMua.Repository.Entity.PlatformStandard"));
             Assert.Equal(5, await db.Configs.CountAsync(x => x.Group == "postgen" && x.Key != "postgen.ratio-preset"));
             Assert.False(await db.GeneratedCards.AnyAsync(x => x.FormType == CardFormType.Calligraphy));
@@ -85,7 +85,7 @@ public class PostGenPostgres
             await using var readDb = new AppDbContext(readOptions);
             var reader = new Core.Service(readDb);
             Assert.Empty((await reader.GetPostCoreDetail(post.BasePostId)).Platforms);
-            Assert.Equal(4, commands.Sql.Count);
+            Assert.Equal(3, commands.Sql.Count);
             Assert.Empty(readDb.ChangeTracker.Entries());
             commands.Sql.Clear();
             await Assert.ThrowsAsync<HoaTheoMua.Service.Exceptions.NotFoundException>(() => reader.GetPostCoreDetail(Guid.NewGuid()));

@@ -686,13 +686,13 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false AND \"Kind\" = 'Setting' AND \"Group\" = 'card_config' AND \"Key\" IN ('card_config.sizes', 'card_config.prices')");
 
-                    b.HasIndex(new[] { "Group", "Key" }, "IX_Configs_PostGenPlatforms")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false AND \"Group\" = 'postgen' AND \"Key\" IN ('postgen.platform.facebook', 'postgen.platform.instagram', 'postgen.platform.zalo')");
-
                     b.HasIndex(new[] { "Group", "Key" }, "IX_Configs_PostGenRatioPreset")
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false AND \"Group\" = 'postgen' AND \"Key\" = 'postgen.ratio-preset'");
+
+                    b.HasIndex(new[] { "Group", "Key" }, "IX_Configs_PostGenSystemPrompts")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false AND \"Group\" = 'postgen' AND \"Key\" IN ('postgen.system-prompt.facebook', 'postgen.system-prompt.instagram', 'postgen.system-prompt.zalo')");
 
                     b.ToTable("Configs");
                 });
@@ -911,6 +911,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid?>("SystemPromptConfigId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("SystemPromptId")
                         .HasColumnType("uuid");
 
@@ -924,6 +927,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ParentGeneratedPostId");
+
+                    b.HasIndex("SystemPromptConfigId");
 
                     b.HasIndex("SystemPromptId");
 
@@ -2857,6 +2862,11 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasForeignKey("PlatformPostId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.Config", null)
+                        .WithMany()
+                        .HasForeignKey("SystemPromptConfigId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("HoaTheoMua.Repository.Entity.SystemPrompt", null)
                         .WithMany()
