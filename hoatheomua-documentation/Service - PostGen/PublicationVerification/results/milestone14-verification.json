@@ -1,0 +1,41 @@
+{
+  "milestone": 14,
+  "status": "IMPLEMENTED_LOCAL",
+  "date": "2026-09-15",
+  "build": "PASS",
+  "fullSuite": {
+    "passed": 1115,
+    "failed": 0,
+    "skipped": 0
+  },
+  "publishingSuite": 120,
+  "newTests": {
+    "unit": 20,
+    "postgresIntegration": 1
+  },
+  "http": {
+    "requests": 37,
+    "checks": 90,
+    "status": "PASS",
+    "evidence": "schedule-api-evidence.json"
+  },
+  "migration": "20260915160000_AddPostPublicationSchedule",
+  "defaults": {
+    "minimumLeadSeconds": 60,
+    "maximumDays": 30,
+    "latenessSeconds": 900
+  },
+  "database": "PostgreSQL",
+  "queue": "RabbitMQ",
+  "clock": "controllable TimeProvider",
+  "metaTransport": "fake HTTP; production adapters",
+  "liveMetaPublished": false,
+  "aiCalls": 0,
+  "deployed": false,
+  "testDatabaseCleanup": true,
+  "temporaryContainersRemoved": true,
+  "composeValidation": {
+    "current": "PASS",
+    "legacy": "PASS with existing optional sample-variable warnings"
+  }
+}

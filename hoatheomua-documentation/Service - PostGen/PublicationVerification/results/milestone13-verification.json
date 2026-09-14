@@ -1,0 +1,39 @@
+{
+  "milestone": 13,
+  "status": "IMPLEMENTED_LOCAL",
+  "date": "2026-09-15",
+  "build": "PASS",
+  "fullSuite": {
+    "passed": 1094,
+    "failed": 0,
+    "skipped": 0
+  },
+  "newAdapterAndWorkerTests": 79,
+  "http": {
+    "requests": 49,
+    "checks": 157,
+    "status": "PASS",
+    "evidence": "api-integration-tester.json"
+  },
+  "providers": [
+    "Facebook Page single/multi-photo",
+    "Instagram Facebook Login single/square carousel"
+  ],
+  "transport": "fake HttpMessageHandler for Meta and media; real local HTTP API/PostgreSQL/RabbitMQ",
+  "migration": "No additional migration beyond milestone 12",
+  "liveMetaPublished": false,
+  "aiCalls": 0,
+  "deployed": false,
+  "publishingFlagsDefault": false,
+  "remaining": [
+    "Authorized smoke on a specific account and test post before enabling each channel",
+    "Instagram container published with missing media ID remains NeedsReview",
+    "Scheduling belongs to milestone 14"
+  ],
+  "testDatabaseCleanup": true,
+  "temporaryContainersRemoved": true,
+  "composeValidation": {
+    "current": "PASS",
+    "legacy": "PASS with existing missing optional sample variables"
+  }
+}

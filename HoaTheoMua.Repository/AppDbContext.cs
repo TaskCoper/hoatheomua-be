@@ -27,6 +27,9 @@ public class AppDbContext : DbContext
     public virtual DbSet<BasePostImage> BasePostImages { get; set; }
     public virtual DbSet<PlatformAccount> PlatformAccounts { get; set; }
     public virtual DbSet<PlatformOAuthSession> PlatformOAuthSessions { get; set; }
+    public virtual DbSet<PostPublication> PostPublications { get; set; }
+    public virtual DbSet<PostPublicationAttempt> PostPublicationAttempts { get; set; }
+    public virtual DbSet<PostPublicationReview> PostPublicationReviews { get; set; }
     public virtual DbSet<PlatformPost> PlatformPosts { get; set; }
     public virtual DbSet<GeneratedPostImage> GeneratedPostImages { get; set; }
     public virtual DbSet<PlatformPostImage> PlatformPostImages { get; set; }

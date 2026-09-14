@@ -1,0 +1,31 @@
+{
+  "milestone": 12,
+  "status": "PASS",
+  "verifiedAt": "2026-09-14T20:44:14.403296+00:00",
+  "build": "PASS",
+  "publishingTests": {
+    "passed": 20,
+    "includesPostgreSQL": true
+  },
+  "fullSuite": {
+    "passed": 1015,
+    "failed": 0,
+    "skipped": 0
+  },
+  "http": {
+    "requests": 39,
+    "checks": 91,
+    "transport": "RabbitMQ (application registration)",
+    "provider": "fake"
+  },
+  "liveAiCalls": 0,
+  "liveSocialProviderCalls": 0,
+  "deployed": false,
+  "limitations": [
+    "M13 real adapters are not registered; publishing flags default false.",
+    "M14 schedule APIs are not implemented.",
+    "M10 durable media storage remains deferred."
+  ],
+  "migration": "20260915120000_AddPostGenPublications",
+  "cleanup": "Confirmed no remaining test databases; removed both disposable PostgreSQL/RabbitMQ containers and their volumes."
+}

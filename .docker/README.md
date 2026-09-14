@@ -14,7 +14,7 @@ Tạo GitHub **Environment Secrets** trong environment `dev` hoặc `prod` (Sett
 | `POSTGEN_META_APP_ID` | App ID; app đang kiểm tra: `1076807665108799` |
 | `POSTGEN_META_APP_SECRET` | App Secret của cùng app, nhập trực tiếp vào secrets |
 | `POSTGEN_META_GRAPH_API_VERSION` | Phiên bản Graph API được app hỗ trợ, dạng `vN.N`; cần xác nhận, không có mặc định |
-| `POSTGEN_META_CONFIG_ID` | Facebook Login for Business configuration ID; cấu hình vừa tạo: `2703062643422200`, loại **user access token** |
+| `POSTGEN_META_CONFIG_ID` | Facebook Login for Business configuration ID, phải chọn loại **Mã truy cập dành cho người dùng** (user access token); kiểm tra loại thực tế trong chi tiết cấu hình, không suy ra từ tên |
 | `POSTGEN_META_FACEBOOK_CALLBACK_URL` | URL callback Facebook công khai, khớp chính xác URL đã lưu trên Meta |
 | `POSTGEN_META_INSTAGRAM_CALLBACK_URL` | URL callback Instagram công khai, khớp chính xác URL đã lưu trên Meta |
 | `POSTGEN_ACTIVE_ENCRYPTION_KEY_ID` | `k1` (mặc định) hoặc `k2` khi xoay khóa |
@@ -61,3 +61,13 @@ Workflow deploy chạy `validate-postgen-env.sh` trước khi pull/deploy: Meta 
 - Startup tự áp dụng migration mốc 11. Nếu dữ liệu cũ có `PlatformPost.PlatformAccountId` chưa được đối soát thì migration chủ động dừng; không tự xóa các giá trị này.
 
 Việc chỉnh file không tạo GitHub Secrets hoặc tự triển khai. Sau khi điền secrets và deploy code mốc 11, thử connect/callback bằng tài khoản Admin trong cùng trình duyệt; kiểm tra backend trả account đúng trước khi làm mốc đăng bài.
+
+
+### PostGen publishing — mốc 13
+
+`POSTGEN_PUBLISH_FACEBOOK_ENABLED` và `POSTGEN_PUBLISH_INSTAGRAM_ENABLED` được ánh xạ sang `PublishingOptions` trong cả hai compose/workflow, mặc định `false`. `POSTGEN_META_ENABLED` chỉ bật kết nối tài khoản. Bật từng flag sau khi cấu hình mốc 11 và smoke được chỉ định trên account/bài thử phù hợp; không bật chung với OAuth một cách tự động. Chưa thay secret hoặc deploy trong lần triển khai mốc 13. Xem [PublishingAdapters.md](../hoatheomua-documentation/Service%20-%20PostGen/PublishingAdapters.md).
+
+
+### PostGen scheduling — mốc 14
+
+Ba biến tùy chọn: `POSTGEN_SCHEDULE_MIN_LEAD_SECONDS=60`, `POSTGEN_SCHEDULE_MAX_DAYS=30`, `POSTGEN_SCHEDULE_LATENESS_SECONDS=900`; đã ánh xạ trong compose/workflow. Ngưỡng trễ tính đến lần worker bắt đầu xử lý, không phải cam kết thời điểm Meta hiển thị bài. Không đổi secrets/môi trường đang chạy. [Contract lịch đăng](../hoatheomua-documentation/Service%20-%20PostGen/Scheduling.md).

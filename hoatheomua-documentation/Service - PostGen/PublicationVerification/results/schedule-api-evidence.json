@@ -1,0 +1,805 @@
+{
+  "skill": "api-integration-tester",
+  "status": "PASS",
+  "started_at": "2026-09-14T21:13:09.472802+00:00",
+  "checks": [
+    {
+      "name": "Real adapters registered",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/85096096-beb2-4efe-bbe2-3cd58e32e8a8: 401",
+      "status": "PASS",
+      "evidence": {
+        "actual": 401
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/85096096-beb2-4efe-bbe2-3cd58e32e8a8: 403",
+      "status": "PASS",
+      "evidence": {
+        "actual": 403
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/85096096-beb2-4efe-bbe2-3cd58e32e8a8: 404",
+      "status": "PASS",
+      "evidence": {
+        "actual": 404
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 401",
+      "status": "PASS",
+      "evidence": {
+        "actual": 401
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "PUT /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 401",
+      "status": "PASS",
+      "evidence": {
+        "actual": 401
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "DELETE /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 401",
+      "status": "PASS",
+      "evidence": {
+        "actual": 401
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 403",
+      "status": "PASS",
+      "evidence": {
+        "actual": 403
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "PUT /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 403",
+      "status": "PASS",
+      "evidence": {
+        "actual": 403
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "DELETE /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 403",
+      "status": "PASS",
+      "evidence": {
+        "actual": 403
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/publication-preview?accountId=74cffc0c-38cc-4817-8e91-bbd868e0173c: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 400",
+      "status": "PASS",
+      "evidence": {
+        "actual": 400
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 400",
+      "status": "PASS",
+      "evidence": {
+        "actual": 400
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 400",
+      "status": "PASS",
+      "evidence": {
+        "actual": 400
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Create returns Scheduled",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Schedule response normalized to UTC",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Schedule is idempotent",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/publish: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "No remote media before due time",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "PUT /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "PUT /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "DELETE /api/v1/posts/d1755c94-16f7-48e6-81eb-1e1c34900a7b/platforms/facebook/schedule?publicationId=9b92c53b-3c5a-4534-8663-9895692393b1\u0026expectedRevision=3: 404",
+      "status": "PASS",
+      "evidence": {
+        "actual": 404
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Old revision cannot execute after reschedule",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Reschedule preserves snapshot",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "DELETE /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule?publicationId=9b92c53b-3c5a-4534-8663-9895692393b1\u0026expectedRevision=3: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Cancel schedule succeeds",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "DELETE /api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule?publicationId=9b92c53b-3c5a-4534-8663-9895692393b1\u0026expectedRevision=3: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/8778acd0-fa41-4030-b24c-3b4a51358055/platforms/facebook/publication-preview?accountId=74cffc0c-38cc-4817-8e91-bbd868e0173c: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/8778acd0-fa41-4030-b24c-3b4a51358055/platforms/facebook/schedule: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "DELETE /api/v1/posts/8778acd0-fa41-4030-b24c-3b4a51358055/platforms/facebook/schedule?publicationId=a47b226a-5ff0-41af-baa2-63848ec79714\u0026expectedRevision=4: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "PUT /api/v1/posts/8778acd0-fa41-4030-b24c-3b4a51358055/platforms/facebook/schedule: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Facebook: one publish through RabbitMQ",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Scheduled time preserved after success",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/a47b226a-5ff0-41af-baa2-63848ec79714: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/502170ec-f8ec-418e-bf3d-0e3b9e2350b0/platforms/instagram/publication-preview?accountId=fdf90bc5-1a35-453c-8627-1ff79d088333: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/502170ec-f8ec-418e-bf3d-0e3b9e2350b0/platforms/instagram/schedule: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "DELETE /api/v1/posts/502170ec-f8ec-418e-bf3d-0e3b9e2350b0/platforms/instagram/schedule?publicationId=4b27a495-22e5-49a3-8584-8b97019b155e\u0026expectedRevision=4: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "PUT /api/v1/posts/502170ec-f8ec-418e-bf3d-0e3b9e2350b0/platforms/instagram/schedule: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Instagram: one publish through RabbitMQ",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Scheduled time preserved after success",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/4b27a495-22e5-49a3-8584-8b97019b155e: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/22f1fb59-646c-455a-8f30-595a94b935aa/platforms/facebook/publication-preview?accountId=74cffc0c-38cc-4817-8e91-bbd868e0173c: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/22f1fb59-646c-455a-8f30-595a94b935aa/platforms/facebook/schedule: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Overdue schedule is failed without automatic catch-up",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Missed schedule never publishes",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/post-gen/publications/42643343-90e6-4fce-a3a7-1bd8fabdb2e1/retry: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/61e36b65-9e51-4768-98c1-a4b8f0352c27/platforms/facebook/publication-preview?accountId=74cffc0c-38cc-4817-8e91-bbd868e0173c: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/61e36b65-9e51-4768-98c1-a4b8f0352c27/platforms/facebook/schedule: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Expired account is checked when schedule becomes due",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/6114906e-6df3-4a35-bb33-5f2da152e958: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Cancelled schedule stayed cancelled after its original due time",
+      "status": "PASS",
+      "evidence": null
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/85096096-beb2-4efe-bbe2-3cd58e32e8a8",
+      "status": 401,
+      "latency_ms": 64,
+      "traceId": "0HNOIKJUA0817:00000001"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/85096096-beb2-4efe-bbe2-3cd58e32e8a8",
+      "status": 403,
+      "latency_ms": 21,
+      "traceId": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/85096096-beb2-4efe-bbe2-3cd58e32e8a8",
+      "status": 404,
+      "latency_ms": 69,
+      "traceId": "0HNOIKJUA0817:00000003"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 401,
+      "latency_ms": 2,
+      "traceId": "0HNOIKJUA0817:00000004"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 401,
+      "latency_ms": 1,
+      "traceId": "0HNOIKJUA0817:00000005"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 401,
+      "latency_ms": 0,
+      "traceId": "0HNOIKJUA0817:00000006"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 403,
+      "latency_ms": 0,
+      "traceId": null
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 403,
+      "latency_ms": 0,
+      "traceId": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 403,
+      "latency_ms": 0,
+      "traceId": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/publication-preview?accountId=74cffc0c-38cc-4817-8e91-bbd868e0173c",
+      "status": 200,
+      "latency_ms": 100,
+      "traceId": "0HNOIKJUA0817:0000000A"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 400,
+      "latency_ms": 8,
+      "traceId": "0HNOIKJUA0817:0000000B"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 400,
+      "latency_ms": 17,
+      "traceId": "0HNOIKJUA0817:0000000C"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 400,
+      "latency_ms": 7,
+      "traceId": "0HNOIKJUA0817:0000000D"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 202,
+      "latency_ms": 55,
+      "traceId": "0HNOIKJUA0817:0000000E"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 202,
+      "latency_ms": 8,
+      "traceId": "0HNOIKJUA0817:0000000F"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/publish",
+      "status": 409,
+      "latency_ms": 10,
+      "traceId": "0HNOIKJUA0817:00000010"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 200,
+      "latency_ms": 45,
+      "traceId": "0HNOIKJUA0817:00000011"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule",
+      "status": 409,
+      "latency_ms": 7,
+      "traceId": "0HNOIKJUA0817:00000012"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/d1755c94-16f7-48e6-81eb-1e1c34900a7b/platforms/facebook/schedule?publicationId=9b92c53b-3c5a-4534-8663-9895692393b1\u0026expectedRevision=3",
+      "status": 404,
+      "latency_ms": 11,
+      "traceId": "0HNOIKJUA0817:00000013"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule?publicationId=9b92c53b-3c5a-4534-8663-9895692393b1\u0026expectedRevision=3",
+      "status": 200,
+      "latency_ms": 16,
+      "traceId": "0HNOIKJUA0817:00000014"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/afcbda64-c7ea-44a2-b37a-f6dd2f555080/platforms/facebook/schedule?publicationId=9b92c53b-3c5a-4534-8663-9895692393b1\u0026expectedRevision=3",
+      "status": 409,
+      "latency_ms": 6,
+      "traceId": "0HNOIKJUA0817:00000015"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/8778acd0-fa41-4030-b24c-3b4a51358055/platforms/facebook/publication-preview?accountId=74cffc0c-38cc-4817-8e91-bbd868e0173c",
+      "status": 200,
+      "latency_ms": 80,
+      "traceId": "0HNOIKJUA0817:00000016"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/8778acd0-fa41-4030-b24c-3b4a51358055/platforms/facebook/schedule",
+      "status": 202,
+      "latency_ms": 46,
+      "traceId": "0HNOIKJUA0817:00000017"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/8778acd0-fa41-4030-b24c-3b4a51358055/platforms/facebook/schedule?publicationId=a47b226a-5ff0-41af-baa2-63848ec79714\u0026expectedRevision=4",
+      "status": 409,
+      "latency_ms": 7,
+      "traceId": "0HNOIKJUA0817:00000018"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/8778acd0-fa41-4030-b24c-3b4a51358055/platforms/facebook/schedule",
+      "status": 409,
+      "latency_ms": 6,
+      "traceId": "0HNOIKJUA0817:00000019"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/a47b226a-5ff0-41af-baa2-63848ec79714",
+      "status": 200,
+      "latency_ms": 20,
+      "traceId": "0HNOIKJUA0817:0000001A"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/502170ec-f8ec-418e-bf3d-0e3b9e2350b0/platforms/instagram/publication-preview?accountId=fdf90bc5-1a35-453c-8627-1ff79d088333",
+      "status": 200,
+      "latency_ms": 10,
+      "traceId": "0HNOIKJUA0817:0000001B"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/502170ec-f8ec-418e-bf3d-0e3b9e2350b0/platforms/instagram/schedule",
+      "status": 202,
+      "latency_ms": 14,
+      "traceId": "0HNOIKJUA0817:0000001C"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/502170ec-f8ec-418e-bf3d-0e3b9e2350b0/platforms/instagram/schedule?publicationId=4b27a495-22e5-49a3-8584-8b97019b155e\u0026expectedRevision=4",
+      "status": 409,
+      "latency_ms": 5,
+      "traceId": "0HNOIKJUA0817:0000001D"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/502170ec-f8ec-418e-bf3d-0e3b9e2350b0/platforms/instagram/schedule",
+      "status": 409,
+      "latency_ms": 4,
+      "traceId": "0HNOIKJUA0817:0000001E"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/4b27a495-22e5-49a3-8584-8b97019b155e",
+      "status": 200,
+      "latency_ms": 8,
+      "traceId": "0HNOIKJUA0817:0000001F"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/22f1fb59-646c-455a-8f30-595a94b935aa/platforms/facebook/publication-preview?accountId=74cffc0c-38cc-4817-8e91-bbd868e0173c",
+      "status": 200,
+      "latency_ms": 7,
+      "traceId": "0HNOIKJUA0817:00000020"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/22f1fb59-646c-455a-8f30-595a94b935aa/platforms/facebook/schedule",
+      "status": 202,
+      "latency_ms": 7,
+      "traceId": "0HNOIKJUA0817:00000021"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/42643343-90e6-4fce-a3a7-1bd8fabdb2e1/retry",
+      "status": 409,
+      "latency_ms": 13,
+      "traceId": "0HNOIKJUA0817:00000022"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/61e36b65-9e51-4768-98c1-a4b8f0352c27/platforms/facebook/publication-preview?accountId=74cffc0c-38cc-4817-8e91-bbd868e0173c",
+      "status": 200,
+      "latency_ms": 5,
+      "traceId": "0HNOIKJUA0817:00000023"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/61e36b65-9e51-4768-98c1-a4b8f0352c27/platforms/facebook/schedule",
+      "status": 202,
+      "latency_ms": 10,
+      "traceId": "0HNOIKJUA0817:00000024"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/6114906e-6df3-4a35-bb33-5f2da152e958",
+      "status": 200,
+      "latency_ms": 15,
+      "traceId": "0HNOIKJUA0817:00000025"
+    }
+  ],
+  "failures": [],
+  "redactions": [
+    "JWT",
+    "OAuth credentials",
+    "raw provider errors"
+  ],
+  "cleanup": true,
+  "liveMeta": false,
+  "aiCalls": 0,
+  "adapterImplementation": "production",
+  "transport": "fake HttpMessageHandler",
+  "database": "PostgreSQL",
+  "queue": "RabbitMQ"
+}

@@ -1,0 +1,1304 @@
+{
+  "skill": "api-integration-tester",
+  "status": "PASS",
+  "started_at": "2026-09-14T20:59:30.715627+00:00",
+  "checks": [
+    {
+      "name": "Real adapters registered",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/a87ee053-5748-47dc-883b-5df6990b5899: 401",
+      "status": "PASS",
+      "evidence": {
+        "actual": 401
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/a87ee053-5748-47dc-883b-5df6990b5899: 403",
+      "status": "PASS",
+      "evidence": {
+        "actual": 403
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/a87ee053-5748-47dc-883b-5df6990b5899: 404",
+      "status": "PASS",
+      "evidence": {
+        "actual": 404
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/51e8f215-d9b1-425f-b667-7cd500444fb7/platforms/facebook/publication-preview?accountId=c6def307-5eb6-4c80-b843-cc6522b62d5f: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Snapshot passes local preview",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Preview creates no remote media",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/51e8f215-d9b1-425f-b667-7cd500444fb7/platforms/facebook/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/51e8f215-d9b1-425f-b667-7cd500444fb7/platforms/facebook/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "HTTP duplicate has same publication",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/51e8f215-d9b1-425f-b667-7cd500444fb7/platforms/facebook/publish: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Facebook/single reaches Succeeded",
+      "status": "PASS",
+      "evidence": {
+        "Status": "Succeeded",
+        "ErrorCode": null
+      }
+    },
+    {
+      "name": "At most one publish command",
+      "status": "PASS",
+      "evidence": {
+        "platform": 1,
+        "scenario": "single",
+        "Publishes": 1
+      }
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/87986502-c1c9-40de-a32f-86800a262fc5: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Persisted snapshot matches outbound text",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Durable publish attempt count",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/dd9d9d5f-255e-4876-97f6-28a3c5422250/platforms/facebook/publication-preview?accountId=c6def307-5eb6-4c80-b843-cc6522b62d5f: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Snapshot passes local preview",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Preview creates no remote media",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/dd9d9d5f-255e-4876-97f6-28a3c5422250/platforms/facebook/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/dd9d9d5f-255e-4876-97f6-28a3c5422250/platforms/facebook/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "HTTP duplicate has same publication",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/dd9d9d5f-255e-4876-97f6-28a3c5422250/platforms/facebook/publish: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Facebook/carousel reaches Succeeded",
+      "status": "PASS",
+      "evidence": {
+        "Status": "Succeeded",
+        "ErrorCode": null
+      }
+    },
+    {
+      "name": "At most one publish command",
+      "status": "PASS",
+      "evidence": {
+        "platform": 1,
+        "scenario": "carousel",
+        "Publishes": 1
+      }
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/ced8db48-07d0-4c96-ad30-37d801e8abfa: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Persisted snapshot matches outbound text",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Durable publish attempt count",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/d1e203b6-20f0-4cfd-8952-fa9488a62022/platforms/facebook/publication-preview?accountId=c6def307-5eb6-4c80-b843-cc6522b62d5f: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Snapshot passes local preview",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Preview creates no remote media",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/d1e203b6-20f0-4cfd-8952-fa9488a62022/platforms/facebook/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/d1e203b6-20f0-4cfd-8952-fa9488a62022/platforms/facebook/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "HTTP duplicate has same publication",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/d1e203b6-20f0-4cfd-8952-fa9488a62022/platforms/facebook/publish: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Facebook/timeout reaches NeedsReview",
+      "status": "PASS",
+      "evidence": {
+        "Status": "NeedsReview",
+        "ErrorCode": "META_TIMEOUT"
+      }
+    },
+    {
+      "name": "At most one publish command",
+      "status": "PASS",
+      "evidence": {
+        "platform": 1,
+        "scenario": "timeout",
+        "Publishes": 1
+      }
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/c0932631-ef6e-477a-916f-e2400e2fee90: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Persisted snapshot matches outbound text",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Durable publish attempt count",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/post-gen/publications/c0932631-ef6e-477a-916f-e2400e2fee90/retry: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/post-gen/publications/c0932631-ef6e-477a-916f-e2400e2fee90/recheck: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Recheck is read-only after timeout",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/post-gen/publications/c0932631-ef6e-477a-916f-e2400e2fee90/resolve: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/e58fb59d-7dc7-4faa-847a-53c166ab1e32/platforms/facebook/publication-preview?accountId=c6def307-5eb6-4c80-b843-cc6522b62d5f: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Snapshot passes local preview",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Preview creates no remote media",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/e58fb59d-7dc7-4faa-847a-53c166ab1e32/platforms/facebook/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/e58fb59d-7dc7-4faa-847a-53c166ab1e32/platforms/facebook/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "HTTP duplicate has same publication",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/e58fb59d-7dc7-4faa-847a-53c166ab1e32/platforms/facebook/publish: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Facebook/bad-media reaches Failed",
+      "status": "PASS",
+      "evidence": {
+        "Status": "Failed",
+        "ErrorCode": "FACEBOOK_IMAGE_FORMAT_INVALID_1"
+      }
+    },
+    {
+      "name": "At most one publish command",
+      "status": "PASS",
+      "evidence": {
+        "platform": 1,
+        "scenario": "bad-media",
+        "Publishes": 0
+      }
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/f0df61c6-caac-4ce8-9faf-ec8f71d2ceca: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Persisted snapshot matches outbound text",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Durable publish attempt count",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/fccece9c-c835-4f0a-aaff-ef9b25d32113/platforms/instagram/publication-preview?accountId=d3bfc20b-1b96-4fc5-b86e-2fe4851cd02b: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Snapshot passes local preview",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Preview creates no remote media",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/fccece9c-c835-4f0a-aaff-ef9b25d32113/platforms/instagram/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/fccece9c-c835-4f0a-aaff-ef9b25d32113/platforms/instagram/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "HTTP duplicate has same publication",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/fccece9c-c835-4f0a-aaff-ef9b25d32113/platforms/instagram/publish: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Instagram/single reaches Succeeded",
+      "status": "PASS",
+      "evidence": {
+        "Status": "Succeeded",
+        "ErrorCode": null
+      }
+    },
+    {
+      "name": "At most one publish command",
+      "status": "PASS",
+      "evidence": {
+        "platform": 2,
+        "scenario": "single",
+        "Publishes": 1
+      }
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/2a3d45d2-bc13-4ca9-9e8f-e0823673d498: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Persisted snapshot matches outbound text",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Durable publish attempt count",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/c312094b-646a-4607-8d0a-bc73fca4bdb8/platforms/instagram/publication-preview?accountId=d3bfc20b-1b96-4fc5-b86e-2fe4851cd02b: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Snapshot passes local preview",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Preview creates no remote media",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/c312094b-646a-4607-8d0a-bc73fca4bdb8/platforms/instagram/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/c312094b-646a-4607-8d0a-bc73fca4bdb8/platforms/instagram/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "HTTP duplicate has same publication",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/c312094b-646a-4607-8d0a-bc73fca4bdb8/platforms/instagram/publish: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Instagram/carousel reaches Succeeded",
+      "status": "PASS",
+      "evidence": {
+        "Status": "Succeeded",
+        "ErrorCode": null
+      }
+    },
+    {
+      "name": "At most one publish command",
+      "status": "PASS",
+      "evidence": {
+        "platform": 2,
+        "scenario": "carousel",
+        "Publishes": 1
+      }
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/c9f3cf31-befb-4f29-b6ef-bf0a39232765: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Persisted snapshot matches outbound text",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Durable publish attempt count",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/074695ce-d824-4cb9-b4b9-f8b2d9589783/platforms/instagram/publication-preview?accountId=d3bfc20b-1b96-4fc5-b86e-2fe4851cd02b: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Snapshot passes local preview",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Preview creates no remote media",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/074695ce-d824-4cb9-b4b9-f8b2d9589783/platforms/instagram/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/074695ce-d824-4cb9-b4b9-f8b2d9589783/platforms/instagram/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "HTTP duplicate has same publication",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/074695ce-d824-4cb9-b4b9-f8b2d9589783/platforms/instagram/publish: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Instagram/timeout reaches NeedsReview",
+      "status": "PASS",
+      "evidence": {
+        "Status": "NeedsReview",
+        "ErrorCode": "META_TIMEOUT"
+      }
+    },
+    {
+      "name": "At most one publish command",
+      "status": "PASS",
+      "evidence": {
+        "platform": 2,
+        "scenario": "timeout",
+        "Publishes": 1
+      }
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/6bdd45fa-1517-4d27-a90f-6f0a77277ceb: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Persisted snapshot matches outbound text",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Durable publish attempt count",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/post-gen/publications/6bdd45fa-1517-4d27-a90f-6f0a77277ceb/retry: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/post-gen/publications/6bdd45fa-1517-4d27-a90f-6f0a77277ceb/recheck: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Recheck is read-only after timeout",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/post-gen/publications/6bdd45fa-1517-4d27-a90f-6f0a77277ceb/resolve: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "GET /api/v1/posts/ed81c0b3-4461-4c47-8efa-302446a84826/platforms/instagram/publication-preview?accountId=d3bfc20b-1b96-4fc5-b86e-2fe4851cd02b: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Snapshot passes local preview",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Preview creates no remote media",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/ed81c0b3-4461-4c47-8efa-302446a84826/platforms/instagram/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/ed81c0b3-4461-4c47-8efa-302446a84826/platforms/instagram/publish: 202",
+      "status": "PASS",
+      "evidence": {
+        "actual": 202
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "HTTP duplicate has same publication",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "POST /api/v1/posts/ed81c0b3-4461-4c47-8efa-302446a84826/platforms/instagram/publish: 409",
+      "status": "PASS",
+      "evidence": {
+        "actual": 409
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Instagram/bad-media reaches Failed",
+      "status": "PASS",
+      "evidence": {
+        "Status": "Failed",
+        "ErrorCode": "INSTAGRAM_JPEG_REQUIRED_1"
+      }
+    },
+    {
+      "name": "At most one publish command",
+      "status": "PASS",
+      "evidence": {
+        "platform": 2,
+        "scenario": "bad-media",
+        "Publishes": 0
+      }
+    },
+    {
+      "name": "GET /api/v1/post-gen/publications/fdfc1b34-dd66-4b4f-8b9a-1d8dacb8955f: 200",
+      "status": "PASS",
+      "evidence": {
+        "actual": 200
+      }
+    },
+    {
+      "name": "HTTP response redacted",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Persisted snapshot matches outbound text",
+      "status": "PASS",
+      "evidence": null
+    },
+    {
+      "name": "Durable publish attempt count",
+      "status": "PASS",
+      "evidence": null
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/a87ee053-5748-47dc-883b-5df6990b5899",
+      "status": 401,
+      "latency_ms": 74,
+      "traceId": "0HNOIKCA95M31:00000001"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/a87ee053-5748-47dc-883b-5df6990b5899",
+      "status": 403,
+      "latency_ms": 22,
+      "traceId": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/a87ee053-5748-47dc-883b-5df6990b5899",
+      "status": 404,
+      "latency_ms": 62,
+      "traceId": "0HNOIKCA95M31:00000003"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/51e8f215-d9b1-425f-b667-7cd500444fb7/platforms/facebook/publication-preview?accountId=c6def307-5eb6-4c80-b843-cc6522b62d5f",
+      "status": 200,
+      "latency_ms": 100,
+      "traceId": "0HNOIKCA95M31:00000004"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/51e8f215-d9b1-425f-b667-7cd500444fb7/platforms/facebook/publish",
+      "status": 202,
+      "latency_ms": 160,
+      "traceId": "0HNOIKCA95M31:00000005"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/51e8f215-d9b1-425f-b667-7cd500444fb7/platforms/facebook/publish",
+      "status": 202,
+      "latency_ms": 10,
+      "traceId": "0HNOIKCA95M31:00000006"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/51e8f215-d9b1-425f-b667-7cd500444fb7/platforms/facebook/publish",
+      "status": 409,
+      "latency_ms": 9,
+      "traceId": "0HNOIKCA95M31:00000007"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/87986502-c1c9-40de-a32f-86800a262fc5",
+      "status": 200,
+      "latency_ms": 19,
+      "traceId": "0HNOIKCA95M31:00000008"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/dd9d9d5f-255e-4876-97f6-28a3c5422250/platforms/facebook/publication-preview?accountId=c6def307-5eb6-4c80-b843-cc6522b62d5f",
+      "status": 200,
+      "latency_ms": 8,
+      "traceId": "0HNOIKCA95M31:00000009"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/dd9d9d5f-255e-4876-97f6-28a3c5422250/platforms/facebook/publish",
+      "status": 202,
+      "latency_ms": 16,
+      "traceId": "0HNOIKCA95M31:0000000A"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/dd9d9d5f-255e-4876-97f6-28a3c5422250/platforms/facebook/publish",
+      "status": 202,
+      "latency_ms": 4,
+      "traceId": "0HNOIKCA95M31:0000000B"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/dd9d9d5f-255e-4876-97f6-28a3c5422250/platforms/facebook/publish",
+      "status": 409,
+      "latency_ms": 14,
+      "traceId": "0HNOIKCA95M31:0000000C"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/ced8db48-07d0-4c96-ad30-37d801e8abfa",
+      "status": 200,
+      "latency_ms": 8,
+      "traceId": "0HNOIKCA95M31:0000000D"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/d1e203b6-20f0-4cfd-8952-fa9488a62022/platforms/facebook/publication-preview?accountId=c6def307-5eb6-4c80-b843-cc6522b62d5f",
+      "status": 200,
+      "latency_ms": 6,
+      "traceId": "0HNOIKCA95M31:0000000E"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/d1e203b6-20f0-4cfd-8952-fa9488a62022/platforms/facebook/publish",
+      "status": 202,
+      "latency_ms": 12,
+      "traceId": "0HNOIKCA95M31:0000000F"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/d1e203b6-20f0-4cfd-8952-fa9488a62022/platforms/facebook/publish",
+      "status": 202,
+      "latency_ms": 4,
+      "traceId": "0HNOIKCA95M31:00000010"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/d1e203b6-20f0-4cfd-8952-fa9488a62022/platforms/facebook/publish",
+      "status": 409,
+      "latency_ms": 8,
+      "traceId": "0HNOIKCA95M31:00000011"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/c0932631-ef6e-477a-916f-e2400e2fee90",
+      "status": 200,
+      "latency_ms": 12,
+      "traceId": "0HNOIKCA95M31:00000012"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/c0932631-ef6e-477a-916f-e2400e2fee90/retry",
+      "status": 409,
+      "latency_ms": 14,
+      "traceId": "0HNOIKCA95M31:00000013"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/c0932631-ef6e-477a-916f-e2400e2fee90/recheck",
+      "status": 200,
+      "latency_ms": 30,
+      "traceId": "0HNOIKCA95M31:00000014"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/c0932631-ef6e-477a-916f-e2400e2fee90/resolve",
+      "status": 200,
+      "latency_ms": 8,
+      "traceId": "0HNOIKCA95M31:00000015"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/e58fb59d-7dc7-4faa-847a-53c166ab1e32/platforms/facebook/publication-preview?accountId=c6def307-5eb6-4c80-b843-cc6522b62d5f",
+      "status": 200,
+      "latency_ms": 4,
+      "traceId": "0HNOIKCA95M31:00000016"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/e58fb59d-7dc7-4faa-847a-53c166ab1e32/platforms/facebook/publish",
+      "status": 202,
+      "latency_ms": 6,
+      "traceId": "0HNOIKCA95M31:00000017"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/e58fb59d-7dc7-4faa-847a-53c166ab1e32/platforms/facebook/publish",
+      "status": 202,
+      "latency_ms": 2,
+      "traceId": "0HNOIKCA95M31:00000018"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/e58fb59d-7dc7-4faa-847a-53c166ab1e32/platforms/facebook/publish",
+      "status": 409,
+      "latency_ms": 3,
+      "traceId": "0HNOIKCA95M31:00000019"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/f0df61c6-caac-4ce8-9faf-ec8f71d2ceca",
+      "status": 200,
+      "latency_ms": 5,
+      "traceId": "0HNOIKCA95M31:0000001A"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/fccece9c-c835-4f0a-aaff-ef9b25d32113/platforms/instagram/publication-preview?accountId=d3bfc20b-1b96-4fc5-b86e-2fe4851cd02b",
+      "status": 200,
+      "latency_ms": 10,
+      "traceId": "0HNOIKCA95M31:0000001B"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/fccece9c-c835-4f0a-aaff-ef9b25d32113/platforms/instagram/publish",
+      "status": 202,
+      "latency_ms": 14,
+      "traceId": "0HNOIKCA95M31:0000001C"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/fccece9c-c835-4f0a-aaff-ef9b25d32113/platforms/instagram/publish",
+      "status": 202,
+      "latency_ms": 7,
+      "traceId": "0HNOIKCA95M31:0000001D"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/fccece9c-c835-4f0a-aaff-ef9b25d32113/platforms/instagram/publish",
+      "status": 409,
+      "latency_ms": 6,
+      "traceId": "0HNOIKCA95M31:0000001E"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/2a3d45d2-bc13-4ca9-9e8f-e0823673d498",
+      "status": 200,
+      "latency_ms": 11,
+      "traceId": "0HNOIKCA95M31:0000001F"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/c312094b-646a-4607-8d0a-bc73fca4bdb8/platforms/instagram/publication-preview?accountId=d3bfc20b-1b96-4fc5-b86e-2fe4851cd02b",
+      "status": 200,
+      "latency_ms": 8,
+      "traceId": "0HNOIKCA95M31:00000020"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/c312094b-646a-4607-8d0a-bc73fca4bdb8/platforms/instagram/publish",
+      "status": 202,
+      "latency_ms": 13,
+      "traceId": "0HNOIKCA95M31:00000021"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/c312094b-646a-4607-8d0a-bc73fca4bdb8/platforms/instagram/publish",
+      "status": 202,
+      "latency_ms": 8,
+      "traceId": "0HNOIKCA95M31:00000022"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/c312094b-646a-4607-8d0a-bc73fca4bdb8/platforms/instagram/publish",
+      "status": 409,
+      "latency_ms": 5,
+      "traceId": "0HNOIKCA95M31:00000023"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/c9f3cf31-befb-4f29-b6ef-bf0a39232765",
+      "status": 200,
+      "latency_ms": 11,
+      "traceId": "0HNOIKCA95M31:00000024"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/074695ce-d824-4cb9-b4b9-f8b2d9589783/platforms/instagram/publication-preview?accountId=d3bfc20b-1b96-4fc5-b86e-2fe4851cd02b",
+      "status": 200,
+      "latency_ms": 10,
+      "traceId": "0HNOIKCA95M31:00000025"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/074695ce-d824-4cb9-b4b9-f8b2d9589783/platforms/instagram/publish",
+      "status": 202,
+      "latency_ms": 11,
+      "traceId": "0HNOIKCA95M31:00000026"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/074695ce-d824-4cb9-b4b9-f8b2d9589783/platforms/instagram/publish",
+      "status": 202,
+      "latency_ms": 5,
+      "traceId": "0HNOIKCA95M31:00000027"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/074695ce-d824-4cb9-b4b9-f8b2d9589783/platforms/instagram/publish",
+      "status": 409,
+      "latency_ms": 7,
+      "traceId": "0HNOIKCA95M31:00000028"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/6bdd45fa-1517-4d27-a90f-6f0a77277ceb",
+      "status": 200,
+      "latency_ms": 10,
+      "traceId": "0HNOIKCA95M31:00000029"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/6bdd45fa-1517-4d27-a90f-6f0a77277ceb/retry",
+      "status": 409,
+      "latency_ms": 10,
+      "traceId": "0HNOIKCA95M31:0000002A"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/6bdd45fa-1517-4d27-a90f-6f0a77277ceb/recheck",
+      "status": 200,
+      "latency_ms": 30,
+      "traceId": "0HNOIKCA95M31:0000002B"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/6bdd45fa-1517-4d27-a90f-6f0a77277ceb/resolve",
+      "status": 200,
+      "latency_ms": 5,
+      "traceId": "0HNOIKCA95M31:0000002C"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/ed81c0b3-4461-4c47-8efa-302446a84826/platforms/instagram/publication-preview?accountId=d3bfc20b-1b96-4fc5-b86e-2fe4851cd02b",
+      "status": 200,
+      "latency_ms": 7,
+      "traceId": "0HNOIKCA95M31:0000002D"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/ed81c0b3-4461-4c47-8efa-302446a84826/platforms/instagram/publish",
+      "status": 202,
+      "latency_ms": 9,
+      "traceId": "0HNOIKCA95M31:0000002E"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/ed81c0b3-4461-4c47-8efa-302446a84826/platforms/instagram/publish",
+      "status": 202,
+      "latency_ms": 4,
+      "traceId": "0HNOIKCA95M31:0000002F"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/ed81c0b3-4461-4c47-8efa-302446a84826/platforms/instagram/publish",
+      "status": 409,
+      "latency_ms": 4,
+      "traceId": "0HNOIKCA95M31:00000030"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/fdfc1b34-dd66-4b4f-8b9a-1d8dacb8955f",
+      "status": 200,
+      "latency_ms": 5,
+      "traceId": "0HNOIKCA95M31:00000031"
+    }
+  ],
+  "failures": [],
+  "redactions": [
+    "JWT",
+    "OAuth credentials",
+    "raw provider errors"
+  ],
+  "cleanup": true,
+  "liveMeta": false,
+  "aiCalls": 0,
+  "adapterImplementation": "production",
+  "transport": "fake HttpMessageHandler",
+  "database": "PostgreSQL",
+  "queue": "RabbitMQ"
+}

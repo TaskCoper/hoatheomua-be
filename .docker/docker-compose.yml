@@ -96,6 +96,11 @@ services:
       PlatformAccountOptions__OAuthStateMinutes: ${POSTGEN_OAUTH_STATE_MINUTES:-10}
       PlatformAccountOptions__RequestTimeoutSeconds: ${POSTGEN_REQUEST_TIMEOUT_SECONDS:-30}
       PlatformAccountOptions__Zalo__Enabled: "false"
+      PublishingOptions__FacebookEnabled: ${POSTGEN_PUBLISH_FACEBOOK_ENABLED:-false}
+      PublishingOptions__InstagramEnabled: ${POSTGEN_PUBLISH_INSTAGRAM_ENABLED:-false}
+      PublishingOptions__MinScheduleLeadSeconds: ${POSTGEN_SCHEDULE_MIN_LEAD_SECONDS:-60}
+      PublishingOptions__MaxScheduleDays: ${POSTGEN_SCHEDULE_MAX_DAYS:-30}
+      PublishingOptions__ScheduleLatenessSeconds: ${POSTGEN_SCHEDULE_LATENESS_SECONDS:-900}
 
       # Ahamove Configuration
       AhamoveOption__Token: ${AHAMOVE_TOKEN}

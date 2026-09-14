@@ -1,0 +1,621 @@
+{
+  "skill": "api-integration-tester",
+  "status": "BLOCKED",
+  "started_at": "2026-09-14T19:44:57.539015+00:00",
+  "base_url": "https://hoatheomua-api.bentran1vn.com/ecommerce-api/v1/post-gen/platform-accounts",
+  "scope": "Deployed milestone 11, Facebook/Instagram, authentication, validation, browser cookie and real OAuth configuration checks",
+  "checks": [
+    {
+      "name": "list requires authentication",
+      "method": "GET",
+      "path": "",
+      "http_status": 401,
+      "expected_http_status": 401,
+      "duration_ms": 269,
+      "trace_id": "0HNOIJ2G2E352:00000004",
+      "response_keys": [
+        "title",
+        "status",
+        "detail",
+        "messageCode",
+        "errors",
+        "traceId",
+        "timestampUtc"
+      ],
+      "error": {
+        "title": "Unauthorized",
+        "detail": "The access token is invalid or missing.",
+        "messageCode": "InvalidAccessToken"
+      },
+      "cache_control": null,
+      "status": "PASS"
+    },
+    {
+      "name": "Facebook connect requires authentication",
+      "method": "POST",
+      "path": "/facebook/connect",
+      "http_status": 401,
+      "expected_http_status": 401,
+      "duration_ms": 328,
+      "trace_id": "0HNOIJ2G2E352:00000005",
+      "response_keys": [
+        "title",
+        "status",
+        "detail",
+        "messageCode",
+        "errors",
+        "traceId",
+        "timestampUtc"
+      ],
+      "error": {
+        "title": "Unauthorized",
+        "detail": "The access token is invalid or missing.",
+        "messageCode": "InvalidAccessToken"
+      },
+      "cache_control": null,
+      "status": "PASS"
+    },
+    {
+      "name": "Instagram connect requires authentication",
+      "method": "POST",
+      "path": "/instagram/connect",
+      "http_status": 401,
+      "expected_http_status": 401,
+      "duration_ms": 394,
+      "trace_id": "0HNOIJ2G2E352:00000006",
+      "response_keys": [
+        "title",
+        "status",
+        "detail",
+        "messageCode",
+        "errors",
+        "traceId",
+        "timestampUtc"
+      ],
+      "error": {
+        "title": "Unauthorized",
+        "detail": "The access token is invalid or missing.",
+        "messageCode": "InvalidAccessToken"
+      },
+      "cache_control": null,
+      "status": "PASS"
+    },
+    {
+      "name": "reconnect requires authentication",
+      "method": "POST",
+      "path": "/00000000-0000-4000-8000-000000000001/reconnect",
+      "http_status": 401,
+      "expected_http_status": 401,
+      "duration_ms": 366,
+      "trace_id": "0HNOIJ2G2E352:00000007",
+      "response_keys": [
+        "title",
+        "status",
+        "detail",
+        "messageCode",
+        "errors",
+        "traceId",
+        "timestampUtc"
+      ],
+      "error": {
+        "title": "Unauthorized",
+        "detail": "The access token is invalid or missing.",
+        "messageCode": "InvalidAccessToken"
+      },
+      "cache_control": null,
+      "status": "PASS"
+    },
+    {
+      "name": "refresh requires authentication",
+      "method": "POST",
+      "path": "/00000000-0000-4000-8000-000000000001/refresh",
+      "http_status": 401,
+      "expected_http_status": 401,
+      "duration_ms": 484,
+      "trace_id": "0HNOIJ2G2E352:00000008",
+      "response_keys": [
+        "title",
+        "status",
+        "detail",
+        "messageCode",
+        "errors",
+        "traceId",
+        "timestampUtc"
+      ],
+      "error": {
+        "title": "Unauthorized",
+        "detail": "The access token is invalid or missing.",
+        "messageCode": "InvalidAccessToken"
+      },
+      "cache_control": null,
+      "status": "PASS"
+    },
+    {
+      "name": "disconnect requires authentication",
+      "method": "DELETE",
+      "path": "/00000000-0000-4000-8000-000000000001",
+      "http_status": 401,
+      "expected_http_status": 401,
+      "duration_ms": 397,
+      "trace_id": "0HNOIJ2G2E352:00000009",
+      "response_keys": [
+        "title",
+        "status",
+        "detail",
+        "messageCode",
+        "errors",
+        "traceId",
+        "timestampUtc"
+      ],
+      "error": {
+        "title": "Unauthorized",
+        "detail": "The access token is invalid or missing.",
+        "messageCode": "InvalidAccessToken"
+      },
+      "cache_control": null,
+      "status": "PASS"
+    },
+    {
+      "name": "invalid JWT rejected",
+      "method": "GET",
+      "path": "",
+      "http_status": 401,
+      "expected_http_status": 401,
+      "duration_ms": 652,
+      "trace_id": "0HNOIJ2G2E352:0000000A",
+      "response_keys": [
+        "title",
+        "status",
+        "detail",
+        "messageCode",
+        "errors",
+        "traceId",
+        "timestampUtc"
+      ],
+      "error": {
+        "title": "Unauthorized",
+        "detail": "The access token is invalid or missing.",
+        "messageCode": "InvalidAccessToken"
+      },
+      "cache_control": null,
+      "status": "PASS"
+    },
+    {
+      "name": "Facebook callback rejects missing state",
+      "method": "GET",
+      "path": "/facebook/callback",
+      "http_status": 400,
+      "expected_http_status": 400,
+      "duration_ms": 387,
+      "trace_id": "0HNOIJ2G2E352:0000000B",
+      "response_keys": [
+        "title",
+        "status",
+        "detail",
+        "messageCode",
+        "errors",
+        "traceId",
+        "timestampUtc"
+      ],
+      "error": {
+        "title": "Platform account",
+        "detail": "Phiên kết nối không hợp lệ, hết hạn hoặc không thuộc trình duyệt này.",
+        "messageCode": "PLATFORM_OAUTH_STATE_INVALID"
+      },
+      "cache_control": null,
+      "status": "PASS"
+    },
+    {
+      "name": "Instagram callback rejects missing state",
+      "method": "GET",
+      "path": "/instagram/callback",
+      "http_status": 400,
+      "expected_http_status": 400,
+      "duration_ms": 388,
+      "trace_id": "0HNOIJ2G2E352:0000000C",
+      "response_keys": [
+        "title",
+        "status",
+        "detail",
+        "messageCode",
+        "errors",
+        "traceId",
+        "timestampUtc"
+      ],
+      "error": {
+        "title": "Platform account",
+        "detail": "Phiên kết nối không hợp lệ, hết hạn hoặc không thuộc trình duyệt này.",
+        "messageCode": "PLATFORM_OAUTH_STATE_INVALID"
+      },
+      "cache_control": null,
+      "status": "PASS"
+    },
+    {
+      "name": "Admin lists connected accounts",
+      "method": "GET",
+      "path": "",
+      "http_status": 200,
+      "expected_http_status": 200,
+      "duration_ms": 873,
+      "trace_id": "0HNOIJ2G2E353:00000001",
+      "status": "PASS",
+      "account_count": 0
+    },
+    {
+      "name": "Admin filters facebook",
+      "method": "GET",
+      "path": "",
+      "http_status": 200,
+      "expected_http_status": 200,
+      "duration_ms": 760,
+      "trace_id": "0HNOIJ2G2E353:00000002",
+      "status": "PASS",
+      "account_count": 0
+    },
+    {
+      "name": "Admin filters instagram",
+      "method": "GET",
+      "path": "",
+      "http_status": 200,
+      "expected_http_status": 200,
+      "duration_ms": 496,
+      "trace_id": "0HNOIJ2G2E353:00000003",
+      "status": "PASS",
+      "account_count": 0
+    },
+    {
+      "name": "Invalid platform rejected",
+      "method": "GET",
+      "path": "",
+      "http_status": 400,
+      "expected_http_status": 400,
+      "duration_ms": 402,
+      "trace_id": "0HNOIJ2G2E353:00000004",
+      "status": "PASS",
+      "error": {
+        "title": "Bad Request",
+        "detail": "Nền tảng phải là facebook, instagram hoặc zalo.",
+        "messageCode": "BAD_REQUEST"
+      }
+    },
+    {
+      "name": "Unknown account refresh rejected",
+      "method": "POST",
+      "path": "/00000000-0000-4000-8000-000000000001/refresh",
+      "http_status": 404,
+      "expected_http_status": 404,
+      "duration_ms": 474,
+      "trace_id": "0HNOIJ2G2E353:00000005",
+      "status": "PASS",
+      "error": {
+        "title": "Not Found",
+        "detail": "Không tìm thấy tài khoản nền tảng.",
+        "messageCode": "PLATFORM_ACCOUNT_NOT_FOUND"
+      }
+    },
+    {
+      "name": "Unknown account reconnect rejected",
+      "method": "POST",
+      "path": "/00000000-0000-4000-8000-000000000001/reconnect",
+      "http_status": 404,
+      "expected_http_status": 404,
+      "duration_ms": 508,
+      "trace_id": "0HNOIJ2G2E353:00000006",
+      "status": "PASS",
+      "error": {
+        "title": "Not Found",
+        "detail": "Không tìm thấy tài khoản nền tảng.",
+        "messageCode": "PLATFORM_ACCOUNT_NOT_FOUND"
+      }
+    },
+    {
+      "name": "facebook starts OAuth",
+      "method": "POST",
+      "path": "/facebook/connect",
+      "http_status": 200,
+      "expected_http_status": 200,
+      "duration_ms": 999,
+      "trace_id": "0HNOIJ2G2E353:00000007",
+      "status": "PASS"
+    },
+    {
+      "name": "facebook authorization URL contract",
+      "status": "PASS",
+      "host": "www.facebook.com",
+      "path": "/v26.0/dialog/oauth",
+      "config_id": [
+        "2703062643422200"
+      ],
+      "redirect_uri": [
+        "https://hoatheomua-api.bentran1vn.com/ecommerce-api/v1/post-gen/platform-accounts/facebook/callback"
+      ],
+      "has_state": true,
+      "has_scope": false
+    },
+    {
+      "name": "facebook secure HttpOnly cookie has public callback path",
+      "status": "PASS"
+    },
+    {
+      "name": "facebook rejects state without browser cookie",
+      "method": "GET",
+      "path": "/facebook/callback",
+      "http_status": 400,
+      "expected_http_status": 400,
+      "duration_ms": 433,
+      "trace_id": "0HNOIJ2G2E353:00000008",
+      "status": "PASS",
+      "error": {
+        "title": "Platform account",
+        "detail": "Phiên kết nối không hợp lệ, hết hạn hoặc không thuộc trình duyệt này.",
+        "messageCode": "PLATFORM_OAUTH_STATE_INVALID"
+      }
+    },
+    {
+      "name": "facebook consent denial returns PLATFORM_OAUTH_DENIED",
+      "method": "GET",
+      "path": "/facebook/callback",
+      "http_status": 400,
+      "expected_http_status": 400,
+      "duration_ms": 514,
+      "trace_id": "0HNOIJ2G2E353:00000009",
+      "status": "PASS",
+      "error": {
+        "title": "Platform account",
+        "detail": "Quyền kết nối đã bị từ chối; hãy bắt đầu kết nối lại.",
+        "messageCode": "PLATFORM_OAUTH_DENIED"
+      }
+    },
+    {
+      "name": "facebook callback after denied session rejected",
+      "method": "GET",
+      "path": "/facebook/callback",
+      "http_status": 400,
+      "expected_http_status": 400,
+      "duration_ms": 381,
+      "trace_id": "0HNOIJ2G2E353:0000000A",
+      "status": "PASS",
+      "error": {
+        "title": "Platform account",
+        "detail": "Phiên kết nối không hợp lệ, hết hạn hoặc không thuộc trình duyệt này.",
+        "messageCode": "PLATFORM_OAUTH_STATE_INVALID"
+      }
+    },
+    {
+      "name": "instagram starts OAuth",
+      "method": "POST",
+      "path": "/instagram/connect",
+      "http_status": 200,
+      "expected_http_status": 200,
+      "duration_ms": 354,
+      "trace_id": "0HNOIJ2G2E353:0000000B",
+      "status": "PASS"
+    },
+    {
+      "name": "instagram authorization URL contract",
+      "status": "PASS",
+      "host": "www.facebook.com",
+      "path": "/v26.0/dialog/oauth",
+      "config_id": [
+        "2703062643422200"
+      ],
+      "redirect_uri": [
+        "https://hoatheomua-api.bentran1vn.com/ecommerce-api/v1/post-gen/platform-accounts/instagram/callback"
+      ],
+      "has_state": true,
+      "has_scope": false
+    },
+    {
+      "name": "instagram secure HttpOnly cookie has public callback path",
+      "status": "PASS"
+    },
+    {
+      "name": "instagram rejects state without browser cookie",
+      "method": "GET",
+      "path": "/instagram/callback",
+      "http_status": 400,
+      "expected_http_status": 400,
+      "duration_ms": 367,
+      "trace_id": "0HNOIJ2G2E353:0000000C",
+      "status": "PASS",
+      "error": {
+        "title": "Platform account",
+        "detail": "Phiên kết nối không hợp lệ, hết hạn hoặc không thuộc trình duyệt này.",
+        "messageCode": "PLATFORM_OAUTH_STATE_INVALID"
+      }
+    },
+    {
+      "name": "instagram consent denial returns PLATFORM_OAUTH_DENIED",
+      "method": "GET",
+      "path": "/instagram/callback",
+      "http_status": 400,
+      "expected_http_status": 400,
+      "duration_ms": 492,
+      "trace_id": "0HNOIJ2G2E353:0000000D",
+      "status": "PASS",
+      "error": {
+        "title": "Platform account",
+        "detail": "Quyền kết nối đã bị từ chối; hãy bắt đầu kết nối lại.",
+        "messageCode": "PLATFORM_OAUTH_DENIED"
+      }
+    },
+    {
+      "name": "instagram callback after denied session rejected",
+      "method": "GET",
+      "path": "/instagram/callback",
+      "http_status": 400,
+      "expected_http_status": 400,
+      "duration_ms": 348,
+      "trace_id": "0HNOIJ2G2E353:0000000E",
+      "status": "PASS",
+      "error": {
+        "title": "Platform account",
+        "detail": "Phiên kết nối không hợp lệ, hết hạn hoặc không thuộc trình duyệt này.",
+        "messageCode": "PLATFORM_OAUTH_STATE_INVALID"
+      }
+    },
+    {
+      "name": "Account list unchanged after cancelled OAuth",
+      "method": "GET",
+      "path": "",
+      "http_status": 200,
+      "expected_http_status": 200,
+      "duration_ms": 479,
+      "trace_id": "0HNOIJ2G2E353:0000000F",
+      "status": "PASS",
+      "account_count": 0
+    },
+    {
+      "name": "Browser creates Facebook OAuth session on deployed origin",
+      "method": "POST",
+      "path": "/facebook/connect",
+      "http_status": 200,
+      "status": "PASS",
+      "trace_id": "0HNOIJ2G2E353:00000011",
+      "provider": "www.facebook.com",
+      "config_id": "2703062643422200"
+    },
+    {
+      "name": "Meta redirect block resolved by enabling Client OAuth Login and Web OAuth Login",
+      "status": "PASS",
+      "evidence": "Both toggles persisted after reload. Existing registered callback URLs match backend authorization URL. Facebook now displays business asset selection."
+    },
+    {
+      "name": "Retest after user redeployment: expired Admin JWT rejected",
+      "status": "PASS",
+      "method": "GET",
+      "path": "",
+      "http_status": 401,
+      "message_code": "ExpiredAccessToken",
+      "trace_id": "0HNOIJF8DASB9:00000001",
+      "checked_at": "2026-09-14T20:08:38.431364+00:00"
+    },
+    {
+      "name": "Fresh Admin token lists accounts after redeployment",
+      "status": "PASS",
+      "method": "GET",
+      "path": "",
+      "http_status": 200,
+      "account_count": 0,
+      "trace_id": "0HNOIJF8DASB9:0000000A"
+    },
+    {
+      "name": "Deployed Facebook connect uses new configuration ID",
+      "status": "PASS",
+      "method": "POST",
+      "path": "/facebook/connect",
+      "http_status": 200,
+      "config_id": "2544385329321414",
+      "callback": "https://hoatheomua-api.bentran1vn.com/ecommerce-api/v1/post-gen/platform-accounts/facebook/callback",
+      "trace_id": "0HNOIJF8DASB9:0000000B"
+    },
+    {
+      "name": "Real Meta consent with configuration 2544385329321414",
+      "status": "BLOCKED",
+      "evidence": "Meta disables epx.mmo with \"This Meta Business Account owns the app\". Expanded configuration HoaTheoMua User Login explicitly shows System User Access Token with 60-day expiry."
+    },
+    {
+      "name": "Latest deployment retest: previous Admin token expired",
+      "status": "PASS",
+      "method": "GET",
+      "path": "",
+      "http_status": 401,
+      "message_code": "ExpiredAccessToken",
+      "trace_id": "0HNOIJO2KE8PR:00000002"
+    },
+    {
+      "name": "Meta configuration now uses User Access Token",
+      "status": "PASS",
+      "config_id": "1352701907073956",
+      "evidence": "Meta Dashboard expanded HoaTheoMua User configuration shows Mã truy cập dành cho người dùng; required Facebook/Instagram scopes are present. Deployed config_id still awaits authenticated verification."
+    },
+    {
+      "name": "Current Admin token lists accounts",
+      "status": "PASS",
+      "method": "GET",
+      "path": "",
+      "http_status": 200,
+      "account_count": 0,
+      "trace_id": "0HNOIJO2KE8PU:00000002"
+    },
+    {
+      "name": "Deployed Facebook OAuth uses verified User Access Token configuration",
+      "status": "PASS",
+      "method": "POST",
+      "path": "/facebook/connect",
+      "http_status": 200,
+      "config_id": "1352701907073956",
+      "trace_id": "0HNOIJO2KE8PU:00000003"
+    },
+    {
+      "name": "User token OAuth selects existing Page, business and Instagram",
+      "status": "PASS",
+      "evidence": "Selected only current Demo HTM Page, epx.mmo business and epx.mmo Instagram; final consent screen reached without creating a business."
+    },
+    {
+      "name": "Observe user-connected then disconnected Demo HTM",
+      "status": "PASS",
+      "method": "GET",
+      "path": "",
+      "http_status": 200,
+      "trace_id": "0HNOIJO2KE8Q0:00000027",
+      "account_id": "7428f19e-0aa2-4b0a-88c9-2b28bbaf0485",
+      "account_status": "Disabled",
+      "revision": 2
+    },
+    {
+      "name": "Reconnect existing disabled Facebook account from API origin",
+      "status": "PASS",
+      "method": "POST",
+      "path": "/{id}/reconnect",
+      "http_status": 200,
+      "trace_id": "0HNOIJO2KE8Q0:00000028"
+    },
+    {
+      "name": "Real Facebook reconnect callback preserves identity",
+      "status": "PASS",
+      "method": "GET",
+      "path": "/facebook/callback",
+      "http_status": 200,
+      "trace_id": "0HNOIJO2KE8Q0:00000029",
+      "account_id": "7428f19e-0aa2-4b0a-88c9-2b28bbaf0485",
+      "account_status": "Connected",
+      "revision": 3,
+      "evidence": "Browser callback includes OAuth proof cookie and response deletes it. No new business required."
+    },
+    {
+      "name": "Instagram connect uses correct deployed configuration and callback",
+      "status": "PASS",
+      "method": "POST",
+      "path": "/instagram/connect",
+      "http_status": 200,
+      "config_id": "1352701907073956",
+      "trace_id": "0HNOIJO2KE8Q0:0000002D"
+    },
+    {
+      "name": "Real Instagram OAuth callback connects epx.mmo",
+      "status": "PASS",
+      "method": "GET",
+      "path": "/instagram/callback",
+      "http_status": 200,
+      "trace_id": "0HNOIJO2KE8Q0:00000030",
+      "account_id": "48dfab16-348f-4573-af5b-2a19bdb1b17c",
+      "external_account_id": "17841449910653773",
+      "page_id": "1230648066809237",
+      "account_status": "Connected",
+      "revision": 1,
+      "evidence": "Reused previously authorized Meta asset selection; backend returned expected Instagram identity with no last error."
+    }
+  ],
+  "failures": [],
+  "pending": [
+    "Local FE reconnect reported invalid state; same-origin Facebook reconnect and Instagram connect passed. FE Network evidence needed to isolate local cookie/session failure.",
+    "Real-account refresh and Instagram disconnect/reconnect checks remain pending.",
+    "Read-only database evidence unavailable."
+  ],
+  "redactions": [
+    "No tokens, cookies, OAuth codes/states or provider responses stored."
+  ],
+  "side_effects": "Two test OAuth sessions cancelled via consent denial; one real browser session reached Meta asset selection. Enabled and saved Client OAuth Login and Web OAuth Login in the Meta app. No new business created, no connected account credentials changed, no AI or publishing calls. Retest created one Facebook OAuth session with new deployed ID; stopped at asset selection. No business created or account credentials changed. Latest User Access Token session reached final consent with existing assets selected. Final consent not submitted by assistant. User completed initial Facebook consent and disconnected Demo HTM. Assistant reconnected that existing account successfully using fresh session from API origin; account now Connected with same ID. Connected Instagram epx.mmo linked to Demo HTM. No AI generation or publishing calls.",
+  "completed_at": "2026-09-14T19:49:47.218959+00:00"
+}

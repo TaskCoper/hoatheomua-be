@@ -212,7 +212,8 @@ public class Service(AppDbContext db, ICurrentUserService user, IOAuthProvider p
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
         var account = await LockAccount(id, ct);
         if (await db.PlatformPosts.AnyAsync(x => x.PlatformAccountId == id && !x.IsDeleted
-            && (x.Status == PlatformPostStatus.Scheduled || x.Status == PlatformPostStatus.Publishing), ct))
+            && (x.Status == PlatformPostStatus.Scheduled || x.Status == PlatformPostStatus.Publishing), ct)
+            || await db.PostPublications.AnyAsync(x => x.PlatformAccountId == id && PostPublishing.Store.ActiveStates.Contains(x.Status), ct))
             throw new AccountException(409, "PLATFORM_ACCOUNT_IN_USE", "Hủy lịch hoặc chờ tác vụ đăng kết thúc trước khi ngắt kết nối.");
         if (account.Status != "Disabled")
         {
@@ -268,7 +269,7 @@ public class Service(AppDbContext db, ICurrentUserService user, IOAuthProvider p
     { "facebook" => PlatformType.Facebook, "instagram" => PlatformType.Instagram, "zalo" => PlatformType.Zalo, _ => throw new BadRequestException("Nền tảng phải là facebook, instagram hoặc zalo.") };
     public static string Random() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     public static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
-    private static string AccountPurpose(Guid id) => $"postgen:account:{id}";
+    internal static string AccountPurpose(Guid id) => $"postgen:account:{id}";
     private static string SessionPurpose(Guid id) => $"postgen:oauth:{id}";
     private static AccountException InvalidState() => new(400, "PLATFORM_OAUTH_STATE_INVALID", "Phiên kết nối không hợp lệ, hết hạn hoặc không thuộc trình duyệt này.");
     private static AccountException Changed() => new(409, "PLATFORM_ACCOUNT_CHANGED", "Thông tin kết nối đã thay đổi; tải lại và kết nối lại nếu cần.");

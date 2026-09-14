@@ -3097,6 +3097,106 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Navigation("SubIds");
                 });
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostPublication", b =>
+            {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<Guid>("BasePostId").HasColumnType("uuid");
+                b.Property<Guid>("PlatformPostId").HasColumnType("uuid");
+                b.Property<Guid>("PlatformAccountId").HasColumnType("uuid");
+                b.Property<Guid>("RequestedBy").HasColumnType("uuid");
+                b.Property<Guid?>("LeaseId").HasColumnType("uuid");
+                b.Property<long>("Revision").IsConcurrencyToken().HasColumnType("bigint");
+                b.Property<int>("AttemptCount").HasColumnType("integer");
+                b.Property<int>("StepCount").HasColumnType("integer");
+                b.Property<bool>("PublishMayHaveOccurred").HasColumnType("boolean");
+                b.Property<bool>("CanRetry").HasColumnType("boolean");
+                b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTimeOffset>("UpdatedAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTimeOffset?>("LeaseUntil").HasColumnType("timestamp with time zone");
+                b.Property<DateTimeOffset?>("NextRunAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTimeOffset?>("ScheduledAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTimeOffset?>("LastDispatchedAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTimeOffset?>("CompletedAt").HasColumnType("timestamp with time zone");
+                b.Property<string>("IdempotencyKey").IsRequired().HasMaxLength(128).HasColumnType("character varying(128)");
+                b.Property<string>("RequestHash").IsRequired().HasMaxLength(64).HasColumnType("character varying(64)");
+                b.Property<string>("Snapshot").IsRequired().HasColumnType("jsonb");
+                b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)");
+                b.Property<string>("Checkpoint").IsRequired().HasColumnType("jsonb");
+                b.Property<string>("ExternalPostId").HasMaxLength(200).HasColumnType("character varying(200)");
+                b.Property<string>("ExternalPostUrl").HasMaxLength(2048).HasColumnType("character varying(2048)");
+                b.Property<string>("ErrorCode").HasMaxLength(100).HasColumnType("character varying(100)");
+                b.HasKey("Id");
+                b.HasIndex("BasePostId");
+                b.HasIndex("PlatformAccountId");
+                b.HasIndex("PlatformPostId").IsUnique().HasDatabaseName("UX_PostPublication_Active").HasFilter("\"Status\" IN ('Queued','Scheduled','Publishing','NeedsReview')");
+                b.HasIndex("PlatformPostId", "IdempotencyKey").IsUnique();
+                b.HasIndex("PlatformPostId", "CreatedAt", "Id");
+                b.HasIndex("Status", "NextRunAt", "LeaseUntil");
+                b.ToTable("PostPublication", t =>
+                {
+                    t.HasCheckConstraint("CK_PostPublication_Schedule", "\"Status\" <> 'Scheduled' OR (\"ScheduledAt\" IS NOT NULL AND \"NextRunAt\" IS NOT NULL AND \"NextRunAt\" >= \"ScheduledAt\" AND \"LeaseId\" IS NULL AND \"AttemptCount\" = 0 AND NOT \"PublishMayHaveOccurred\")");
+                    t.HasCheckConstraint("CK_PostPublication_Status", "\"Status\" IN ('Queued','Scheduled','Publishing','Succeeded','Failed','Cancelled','NeedsReview','Closed')");
+                    t.HasCheckConstraint("CK_PostPublication_Counters", "\"Revision\" > 0 AND \"AttemptCount\" >= 0 AND \"StepCount\" >= 0");
+                    t.HasCheckConstraint("CK_PostPublication_Lease", "(\"LeaseId\" IS NULL) = (\"LeaseUntil\" IS NULL)");
+                    t.HasCheckConstraint("CK_PostPublication_Retry", "NOT \"CanRetry\" OR (\"Status\" = 'Failed' AND NOT \"PublishMayHaveOccurred\")");
+                    t.HasCheckConstraint("CK_PostPublication_Success", "\"Status\" <> 'Succeeded' OR (\"ExternalPostId\" IS NOT NULL AND length(\"ExternalPostId\") > 0)");
+                });
+            });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostPublicationAttempt", b =>
+            {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<Guid>("PublicationId").HasColumnType("uuid");
+                b.Property<int>("Number").HasColumnType("integer");
+                b.Property<DateTimeOffset>("StartedAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTimeOffset?>("CompletedAt").HasColumnType("timestamp with time zone");
+                b.Property<string>("Operation").IsRequired().HasMaxLength(40).HasColumnType("character varying(40)");
+                b.Property<string>("Status").IsRequired().HasMaxLength(30).HasColumnType("character varying(30)");
+                b.Property<string>("ErrorCode").HasMaxLength(100).HasColumnType("character varying(100)");
+                b.Property<string>("ProviderCode").HasMaxLength(100).HasColumnType("character varying(100)");
+                b.Property<string>("ProviderRequestId").HasMaxLength(200).HasColumnType("character varying(200)");
+                b.Property<string>("ExternalPostId").HasMaxLength(200).HasColumnType("character varying(200)");
+                b.HasKey("Id");
+                b.HasIndex("PublicationId", "Number").IsUnique();
+                b.ToTable("PostPublicationAttempt", t =>
+                {
+                    t.HasCheckConstraint("CK_PostPublicationAttempt_Number", "\"Number\" > 0");
+                });
+            });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostPublicationReview", b =>
+            {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<Guid>("PublicationId").HasColumnType("uuid");
+                b.Property<Guid>("ActorId").HasColumnType("uuid");
+                b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone");
+                b.Property<string>("Action").IsRequired().HasMaxLength(40).HasColumnType("character varying(40)");
+                b.Property<string>("Note").IsRequired().HasMaxLength(2000).HasColumnType("character varying(2000)");
+                b.Property<string>("ExternalPostId").HasMaxLength(200).HasColumnType("character varying(200)");
+                b.HasKey("Id");
+                b.HasIndex("PublicationId", "CreatedAt");
+                b.ToTable("PostPublicationReview", t =>
+                {
+                });
+            });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostPublication", b =>
+            {
+                b.HasOne("HoaTheoMua.Repository.Entity.BasePost", null).WithMany().HasForeignKey("BasePostId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                b.HasOne("HoaTheoMua.Repository.Entity.PlatformPost", null).WithMany().HasForeignKey("PlatformPostId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                b.HasOne("HoaTheoMua.Repository.Entity.PlatformAccount", null).WithMany().HasForeignKey("PlatformAccountId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostPublicationAttempt", b =>
+            {
+                b.HasOne("HoaTheoMua.Repository.Entity.PostPublication", null).WithMany().HasForeignKey("PublicationId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostPublicationReview", b =>
+            {
+                b.HasOne("HoaTheoMua.Repository.Entity.PostPublication", null).WithMany().HasForeignKey("PublicationId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            });
+
 #pragma warning restore 612, 618
         }
     }
