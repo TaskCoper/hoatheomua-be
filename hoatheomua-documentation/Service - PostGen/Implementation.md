@@ -218,3 +218,25 @@ dotnet run --project "hoatheomua-documentation/Service - PostGen/AccountVerifica
 ```
 
 AccountProbe tạo/xóa database có prefix account_probe_, chỉ mở cổng loopback 55442, tất cả OAuth HTTP dùng fake handler. Chạy từ thư mục AccountVerification để lưu evidence vào đúng thư mục results của tài liệu. Không đưa secret thật vào file evidence.
+
+## Mốc 12 — tác vụ đăng và snapshot (2026-09-15)
+
+- Đã triển khai migration PostPublication/Attempt/Review, snapshot JSONB bất biến, API Admin preview/publish/list/detail/retry/cancel/recheck/resolve, worker từng bước với lease/intent/checkpoint và PostgreSQL recovery qua bus outbox.
+- Khóa bản chốt nền tảng khi có job hoạt động, khóa sửa/xóa bài gốc; vẫn đọc lịch sử và thêm ảnh vào kho. NeedsReview không tự gửi lại bài; xác nhận của Admin vẫn cần bằng chứng adapter.
+- Build Release PASS (còn warning hiện hữu). **20 test PostPublishing PASS**, gồm PostgreSQL migration/concurrency/immutable snapshot/rollback job-outbox/crash; **toàn suite 1.015 PASS, 0 fail, 0 skip**.
+- HTTP/JWT/RabbitMQ probe dùng đúng đăng ký MassTransit ứng dụng: **39 request / 91 kiểm tra PASS**, chỉ một lần publish trong kịch bản timeout rồi đối soát. Anonymous 401, Staff 403, Admin dùng được 8 endpoint. Toàn bộ provider giả lập, không gọi AI/Meta thật.
+- EF scaffold gặp lại lỗi comparer enum của snapshot cũ; migration/snapshot mới được viết tường minh và so sánh metadata bằng PostgreSQL. Up/Down khi rỗng PASS; Down khi có lịch sử bị chặn đúng thiết kế.
+- [Contract](Publications.md), [FE handoff](../FE-API-Handoff-PostGen-Milestone12.md), [HTTP evidence](PublicationVerification/results/publication-api-evidence.json), [báo cáo](PublicationVerification/results/milestone12-verification.json). Database test được dọn sau chạy; chưa deploy.
+- Mốc 13 chưa có adapter thật; flag Facebook/Instagram mặc định false. Mốc 14 chưa có API lịch, mốc 9–10/Zalo tiếp tục hoãn.
+
+
+## Cập nhật mốc 13 — 2026-09-15
+
+Đã triển khai adapter Facebook/Instagram gọi Graph API, giữ API mốc 12. Kiểm chứng local qua fake HTTP Meta/media, PostgreSQL/RabbitMQ thật; HTTP 49 request / 157 checks PASS. Chưa deploy/smoke account thật; flag mặc định false. Contract hiện hành và giới hạn media/đối soát: [PublishingAdapters.md](PublishingAdapters.md); [FE handoff](../FE-API-Handoff-PostGen-Milestone13.md). Không thêm migration; checkpoint JSON có preparedAt và metadata/ready của media.
+
+Kiểm chứng cuối mốc 13: `dotnet build HoaTheoMua.sln -c Release --no-restore --disable-build-servers -m:1` PASS; `dotnet test HoaTheoMua.sln -c Release` với PostgreSQL local: **1.094 PASS / 0 fail / 0 skip**, gồm 79 test mới mốc 13. HTTP adapter probe **49 request / 157 checks PASS**. [Tổng hợp evidence](PublicationVerification/results/milestone13-verification.json).
+
+
+## Cập nhật mốc 14 — 2026-09-15
+
+Ba API Admin POST/PUT/DELETE schedule, scheduledAt UTC trong response job; snapshot giữ nguyên. Contract/lỗi/default thời gian/migration tại [Scheduling.md](Scheduling.md), [FE handoff](../FE-API-Handoff-PostGen-Milestone14.md). Build PASS; 21 test mới, toàn suite 1.115 PASS/0 skip; HTTP 37 request/90 checks PASS với PostgreSQL/RabbitMQ, adapter production và HTTP Meta giả lập. Không đăng thật hoặc deploy. [Evidence](PublicationVerification/results/milestone14-verification.json).

@@ -111,7 +111,10 @@ public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserServic
         var types = targets.Select(x => x.Platform).ToArray();
         var platforms = await db.PlatformPosts.Where(x => x.BasePostId == id && !x.IsDeleted && types.Contains(x.Platform)).ToListAsync(ct);
         if (platforms.Any(x => x.Status == PlatformPostStatus.Generating)) throw new ConflictException("Platform post is generating");
-        if (platforms.Any(x => x.Status is not (PlatformPostStatus.Draft or PlatformPostStatus.Generated or PlatformPostStatus.Ready or PlatformPostStatus.Failed)))
+        var platformIds = platforms.Select(x => x.Id).ToArray();
+        if (await db.PostPublications.AnyAsync(x => platformIds.Contains(x.PlatformPostId) && PostPublishing.Store.ActiveStates.Contains(x.Status), ct))
+            throw new PostPublishing.PublicationException(409, "PUBLICATION_LOCKED", "Bản chốt đang được tác vụ đăng sử dụng.");
+        if (platforms.Any(x => x.Status is not (PlatformPostStatus.Draft or PlatformPostStatus.Generated or PlatformPostStatus.Ready or PlatformPostStatus.Failed or PlatformPostStatus.PublishFailed)))
             throw new ConflictException("Platform post cannot be generated in its current state");
         foreach (var target in targets)
         {

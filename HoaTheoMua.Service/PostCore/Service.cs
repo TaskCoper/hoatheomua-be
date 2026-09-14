@@ -137,6 +137,7 @@ public class Service(AppDbContext db) : IService
     {
         await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(cancellationToken) : null;
         var post = await LockPost(id, cancellationToken);
+        await RequireNoPublication(id, cancellationToken);
         if (await db.PlatformPosts.AnyAsync(x => x.BasePostId == id && !x.IsDeleted && x.Status == PlatformPostStatus.Generating, cancellationToken))
             throw new ConflictException("Platform post is generating");
         var images = await db.BasePostImages.Where(x => x.BasePostId == id && !x.IsDeleted).ToListAsync(cancellationToken);
@@ -175,6 +176,7 @@ public class Service(AppDbContext db) : IService
     {
         await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(cancellationToken) : null;
         var post = await LockPost(id, cancellationToken);
+        await RequireNoPublication(id, cancellationToken);
         var platforms = await db.PlatformPosts.Where(x => x.BasePostId == id && !x.IsDeleted).ToListAsync(cancellationToken);
         if (platforms.Any(x => x.Status == PlatformPostStatus.Generating)) throw new ConflictException("Platform post is generating");
         post.IsDeleted = true;
@@ -187,6 +189,13 @@ public class Service(AppDbContext db) : IService
         return new Response.DeletedPost(id, true);
     }
 
+    private async Task RequireNoPublication(Guid id, CancellationToken ct)
+    {
+        if (await db.PlatformPosts.AnyAsync(x => x.BasePostId == id && !x.IsDeleted
+                && (x.Status == PlatformPostStatus.Scheduled || x.Status == PlatformPostStatus.Publishing), ct)
+            || await db.PostPublications.AnyAsync(x => x.BasePostId == id && PostPublishing.Store.ActiveStates.Contains(x.Status), ct))
+            throw new PostPublishing.PublicationException(409, "PUBLICATION_LOCKED", "Bài đang chờ đăng, đang đăng hoặc cần đối soát; xử lý tác vụ trước khi sửa/xóa bài gốc.");
+    }
     private async Task<BasePost> LockPost(Guid id, CancellationToken ct)
     {
         if (!db.Database.IsRelational()) return await FindPost(id, ct);

@@ -151,7 +151,9 @@ public partial class Service
         var platform = await db.PlatformPosts.SingleOrDefaultAsync(x => x.BasePostId == id && x.Platform == type && !x.IsDeleted, ct)
             ?? throw new NotFoundException("Platform post not found");
         if (platform.Status == PlatformPostStatus.Generating) throw new ConflictException("Platform post is generating");
-        if (platform.Status is not (PlatformPostStatus.Draft or PlatformPostStatus.Generated or PlatformPostStatus.Ready or PlatformPostStatus.Failed))
+        if (await db.PostPublications.AnyAsync(x => x.PlatformPostId == platform.Id && PostPublishing.Store.ActiveStates.Contains(x.Status), ct))
+            throw new PostPublishing.PublicationException(409, "PUBLICATION_LOCKED", "Bản chốt đang được tác vụ đăng sử dụng.");
+        if (platform.Status is not (PlatformPostStatus.Draft or PlatformPostStatus.Generated or PlatformPostStatus.Ready or PlatformPostStatus.Failed or PlatformPostStatus.PublishFailed))
             throw new ConflictException("Platform post content cannot be changed in its current state");
         return (post, platform);
     }

@@ -494,3 +494,27 @@ State được claim bằng khóa hàng trong transaction ngắn rồi ghi UsedA
 Refresh claim lease trong transaction, gọi provider ngoài transaction, lưu với kiểm lease mới nhất. Crash/timeout của refresh Zalo cần reconnect vì token một lần có thể đã bị tiêu thụ. Disconnect/reconnect thắng kết quả refresh cũ. Khi tích hợp job mốc 12–14, writer gán account/lập lịch phải khóa cùng row account và kiểm Connected để không đua với disconnect.
 
 Nâng cấp có guard: nếu cột PlatformAccountId dành sẵn đang có giá trị từ ngoài API PostGen thì migration dừng, không tự xóa hoặc sửa giá trị; cần đối soát trước. Down bỏ FK/index trên PlatformPost rồi bỏ hai bảng mới, mất dữ liệu account/session nên chỉ dùng trên DB thử hoặc theo quy trình rollback có backup. Upgrade/downgrade/guard đã được kiểm bằng PostgreSQL local.
+## Bổ sung mốc 12 — tác vụ xuất bản (2026-09-15)
+
+Schema đã triển khai local tại migration `20260915120000_AddPostGenPublications`; phần này bổ sung mô hình version nội dung/ảnh hiện hữu. Contract đầy đủ: [Publications.md](Publications.md).
+
+- `PostPublication`: FK Restrict đến BasePost, PlatformPost, PlatformAccount; requestedBy lấy từ JWT. Snapshot JSONB cố định, idempotency key/request hash, status/revision, checkpoint, lease, nextRun/lastDispatched, attempt/step count, bằng chứng có thể đã đăng, external ID/link và lỗi.
+- `PostPublicationAttempt`: mỗi lời gọi adapter có một dòng intent trước HTTP, số thứ tự unique trong job, operation/status, mã lỗi/provider request ID đã lọc, thời điểm bắt đầu/kết thúc. Có thể đóng dòng Started thành kết quả hoặc Interrupted; không dùng retry HTTP để xóa attempt trước.
+- `PostPublicationReview`: actor/action/note/external ID/thời điểm, append-only bằng trigger. Dùng cho retry/cancel/recheck/resolve/close.
+- Snapshot chứa bản sao text và mảng `{generationId,url,order}`, không FK-only đến Manual. Trigger chặn cập nhật identity/snapshot. Soft delete bài nguồn không xóa history. Không thêm asset của mốc 10.
+- Unique `(PlatformPostId,IdempotencyKey)` và partial unique PlatformPostId cho Queued/Scheduled/Publishing/NeedsReview. Revision là optimistic concurrency token. CHECK bảo vệ status, counters, lease pair, trạng thái retry và external ID khi thành công.
+- Down chỉ cho phép nếu bảng publication rỗng; không xóa lịch sử để rollback triển khai. Scheduled được dành sẵn, chưa có API lịch mốc 14.
+
+```mermaid
+erDiagram
+    BasePost ||--o{ PostPublication : source
+    PlatformPost ||--o{ PostPublication : history
+    PlatformAccount ||--o{ PostPublication : destination
+    PostPublication ||--o{ PostPublicationAttempt : attempts
+    PostPublication ||--o{ PostPublicationReview : reviews
+```
+
+
+## Mốc 14 — Lịch đăng
+
+Migration `20260915160000_AddPostPublicationSchedule` thêm PostPublication.ScheduledAt `timestamptz NULL`, phân biệt giờ Admin yêu cầu với NextRunAt dùng cho dispatch/backoff. Response job giữ ScheduledAt cho lịch sử; PlatformPost.ScheduledAt cập nhật cùng transaction và xóa pointer khi cancel. Scheduled phải có giờ/NextRunAt ≥ giờ, chưa lease/attempt/publish intent. Trigger chặn đổi ScheduledAt sau claim; review append-only lưu giờ trước/sau/actor. Snapshot không đổi khi reschedule. Chi tiết migration/rollback/index tại [Scheduling.md](Scheduling.md).

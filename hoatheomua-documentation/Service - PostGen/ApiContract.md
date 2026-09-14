@@ -235,3 +235,16 @@ Chỉ POST regenerate dùng HeavyPolicy và AI; PUT/history không đọc Config
 GET `/api/v1/posts/{id}/platforms/{platform}/official` trả ApiResponse<OfficialVersion>: basePostId/platformPostId/platform, generationId/title/content/hashtag/selectedAt, images chốt (shape như detail), status/isReady/notReadyReasons. Chỉ đọc, không heavy/AI/Config, không sửa trạng thái. Scope content đúng PlatformPost, ảnh đúng bài/cặp và Succeeded có URL. Không có lịch sử hoặc ảnh nguồn trong response.
 
 Có content không rỗng và ít nhất một ảnh hợp lệ → Ready; thiếu trả 200 với MissingContent/MissingImages. Generating hoặc các trạng thái publish có lý do riêng, isReady=false. Cờ Ready lưu trong DB không thay thế kiểm dữ liệu thật; status của official phản ánh payload, có thể khác trạng thái xử lý trong detail. Tất cả truy vấn cùng snapshot PostgreSQL Repeatable Read. Ví dụ và cách FE xử lý tại [bàn giao mốc 7](../FE-API-Handoff-PostGen-Milestone7.md).
+## Bổ sung contract mốc 12 (2026-09-15)
+
+API tác vụ xuất bản đã triển khai local, xem [Publications.md](Publications.md) và [FE mốc 12](../FE-API-Handoff-PostGen-Milestone12.md): preview, publish, list/detail, retry, cancel trước claim, recheck và resolve. Toàn bộ nhóm này dùng AdminPolicy. `POST publish` trả 202 cùng publicationId; chưa có adapter Meta thật nên mặc định không nhận job trên ứng dụng production. Route schedule vẫn là mốc 14, chưa triển khai. Các API mốc 0–7 bên dưới giữ contract đọc/sinh nội dung, không tự kích hoạt đăng.
+
+
+## Cập nhật mốc 13 — 2026-09-15
+
+Đã triển khai adapter Facebook/Instagram gọi Graph API, giữ API mốc 12. Kiểm chứng local qua fake HTTP Meta/media, PostgreSQL/RabbitMQ thật; HTTP 49 request / 157 checks PASS. Chưa deploy/smoke account thật; flag mặc định false. Contract hiện hành và giới hạn media/đối soát: [PublishingAdapters.md](PublishingAdapters.md); [FE handoff](../FE-API-Handoff-PostGen-Milestone13.md). Không thêm migration; checkpoint JSON có preparedAt và metadata/ready của media.
+
+
+## Cập nhật mốc 14 — 2026-09-15
+
+Ba API Admin POST/PUT/DELETE schedule, scheduledAt UTC trong response job; snapshot giữ nguyên. Contract/lỗi/default thời gian/migration tại [Scheduling.md](Scheduling.md), [FE handoff](../FE-API-Handoff-PostGen-Milestone14.md). Build PASS; 21 test mới, toàn suite 1.115 PASS/0 skip; HTTP 37 request/90 checks PASS với PostgreSQL/RabbitMQ, adapter production và HTTP Meta giả lập. Không đăng thật hoặc deploy. [Evidence](PublicationVerification/results/milestone14-verification.json).

@@ -2,7 +2,7 @@
 
 > **Phạm vi đăng tải chốt ngày 2026-09-15:** hiện chỉ cấu hình, kết nối và triển khai xuất bản cho **Facebook và Instagram**. **Zalo tạm hoãn**, không yêu cầu tài khoản/app/OA, cấu hình OAuth hoặc kiểm thử đăng thật trong đợt này; mốc 13C và nghiệm thu Zalo ở mốc 14–15 chờ yêu cầu tiếp tục. Giữ `PlatformAccountOptions:Zalo:Enabled=false` (mặc định). Code/contract Zalo đã có được giữ lại; quyết định này không thay đổi tính năng sinh nội dung/ảnh Zalo ở mốc 0–7.
 
-> **Cập nhật 2026-09-14:** mốc **0–7 đã triển khai và push** trên `feature/post-gen`, chưa deploy. Bổ sung kế hoạch **mốc 8–15** cho contract xuất bản, xác thực AI, lưu ảnh, tài khoản nền tảng, đăng bài, lập lịch và nghiệm thu. Phần code xuất bản **chưa triển khai**. **Mốc 9 và 10 tạm hoãn theo yêu cầu người dùng. Cập nhật 2026-09-15: mốc 11 đã triển khai và kiểm chứng local; trên nhánh `feature/post-gen`, chưa deploy. Bước tiếp theo là mốc 12.** Đã chốt backend gọi trực tiếp API chính thức Facebook/Instagram/Zalo; các lựa chọn khác chưa được xác nhận vẫn là đề xuất thiết kế.
+> **Cập nhật 2026-09-14:** mốc **0–7 đã triển khai và push** trên `feature/post-gen`, chưa deploy. Bổ sung kế hoạch **mốc 8–15** cho contract xuất bản, xác thực AI, lưu ảnh, tài khoản nền tảng, đăng bài, lập lịch và nghiệm thu. Mốc 12 đã có API tác vụ xuất bản; mốc 13 đã có adapter Facebook/Instagram gọi Graph API, kiểm chứng local bằng fake HTTP Meta. **Mốc 9 và 10 tạm hoãn theo yêu cầu người dùng. Cập nhật 2026-09-15: mốc 11 đã triển khai và kiểm chứng local; trên nhánh `feature/post-gen`, chưa deploy. Mốc 12–14 đã triển khai local; chưa smoke đăng lên account thật. Bước tiếp theo là smoke được chỉ định và nghiệm thu/phát hành mốc 15.** Đã chốt backend gọi trực tiếp API chính thức Facebook/Instagram/Zalo; các lựa chọn khác chưa được xác nhận vẫn là đề xuất thiết kế.
 
 Cập nhật 2026-09-14: đã bỏ bảng PlatformStandard và cả API chuẩn nền tảng/preset riêng. Đã bỏ cả key `postgen.platform.*`; Admin dùng [Config prompt theo nền tảng](PlatformConfig.md) và [Config ratio preset](RatioPresetConfig.md).
 
@@ -33,7 +33,7 @@ BasePost và preset PostGen dùng chung cho mọi Staff/Admin. BasePost không c
 - **Kiểm thử mốc 7**: 18 test PASS (1 PostgreSQL snapshot integration), API/probe build PASS; 134 request HTTP / 259 kiểm tra PASS, không gọi AI thật. Xem [Implementation.md](Implementation.md).
 - **Kiểm thử mốc 6**: 114 test PostGen PASS, gồm 7 PostgreSQL integration; test rollback sau SQL chạy bổ sung PASS. HTTP probe 121 request / 234 kiểm tra PASS; toàn bộ AI mock. Xem [Implementation.md](Implementation.md).
 - **Kiểm thử mốc 5 trước thay đổi ảnh tùy chọn**: mốc 5 có 102 test PostGen PASS (6 PostgreSQL integration, không fail/skip), HTTP probe 79 request / 168 kiểm tra PASS, gồm bốn API mới bằng AI mock. Không gọi proxy thật trong thay đổi này. Số request/check và evidence tại [Implementation.md](Implementation.md).
-- **Tiến độ hiện tại**: hoàn thành mốc 0–7; mốc 7 trả nội dung/ảnh chốt với `isReady/notReadyReasons`. **Mốc 8 đã chốt hướng tích hợp trực tiếp. Mốc 9–10 tạm hoãn. Mốc 11 đã triển khai tài khoản và OAuth/token, kiểm chứng bằng provider giả lập; bước tiếp theo là mốc 12 — tác vụ đăng và snapshot.** Mốc 11 có API account đã hiện thực; các API publish/schedule của mốc 12–15 vẫn ở mức kế hoạch. Các tham chiếu giai đoạn 2/3/4 trong bản brief cũ tương ứng schema/CRUD/AI; dùng số mốc trong tài liệu này khi triển khai.
+- **Tiến độ hiện tại**: hoàn thành mốc 0–7; mốc 8 chốt tích hợp trực tiếp; mốc 9–10 tạm hoãn. **Mốc 11 đã có account/OAuth; mốc 12 đã có job, snapshot, outbox/worker và xử lý NeedsReview, kiểm chứng local bằng fake provider. Mốc 13 đã có adapter Facebook/Instagram, kiểm chứng local; chưa smoke account thật.** Mốc 14 đã có đặt/đổi/hủy lịch; mốc 15 chưa hoàn tất. Xem [Publications.md](Publications.md) và [bàn giao FE mốc 12](../FE-API-Handoff-PostGen-Milestone12.md).
 
 ## Bối cảnh nghiệp vụ
 
@@ -91,7 +91,7 @@ Nếu nội dung hoặc ảnh chưa phù hợp, người dùng tạo lại dựa
 
 Sau khi có nội dung cho các nền tảng, người dùng đăng ngay hoặc đặt lịch. Không bấm đăng và không đặt lịch thì bài không bao giờ được đăng.
 
-Phần này **chưa triển khai trong mốc 0–7**. Các cột đã dành sẵn trên `PlatformPost` sẽ được tái sử dụng; mốc 11 đã có migration tài khoản/phiên OAuth. Các mốc sau vẫn cần migration cho tác vụ đăng, bản sao nội dung xuất bản và lịch sử lần gọi provider.
+Phần này **chưa triển khai trong mốc 0–7**. Các cột đã dành sẵn trên `PlatformPost` sẽ được tái sử dụng; mốc 11 đã có migration tài khoản/phiên OAuth. Mốc 12 đã thêm migration cho tác vụ đăng, snapshot và lịch sử attempt/review; adapter thật đã có ở mốc 13; lịch đã triển khai ở mốc 14.
 
 ## Quyết định đã chốt
 
@@ -152,10 +152,11 @@ stateDiagram-v2
     Ready --> Generated: PUT ảnh bỏ hết ảnh chốt, vẫn còn nội dung
     Failed --> Ready: PUT chọn ảnh thành công, đã có nội dung chốt
     Ready --> Generating: paraphase lại tiếp
-    Ready --> Scheduled: (phase sau)
+    Ready --> Publishing: tạo job mốc 12
+    Ready --> Scheduled: mốc 14
     Scheduled --> Publishing: (phase sau)
-    Publishing --> Published: (phase sau)
-    Publishing --> PublishFailed: (phase sau)
+    Publishing --> Published: job thành công
+    Publishing --> PublishFailed: job thất bại
 ```
 
 Guard:
@@ -164,7 +165,7 @@ Guard:
 - Vào `Ready` phải có `OfficialGenerationId != null` **và** ít nhất một dòng `PlatformPostImage` có `SelectedGeneratedPostImageId != null`.
 - Sửa tay nội dung không đưa `PlatformPost` về `Generating` — nó tạo version `Manual` và giữ nguyên trạng thái hiện tại (`Generated` hoặc `Ready`).
 - Paraphase lại **một ô ảnh** cũng không đưa cả bài về `Generating` — nó chỉ thêm ảnh vào kho dùng chung.
-- Các trạng thái sau `Ready` chỉ khai báo, đợt này không có code nào chuyển vào.
+- Mốc 12 đã có code cập nhật trạng thái tổng hợp Publishing/Published/PublishFailed theo job; Scheduled đã được API lịch mốc 14 sử dụng. Mốc 0–7 không tự kích hoạt xuất bản.
 
 ### Không có state machine cho version
 
@@ -366,7 +367,7 @@ Các quyết định mốc 0–7 giữ nguyên, trừ hai giả định được
 | Kho ảnh và chính sách URL | Đề xuất object storage tương thích S3; cần endpoint/bucket, cách provider đọc ảnh và thời hạn lưu | Khi tiếp tục mốc 10; tạm hoãn, không chặn mốc 11–15 |
 | OAuth và nơi giữ secret | Admin quản lý account; dùng secret của môi trường và mã hóa token, không lưu plaintext trong Config | Kết nối thật mốc 11 |
 | API key AI | Hiện không bắt buộc; tái sử dụng `AiOption.ApiKey` khi proxy xác nhận Bearer hoặc cung cấp contract khác | Khi tiếp tục mốc 9; tạm hoãn, giữ cơ chế gọi AI hiện tại |
-| Quy tắc vận hành lịch | Đề xuất hiển thị `Asia/Ho_Chi_Minh`, nhận thời gian có offset, lưu UTC; lịch trễ quá ngưỡng phải yêu cầu xử lý lại | Nghiệm thu mốc 14; ngưỡng trễ cần chốt |
+| Quy tắc vận hành lịch | UI hiển thị `Asia/Ho_Chi_Minh`, API nhận offset/lưu UTC; mặc định lead 60 giây, horizon 30 ngày, trễ quá 900 giây trước claim thì dừng | Đã hiện thực/kiểm chứng local mốc 14; ngưỡng cấu hình được |
 
 Secret được cấp qua cấu hình môi trường/kho secret; tài liệu chỉ ghi tên cấu hình. Xem [PublishingReserved.md](PublishingReserved.md) và chi tiết mốc 8–15 bên dưới.
 
@@ -374,7 +375,7 @@ Secret được cấp qua cấu hình môi trường/kho secret; tài liệu ch�
 
 ## Các giai đoạn triển khai
 
-**Giai đoạn tạo nội dung: mốc 0–7 đã hoàn thành.** Mỗi mốc có kiểm chứng riêng. Các mốc 3–6 có thao tác cần AI Service (kiểm bằng mock). **Giai đoạn tiếp nối: mốc 11 đã hiện thực; mốc 9–10 tạm hoãn; mốc 12–15 còn ở mức kế hoạch**, được mô tả sau phần nghiệm thu 0–7.
+**Giai đoạn tạo nội dung: mốc 0–7 đã hoàn thành.** Mỗi mốc có kiểm chứng riêng. Các mốc 3–6 có thao tác cần AI Service (kiểm bằng mock). **Giai đoạn tiếp nối: mốc 11 đã hiện thực; mốc 9–10 tạm hoãn; mốc 12 đã triển khai local; mốc 13 đã triển khai local/chưa smoke thật; mốc 14 đã triển khai local; mốc 15 còn ở mức kế hoạch**, được mô tả sau phần nghiệm thu 0–7.
 
 | Mốc | Endpoint | Cần AI? |
 | --- | --- | --- |
@@ -536,7 +537,7 @@ Chạy test phù hợp trong lúc phát triển. Hook Husky `pre-push` hiện c�
 
 ## Kế hoạch tiếp nối — mốc 8–15
 
-**Trạng thái: mốc 11 đã triển khai local; mốc 9–10 tạm hoãn; mốc 12–15 chưa triển khai.** Đã chốt backend gọi trực tiếp API chính thức Facebook/Instagram/Zalo qua adapter riêng từng nền tảng (quyết định #23). Các route/schema mốc 11 đã hiện thực theo PlatformAccounts.md; các chi tiết mốc 12–15 còn là đề xuất thiết kế. Không tái tạo `PlatformStandard` hoặc key `postgen.platform.*`: system prompt vẫn ở Config theo từng nền tảng; giới hạn kỹ thuật khi xuất bản thuộc contract và validator của adapter, không phải bộ prompt thứ hai.
+**Trạng thái: mốc 11–14 đã triển khai local, chưa deploy; chưa smoke đăng thật; mốc 9–10 tạm hoãn; mốc 15 chưa hoàn tất.** Đã chốt backend gọi trực tiếp API chính thức Facebook/Instagram/Zalo qua adapter riêng từng nền tảng (quyết định #23). Các route/schema mốc 11 đã hiện thực theo PlatformAccounts.md; mốc 12 theo [Publications.md](Publications.md); mốc 13 theo [PublishingAdapters.md](PublishingAdapters.md); mốc 14 theo [Scheduling.md](Scheduling.md); mốc 15 còn là kế hoạch nghiệm thu/phát hành. Không tái tạo `PlatformStandard` hoặc key `postgen.platform.*`: system prompt vẫn ở Config theo từng nền tảng; giới hạn kỹ thuật khi xuất bản thuộc contract và validator của adapter, không phải bộ prompt thứ hai.
 
 | Mốc | Kết quả cần giao | Phụ thuộc |
 | --- | --- | --- |
@@ -544,12 +545,12 @@ Chạy test phù hợp trong lúc phát triển. Hook Husky `pre-push` hiện c�
 | 9 | **Tạm hoãn** — sẵn sàng bật API key AI | Giữ cơ chế gọi AI hiện tại; thực hiện lại khi có yêu cầu |
 | 10 | **Tạm hoãn** — ảnh bền vững, metadata kích thước thực | Dùng URL đã lưu; chưa triển khai kho ảnh/import/asset |
 | 11 | **Đã triển khai local** — tài khoản nền tảng và vòng đời token | Kiểm chứng mock/PostgreSQL/HTTP; kết nối thật cần cấu hình app |
-| 12 | Tác vụ đăng, snapshot cố định, outbox và worker | 8, 11; snapshot dùng version ID/URL ảnh hiện có |
-| 13 | Adapter đăng Facebook, Instagram; **13C Zalo tạm hoãn** | 11–12; contract riêng từng kênh, không chờ mốc 10 |
-| 14 | Đặt lịch, đổi lịch, hủy lịch và phục hồi sau restart | 12; adapter mốc 13 cho kênh được bật |
+| 12 | **Đã triển khai local** — job/snapshot, outbox/worker, retry/cancel/review và guard | Fake provider/PostgreSQL/RabbitMQ; đã tích hợp adapter mốc 13 |
+| 13 | **Đã triển khai local** — adapter Facebook/Instagram; **13C Zalo tạm hoãn** | Fake HTTP Meta + PostgreSQL/RabbitMQ PASS; chưa smoke account thật |
+| 14 | **Đã triển khai local** — đặt/đổi/hủy lịch, phục hồi sau restart và chặn lịch quá trễ | 21 test mới, HTTP 37 request / 90 checks PASS; chưa deploy |
 | 15 | Kiểm thử tích hợp, vận hành, bàn giao và rollout | Các mốc tương ứng của kênh phát hành |
 
-**Thứ tự làm đã cập nhật:** mốc 8 đã chốt hướng tích hợp → mốc 11 đã triển khai → **12 → 13 → 14 → 15**. **Mốc 9 và 10 tạm hoãn, không phải đã hoàn thành hoặc bị xóa khỏi kế hoạch.** Giữ nội dung thiết kế để tiếp tục khi có yêu cầu; không tự triển khai hai mốc này như phụ thuộc ngầm của publishing. Một kênh thiếu quyền/contract không chặn việc viết và kiểm thử các kênh còn lại bằng mock.
+**Thứ tự làm đã cập nhật:** mốc 8 đã chốt hướng tích hợp → mốc 11–14 đã triển khai local → smoke từng kênh được chỉ định → **15**. **Mốc 9 và 10 tạm hoãn, không phải đã hoàn thành hoặc bị xóa khỏi kế hoạch.** Giữ nội dung thiết kế để tiếp tục khi có yêu cầu; không tự triển khai hai mốc này như phụ thuộc ngầm của publishing. Một kênh thiếu quyền/contract không chặn việc viết và kiểm thử các kênh còn lại bằng mock.
 
 ### Mốc 8 — Contract xuất bản và thiết kế bàn giao
 
@@ -605,27 +606,28 @@ Kiểm chứng local: 23 test mốc 11 PASS (gồm PostgreSQL cho callback/refre
 - Thiết kế connect/callback/list/reconnect/disconnect. Callback kiểm `state` một lần, có hạn, gắn với Admin khởi tạo; redirect URI cho phép phải cố định. Không yêu cầu JWT ở callback provider nếu luồng OAuth dùng redirect; quyền khởi tạo kết nối vẫn là Admin.
 - Refresh token có khóa hoặc compare-and-swap để xử lý token xoay vòng; lỗi thu hồi/hết quyền chuyển `ReauthRequired`, không retry vô hạn. Disconnect ngừng đăng mới và xử lý rõ job đang chờ; giữ lịch sử account đã dùng.
 
-**API đã triển khai:** `GET /api/v1/post-gen/platform-accounts`, `POST .../platform-accounts/{platform}/connect`, callback theo provider, `POST .../platform-accounts/{id}/reconnect`, `POST .../platform-accounts/{id}/refresh`, `DELETE .../platform-accounts/{id}`. DTO chi tiết tại PlatformAccounts.md; callback không trả token về FE.
+**API đã triển khai:** `GET /api/v1/post-gen/platform-accounts`, `POST .../platform-accounts/{platform}/connect`, callback theo provider, `POST .../platform-accounts/{id}/reconnect`, `POST .../platform-accounts/{id}/refresh`, NeedsReview. NeedsReview`DELETE .../platform-accounts/{id}`. DTO chi tiết tại PlatformAccounts.md; callback không trả token về FE.
 
 **Nghiệm thu:** mock OAuth thành công, state hết hạn/dùng lại, thiếu quyền, hai request refresh đồng thời và disconnect khi có lịch. API thường chỉ Admin truy cập; log/response không chứa secret. Kết nối thử thật cần app và account phù hợp.
 
 ### Mốc 12 — Tác vụ đăng và snapshot cố định
 
-- Đề xuất `PostPublication` và `PostPublicationAttempt`, cùng bảng con ảnh snapshot nếu cần. Tác vụ giữ account, người yêu cầu, idempotency key, request hash, lịch, lease, attempt count và kết quả provider. Snapshot giữ nguyên title/content/hashtag đã định dạng, version formatter, generation ID, danh sách version ảnh/URL/order hiện có; asset/checksum bổ sung khi tiếp tục mốc 10, không bắt buộc trong giai đoạn tạm hoãn; **không chỉ lưu FK nội dung**, vì bản Manual có thể sửa tại chỗ.
-- Snapshot tạo trong transaction ngắn, khóa theo thứ tự BasePost → PlatformPost, đọc lại bản chốt và kiểm điều kiện đăng. Preview trả revision/hash; publish/schedule gửi revision dự kiến, trả 409 nếu bản chốt hoặc formatter đã đổi để FE yêu cầu xem lại.
-- `GET official` vẫn chỉ là readiness nội bộ. Thêm preflight kiểm account, quyền, loại bài, giới hạn kỹ thuật và URL media theo contract provider. Khi mốc 10 tạm hoãn, không yêu cầu asset trong kho riêng; lỗi URL/media phải được thể hiện rõ và không suy ra kích thước thực từ metadata mục tiêu. Worker kiểm lại điều kiện bên ngoài lúc thực thi nhưng không thay snapshot hoặc gọi AI.
-- Đề xuất trạng thái job `Queued`, `Scheduled`, `Publishing`, `Succeeded`, `Failed`, `Cancelled`, `NeedsReview`. `NeedsReview` nghĩa là chưa biết provider đã đăng hay chưa. Dùng varchar + CHECK; `PlatformPost` giữ trạng thái tổng hợp và các cột đã dành sẵn, job/attempt là nguồn lịch sử đầy đủ.
-- Một tác vụ đang hoạt động cho mỗi PlatformPost; khóa/unique index ngăn publish và schedule đồng thời. Idempotency key unique trong phạm vi PlatformPost; cùng key/cùng request trả job cũ, khác payload trả 409. Bản đã Published không tự đăng lại; thao tác đăng lại là phạm vi cần thiết kế riêng.
-- Ghi job và outbox cùng transaction, dùng MassTransit/RabbitMQ đã có. Consumer claim bằng lease và cập nhật có điều kiện; không giữ transaction qua HTTP. Thông điệp giao lại phải kiểm trạng thái DB, không chỉ dựa vào cửa sổ dedup của inbox.
-- Retry tách lỗi tạm thời, lỗi xác thực/nghiệp vụ và kết quả không rõ. Mất response sau khi provider có thể đã đăng → lưu `NeedsReview`, đối soát bằng định danh provider trước khi thử lại. Outbox không bảo đảm nền tảng bên ngoài chỉ nhận đúng một lần.
-- Rà soát middleware retry MassTransit dùng chung hiện tại: không để retry toàn consumer gửi lại lệnh publish sau timeout. Lưu từng bước chuẩn bị media/operation ID để tiếp tục an toàn sau crash; nếu provider không hỗ trợ tra cứu đủ chắc chắn thì giữ `NeedsReview` cho xử lý thủ công.
-- Rà soát guard CRUD/generate/edit/select/delete khi có job: từ chối thay đổi ảnh/nội dung chốt hoặc xóa bài đang Scheduled/Publishing; muốn sửa lịch phải hủy job chưa chạy trước. Snapshot và tham chiếu media đã xuất bản không bị xóa theo bài nguồn; chưa bảo đảm nội dung file tại URL bên ngoài bất biến hoặc luôn tồn tại khi mốc 10 tạm hoãn.
+**Đã triển khai local 2026-09-15; chưa deploy.** Migration `20260915120000_AddPostGenPublications` thêm PostPublication, PostPublicationAttempt và PostPublicationReview. Snapshot JSONB cố định giữ text đã format, version/URL/thứ tự ảnh, formatter/API version và account đích. Trigger bảo vệ snapshot, review append-only; Down bị chặn nếu đã có lịch sử.
 
-**API dự kiến:** `POST /api/v1/posts/{id}/platforms/{platform}/publish` trả HTTP 202 cùng `publicationId`; `GET .../platforms/{platform}/publications` có phân trang; `GET /api/v1/post-gen/publications/{id}` trả trạng thái/lỗi; retry chỉ cho job được xác định chưa đăng và lỗi cho phép retry. Mỗi thao tác ghi dùng Admin; đọc lịch sử mới cũng dùng Admin trong phạm vi này.
+- API Admin: preview, publish trả 202, danh sách phân trang, detail, retry, cancel trước claim, recheck và resolve có ghi actor/note.
+- Revision/hash kiểm preview; key unique theo PlatformPost chống request trùng; unique index bảo vệ một job hoạt động. Job đã thành công hoặc Closed chưa rõ kết quả không cho tạo bài đăng mới.
+- Transaction khóa BasePost → PlatformPost → account → job; job và bus outbox commit cùng nhau. Worker commit attempt intent trước HTTP, lưu checkpoint từng bước, claim lease và bỏ stale message/response. Queue publication không dùng retry/EF inbox transaction chung qua HTTP.
+- Recovery PostgreSQL quét batch, phát lại qua RabbitMQ, giới hạn steps/attempts. Timeout/crash sau publish intent → NeedsReview, không gửi lại. Retry chỉ cho Failed/canRetry khi chắc chắn chưa đăng. Admin nhập ID bài vẫn phải được adapter xác minh; Close giữ kết quả bên ngoài chưa rõ.
+- Khóa bản chốt nền tảng khi Queued/Scheduled/Publishing/NeedsReview; khóa sửa/xóa bài gốc nếu còn job hoạt động. Vẫn xem lịch sử và thêm ảnh vào kho, không thay ảnh chốt. Chi tiết phạm vi khóa tại [Publications.md](Publications.md).
+- Mốc 13 cung cấp IPublishingAdapter thật. Flag Facebook/Instagram mặc định false; adapter thật đã đăng ký ở mốc 13, nhưng chưa smoke đăng Meta. Mốc 14 đã bổ sung API đặt/đổi/hủy lịch và xử lý Scheduled. Mốc 9–10 tiếp tục hoãn.
 
-**Nghiệm thu:** test PostgreSQL thật cho snapshot Manual, hai yêu cầu đồng thời, idempotency, rollback job/outbox, crash trước/sau khi gửi và xử lý message trùng. Mock xác nhận publish không gọi AI, dùng đúng nội dung/ảnh/order đã snapshot. Trường hợp không rõ kết quả không tự gửi lại bài.
+**Contract và bàn giao:** [Publications.md](Publications.md), [FE mốc 12](../FE-API-Handoff-PostGen-Milestone12.md). **Kiểm chứng: 20 test mốc 12, toàn suite 1.015 PASS/0 skip; HTTP/RabbitMQ 39 request/91 kiểm tra PASS bằng fake provider.** Kiểm chứng build, PostgreSQL constraint/concurrency/rollback, HTTP/RabbitMQ và regression tại [Implementation.md](Implementation.md).
 
 ### Mốc 13 — Adapter xuất bản từng nền tảng
+
+**Đã triển khai local 2026-09-15:** Facebook single/multi-photo; Instagram single/carousel qua Facebook Login, checkpoint/polling, kiểm media thực, quota/backoff, phân loại lỗi và đối soát bảo thủ. Giữ text/URL/order của snapshot, không tự crop/chuyển ảnh/gọi AI. Carousel Instagram đợt này chỉ nhận ảnh vuông. Không thêm migration.
+
+**Kiểm chứng:** 79 test mới mốc 13; toàn suite 1.094 PASS/0 skip, gồm PostgreSQL regression; HTTP 49 request / 157 checks PASS qua adapter production, fake HTTP Meta/media và PostgreSQL/RabbitMQ thật. **Chưa deploy, chưa smoke trên account/bài thật; flags mặc định false.** Xem [contract triển khai](PublishingAdapters.md), [bàn giao FE](../FE-API-Handoff-PostGen-Milestone13.md), [evidence](PublicationVerification/results/api-integration-tester.json). [Nghiên cứu ban đầu](PublishingAdaptersResearch.md) giữ các điểm provider chưa nghiệm thu.
 
 Triển khai lần lượt **13A Facebook → 13B Instagram**; **13C Zalo tạm hoãn theo yêu cầu ngày 2026-09-15**, chỉ tiếp tục khi người dùng yêu cầu; từng kênh có feature flag và điều kiện nghiệm thu riêng. Nếu contract một kênh chưa sẵn sàng, tiếp tục kênh đã đủ đầu vào.
 
@@ -638,16 +640,18 @@ Triển khai lần lượt **13A Facebook → 13B Instagram**; **13C Zalo tạm 
 
 ### Mốc 14 — Đặt lịch, đổi lịch và hủy lịch
 
-- Dùng snapshot/job của mốc 12. `scheduledAt` phải có offset và ở tương lai; lưu UTC, trả lại thời gian chuẩn cùng timezone hiển thị. Đề xuất UI mặc định `Asia/Ho_Chi_Minh`; chốt khoảng lập lịch tối thiểu/tối đa trong contract.
-- Đề xuất worker quét lịch đến hạn trong PostgreSQL, claim theo batch với khóa hàng/`SKIP LOCKED`, ghi outbox cùng transaction. Tái sử dụng MassTransit để thực thi; chưa cần thêm Quartz chỉ vì package có sẵn. DB giữ lịch bền vững qua restart và nhiều instance.
-- Đổi lịch/hủy lịch dùng revision và cập nhật có điều kiện, chỉ thành công khi job chưa được claim để gửi. Consumer phải kiểm revision/trạng thái mới nhất để bỏ message cũ. Đã Publishing thì trả conflict, không báo hủy thành công giả.
-- Lịch được tạo với snapshot cố định. Muốn đổi nội dung/ảnh/account: hủy lịch chưa chạy, chỉnh/chốt rồi tạo lịch mới; không sửa âm thầm snapshot cũ. Đổi giờ không làm đổi snapshot.
-- Sau downtime, lịch trễ trong ngưỡng được phép sẽ chạy; quá ngưỡng chuyển trạng thái cần xử lý lại, không tự đăng hàng loạt bài cũ. Ngưỡng trễ và giới hạn batch là cấu hình vận hành phải chốt trước rollout.
-- Token hết quyền, URL ảnh hết hạn/không truy cập được hoặc account disconnect lúc đến giờ phải hiện lý do cụ thể. Không tự thay account/ảnh hoặc sinh lại nội dung để đăng cho đủ.
+**Đã triển khai local 2026-09-15; chưa deploy.** Migration `20260915160000_AddPostPublicationSchedule` thêm ScheduledAt UTC cho job, check constraint và trigger bảo vệ lịch sử giờ sau claim. Snapshot và migration mốc 12 giữ nguyên; không thêm Quartz.
 
-**API dự kiến:** `POST /api/v1/posts/{id}/platforms/{platform}/schedule`, `PUT .../platforms/{platform}/schedule` đổi giờ, `DELETE .../platforms/{platform}/schedule` hủy; request thao tác lịch xác định `publicationId` và revision để không tác động nhầm lịch mới. Lịch sử xem qua publications của mốc 12.
+- Ba API Admin: POST/PUT/DELETE `.../platforms/{platform}/schedule`; POST nhận account/key/hash preview/giờ có offset, PUT nhận publicationId/revision số/giờ mới, DELETE nhận publicationId/revision qua query.
+- Mặc định đặt trước tối thiểu 60 giây, tối đa 30 ngày; chuẩn hóa UTC/microsecond. Các ngưỡng được cấu hình qua PublishingOptions và Docker/GitHub Environment Secrets.
+- Đặt lịch lưu snapshot cố định, chưa tạo media hoặc gửi publish. Scanner đọc DB khi đến hạn và phát qua bus outbox; restart không mất lịch. Batch 50, khóa SKIP LOCKED, worker kiểm lại giờ/revision trước claim.
+- Đổi giờ/hủy chỉ trước claim; ghi actor và thời điểm trước/sau trong review, vô hiệu hóa message revision cũ. Hủy mở khóa dữ liệu; không xóa snapshot hoặc lịch sử. Đã Publishing trả 409.
+- Chưa bắt đầu mà trễ hơn 15 phút → Failed/PUBLICATION_SCHEDULE_MISSED, không tự đăng bù. Account/media/quota kiểm lại khi chạy. Job đã bắt đầu dùng cơ chế phục hồi/NeedsReview mốc 12–13.
+- Down không xóa lịch sử ScheduledAt đã dùng. Up dừng nếu có dòng Scheduled do writer cũ ngoài API mốc 12 tạo; không đoán giờ lịch từ timestamp retry.
 
-**Nghiệm thu:** dùng clock giả và PostgreSQL thật cho đến hạn, offset, restart, nhiều worker, cancel/claim race, đổi lịch nhưng còn message cũ, token hết hạn và lịch quá trễ. Một job chỉ có một kết quả cuối hợp lệ; trường hợp provider không rõ kết quả đi qua đối soát mốc 12.
+**Kiểm chứng:** 21 test mới mốc 14 (20 unit + 1 PostgreSQL integration tổng hợp), nhóm publishing 120 PASS; toàn suite **1.115 PASS / 0 fail / 0 skip**. HTTP **37 request / 90 checks PASS**, dùng API/PostgreSQL/RabbitMQ và adapter production với HTTP Meta/media giả lập, clock điều khiển được. Chưa đăng thử lên account thật.
+
+Chi tiết: [Scheduling.md](Scheduling.md), [FE handoff mốc 14](../FE-API-Handoff-PostGen-Milestone14.md), [HTTP evidence](PublicationVerification/results/schedule-api-evidence.json).
 
 ### Mốc 15 — Nghiệm thu tích hợp và phát hành
 

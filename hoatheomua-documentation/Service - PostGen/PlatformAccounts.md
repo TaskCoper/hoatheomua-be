@@ -56,6 +56,14 @@ Mẫu response account (callback/list trả mảng các object này trong `value
 4. Callback trả JSON envelope; hiện chưa redirect tự động về FE hoặc gửi `postMessage`. FE có thể dùng popup và tải lại danh sách khi popup đóng. Không lấy code/state để gọi lại callback bằng JavaScript; token không đi qua FE.
 5. Sau khi bị từ chối, hết hạn, lỗi đổi code hoặc mất phản hồi, bắt đầu phiên connect mới. State đã dùng không được retry. Phiên hết hạn quá 7 ngày được dọn khi tạo phiên mới.
 
+### Kết nối lại và kiểm thử FE local
+
+- Sau DELETE, giữ account ID và gọi `POST /platform-accounts/{id}/reconnect` để tạo phiên mới; mở `authorizationUrl` vừa nhận. Không cache URL connect/reconnect, mở lại callback cũ hoặc gọi callback thêm lần nữa từ FE. Account Disabled không được khôi phục bằng endpoint connect chung.
+- FE `http://localhost:<port>` gọi API HTTPS trên domain server là khác site. `credentials: "include"` (Axios: `withCredentials: true`) là cần thiết nhưng không tự vượt qua chính sách cookie `SameSite=Lax`; cookie proof có thể không được lưu, khiến callback báo `PLATFORM_OAUTH_STATE_INVALID`.
+- Để kiểm thử với API đã deploy, phục vụ FE qua HTTPS trên subdomain cùng site với API, đồng thời cấu hình CORS đúng origin và cho phép credentials. Hoặc chạy FE/backend local với callback trỏ đúng backend local và được Meta chấp nhận. Chỉ proxy request connect qua localhost trong khi callback vẫn về domain server không giải quyết được cookie khác host.
+- Trong DevTools, kiểm tra response connect/reconnect có `Set-Cookie`, cảnh báo cookie bị chặn, và request callback có cookie `postgen_oauth_*` tương ứng. Không chia sẻ giá trị cookie/code/state. Callback là single-use: refresh trang callback sau một lần xử lý cũng sẽ bị từ chối.
+- Kiểm thử live ngày 15/09/2026: từ cùng origin với API, reconnect Page Demo HTM đang Disabled trả callback 200, giữ nguyên account ID và chuyển về Connected. Báo lỗi từ FE local cần kiểm tra Network của FE để phân biệt cookie bị chặn, thiếu credentials và URL/phiên đã dùng.
+
 `Connected` xác nhận thông tin kết nối ở lần kiểm tra gần nhất, **không đồng nghĩa sẵn sàng xuất bản**. Zalo không trả danh sách scopes trong token/getoa nên `grantedScopes` rỗng nghĩa là chưa có dữ liệu scope để liệt kê; không suy ra đã có quyền quản lý bài viết. Mốc 13 vẫn phải kiểm quyền xuất bản thực tế.
 
 ## Token và trạng thái
@@ -92,6 +100,10 @@ Không seed secret vào Config/appsettings. Mặc định Meta/Zalo Disabled; ch
 | `PlatformAccountOptions:Zalo:CallbackUrl` | URL backend cố định kết thúc `/platform-accounts/zalo/callback` |
 
 Callback trong cấu hình không chứa query/fragment/userinfo, yêu cầu HTTPS ngoài localhost; đăng ký đúng URL/cơ chế callback ở dashboard provider. Không nhận redirect URL tùy ý từ FE. Zalo thêm state vào query callback cho mỗi phiên.
+
+Meta Dashboard → Đăng nhập bằng Facebook cho doanh nghiệp → Cài đặt: bật cả **Đăng nhập OAuth ứng dụng** và **Đăng nhập OAuth trên web**, thêm hai callback vào **URI chuyển hướng OAuth hợp lệ**, rồi Save Changes. Ô **Chuyển hướng URI để kiểm tra** chỉ dùng kiểm tra, không lưu callback. Hai công tắc bị tắt vẫn gây lỗi “URL bị chặn” dù callback đã đăng ký đúng; đây là cài đặt trên Meta, khác với `POSTGEN_META_ENABLED` của backend.
+
+Khi tạo cấu hình cho `POSTGEN_META_CONFIG_ID`, chọn **Mã truy cập dành cho người dùng** để khớp luồng backend đổi user token và lấy Page qua `/me/accounts`. Nếu đã chọn **Mã truy cập dành cho người dùng hệ thống**, tạo cấu hình mới đúng loại và cập nhật ID khi deploy. Trong kiểm thử thực tế ngày 15/09/2026, cấu hình system user chặn chọn business sở hữu app với thông báo “This Meta Business Account owns the app”; không tạo business mới để vượt qua bước này.
 
 Khóa mã hóa phải dùng chung giữa các instance và tồn tại qua deploy/restart. Rotation: giữ các keyId cũ để giải mã, thêm key mới và đổi ActiveEncryptionKeyId; các lần kết nối/refresh mới dùng khóa mới. Chưa có tác vụ re-encrypt hàng loạt, nên không bỏ khóa cũ khi còn account/session dùng nó. Khóa không có fallback hardcode và không dùng JWT signing key.
 
