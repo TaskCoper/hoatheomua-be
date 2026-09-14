@@ -11,6 +11,35 @@ namespace HoaTheoMua.Controllers;
 [Authorize(Policy = JwtExtensions.StaffOrAdminPolicy)]
 public class PostGenerationController(IService service) : ControllerBase
 {
+    [HttpGet("/api/v1/posts/{id:guid}/platforms/{platform}/official")]
+    public async Task<IActionResult> GetOfficialVersion(Guid id, string platform, CancellationToken cancellationToken)
+    {
+        var result = await service.GetOfficialVersion(id, platform, cancellationToken);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
+    [HttpPost("/api/v1/posts/{id:guid}/images/regenerate")]
+    [EnableRateLimiting(RateLimitExtensions.HeavyPolicy)]
+    public async Task<IActionResult> RegenerateImage(Guid id, Request.RegenerateImageRequest request, CancellationToken cancellationToken)
+    {
+        var result = await service.RegenerateImage(id, request, cancellationToken);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
+    [HttpGet("/api/v1/posts/{id:guid}/images")]
+    public async Task<IActionResult> GetImageVersions(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await service.GetImageVersions(id, cancellationToken);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
+    [HttpPut("/api/v1/posts/{id:guid}/platforms/{platform}/images")]
+    public async Task<IActionResult> UpdatePlatformImages(Guid id, string platform, Request.UpdatePlatformImagesRequest request, CancellationToken cancellationToken)
+    {
+        var result = await service.UpdatePlatformImages(id, platform, request, cancellationToken);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpPost("/api/v1/posts/{id:guid}/generate")]
     [EnableRateLimiting(RateLimitExtensions.HeavyPolicy)]
     public async Task<IActionResult> GeneratePlatformPosts(Guid id, Request.GenerateRequest request, CancellationToken cancellationToken)

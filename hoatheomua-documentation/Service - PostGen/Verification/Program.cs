@@ -236,6 +236,9 @@ try
     Check(selectedFacebook.GetProperty("content").GetProperty("versionNo").GetInt32() == 1 && aiHandler.Calls == beforeSelectionCalls, "Selecting old content does not generate or create a version");
     Check(selectedFacebook.GetProperty("images").GetRawText() == allFailed.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == "facebook").GetProperty("images").GetRawText(), "All content workflows preserve selected image IDs and ordering");
     Check(!selectedFacebook.TryGetProperty("versions", out _), "Mutation detail still omits history");
+    var oldOfficial = await Call("M7OfficialOldContent", HttpMethod.Get, url + "/platforms/facebook/official", null, user: versionUser);
+    Check(oldOfficial.GetProperty("value").GetProperty("generationId").GetGuid() == sourceV1
+        && oldOfficial.GetProperty("value").GetProperty("content").GetString() == originalContent.GetProperty("content").GetString(), "Official payload uses chosen old content, not newest version");
     var foreignContent = instagramAfter.GetProperty("content").GetProperty("generationId").GetGuid();
     await Call("ContentForeignSourceRejected", HttpMethod.Post, contentUrl + "/regenerate", new { sourceGenerationId = foreignContent }, 400, versionUser);
     await Call("ContentForeignOfficialRejected", HttpMethod.Put, contentUrl + "/official", new { generationId = foreignContent }, 400, versionUser);
@@ -310,6 +313,113 @@ try
     Check(!await db.PostHistories.AnyAsync() && !await db.ClientHistories.AnyAsync(), "No legacy history writes");
     Check(!await db.GeneratedCards.AnyAsync(x => x.FormType == CardFormType.Calligraphy), "Existing CardFormType mapping remains queryable");
     Check(!await db.ClientHistories.AnyAsync(x => x.Type == ClientHistoryType.Post), "Existing ClientHistoryType mapping remains queryable");
+    // Milestone 6: shared history and independent platform selections through real HTTP.
+    var imageVersionUser = Guid.NewGuid(); aiHandler.FailAllImages = false; aiHandler.FailImageNumber = 0;
+    var imageDraft = await Call("M6CreatePost", HttpMethod.Post, "/api/v1/posts", input, user: imageVersionUser);
+    var imagePostId = imageDraft.GetProperty("value").GetProperty("basePostId").GetGuid();
+    var imagePostUrl = "/api/v1/posts/" + imagePostId;
+    var imageHistoryUrl = imagePostUrl + "/images";
+    var imageSources = imageDraft.GetProperty("value").GetProperty("baseImages").EnumerateArray().Take(2).ToArray();
+    var versionSourceIds = imageSources.Select(x => x.GetProperty("id").GetGuid()).ToArray();
+    await Call("M6AnonymousDenied", HttpMethod.Get, imageHistoryUrl, null, 401, role: "Anonymous");
+    await Call("M6CustomerDenied", HttpMethod.Get, imageHistoryUrl, null, 403, role: "Customer");
+    var emptyImageHistory = await Call("M6EmptyHistory", HttpMethod.Get, imageHistoryUrl, null, user: imageVersionUser);
+    Check(emptyImageHistory.GetProperty("value").GetProperty("groups").GetArrayLength() == 0, "Image history is empty before generating");
+    await Call("M7MissingPlatform", HttpMethod.Get, imagePostUrl + "/platforms/facebook/official", null, 404, imageVersionUser);
+    await Call("M7AnonymousDenied", HttpMethod.Get, imagePostUrl + "/platforms/facebook/official", null, 401, role: "Anonymous");
+    await Call("M7CustomerDenied", HttpMethod.Get, imagePostUrl + "/platforms/facebook/official", null, 403, role: "Customer");
+    await Call("M7InvalidPlatform", HttpMethod.Get, imagePostUrl + "/platforms/tiktok/official", null, 422, imageVersionUser);
+    await Call("M6MissingPlatform", HttpMethod.Put, imagePostUrl + "/platforms/facebook/images", new { images = Array.Empty<object>() }, 404, imageVersionUser);
+    var initialImageDetail = await Call("M6GenerateSharedImages", HttpMethod.Post, imagePostUrl + "/generate", new { platforms = new[] { "facebook", "instagram" }.Select(p => new { platform = p, ratios = new[] { new { ratioCode = "Square1x1", basePostImageIds = versionSourceIds } } }) }, user: imageVersionUser);
+    JsonElement PlatformValue(JsonElement detailValue, string name) => detailValue.GetProperty("platforms").EnumerateArray().Single(x => x.GetProperty("platform").GetString() == name);
+    var initialValue = initialImageDetail.GetProperty("value");
+    var fbImages = PlatformValue(initialValue, "facebook").GetProperty("images").EnumerateArray().ToArray();
+    var firstImageId = fbImages[0].GetProperty("selectedGeneratedPostImageId").GetGuid();
+    var secondImageId = fbImages[1].GetProperty("selectedGeneratedPostImageId").GetGuid();
+    var regenImageRequest = new { sourceBasePostImageId = versionSourceIds[0], ratioCode = "Square1x1", sourceGeneratedPostImageId = firstImageId, feedback = "Nền sáng hơn" };
+    await Call("M6RegenerateCustomerDenied", HttpMethod.Post, imageHistoryUrl + "/regenerate", regenImageRequest, 403, role: "Customer");
+    await Call("M6SelectCustomerDenied", HttpMethod.Put, imagePostUrl + "/platforms/facebook/images", new { images = Array.Empty<object>() }, 403, role: "Customer");
+    var regeneratedImage = await Call("M6RegenerateImage", HttpMethod.Post, imageHistoryUrl + "/regenerate", regenImageRequest, user: imageVersionUser);
+    var imageV2 = regeneratedImage.GetProperty("value"); var imageV2Id = imageV2.GetProperty("generatedPostImageId").GetGuid();
+    Check(imageV2.GetProperty("versionNo").GetInt32() == 2 && imageV2.GetProperty("parentGeneratedPostImageId").GetGuid() == firstImageId, "Image v2 pins v1 and has stable pair number");
+    var sentParts = aiHandler.ImageInputs.Last().GetProperty("messages")[0].GetProperty("content");
+    Check(sentParts[1].GetProperty("image_url").GetProperty("url").GetString() == imageSources[0].GetProperty("imageUrl").GetString()
+        && sentParts[3].GetProperty("image_url").GetProperty("url").GetString() == fbImages[0].GetProperty("imageUrl").GetString(), "Provider gets original reference then selected revision in order");
+    var afterImageRegen = await Call("M6DetailAfterRegeneration", HttpMethod.Get, imagePostUrl, null, user: imageVersionUser);
+    Check(initialValue.GetRawText() == afterImageRegen.GetProperty("value").GetRawText(), "Regenerating a shared image leaves full detail unchanged");
+    var newSelection = new { images = new[] {
+        new { sourceBasePostImageId = versionSourceIds[1], ratioCode = "Square1x1", selectedGeneratedPostImageId = secondImageId, sortOrder = 1 },
+        new { sourceBasePostImageId = versionSourceIds[0], ratioCode = "Square1x1", selectedGeneratedPostImageId = imageV2Id, sortOrder = 2 } } };
+    var selectionCalls = aiHandler.Calls;
+    var chosenImages = await Call("M6SelectFacebookV2AndReorder", HttpMethod.Put, imagePostUrl + "/platforms/facebook/images", newSelection, user: imageVersionUser);
+    var chosenValue = chosenImages.GetProperty("value");
+    Check(PlatformValue(chosenValue, "facebook").GetProperty("status").GetString() == "Ready", "Content plus selected images becomes Ready");
+    Check(PlatformValue(chosenValue, "facebook").GetProperty("images")[1].GetProperty("selectedGeneratedPostImageId").GetGuid() == imageV2Id, "Facebook selects v2 at requested order");
+    Check(PlatformValue(chosenValue, "instagram").GetRawText() == PlatformValue(initialValue, "instagram").GetRawText(), "Instagram retains v1 and original state");
+    Check(PlatformValue(chosenValue, "facebook").GetProperty("content").GetRawText() == PlatformValue(initialValue, "facebook").GetProperty("content").GetRawText(), "Selecting images preserves official content");
+    var officialUrl = imagePostUrl + "/platforms/facebook/official";
+    var officialReady = await Call("M7OfficialReady", HttpMethod.Get, officialUrl, null, user: imageVersionUser);
+    var officialValue = officialReady.GetProperty("value");
+    Check(officialValue.GetProperty("isReady").GetBoolean() && officialValue.GetProperty("status").GetString() == "Ready"
+        && officialValue.GetProperty("notReadyReasons").GetArrayLength() == 0, "Official selected payload is Ready");
+    var chosenContent = PlatformValue(chosenValue, "facebook").GetProperty("content");
+    foreach (var key in new[] { "title", "content", "hashtag", "generationId" })
+        Check(officialValue.GetProperty(key).GetRawText() == chosenContent.GetProperty(key).GetRawText(), "Official carries exact selected " + key);
+    Check(officialValue.GetProperty("images").GetRawText() == PlatformValue(chosenValue, "facebook").GetProperty("images").GetRawText(), "Official images match selected IDs, URLs, pixels and order");
+    var officialAgain = await Call("M7OfficialReadAgain", HttpMethod.Get, officialUrl, null, user: imageVersionUser, role: "Staff");
+    Check(officialValue.GetRawText() == officialAgain.GetProperty("value").GetRawText(), "Official read is stable across accounts");
+    Check(!officialValue.TryGetProperty("versions", out _) && !officialValue.TryGetProperty("baseImages", out _), "Official excludes history and source-image collections");
+    var imageHistory = await Call("M6ReadHistory", HttpMethod.Get, imageHistoryUrl, null, user: imageVersionUser);
+    var imageHistoryAgain = await Call("M6ReadHistoryAgain", HttpMethod.Get, imageHistoryUrl, null, user: imageVersionUser);
+    Check(imageHistory.GetProperty("value").GetRawText() == imageHistoryAgain.GetProperty("value").GetRawText(), "Image history order and numbers are stable");
+    Check(aiHandler.Calls == selectionCalls, "Selecting/reordering/history do not call AI");
+    await Call("M6ForeignSelectedImage", HttpMethod.Put, imagePostUrl + "/platforms/facebook/images", new { images = new[] { new { sourceBasePostImageId = versionSourceIds[0], ratioCode = "Square1x1", selectedGeneratedPostImageId = Guid.NewGuid(), sortOrder = 1 } } }, 400, imageVersionUser);
+    await Call("M6WrongSlot", HttpMethod.Put, imagePostUrl + "/platforms/facebook/images", new { images = new[] { new { sourceBasePostImageId = versionSourceIds[1], ratioCode = "Square1x1", selectedGeneratedPostImageId = imageV2Id, sortOrder = 1 } } }, 400, imageVersionUser);
+    await Call("M6DuplicateOrder", HttpMethod.Put, imagePostUrl + "/platforms/facebook/images", new { images = newSelection.images.Select(x => new { x.sourceBasePostImageId, x.ratioCode, x.selectedGeneratedPostImageId, sortOrder = 1 }) }, 400, imageVersionUser);
+    await Call("M6MissingImages", HttpMethod.Put, imagePostUrl + "/platforms/facebook/images", new {}, 422, imageVersionUser);
+    await Call("M6InvalidRatio", HttpMethod.Post, imageHistoryUrl + "/regenerate", new { sourceBasePostImageId = versionSourceIds[0], ratioCode = 999 }, 422, imageVersionUser);
+    aiHandler.FailAllImages = true;
+    var failedImage = await Call("M6FailedRegenerationRetained", HttpMethod.Post, imageHistoryUrl + "/regenerate", regenImageRequest, user: imageVersionUser);
+    var failedImageId = failedImage.GetProperty("value").GetProperty("generatedPostImageId").GetGuid();
+    Check(failedImage.GetProperty("value").GetProperty("status").GetString() == "Failed" && failedImage.GetProperty("value").GetProperty("imageUrl").ValueKind == JsonValueKind.Null, "Failed image attempt is explicit in 200 response");
+    aiHandler.FailAllImages = false;
+    await Call("M6FailedParentRejected", HttpMethod.Post, imageHistoryUrl + "/regenerate", new { sourceBasePostImageId = versionSourceIds[0], ratioCode = "Square1x1", sourceGeneratedPostImageId = failedImageId }, 400, imageVersionUser);
+    await Call("M6FailedSelectionRejected", HttpMethod.Put, imagePostUrl + "/platforms/facebook/images", new { images = new[] { new { sourceBasePostImageId = versionSourceIds[0], ratioCode = "Square1x1", selectedGeneratedPostImageId = failedImageId, sortOrder = 1 } } }, 400, imageVersionUser);
+    var reuseCalls = aiHandler.Calls;
+    await Call("M6ReuseV2ForInstagram", HttpMethod.Put, imagePostUrl + "/platforms/instagram/images", newSelection, user: imageVersionUser);
+    Check(aiHandler.Calls == reuseCalls, "Instagram can reuse existing versions without generation");
+    var clearedImages = await Call("M6ClearFacebookImages", HttpMethod.Put, imagePostUrl + "/platforms/facebook/images", new { images = Array.Empty<object>() }, user: imageVersionUser);
+    Check(PlatformValue(clearedImages.GetProperty("value"), "facebook").GetProperty("images").GetArrayLength() == 0
+        && PlatformValue(clearedImages.GetProperty("value"), "facebook").GetProperty("status").GetString() == "Generated", "Clearing images removes Ready state");
+    var officialNoImages = await Call("M7OfficialMissingImages", HttpMethod.Get, officialUrl, null, user: imageVersionUser);
+    Check(!officialNoImages.GetProperty("value").GetProperty("isReady").GetBoolean()
+        && officialNoImages.GetProperty("value").GetProperty("notReadyReasons")[0].GetString() == "MissingImages"
+        && officialNoImages.GetProperty("value").GetProperty("status").GetString() == "Generated", "Official incomplete selection returns 200 with MissingImages");
+    await Call("M6RemoveSources", HttpMethod.Put, imagePostUrl, new { title = "Keep text", content = "Keep text", images = Array.Empty<object>() }, user: imageVersionUser);
+    var removedSourceHistory = await Call("M6HistoryRetainsRemovedSources", HttpMethod.Get, imageHistoryUrl, null, user: imageVersionUser);
+    Check(removedSourceHistory.GetProperty("value").GetProperty("groups").EnumerateArray().All(x => x.GetProperty("sourceIsDeleted").GetBoolean()), "Removed sources keep history but are marked unavailable");
+    await Call("M6RemovedSourceRejected", HttpMethod.Post, imageHistoryUrl + "/regenerate", regenImageRequest, 400, imageVersionUser);
+    await Call("M6DeletePost", HttpMethod.Delete, imagePostUrl, null, user: imageVersionUser);
+    await Call("M6DeletedHistory", HttpMethod.Get, imageHistoryUrl, null, 404, imageVersionUser);
+    Check(await db.GeneratedPostImages.CountAsync(x => x.BasePostId == imagePostId) == 4, "M6 stores three succeeded images and one failed attempt");
+    Check(await db.GeneratedPostImages.CountAsync(x => x.BasePostId == imagePostId && x.ParentGeneratedPostImageId == firstImageId) == 2, "Success and failure both preserve parent lineage");
+    Check(await db.GeneratedPosts.CountAsync(x => db.PlatformPosts.Any(p => p.Id == x.PlatformPostId && p.BasePostId == imagePostId)) == 2, "M6 does not regenerate content");
+    await Call("M7DeletedPost", HttpMethod.Get, officialUrl, null, 404, imageVersionUser);
+    var imageOnlyUser = Guid.NewGuid();
+    var imageOnlyPost = await Call("M7CreateImageOnlyPost", HttpMethod.Post, "/api/v1/posts", input, user: imageOnlyUser);
+    var imageOnlyId = imageOnlyPost.GetProperty("value").GetProperty("basePostId").GetGuid();
+    var imageOnlyUrl = "/api/v1/posts/" + imageOnlyId;
+    var imageOnlySource = imageOnlyPost.GetProperty("value").GetProperty("baseImages")[0].GetProperty("id").GetGuid();
+    await Call("M7GenerateImagesWithoutContent", HttpMethod.Post, imageOnlyUrl + "/generate", new { mode = "images", platforms = new[] { new { platform = "facebook", ratios = new[] { new { ratioCode = "Square1x1", basePostImageIds = new[] { imageOnlySource } } } } } }, user: imageOnlyUser);
+    var officialCalls = aiHandler.Calls;
+    var withoutContent = await Call("M7OfficialMissingContent", HttpMethod.Get, imageOnlyUrl + "/platforms/facebook/official", null, user: imageOnlyUser);
+    Check(withoutContent.GetProperty("value").GetProperty("content").ValueKind == JsonValueKind.Null
+        && withoutContent.GetProperty("value").GetProperty("generationId").ValueKind == JsonValueKind.Null
+        && !withoutContent.GetProperty("value").GetProperty("isReady").GetBoolean()
+        && withoutContent.GetProperty("value").GetProperty("notReadyReasons")[0].GetString() == "MissingContent", "Official with only images reports missing content, never falls back to core");
+    Check(aiHandler.Calls == officialCalls, "Official GET does not call AI");
+    await Call("M7DeleteImageOnlyPost", HttpMethod.Delete, imageOnlyUrl, null, user: imageOnlyUser);
+    Check(!await db.BasePosts.AnyAsync(x => !x.IsDeleted), "All HTTP fixture posts are soft deleted");
     await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "postgen-api-evidence.json"), JsonSerializer.Serialize(evidence, new JsonSerializerOptions { WriteIndented = true }));
 }
 finally { await app.StopAsync(); }
@@ -332,6 +442,7 @@ sealed class ProbeAiHandler : HttpMessageHandler
     public int FailOnCall { get; set; }
     public List<string> Prompts { get; } = new();
     public List<JsonElement> ContentInputs { get; } = new();
+    public List<JsonElement> ImageInputs { get; } = new();
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var call = Interlocked.Increment(ref calls);
@@ -339,6 +450,7 @@ sealed class ProbeAiHandler : HttpMessageHandler
         var messages = json.RootElement.GetProperty("messages");
         if (messages.EnumerateArray().Any(m => m.GetProperty("content").EnumerateArray().Any(p => p.GetProperty("type").GetString() == "image_url")))
         {
+            lock (ImageInputs) ImageInputs.Add(json.RootElement.Clone());
             var imageCall = Interlocked.Increment(ref imageCalls);
             if (FailAllImages || imageCall == FailImageNumber) return new(HttpStatusCode.InternalServerError);
             return new(HttpStatusCode.OK) { Content = JsonContent.Create(new { id = "chatcmpl-image-" + imageCall,

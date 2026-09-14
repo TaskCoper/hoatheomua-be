@@ -1,6 +1,6 @@
 # PostGen — Phần đăng bài dành cho phase sau
 
-Chưa có API đăng bài, đặt lịch, OAuth account hoặc background job trong mốc 0–2.
+Chưa có API đăng bài, đặt lịch, OAuth account hoặc background job trong mốc 0–7.
 
 ## Các phần đã dành sẵn
 
@@ -18,3 +18,5 @@ Route dự kiến: `POST .../platforms/{platform}/publish`, `POST .../platforms/
 - Hạ tầng queue/scheduler, guard để không đăng trùng, nơi lưu token và quyền quản lý account.
 
 Mỗi lần đăng phải do hành động đăng ngay hoặc đặt lịch rõ ràng của người dùng.
+
+Mốc 7 đã có GET official chỉ trả payload đang chốt và readiness nội bộ; không phải API publish, không gọi mạng xã hội hoặc chuyển trạng thái trong database. Title/content/hashtag giữ riêng. Xem [GetOfficialVersion.md](GetOfficialVersion.md).

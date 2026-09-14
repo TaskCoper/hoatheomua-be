@@ -4,7 +4,8 @@ namespace HoaTheoMua.Service.AiService;
 
 public class Request
 {
-    public record ImageInput(string SourceImageUrl, string RatioCode, int PixelWidth, int PixelHeight, string Instruction);
+    public record ImageInput(string SourceImageUrl, string RatioCode, int PixelWidth, int PixelHeight, string Instruction,
+        string? OriginalImageUrl = null, string? Feedback = null);
     public record ContentInput(string SystemPrompt, string Platform, SourceText Source,
         SourceText? PreviousContent = null, string? Feedback = null);
     public record SourceText(string? Title, string Content, string? Hashtag);

@@ -124,3 +124,9 @@ PostGeneration hỗ trợ mode content/images/all (mặc định all). Content c
 RegeneratePlatformContent dùng lại GenerateContent qua cùng proxy: system message là prompt Config hiện tại, source là bài gốc, previousContent là Title/Content/Hashtag của sourceGenerationId được chọn (hoặc null khi sinh từ bài gốc), feedback chỉ của request hiện tại. Không gửi ảnh hoặc cộng dồn feedback. Mọi version Ai thành công lưu ParentGeneratedPostId/FeedbackInput cùng snapshot prompt/provider metadata, rồi tự chốt trong cùng transaction.
 
 Khóa bài gốc khi snapshot/claim, nhả trước HTTP; các thao tác sửa/chốt/sinh cùng nền tảng trả 409 khi Generating. Regenerate lỗi/cancel không ghi version mới, giữ official cũ và giải phóng claim thành Failed. Sửa tay, lịch sử và chọn official không gọi AI/Config. Mốc 5 chỉ kiểm proxy bằng fake HttpMessageHandler.
+
+## Sinh lại ảnh mốc 6
+
+ImageInput thêm OriginalImageUrl?/Feedback?; call mốc 4 giữ payload cũ. Với parent, gửi content parts theo thứ tự [text nhãn gốc, image_url gốc, text nhãn version, image_url version, text chỉ dẫn chung, text feedback hiện tại nếu có, text yêu cầu tạo]. Không cộng dồn feedback; SourceImageUrl lưu đúng URL bản đang sửa. Chỉ dẫn vẫn từ Config postgen.image_instruction, không dùng prompt nội dung nền tảng.
+
+Regenerate không gọi AI nội dung, không thay PlatformPost/ô ảnh. Parser Markdown và timeout như mốc 4, không retry. Provider lỗi/timeout tạo attempt Failed trong kho với errorMessage an toàn và URL null, API trả 200 ImageVersion; caller cancellation không lưu. Trước ghi kiểm lại bài/ảnh nguồn còn hiệu lực. Lịch sử phân biệt versionNo riêng cho mỗi cặp; timestamp gán lúc lưu có khóa root, không dựa trên thời điểm bắt đầu gọi AI.

@@ -1,12 +1,12 @@
 # PostGen — Dự án AI Marketing
 
-> **Cập nhật 2026-09-14:** mốc 0–4 đã triển khai và commit trên `feature/post-gen`. **Mốc 5 đã triển khai trên nhánh `feature/post-gen`:** sinh lại nội dung theo nguồn/feedback, sửa tay, lịch sử và chọn nội dung chốt; chưa deploy. Tiếp theo mốc 6; mốc 6–7 chưa triển khai.
+> **Cập nhật 2026-09-14:** mốc 0–5 đã triển khai và push trên `feature/post-gen`. **Mốc 6–7 đã triển khai trên nhánh `feature/post-gen`**, chưa deploy. Đã hoàn thành phạm vi backend của 8 mốc; tích hợp đăng thật/lập lịch thuộc giai đoạn riêng.
 
 Cập nhật 2026-09-14: đã bỏ bảng PlatformStandard và cả API chuẩn nền tảng/preset riêng. Đã bỏ cả key `postgen.platform.*`; Admin dùng [Config prompt theo nền tảng](PlatformConfig.md) và [Config ratio preset](RatioPresetConfig.md).
 
 ## Đọc gì trước khi code
 
-Mốc 0–5 đã hiện thực; tiếp theo mốc 6 version/chốt ảnh. Đọc kèm:
+Mốc 0–7 đã hiện thực. Mốc 6–7 đã được đưa vào nhánh `feature/post-gen`; chưa deploy. Đọc kèm:
 
 - **`CLAUDE.md` ở gốc repo** — quy ước feature folder `IService`/`Service`, đăng ký trong `Program.cs`, `ApiResponseFactory`, exception, và hai thư mục cố tình viết sai chính tả `Extentions` / `Abtraction`.
 - **`HoaTheoMua.Service/XanhSm/Service.cs`** — mẫu để viết `AiService/`: typed `HttpClient`, `SendAsync<T>` tập trung, map lỗi provider sang `BadGatewayException`.
@@ -23,11 +23,15 @@ BasePost và preset PostGen dùng chung cho mọi Staff/Admin. BasePost không c
 
 - **Thiết kế nghiệp vụ**: đã chốt mô hình dữ liệu, API PostGen và state machine. Contract AI proxy đã được người dùng cung cấp ngày 2026-09-14 và kiểm chứng một lời gọi text thật.
 - **Tài liệu tách riêng**: đã có [DataModel.md](DataModel.md), [ApiContract.md](ApiContract.md), [AiServiceContract.md](AiServiceContract.md), [PublishingReserved.md](PublishingReserved.md).
+- **Bàn giao FE mốc 7**: [FE-API-Handoff-PostGen-Milestone7.md](../FE-API-Handoff-PostGen-Milestone7.md) — payload chốt và readiness, GET chỉ đọc.
+- **Bàn giao FE mốc 6**: [FE-API-Handoff-PostGen-Milestone6.md](../FE-API-Handoff-PostGen-Milestone6.md) — kho ảnh, sinh lại và chọn/sắp xếp ảnh.
 - **Bàn giao FE mốc 5**: [FE-API-Handoff-PostGen-Milestone5.md](../FE-API-Handoff-PostGen-Milestone5.md) — sinh lại, sửa tay, lịch sử/chốt nội dung; dùng cùng detail chỉ trả bản chốt.
 - **Bàn giao FE mốc 3**: [FE-API-Handoff-PostGen-Milestone3.md](../FE-API-Handoff-PostGen-Milestone3.md) — request/response, trạng thái UI, xử lý lỗi và Config prompt.
-- **Code**: đã triển khai mốc 0–2 (schema, 5 API Post Core, cấu hình nền tảng/preset qua API Config chung). Code đã commit/push trên `feature/post-gen`, chưa deploy. Mốc 3 đã có migration seed prompt và migration gộp `20260914073414_ConsolidatePostGenPlatformConfigs`, AiService và PostGeneration; mốc 6–7 chưa triển khai.
+- **Code**: đã triển khai mốc 0–2 (schema, 5 API Post Core, cấu hình nền tảng/preset qua API Config chung). Code đã commit/push trên `feature/post-gen`, chưa deploy. Mốc 3 đã có migration seed prompt và migration gộp `20260914073414_ConsolidatePostGenPlatformConfigs`, AiService và PostGeneration; mốc 6–7 đã triển khai trên nhánh `feature/post-gen`.
+- **Kiểm thử mốc 7**: 18 test PASS (1 PostgreSQL snapshot integration), API/probe build PASS; 134 request HTTP / 259 kiểm tra PASS, không gọi AI thật. Xem [Implementation.md](Implementation.md).
+- **Kiểm thử mốc 6**: 114 test PostGen PASS, gồm 7 PostgreSQL integration; test rollback sau SQL chạy bổ sung PASS. HTTP probe 121 request / 234 kiểm tra PASS; toàn bộ AI mock. Xem [Implementation.md](Implementation.md).
 - **Kiểm thử mốc 5 trước thay đổi ảnh tùy chọn**: mốc 5 có 102 test PostGen PASS (6 PostgreSQL integration, không fail/skip), HTTP probe 79 request / 168 kiểm tra PASS, gồm bốn API mới bằng AI mock. Không gọi proxy thật trong thay đổi này. Số request/check và evidence tại [Implementation.md](Implementation.md).
-- **Tiếp theo**: mốc 6 sinh lại ảnh, đọc lịch sử ảnh và chọn/sắp xếp ảnh từng nền tảng. Mốc 5 đã có bốn API version nội dung. Mốc 4 đã sinh ảnh qua chat completions, trích URL Markdown, gom cặp và xử lý lỗi từng ảnh. Các tham chiếu giai đoạn 2/3/4 trong bản brief cũ tương ứng schema/CRUD/AI; bảng mốc 0–7 phía dưới là thứ tự hiện tại.
+- **Tiến độ hiện tại**: mốc 7 đã trả payload nội dung/ảnh chốt với isReady/notReadyReasons. Hoàn thành 8 mốc backend; bước publishing/OAuth/lập lịch cần thiết kế và contract riêng. Mốc 6 đã có API sinh lại ảnh, lịch sử và chọn/sắp xếp ảnh. Mốc 5 đã có bốn API version nội dung. Mốc 4 đã sinh ảnh qua chat completions, trích URL Markdown, gom cặp và xử lý lỗi từng ảnh. Các tham chiếu giai đoạn 2/3/4 trong bản brief cũ tương ứng schema/CRUD/AI; bảng mốc 0–7 phía dưới là thứ tự hiện tại.
 
 ## Bối cảnh nghiệp vụ
 
@@ -116,7 +120,7 @@ Phần này **không nằm trong phạm vi đợt này**. Schema chừa sẵn c�
 
 ## Hiện trạng code (đã kiểm chứng)
 
-- PostCoreController/PostCore.Service đã hiện thực 5 API CRUD bài gốc, dùng BasePost và các bảng ảnh/bài nền tảng để đọc chi tiết. Đã thêm POST generate nội dung qua PostGenerationController; sinh ảnh đã triển khai ở mốc 4; version nội dung đã triển khai ở mốc 5; version ảnh và đăng bài chưa triển khai.
+- PostCoreController/PostCore.Service đã hiện thực 5 API CRUD bài gốc, dùng BasePost và các bảng ảnh/bài nền tảng để đọc chi tiết. Đã thêm POST generate nội dung qua PostGenerationController; sinh ảnh đã triển khai ở mốc 4; version nội dung đã triển khai ở mốc 5; version ảnh đã triển khai ở mốc 6; payload official đã triển khai ở mốc 7; đăng bài thật chưa triển khai.
 - PlatformStandard và các API chuyên biệt đã bỏ. Migration mới nhất xóa `postgen.platform.*`, chuyển bật/tắt vào Config prompt cùng nền tảng. Ratio preset vẫn riêng trong Config.
 - `SystemPrompt`, `CardTemplate`, `Mockup` tiếp tục dùng service/controller hiện có. Rule URL HTTP/HTTPS đã trích thành `HttpUrl()` dùng chung cho PostCore, CardTemplate và Mockup.
 - Bảng `SystemPrompt` hiện vẫn có unique index trên `Type` và dòng Post do migration cũ seed. PostGen theo quyết định #8 mới sẽ đọc ba Config prompt riêng; không sửa API hoặc schema SystemPrompt của các chức năng khác.
@@ -142,6 +146,8 @@ stateDiagram-v2
     Failed --> Generating: thử lại
     Generated --> Generating: paraphase lại nội dung
     Generated --> Ready: đã chọn nội dung + ít nhất 1 ảnh chính thức
+    Ready --> Generated: PUT ảnh bỏ hết ảnh chốt, vẫn còn nội dung
+    Failed --> Ready: PUT chọn ảnh thành công, đã có nội dung chốt
     Ready --> Generating: paraphase lại tiếp
     Ready --> Scheduled: (phase sau)
     Scheduled --> Publishing: (phase sau)
@@ -169,7 +175,7 @@ Các endpoint PostGen dưới đây dùng `[Authorize(Policy = JwtExtensions.Sta
 
 `{platform}` trong route là tên enum viết thường: `facebook` | `instagram` | `zalo`.
 
-Hiện có 5 API Post Core và POST generate nội dung có route thực thi. Sinh ảnh đã có trong generate; bốn dòng version nội dung đã triển khai; các dòng version ảnh/payload official là hợp đồng mốc 6–7. Chuẩn nền tảng và ratio preset dùng API Config chung, không nằm trong bảng endpoint PostGen.
+Hiện có 5 API Post Core và POST generate nội dung có route thực thi. Sinh ảnh đã có trong generate; bốn dòng version nội dung đã triển khai; ba dòng version ảnh đã triển khai trên nhánh `feature/post-gen` ở mốc 6; payload official cũng đã triển khai ở mốc 7. Chuẩn nền tảng và ratio preset dùng API Config chung, không nằm trong bảng endpoint PostGen.
 
 | Method | Route | Service method | Ghi chú |
 | --- | --- | --- | --- |
@@ -248,7 +254,7 @@ Server gom các cặp `(sourceBasePostImageId, ratioCode)` của **tất cả** 
 }
 ```
 
-Response không có `value.images` hoặc `platforms[].versions`. `baseImages` chứa ảnh nguồn; mỗi nền tảng có một object `content` chốt (hoặc null) và `images` chỉ gồm ảnh đã chốt thành công, kèm `imageUrl`, `pixelWidth`, `pixelHeight`, theo `sortOrder`. Ô chưa chọn ảnh hoặc ảnh lỗi không xuất hiện trong danh sách này. Kho lịch sử vẫn lưu trong database; API lịch sử nội dung riêng đã triển khai ở mốc 5; lịch sử ảnh thuộc mốc 6. `versionNo` của nội dung được tính lúc đọc, định danh bằng `generationId`. Ví dụ trên rút gọn các trường bài gốc của `PostCoreDetail`.
+Response không có `value.images` hoặc `platforms[].versions`. `baseImages` chứa ảnh nguồn; mỗi nền tảng có một object `content` chốt (hoặc null) và `images` chỉ gồm ảnh đã chốt thành công, kèm `imageUrl`, `pixelWidth`, `pixelHeight`, theo `sortOrder`. Ô chưa chọn ảnh hoặc ảnh lỗi không xuất hiện trong danh sách này. Kho lịch sử vẫn lưu trong database; API lịch sử nội dung riêng đã triển khai ở mốc 5; lịch sử ảnh riêng đã triển khai ở mốc 6. `versionNo` của nội dung được tính lúc đọc, định danh bằng `generationId`. Ví dụ trên rút gọn các trường bài gốc của `PostCoreDetail`.
 
 `POST .../platforms/{platform}/content/regenerate`
 
@@ -359,7 +365,7 @@ Các câu về nghiệp vụ đã chốt hết ở bảng quyết định. Còn 
 
 ## Các giai đoạn triển khai
 
-Tám mốc, mỗi mốc **tự kiểm được** rồi mới sang mốc sau. Chỉ hai mốc cần AI Service (mock được cả hai), nên phần lớn công việc không phải chờ bên ngoài.
+Tám mốc, mỗi mốc **tự kiểm được** rồi mới sang mốc sau. Các mốc 3–6 có thao tác cần AI Service (đều kiểm bằng mock), nên phần lớn công việc không phải chờ bên ngoài.
 
 | Mốc | Endpoint | Cần AI? |
 | --- | --- | --- |
@@ -394,7 +400,7 @@ Feature `HoaTheoMua.Service/PostCore/` theo shape `IService.cs` / `Service.cs` /
 | `PUT /api/v1/posts/{id}` | `UpdatePostCore` |
 | `DELETE /api/v1/posts/{id}` | `DeletePostCore` |
 
-**Kiểm trên Swagger:** tạo một bài có 3 ảnh → `GET` danh sách thấy nó → `GET` chi tiết thấy đủ 3 ảnh đúng `SortOrder` → sửa title → xóa → danh sách không còn nhưng dòng DB vẫn còn với `IsDeleted = true`. Gửi bài không ảnh phải nhận 422.
+**Kiểm trên Swagger:** tạo một bài có 3 ảnh → `GET` danh sách thấy nó → `GET` chi tiết thấy đủ 3 ảnh đúng `SortOrder` → sửa title → xóa → danh sách không còn nhưng dòng DB vẫn còn với `IsDeleted = true`. Tạo bài không ảnh (bỏ images/null/[]) nhận 200, baseImages rỗng; PUT bổ sung ảnh sau.
 
 ### Mốc 2 — Cấu hình nền tảng và preset
 
@@ -415,7 +421,7 @@ Migration seed prompt đã kiểm trên PostgreSQL 16: giữ nguyên prompt tùy
 
 **Đã triển khai phần AI:**
 
-Feature `HoaTheoMua.Service/AiService/` (`AddHttpClient`, `SendAsync<T>` tập trung) + `PostGeneration/`. Endpoint `POST /api/v1/posts/{id}/generate` **chỉ sinh nội dung, chưa sinh ảnh**. Đã kiểm 108 test Config/PostGen và 48 request HTTP. Lỗi ở bất kỳ nền tảng nào không tạo version mới; giữ official trước đó và chuyển các nền tảng đã claim sang Failed.
+Feature `HoaTheoMua.Service/AiService/` (`AddHttpClient`, `SendAsync<T>` tập trung) + `PostGeneration/`. Endpoint `POST /api/v1/posts/{id}/generate` **ở thời điểm mốc 3 chỉ sinh nội dung; từ mốc 4 đã hỗ trợ sinh ảnh theo mode**. Đã kiểm 108 test Config/PostGen và 48 request HTTP. Lỗi ở bất kỳ nền tảng nào không tạo version mới; giữ official trước đó và chuyển các nền tảng đã claim sang Failed.
 
 Tách riêng phần nội dung có lý do: cô lập được lỗi tầng HTTP client, ánh xạ lỗi và snapshot prompt trước khi thêm fan-out ảnh vào. Sai ở đây mà đã có 12 lời gọi ảnh song song thì rất khó lần ra.
 
@@ -470,6 +476,10 @@ Thêm ba phép thử:
 
 ### Mốc 6 — Version ảnh và chốt ảnh
 
+**Đã triển khai trên nhánh `feature/post-gen`, không cần migration:** regenerate thêm một version Succeeded/Failed nhưng không thay trạng thái hay ô ảnh chốt. GET kho gồm groups theo nguồn × tỷ lệ, versionNo/parent/feedback/selectedPlatforms, giữ lịch sử nguồn đã xóa. PUT thay tập ô nguyên tử, giữ ID ô còn tồn tại, đổi thứ tự/chọn version hoặc bỏ ô bằng []; không gọi AI, không đổi content. Có nội dung và ảnh chốt thì Ready; bỏ hết ảnh về Generated; chưa có nội dung thì Draft. History chưa phân trang. Xem [bàn giao FE mốc 6](../FE-API-Handoff-PostGen-Milestone6.md).
+
+Regenerate từ version gửi ảnh gốc đối chiếu rồi ảnh version, giữ thứ tự text/ảnh và chỉ feedback hiện tại. Recheck bài/nguồn khi lưu sau AI. Generate và regenerate cùng gán CreatedAt khi lưu dưới khóa BasePost để versionNo không bị đổi bởi lượt hoàn tất muộn. Hai PUT đồng thời tuần tự; không có ETag. Không gọi proxy thật trong kiểm thử.
+
 | Endpoint | |
 | --- | --- |
 | `POST /api/v1/posts/{id}/images/regenerate` | `RegenerateImage` |
@@ -485,6 +495,8 @@ Thêm ba phép thử:
 5. Chọn một ảnh thuộc bài gốc khác, hoặc ảnh `Failed`, hoặc ảnh sai cặp (ảnh gốc, tỷ lệ) → đều phải ra `BadRequestException` với đúng message trong bảng lỗi.
 
 ### Mốc 7 — Payload đăng bài
+
+**Đã triển khai trên nhánh `feature/post-gen`, không cần migration:** GetOfficialVersion trả đúng version content được chốt và ảnh chốt hợp lệ theo thứ tự, dùng một snapshot Repeatable Read. Payload phẳng gồm generationId/title/content/hashtag/images, status/isReady/notReadyReasons và định danh bài/nền tảng/selectedAt. Không gọi AI/Config, không ghi readiness hoặc dữ liệu xuất bản. Thiếu text/ảnh vẫn 200 với lý do; Generating hoặc trạng thái publish không Ready. Status ở endpoint này được tính cho payload, không sửa cờ trạng thái xử lý trong DB. Chi tiết [bàn giao FE mốc 7](../FE-API-Handoff-PostGen-Milestone7.md).
 
 `GET .../platforms/{platform}/official`.
 
@@ -504,11 +516,11 @@ Chạy test phù hợp trong lúc phát triển. Hook Husky `pre-push` hiện c�
 - Mỗi endpoint có route, policy, DTO và bảng lỗi.
 - Mọi câu hỏi nghiệp vụ đã chốt; phần còn treo đều là phụ thuộc bên ngoài, có ghi rõ giả định đang dùng.
 
-**Giai đoạn hiện thực hóa — sẽ đạt khi:**
+**Giai đoạn hiện thực hóa — mốc 0–7 đã triển khai trên nhánh `feature/post-gen` và kiểm chứng:**
 
 - Không có migration nào đụng tới native PG enum (`PlatformType`, `SystemPromptType`, `ClientHistoryType`, `CardFormType`).
 - `PostHistory`, `ClientHistory` không có dòng nào được ghi; `SystemPrompt` không đổi schema.
 - Các field phục vụ đăng bài có mặt trong schema nhưng không endpoint nào ghi vào.
-- Một cặp `(ảnh gốc, tỷ lệ)` dùng chung giữa các nền tảng chỉ tốn đúng một lời gọi AI — kiểm bằng test đếm số lần gọi `HttpMessageHandler` mock.
+- Trong cùng request generate, một cặp `(ảnh gốc, tỷ lệ)` dùng chung giữa các nền tảng chỉ tốn đúng một lời gọi AI — kiểm bằng test đếm số lần gọi `HttpMessageHandler` mock.
 - Paraphase lại một ô ảnh không làm đổi ô của nền tảng nào.
 - Contract với AI Service đã được bên làm AI xác nhận.
