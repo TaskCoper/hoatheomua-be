@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using HoaTheoMua.Repository.Enum;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -48,30 +47,6 @@ namespace HoaTheoMua.Repository.Migrations
                 type: "jsonb",
                 nullable: true);
 
-            // Convert GeneratedFlower from uuid to uuid[] (preserving existing data)
-            migrationBuilder.Sql(
-                """
-                ALTER TABLE "OrderDetails"
-                ALTER COLUMN "GeneratedFlower"
-                TYPE uuid[]
-                USING CASE
-                    WHEN "GeneratedFlower" IS NULL THEN NULL
-                    ELSE ARRAY["GeneratedFlower"]
-                END;
-                """);
-
-            // Convert GeneratedCard from uuid to uuid[] (preserving existing data)
-            migrationBuilder.Sql(
-                """
-                ALTER TABLE "OrderDetails"
-                ALTER COLUMN "GeneratedCard"
-                TYPE uuid[]
-                USING CASE
-                    WHEN "GeneratedCard" IS NULL THEN NULL
-                    ELSE ARRAY["GeneratedCard"]
-                END;
-                """);
-
             migrationBuilder.AlterColumn<CardFormType>(
                 name: "FormType",
                 table: "GeneratedCard",
@@ -107,34 +82,6 @@ namespace HoaTheoMua.Repository.Migrations
                 nullable: false,
                 oldClrType: typeof(CardFormType),
                 oldType: "\"CardFormType\"");
-
-            // Convert GeneratedCard from uuid[] back to uuid
-            // WARNING: If array has multiple values, only first value is restored
-            migrationBuilder.Sql(
-                """
-                ALTER TABLE "OrderDetails"
-                ALTER COLUMN "GeneratedCard"
-                TYPE uuid
-                USING CASE
-                    WHEN "GeneratedCard" IS NULL THEN NULL
-                    WHEN cardinality("GeneratedCard") = 0 THEN NULL
-                    ELSE "GeneratedCard"[1]
-                END;
-                """);
-
-            // Convert GeneratedFlower from uuid[] back to uuid
-            // WARNING: If array has multiple values, only first value is restored
-            migrationBuilder.Sql(
-                """
-                ALTER TABLE "OrderDetails"
-                ALTER COLUMN "GeneratedFlower"
-                TYPE uuid
-                USING CASE
-                    WHEN "GeneratedFlower" IS NULL THEN NULL
-                    WHEN cardinality("GeneratedFlower") = 0 THEN NULL
-                    ELSE "GeneratedFlower"[1]
-                END;
-                """);
 
             migrationBuilder.DropColumn(
                 name: "SnapshotCard",
