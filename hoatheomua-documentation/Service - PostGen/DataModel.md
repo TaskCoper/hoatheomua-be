@@ -217,7 +217,7 @@ CHECK: `("Status" = 'Succeeded' AND "ImageUrl" IS NOT NULL) OR "Status" <> 'Succ
 
 Không có `IsDeleted` — append-only như `GeneratedPost`.
 
-**Chống sinh trùng**: trước khi gọi AI cho cặp (ảnh gốc, tỷ lệ), kiểm tra đã có version `Succeeded` nào chưa. Có rồi thì dùng lại, không gọi AI. Chỉ khi người dùng bấm paraphase lại đúng ô đó mới sinh version mới. Đây là chỗ tiết kiệm tiền rõ rệt nhất khi một bài đăng lên nhiều nền tảng cùng tỷ lệ.
+**Hiện thực tái sử dụng:** generate chỉ gom cặp trùng trong cùng request; chưa tự tìm và dùng lại giữa các request. Từ mốc 6, FE đọc kho bằng GET images và PUT chọn một version Succeeded đã có cho nền tảng khác, không gọi AI. POST images/regenerate luôn chủ động sinh một version mới và không đổi ô chốt.
 
 ### Hai tình huống paraphase ảnh
 
@@ -267,7 +267,7 @@ Hai nền tảng cùng dùng một tấm ảnh thì là hai dòng `PlatformPostI
 
 ### Đánh số version lúc đọc
 
-Không bảng nào lưu `VersionNo`. Lý do: số thứ tự là tài nguyên tranh chấp — muốn cấp số phải đọc `MAX + 1`, mà lời gọi AI kéo dài vài chục giây, nên hai người bấm cùng lúc sẽ cùng đọc ra `1` và cùng ghi `2`. Với ảnh thì chuyện này còn dễ xảy ra hơn vì cặp (ảnh gốc × tỷ lệ) dùng chung mọi nền tảng. Không lưu số thì không có gì để giành: không khóa, không retry, không mất lời gọi AI đã trả tiền.
+Không bảng nào lưu `VersionNo`. Lý do: số thứ tự là tài nguyên tranh chấp — muốn cấp số phải đọc `MAX + 1`, mà lời gọi AI kéo dài vài chục giây, nên hai người bấm cùng lúc sẽ cùng đọc ra `1` và cùng ghi `2`. Với ảnh thì chuyện này còn dễ xảy ra hơn vì cặp (ảnh gốc × tỷ lệ) dùng chung mọi nền tảng. Không lưu số nên không cấp MAX(versionNo)+1. Phần lưu ảnh dùng khóa BasePost ngắn và timestamp tăng dần; không giữ khóa trong lúc AI chạy, không tự retry AI.
 
 Số thứ tự được tính lúc đọc, và **ổn định** nhờ đúng một bất biến: **`CreatedAt` và `Id` của một dòng không bao giờ thay đổi, và dòng không bao giờ bị xóa.** Chỉ cần giữ bất biến đó thì thứ tự không đổi, hôm nay là v2 thì mai vẫn là v2.
 
@@ -457,3 +457,17 @@ Mốc 4: PixelWidth/PixelHeight của GeneratedPostImage là kích thước mụ
 Không đổi schema. Mọi mutation mốc 5 khóa BasePost FOR UPDATE như generate/CRUD; regen claim nền tảng rồi nhả transaction trước gọi AI. Sửa/chốt bị chặn khi Generating, nên nguồn Manual không thể bị ghi đè lúc AI đang sử dụng. Persist version + official cùng transaction; rollback không để version rác hoặc thay đổi Manual dở dang.
 
 Sửa tay mới có parent là official hiện tại. Chỉ ghi đè Manual mới nhất nếu chính nó đang official và chưa có child; giữ Id/CreatedAt/parent, cập nhật UserId người sửa cuối. Chọn lại bản cũ rồi sửa tạo nhánh mới. API history chứa phiên bản theo thứ tự cũ → mới và officialId; detail không trả mảng lịch sử. Manual/select giữ trạng thái và ảnh, regenerate thành công chốt mới và Generated, lỗi giữ con trỏ cũ và Failed.
+
+## Hiện thực mốc 6 — version và lựa chọn ảnh
+
+Ba API mới không đổi schema. Image history trả groups/version, bao gồm Failed và nguồn soft delete; selectedPlatforms lấy từ ô của nền tảng còn hiệu lực. Không có lịch sử ảnh lồng trong GET detail. Regenerate không thay các version cũ hoặc con trỏ nào. Khi caller hủy hoặc nguồn/bài bị xóa trong lúc AI chạy, không lưu kết quả mới; lỗi provider bình thường lưu Failed với URL null. Config instruction dùng chung, không trộn prompt từng nền tảng.
+
+Để số version ảnh không đổi khi hai AI hoàn tất khác thứ tự, generate/regenerate khóa BasePost ngay trước insert, gán CreatedAt lớn hơn timestamp ảnh cuối của bài (độ chính xác microsecond PostgreSQL), rồi lưu/commit nguyên tử. ID/CreatedAt không đổi sau lưu. Không có trạng thái pending hoặc job durable cho lượt regenerate; client không tự retry.
+
+PUT ảnh kiểm toàn bộ request trước mutation: tối đa 100 ô, source còn hiệu lực, cặp/thứ tự không trùng, selected version đúng bài/cặp và Succeeded có URL. Bỏ ô xóa PlatformPostImage, giữ lịch sử; ô cùng cặp được cập nhật tại chỗ. Một transaction khóa root bảo vệ cả cập nhật/xóa/thêm ô và readiness. GET history không khóa dài, là trạng thái đọc tại thời điểm request; chưa phân trang, chưa có ETag cho PUT.
+
+## Hiện thực mốc 7 — đọc payload official
+
+Không đổi schema. GetOfficialVersion đọc bài/nền tảng, chính xác content được OfficialGenerationId trỏ tới (scoped PlatformPost), và các ảnh SelectedGeneratedPostImageId hợp lệ cùng bài/cặp, Succeeded có URL. Dùng transaction Repeatable Read + AsNoTracking/projection để cả mutable Manual và tập ảnh cùng thuộc một snapshot; GET không ghi gì.
+
+Readiness tính từ payload thật: có content không rỗng và ít nhất một ảnh thành công được chọn, không Generating hoặc trạng thái publish. Response có status/isReady/notReadyReasons; status ở đây là trạng thái payload, không cập nhật PlatformPost.Status. Ảnh nguồn bị soft delete không làm mất snapshot ảnh kết quả đã chốt. Mốc này không đóng băng payload cho tương lai; phase publish cần snapshot/idempotency riêng.

@@ -85,7 +85,7 @@ Server gom các cặp `(sourceBasePostImageId, ratioCode)` của **tất cả** 
 }
 ```
 
-Response không có `value.images` hoặc `platforms[].versions`. `baseImages` chứa ảnh nguồn; mỗi nền tảng có một object `content` chốt (hoặc null) và `images` chỉ gồm ảnh đã chốt thành công, kèm `imageUrl`, `pixelWidth`, `pixelHeight`, theo `sortOrder`. Ô chưa chọn ảnh hoặc ảnh lỗi không xuất hiện trong danh sách này. Kho lịch sử vẫn lưu trong database; API lịch sử nội dung/ảnh riêng dự kiến ở mốc 5/6. `versionNo` của nội dung được tính lúc đọc, định danh bằng `generationId`. Ví dụ trên rút gọn các trường bài gốc của `PostCoreDetail`.
+Response không có `value.images` hoặc `platforms[].versions`. `baseImages` chứa ảnh nguồn; mỗi nền tảng có một object `content` chốt (hoặc null) và `images` chỉ gồm ảnh đã chốt thành công, kèm `imageUrl`, `pixelWidth`, `pixelHeight`, theo `sortOrder`. Ô chưa chọn ảnh hoặc ảnh lỗi không xuất hiện trong danh sách này. Kho lịch sử vẫn lưu trong database; API lịch sử nội dung/ảnh riêng đã triển khai ở mốc 5/6. `versionNo` của nội dung được tính lúc đọc, định danh bằng `generationId`. Ví dụ trên rút gọn các trường bài gốc của `PostCoreDetail`.
 
 `POST .../platforms/{platform}/content/regenerate`
 
@@ -163,7 +163,7 @@ Response luôn bọc bằng `ApiResponseFactory.Base(...)` / `BasePagination(...
 
 ## Phần đã hiện thực
 
-Mốc 1–2: 5 API Post Core; prompt/bật tắt nền tảng và preset dùng API Config chung; không còn key standard riêng. Mốc 3 đã có POST generate nội dung, AiService proxy và snapshot prompt Config. Sinh ảnh trong generate đã triển khai ở mốc 4; Bốn API version nội dung đã triển khai ở mốc 5; version ảnh/payload official còn là thiết kế mốc 6–7.
+Mốc 1–2: 5 API Post Core; prompt/bật tắt nền tảng và preset dùng API Config chung; không còn key standard riêng. Mốc 3 đã có POST generate nội dung, AiService proxy và snapshot prompt Config. Sinh ảnh trong generate đã triển khai ở mốc 4; Bốn API version nội dung đã triển khai ở mốc 5; ba API version ảnh đã triển khai trên nhánh `feature/post-gen` ở mốc 6; payload official đã triển khai trên nhánh `feature/post-gen` ở mốc 7.
 
 - GET danh sách: `pageIndex` mặc định 1, `pageSize` mặc định 10, clamp tối đa 100; `platform=facebook|instagram|zalo`, `keyword` tìm trong title/content, không phân biệt hoa thường.
 - POST/PUT Post Core: `{title, content, hashtag, images: [{id?, imageUrl, sortOrder, width?, height?}]}`. POST không bắt buộc ảnh: bỏ images/null/[] hợp lệ. PUT yêu cầu mảng images đầy đủ, được phép rỗng; tối đa 20 ảnh. Bài chưa có ảnh trả baseImages=[] và vẫn sinh nội dung bằng mode content được. `sortOrder` bắt đầu từ 1, không trùng. POST không nhận id ảnh có sẵn. PUT thay toàn bộ tập; id ảnh phải thuộc bài đang sửa, URL của id cũ không thay đổi. Bỏ id cũ và thêm ảnh không id để thay nguồn.
@@ -215,3 +215,17 @@ Mode áp dụng cho toàn bộ request. Các mode cùng dùng khóa/claim của 
 Bốn route content/regenerate, content (PUT), content/versions (GET), content/official (PUT) đã chạy. POST regenerate dùng heavy rate limit; ba route còn lại không gọi AI. Source/official phải thuộc cùng PlatformPost, mọi mutation dùng khóa BasePost và chặn Generating hoặc các trạng thái xuất bản. Regenerate tự chốt bản mới; manual/select giữ ảnh và trạng thái hiện tại. Manual chỉ ghi đè tại chỗ khi đang official, mới nhất và chưa có child.
 
 GET versions trả ContentHistory gồm platformPostId/platform/officialGenerationId và versions (ContentVersion + feedback/isOfficial); mutation trả PostCoreDetail, không gắn lịch sử vào platforms. Lịch sử chưa phân trang. Body và lỗi chi tiết tại [bàn giao FE mốc 5](../FE-API-Handoff-PostGen-Milestone5.md).
+
+## Contract mốc 6 đã triển khai
+
+- POST `/api/v1/posts/{id}/images/regenerate`: body sourceBasePostImageId/ratioCode/sourceGeneratedPostImageId?/feedback?; trả ApiResponse<ImageVersion>. HTTP 200 kể cả attempt Failed sau khi gọi provider; FE kiểm value.status/errorMessage. Không thay content, trạng thái hoặc bất kỳ ảnh chốt nào.
+- GET `/api/v1/posts/{id}/images`: ApiResponse<ImageHistory> với basePostId và groups; mỗi nhóm có sourceBasePostImageId/originalImageUrl/sourceIsDeleted/ratioCode/versions. Version gồm id, parent, versionNo, source/result URL, target pixels, status/error/feedback/createdAt/selectedPlatforms. Chưa phân trang.
+- PUT `/api/v1/posts/{id}/platforms/{platform}/images`: mảng images bắt buộc, 0–100 ô; [] bỏ hết, selectedGeneratedPostImageId null giữ ô chưa chốt. Cặp và sortOrder không trùng (400). Chọn sai bài/cặp hoặc Failed trả 400. Thành công trả PostCoreDetail; tính Ready từ nội dung chốt và ít nhất một ảnh chốt, không đổi nội dung.
+
+Chỉ POST regenerate dùng HeavyPolicy và AI; PUT/history không đọc Config/AI. Body, ví dụ response, xử lý lỗi và kịch bản FE tại [bàn giao mốc 6](../FE-API-Handoff-PostGen-Milestone6.md). Không thay shape detail hoặc generate; không thêm value.images/platforms[].versions. Mốc 7 official riêng đã triển khai trên nhánh `feature/post-gen`.
+
+## Contract mốc 7 đã triển khai
+
+GET `/api/v1/posts/{id}/platforms/{platform}/official` trả ApiResponse<OfficialVersion>: basePostId/platformPostId/platform, generationId/title/content/hashtag/selectedAt, images chốt (shape như detail), status/isReady/notReadyReasons. Chỉ đọc, không heavy/AI/Config, không sửa trạng thái. Scope content đúng PlatformPost, ảnh đúng bài/cặp và Succeeded có URL. Không có lịch sử hoặc ảnh nguồn trong response.
+
+Có content không rỗng và ít nhất một ảnh hợp lệ → Ready; thiếu trả 200 với MissingContent/MissingImages. Generating hoặc các trạng thái publish có lý do riêng, isReady=false. Cờ Ready lưu trong DB không thay thế kiểm dữ liệu thật; status của official phản ánh payload, có thể khác trạng thái xử lý trong detail. Tất cả truy vấn cùng snapshot PostgreSQL Repeatable Read. Ví dụ và cách FE xử lý tại [bàn giao mốc 7](../FE-API-Handoff-PostGen-Milestone7.md).

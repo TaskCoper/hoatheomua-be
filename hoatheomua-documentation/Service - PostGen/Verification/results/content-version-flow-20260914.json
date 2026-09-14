@@ -1,0 +1,607 @@
+{
+  "skill": "database-flow-validator",
+  "status": "PASS",
+  "date": "2026-09-14",
+  "flow": "Milestone 5 content regenerate, manual edits, history and official selection; shared root lock protects revision sources",
+  "environment": "Disposable local PostgreSQL 16; real HTTP/controllers/JWT/validation/rate limiter/services; fake AI HttpMessageHandler and cache revalidation",
+  "assertions": {
+    "release_solution_build": "PASS",
+    "release_http_probe_build": "PASS",
+    "postgen_tests": {
+      "passed": 102,
+      "failed": 0,
+      "skipped": 0,
+      "postgres_integration_tests": 6
+    },
+    "http_requests": 79,
+    "http_checks_passed": 168,
+    "ai_ai_manual_ai_lineage": true,
+    "feedback_not_accumulated": true,
+    "branch_from_old_version_sends_exact_selected_source": true,
+    "null_source_uses_base_post": true,
+    "manual_saves_coalesce_only_latest_current_unreferenced_revision": true,
+    "referenced_or_other_branch_manual_versions_unchanged": true,
+    "concurrent_manual_saves_serialized": true,
+    "manual_source_frozen_during_ai_by_generating_claim": true,
+    "regenerate_failure_and_cancellation_preserve_official": true,
+    "regenerate_manual_create_manual_overwrite_and_select_rollback": true,
+    "history_scoped_and_stably_numbered": true,
+    "detail_omits_versions_and_root_images": true,
+    "all_content_mutations_preserve_image_selections": true,
+    "foreign_sources_and_official_ids_rejected": true,
+    "auth_validation_deleted_post_and_missing_platform_guards": true,
+    "live_ai_calls": 0
+  },
+  "queries": [
+    "Count isolated integration database prefixes after tests: 0",
+    "GeneratedPost grouped source in HTTP fixture: Ai=6, Manual=1",
+    "ParentGeneratedPostId crossing PlatformPostId: 0",
+    "OfficialGenerationId pointing into another PlatformPost: 0"
+  ],
+  "correlation_ids": [
+    {
+      "name": "AnonymousDenied",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 401,
+      "trace_id": "0HNOIB3PK0OPB:00000001"
+    },
+    {
+      "name": "CustomerDenied",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "CreateWithoutImages",
+      "method": "POST",
+      "url": "/api/v1/posts",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:00000003"
+    },
+    {
+      "name": "CreatePostCore",
+      "method": "POST",
+      "url": "/api/v1/posts",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000004"
+    },
+    {
+      "name": "GetPostCoreList",
+      "method": "GET",
+      "url": "/api/v1/posts?pageSize=200&keyword=hoa",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000005"
+    },
+    {
+      "name": "GetPostCoreDetail",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000006"
+    },
+    {
+      "name": "FilterByPlatform",
+      "method": "GET",
+      "url": "/api/v1/posts?platform=facebook",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000007"
+    },
+    {
+      "name": "CrossUserRead",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000008"
+    },
+    {
+      "name": "CrossUserList",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000009"
+    },
+    {
+      "name": "CrossUserUpdate",
+      "method": "PUT",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000000A"
+    },
+    {
+      "name": "UpdatePostCore",
+      "method": "PUT",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000000B"
+    },
+    {
+      "name": "GenerateCustomerDenied",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "GenerateDuplicatePlatforms",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:0000000D"
+    },
+    {
+      "name": "GenerateConflictingImageSelection",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:0000000E"
+    },
+    {
+      "name": "GenerateTwoPlatforms",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000000F"
+    },
+    {
+      "name": "GenerateSecondPlatformFailure",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 502,
+      "trace_id": "0HNOIB3PK0OPB:00000010"
+    },
+    {
+      "name": "FailedGenerationPreservesOfficial",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000011"
+    },
+    {
+      "name": "RemovedPresetGet",
+      "method": "GET",
+      "url": "/api/v1/post-gen/presets",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "RemovedPresetPut",
+      "method": "PUT",
+      "url": "/api/v1/post-gen/presets",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "RemovedStandardGet",
+      "method": "GET",
+      "url": "/api/v1/platform-standards",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "RemovedStandardPut",
+      "method": "PUT",
+      "url": "/api/v1/platform-standards/3ddc70a7-abef-4b1a-962f-1178cc750813",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "CreateRatioConfig",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000016"
+    },
+    {
+      "name": "RemovedPlatformConfigKeys",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.platform.",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000017"
+    },
+    {
+      "name": "RatioPresetUnchanged",
+      "method": "GET",
+      "url": "/api/v1/configs/2cc6746d-f1ab-4ed6-8fc8-31b9d02dba26",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000018"
+    },
+    {
+      "name": "GenerateSharedImagesPartial",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000019"
+    },
+    {
+      "name": "ReadSelectedImages",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000001A"
+    },
+    {
+      "name": "GenerateImagesAgain",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000001B"
+    },
+    {
+      "name": "RejectForeignImage",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:0000001C"
+    },
+    {
+      "name": "RejectImagePairLimit",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:0000001D"
+    },
+    {
+      "name": "GenerateAllImagesFailed",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000001E"
+    },
+    {
+      "name": "RejectInvalidGenerationMode",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:0000001F"
+    },
+    {
+      "name": "RejectImageModeWithoutSelection",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:00000020"
+    },
+    {
+      "name": "RejectContentModeWithImages",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:00000021"
+    },
+    {
+      "name": "GenerateContentAfterImages",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000022"
+    },
+    {
+      "name": "ContentHistoryAnonymousDenied",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/versions",
+      "status": 401,
+      "trace_id": "0HNOIB3PK0OPB:00000023"
+    },
+    {
+      "name": "ContentEditCustomerDenied",
+      "method": "PUT",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "ContentSelectCustomerDenied",
+      "method": "PUT",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/official",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "ContentRegenerateCustomerDenied",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/regenerate",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "ContentMissingPlatform",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/zalo/content/versions",
+      "status": 404,
+      "trace_id": "0HNOIB3PK0OPB:00000027"
+    },
+    {
+      "name": "ContentUnknownPlatform",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/tiktok/content/versions",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:00000028"
+    },
+    {
+      "name": "RegenerateContentFromVersion",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/regenerate",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000029"
+    },
+    {
+      "name": "EditContentManual",
+      "method": "PUT",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000002A"
+    },
+    {
+      "name": "EditContentManualAgain",
+      "method": "PUT",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000002B"
+    },
+    {
+      "name": "RegenerateContentFromManual",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/regenerate",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000002C"
+    },
+    {
+      "name": "GetContentVersions",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/versions",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000002D"
+    },
+    {
+      "name": "GetContentVersionsAgain",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/versions",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000002E"
+    },
+    {
+      "name": "RegenerateContentBranchFromOld",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/regenerate",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000002F"
+    },
+    {
+      "name": "SelectOfficialOldContent",
+      "method": "PUT",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/official",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000030"
+    },
+    {
+      "name": "ContentForeignSourceRejected",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/regenerate",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:00000031"
+    },
+    {
+      "name": "ContentForeignOfficialRejected",
+      "method": "PUT",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/official",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:00000032"
+    },
+    {
+      "name": "ContentEmptyBodyRejected",
+      "method": "PUT",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:00000033"
+    },
+    {
+      "name": "ContentFeedbackLimitRejected",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/regenerate",
+      "status": 422,
+      "trace_id": "0HNOIB3PK0OPB:00000034"
+    },
+    {
+      "name": "ContentRegenerationFailure",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/regenerate",
+      "status": 502,
+      "trace_id": "0HNOIB3PK0OPB:00000035"
+    },
+    {
+      "name": "ContentHistoryAfterFailure",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/versions",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000036"
+    },
+    {
+      "name": "AnonymousPromptReadDenied",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 401,
+      "trace_id": "0HNOIB3PK0OPB:00000037"
+    },
+    {
+      "name": "StaffPromptReadDenied",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "ReadPlatformPrompts",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000039"
+    },
+    {
+      "name": "StaffPromptUpdateDenied",
+      "method": "PUT",
+      "url": "/api/v1/configs/6dc488d4-7fbd-4f0d-b79d-de4df1d389d0",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "UpdateFacebookPrompt",
+      "method": "PUT",
+      "url": "/api/v1/configs/6dc488d4-7fbd-4f0d-b79d-de4df1d389d0",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000003B"
+    },
+    {
+      "name": "SecondAdminReadsPrompt",
+      "method": "GET",
+      "url": "/api/v1/configs/6dc488d4-7fbd-4f0d-b79d-de4df1d389d0",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000003C"
+    },
+    {
+      "name": "DisableFacebookViaPrompt",
+      "method": "PUT",
+      "url": "/api/v1/configs/6dc488d4-7fbd-4f0d-b79d-de4df1d389d0",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000003D"
+    },
+    {
+      "name": "GenerateDisabledPrompt",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:0000003E"
+    },
+    {
+      "name": "EnableFacebookViaPrompt",
+      "method": "PUT",
+      "url": "/api/v1/configs/6dc488d4-7fbd-4f0d-b79d-de4df1d389d0",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000003F"
+    },
+    {
+      "name": "OtherSystemPromptsUnchanged",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000040"
+    },
+    {
+      "name": "RejectDuplicatePrompt",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:00000041"
+    },
+    {
+      "name": "SystemPromptsPrivate",
+      "method": "GET",
+      "url": "/api/v1/configs/public?groupName=postgen&key=postgen.system-prompt.",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000042"
+    },
+    {
+      "name": "DeleteFacebookPrompt",
+      "method": "DELETE",
+      "url": "/api/v1/configs/6dc488d4-7fbd-4f0d-b79d-de4df1d389d0",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000043"
+    },
+    {
+      "name": "DeletedPromptExcluded",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.facebook",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:00000044"
+    },
+    {
+      "name": "GenerateMissingPromptNoFallback",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:00000045"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt0",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:00000046"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt1",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:00000047"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt2",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:00000048"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt3",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 400,
+      "trace_id": "0HNOIB3PK0OPB:00000049"
+    },
+    {
+      "name": "GenerateHeavyRateLimited",
+      "method": "POST",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/generate",
+      "status": 429,
+      "trace_id": null
+    },
+    {
+      "name": "RecreateFacebookPrompt",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000004B"
+    },
+    {
+      "name": "DeletePostCore",
+      "method": "DELETE",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000004C"
+    },
+    {
+      "name": "DeletedPostList",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 200,
+      "trace_id": "0HNOIB3PK0OPB:0000004D"
+    },
+    {
+      "name": "DeletedPostDetail",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3",
+      "status": 404,
+      "trace_id": "0HNOIB3PK0OPB:0000004E"
+    },
+    {
+      "name": "DeletedPostContentHistory",
+      "method": "GET",
+      "url": "/api/v1/posts/beb3f72b-c728-440f-bcca-5cd83f5712a3/platforms/facebook/content/versions",
+      "status": 404,
+      "trace_id": "0HNOIB3PK0OPB:0000004F"
+    }
+  ],
+  "cleanup": {
+    "temporary_integration_databases_remaining": 0,
+    "container": "htm-postgen-m5-test-20260914",
+    "container_and_volume_removed": true
+  },
+  "failures": [],
+  "limits": [
+    "AI/provider and cache revalidation are mocked. No live AI request in this milestone.",
+    "History is not paginated. Concurrent edit requests serialize but there is no stale-form ETag check.",
+    "No new schema migration or deployment. Existing image dimensions/provider URL constraints remain unchanged."
+  ]
+}

@@ -19,18 +19,20 @@ public partial class Service
             || string.IsNullOrWhiteSpace(options.Model) || options.TimeoutSeconds is < 1 or > 180)
             throw new ServerException("AI service configuration is invalid");
         // A shared image must not depend on which platform requested this pair first.
-        var payload = new Request.ChatCompletion(options.Model, new[]
+        var parts = new List<Request.ContentPart>();
+        if (input.OriginalImageUrl != null)
         {
-            new Request.Message("user", new[]
-            {
-                new Request.ContentPart("text", "Ảnh sản phẩm gốc cần dựng lại:"),
-                new Request.ContentPart("image_url", ImageUrl: new(input.SourceImageUrl)),
-                new Request.ContentPart("text", input.Instruction),
-                new Request.ContentPart("text", $"Tạo một ảnh mới từ ảnh trên, tỷ lệ {input.RatioCode}, kích thước mục tiêu {input.PixelWidth}x{input.PixelHeight} pixel. " +
-                    "Giữ nguyên sản phẩm và mọi chi tiết nhận diện. Chỉ điều chỉnh bố cục hoặc mở rộng nền; không thay sản phẩm, không thêm chữ hay logo. " +
-                    "Thực hiện tạo ảnh ngay và trả đúng một ảnh dưới dạng Markdown ![generated image](URL).")
-            })
-        });
+            parts.Add(new("text", "Ảnh sản phẩm gốc để đối chiếu, giữ nguyên chi tiết nhận diện:"));
+            parts.Add(new("image_url", ImageUrl: new(input.OriginalImageUrl)));
+        }
+        parts.Add(new("text", input.OriginalImageUrl == null ? "Ảnh sản phẩm gốc cần dựng lại:" : "Ảnh phiên bản được chọn để chỉnh sửa tiếp:"));
+        parts.Add(new("image_url", ImageUrl: new(input.SourceImageUrl)));
+        parts.Add(new("text", input.Instruction));
+        if (!string.IsNullOrWhiteSpace(input.Feedback)) parts.Add(new("text", "Yêu cầu chỉnh sửa lần này: " + input.Feedback));
+        parts.Add(new("text", $"Tạo một ảnh mới từ ảnh trên, tỷ lệ {input.RatioCode}, kích thước mục tiêu {input.PixelWidth}x{input.PixelHeight} pixel. " +
+            "Giữ nguyên sản phẩm và mọi chi tiết nhận diện. Chỉ điều chỉnh bố cục hoặc mở rộng nền; không thay sản phẩm, không thêm chữ hay logo. " +
+            "Thực hiện tạo ảnh ngay và trả đúng một ảnh dưới dạng Markdown ![generated image](URL)."));
+        var payload = new Request.ChatCompletion(options.Model, new[] { new Request.Message("user", parts) });
         using var request = new HttpRequestMessage(HttpMethod.Post, uri) { Content = JsonContent.Create(payload, options: JsonOptions) };
         if (!string.IsNullOrWhiteSpace(options.ApiKey)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

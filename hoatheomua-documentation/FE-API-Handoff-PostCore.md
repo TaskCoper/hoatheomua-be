@@ -14,7 +14,7 @@ Ngày đối chiếu: **14/09/2026**. Nội dung dựa trên controller, DTO, se
 
 **Tổng: 5 endpoint PostCore đã triển khai, commit/push trên feature/post-gen.** Trạng thái triển khai lên server chưa được xác minh trong lần tổng hợp này; FE cần dùng môi trường đã có code và migration tương ứng.
 
-Mốc 3 đã thêm API generate nội dung trong workspace; xem [bàn giao PostGen mốc 3](FE-API-Handoff-PostGen-Milestone3.md). API regenerate theo feedback, chỉnh/chọn version, sinh ảnh, official, publish và schedule vẫn chưa triển khai. Tài liệu này tập trung vào 5 API PostCore. Cấu hình PostGen dùng API Config chung hiện có, không thuộc 5 endpoint trong tài liệu này.
+Mốc 3 đã thêm API generate nội dung trong workspace; xem [bàn giao PostGen mốc 3](FE-API-Handoff-PostGen-Milestone3.md). Sinh ảnh, regenerate và chỉnh/chọn version nội dung/ảnh đã có ở mốc 4–6; official riêng đã có ở mốc 7; publish và schedule chưa triển khai. Tài liệu này tập trung vào 5 API PostCore. Cấu hình PostGen dùng API Config chung hiện có, không thuộc 5 endpoint trong tài liệu này.
 
 ## 2. Quy ước chung
 
@@ -236,7 +236,7 @@ interface OfficialImage {
 Lưu ý cho màn hình chi tiết:
 
 - `baseImages`: ảnh nguồn còn hiệu lực, sắp xếp theo `sortOrder`; dùng để điền form sửa bài.
-- Không còn `value.images`; lịch sử ảnh vẫn ở database, API đọc lịch sử riêng dự kiến ở mốc 6.
+- Không còn `value.images`; lịch sử ảnh vẫn ở database, API đọc lịch sử riêng GET /api/v1/posts/{id}/images đã triển khai ở mốc 6.
 - `platforms[].content`: một object nội dung chính thức được chọn hoặc null. Không có mảng versions trong response chi tiết; API content/versions riêng đã có ở mốc 5.
 - `platforms[].images`: ảnh đã chốt thành công theo `sortOrder`, có `selectedGeneratedPostImageId`, `imageUrl` và kích thước; không trả ô chưa chọn hoặc ảnh lỗi.
 - `versionNo` được tính lúc đọc. Dùng `id` / `generationId` để định danh version.
@@ -367,3 +367,7 @@ Tài liệu được đối chiếu tĩnh với source code. Lần tổng hợp 
 Sinh ảnh trong generate đã triển khai tại [bàn giao FE mốc 4](FE-API-Handoff-PostGen-Milestone4.md). Kích thước pixel của ảnh chốt là kích thước mục tiêu gửi AI, chưa đo từ file ảnh.
 
 API sinh lại, sửa tay, lịch sử và chọn nội dung đã có trong [bàn giao FE mốc 5](FE-API-Handoff-PostGen-Milestone5.md).
+
+Kho ảnh, sinh lại và chọn/sắp xếp ảnh: [bàn giao FE mốc 6](FE-API-Handoff-PostGen-Milestone6.md).
+
+Payload chốt để xem trước/chuẩn bị đăng: [bàn giao FE mốc 7](FE-API-Handoff-PostGen-Milestone7.md).

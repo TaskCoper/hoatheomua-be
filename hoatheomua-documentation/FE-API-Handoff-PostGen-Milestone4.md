@@ -1,6 +1,6 @@
 # Bàn giao FE — PostGen mốc 4: sinh ảnh
 
-Cập nhật 2026-09-14. Mốc 4 và mode content/images/all đã triển khai, kiểm thử và được đưa vào nhánh `feature/post-gen`; chưa deploy. Dùng cùng API và quyền Staff/Admin của mốc 3; không thêm route. Mốc 5 (version nội dung) đã triển khai; xem [bàn giao mốc 5](FE-API-Handoff-PostGen-Milestone5.md). Mốc 6–7 (version/chốt ảnh và payload official riêng) chưa triển khai.
+Cập nhật 2026-09-14. Mốc 4 và mode content/images/all đã triển khai, kiểm thử và được đưa vào nhánh `feature/post-gen`; chưa deploy. Dùng cùng API và quyền Staff/Admin của mốc 3; không thêm route. Mốc 5 (version nội dung) đã triển khai; xem [bàn giao mốc 5](FE-API-Handoff-PostGen-Milestone5.md). Mốc 6 (version/chốt ảnh) đã triển khai trên nhánh `feature/post-gen`: [bàn giao mốc 6](FE-API-Handoff-PostGen-Milestone6.md). Mốc 7 payload official riêng đã triển khai trên nhánh `feature/post-gen`: [bàn giao mốc 7](FE-API-Handoff-PostGen-Milestone7.md).
 
 ## Chọn phần cần sinh bằng `mode`
 
@@ -88,7 +88,7 @@ Một ảnh trong `platforms[].images`:
 
 `pixelWidth/pixelHeight` là kích thước mục tiêu đã yêu cầu AI theo bảng tỷ lệ; proxy chỉ trả URL, backend chưa tải ảnh để xác minh kích thước thực tế. URL được kiểm cú pháp HTTP/HTTPS; độ bền URL và chất lượng giữ sản phẩm chưa được xác minh bằng provider thật trong đợt này.
 
-Ô ảnh chưa chọn sẽ tự chọn kết quả thành công. Nếu đã chọn ảnh từ lần trước thì giữ ID đó; lần sinh mới vẫn được lưu trong lịch sử. Các ô cũ và thứ tự của chúng giữ nguyên; cặp mới nối tiếp cuối danh sách. Muốn chọn bản khác sẽ dùng API mốc 6, hiện chưa có.
+Ô ảnh chưa chọn sẽ tự chọn kết quả thành công. Nếu đã chọn ảnh từ lần trước thì giữ ID đó; lần sinh mới vẫn được lưu trong lịch sử. Các ô cũ và thứ tự của chúng giữ nguyên; cặp mới nối tiếp cuối danh sách. Muốn chọn bản khác dùng PUT platform images của mốc 6, đã triển khai trên nhánh `feature/post-gen`.
 
 ## Trạng thái và lỗi
 
@@ -112,3 +112,5 @@ Tổng ngân sách AI 180 giây, tối đa 3 lời gọi ảnh đồng thời; t
 Chỉ dẫn ảnh chung nằm ở Config `postgen.image_instruction`, group `postgen`, kind `Setting`, private; `value` là **JSON string**, không phải object `{content}`. Ba prompt nền tảng vẫn chỉ dùng cho nội dung. Admin quản trị bằng API Config chung.
 
 Các luồng cần kiểm: chọn cùng ảnh/tỷ lệ trên hai nền tảng; kết hợp preset và chọn tay; ảnh lỗi một phần; gọi lại giữ ảnh đã chốt; vượt 12 cặp; reload vẫn có nội dung, URL ảnh và trạng thái đúng. Lịch sử/sinh lại theo feedback/chọn version nội dung đã có ở mốc 5; lịch sử/chọn ảnh và đăng bài chưa triển khai.
+
+Từ mốc 6, FE có thể đọc kho ảnh bằng GET images và PUT lựa chọn phiên bản đã có để dùng lại giữa các nền tảng, không gọi AI. POST images/regenerate chỉ thêm version vào kho, không tự thay ô chốt.

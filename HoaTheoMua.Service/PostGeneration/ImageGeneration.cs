@@ -19,19 +19,7 @@ public partial class Service
         var result = new List<ImageSelection>();
         var instruction = "";
         if (request.Platforms!.Any(x => x.UsePreset || x.Ratios != null))
-        {
-            var rows = await db.Configs.AsNoTracking().Where(x => x.Group == "postgen" && x.Key == "postgen.image_instruction"
-                && x.Kind == "Setting" && !x.IsDeleted && !x.IsPublic).ToListAsync(ct);
-            try
-            {
-                if (rows.Count != 1) throw new JsonException();
-                using var json = JsonDocument.Parse(rows[0].Value);
-                instruction = json.RootElement.GetString()!;
-                if (string.IsNullOrWhiteSpace(instruction)) throw new JsonException();
-            }
-            catch (Exception ex) when (ex is JsonException or InvalidOperationException)
-            { throw new BadRequestException("Image instruction is not configured"); }
-        }
+            instruction = await ReadImageInstruction(ct);
         string? preset = null;
         if (request.Platforms!.Any(x => x.UsePreset))
         {
@@ -58,6 +46,22 @@ public partial class Service
         if (result.Select(x => x.Pair).Distinct().Count() > 12)
             throw new ValidationExceptionError("A generation request cannot exceed 12 image pairs");
         return result;
+    }
+
+    private async Task<string> ReadImageInstruction(CancellationToken ct)
+    {
+        var rows = await db.Configs.AsNoTracking().Where(x => x.Group == "postgen" && x.Key == "postgen.image_instruction"
+            && x.Kind == "Setting" && !x.IsDeleted && !x.IsPublic).ToListAsync(ct);
+        try
+        {
+            if (rows.Count != 1) throw new JsonException();
+            using var json = JsonDocument.Parse(rows[0].Value);
+            var instruction = json.RootElement.GetString()!;
+            if (string.IsNullOrWhiteSpace(instruction)) throw new JsonException();
+            return instruction;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        { throw new BadRequestException("Image instruction is not configured"); }
     }
 
     private static List<Request.RatioInput> ExpandPreset(string value, PlatformType platform, List<BasePostImage> sources)

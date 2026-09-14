@@ -62,18 +62,7 @@ public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserServic
     private async Task<List<Target>> ReadTargets(Request.GenerateRequest request, CancellationToken ct)
     {
         var configs = await db.Configs.AsNoTracking().Where(x => x.Group == "postgen" && !x.IsDeleted).ToListAsync(ct);
-        var enabled = configs.Where(x => x.Key == "postgen.enabled").ToList();
-        if (enabled.Count > 1) throw new BadRequestException("PostGen enabled config is invalid");
-        if (enabled.Count == 1)
-        {
-            try
-            {
-                using var json = JsonDocument.Parse(enabled[0].Value);
-                if (!json.RootElement.GetBoolean()) throw new BadRequestException("PostGen is disabled");
-            }
-            catch (Exception ex) when (ex is JsonException or InvalidOperationException)
-            { throw new BadRequestException("PostGen enabled config is invalid"); }
-        }
+        EnsurePostGenEnabled(configs);
         var result = new List<Target>();
         foreach (var input in request.Platforms!)
         {
@@ -95,6 +84,22 @@ public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserServic
             result.Add(new(platform, prompts[0].Id, prompt));
         }
         return result;
+    }
+
+    private static void EnsurePostGenEnabled(List<HoaTheoMua.Repository.Entity.Config> configs)
+    {
+        var enabled = configs.Where(x => x.Key == "postgen.enabled").ToList();
+        if (enabled.Count > 1) throw new BadRequestException("PostGen enabled config is invalid");
+        if (enabled.Count == 1)
+        {
+            try
+            {
+                using var json = JsonDocument.Parse(enabled[0].Value);
+                if (!json.RootElement.GetBoolean()) throw new BadRequestException("PostGen is disabled");
+            }
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+            { throw new BadRequestException("PostGen enabled config is invalid"); }
+        }
     }
 
     private async Task<(BasePost, List<PlatformPost>, List<ImageSelection>)> Claim(Guid id, List<Target> targets, Request.GenerateRequest request, Guid userId, CancellationToken ct)
@@ -127,6 +132,11 @@ public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserServic
     private async Task Persist(List<PlatformPost> platforms, List<GeneratedPost> versions, List<ImageSelection> plan, List<GeneratedPostImage> images, CancellationToken ct)
     {
         await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
+        if (images.Count > 0)
+        {
+            await LockBasePost(platforms[0].BasePostId, ct);
+            await StampImageVersions(platforms[0].BasePostId, images, ct);
+        }
         db.GeneratedPosts.AddRange(versions);
         db.GeneratedPostImages.AddRange(images);
         await db.SaveChangesAsync(ct);
