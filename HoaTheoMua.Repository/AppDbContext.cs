@@ -25,6 +25,8 @@ public class AppDbContext : DbContext
     public virtual DbSet<CardTemplate> CardTemplates { get; set; }
     public virtual DbSet<BasePost> BasePosts { get; set; }
     public virtual DbSet<BasePostImage> BasePostImages { get; set; }
+    public virtual DbSet<PlatformAccount> PlatformAccounts { get; set; }
+    public virtual DbSet<PlatformOAuthSession> PlatformOAuthSessions { get; set; }
     public virtual DbSet<PlatformPost> PlatformPosts { get; set; }
     public virtual DbSet<GeneratedPostImage> GeneratedPostImages { get; set; }
     public virtual DbSet<PlatformPostImage> PlatformPostImages { get; set; }

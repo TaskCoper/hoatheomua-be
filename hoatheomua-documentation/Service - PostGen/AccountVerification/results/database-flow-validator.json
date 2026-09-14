@@ -1,0 +1,210 @@
+{
+  "skill": "database-flow-validator",
+  "status": "PASS",
+  "flow": "Admin connect -\u003E anonymous browser-bound callback -\u003E list -\u003E refresh -\u003E disconnect -\u003E reconnect",
+  "assertions": {
+    "requests": 38,
+    "checks": 236,
+    "encryptedAtRest": true,
+    "stableAccountIds": true,
+    "stateReplayDenied": true,
+    "realAiCalls": 0,
+    "realProviderCalls": 0
+  },
+  "queries": [
+    "SELECT account metadata and protected credentials in disposable database (values redacted)",
+    "SELECT used OAuth sessions",
+    "SELECT count(*) FROM pg_database WHERE datname = @disposable_name"
+  ],
+  "correlation_ids": [
+    {
+      "name": "anonymous list denied",
+      "status": 401,
+      "traceId": "0HNOIH7L27SIP:00000001"
+    },
+    {
+      "name": "Staff list denied",
+      "status": 403,
+      "traceId": null
+    },
+    {
+      "name": "Staff connect denied",
+      "status": 403,
+      "traceId": null
+    },
+    {
+      "name": "Staff refresh denied",
+      "status": 403,
+      "traceId": null
+    },
+    {
+      "name": "Staff disconnect denied",
+      "status": 403,
+      "traceId": null
+    },
+    {
+      "name": "Customer list denied",
+      "status": 403,
+      "traceId": null
+    },
+    {
+      "name": "Customer connect denied",
+      "status": 403,
+      "traceId": null
+    },
+    {
+      "name": "Customer refresh denied",
+      "status": 403,
+      "traceId": null
+    },
+    {
+      "name": "Customer disconnect denied",
+      "status": 403,
+      "traceId": null
+    },
+    {
+      "name": "unknown platform",
+      "status": 400,
+      "traceId": "0HNOIH7L27SIP:0000000A"
+    },
+    {
+      "name": "callback missing state",
+      "status": 400,
+      "traceId": "0HNOIH7L27SIP:0000000B"
+    },
+    {
+      "name": "facebook connect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:0000000C"
+    },
+    {
+      "name": "facebook callback without JWT",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:0000000D"
+    },
+    {
+      "name": "facebook callback replay rejected",
+      "status": 400,
+      "traceId": "0HNOIH7L27SIP:0000000E"
+    },
+    {
+      "name": "facebook refresh",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:0000000F"
+    },
+    {
+      "name": "facebook disconnect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000010"
+    },
+    {
+      "name": "facebook reconnect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000011"
+    },
+    {
+      "name": "facebook reconnect callback",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000012"
+    },
+    {
+      "name": "instagram connect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000013"
+    },
+    {
+      "name": "instagram callback without JWT",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000014"
+    },
+    {
+      "name": "instagram callback replay rejected",
+      "status": 400,
+      "traceId": "0HNOIH7L27SIP:00000015"
+    },
+    {
+      "name": "instagram refresh",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000016"
+    },
+    {
+      "name": "instagram disconnect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000017"
+    },
+    {
+      "name": "instagram reconnect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000018"
+    },
+    {
+      "name": "instagram reconnect callback",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000019"
+    },
+    {
+      "name": "zalo connect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:0000001A"
+    },
+    {
+      "name": "zalo callback without JWT",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:0000001B"
+    },
+    {
+      "name": "zalo callback replay rejected",
+      "status": 400,
+      "traceId": "0HNOIH7L27SIP:0000001C"
+    },
+    {
+      "name": "zalo refresh",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:0000001D"
+    },
+    {
+      "name": "zalo disconnect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:0000001E"
+    },
+    {
+      "name": "zalo reconnect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:0000001F"
+    },
+    {
+      "name": "zalo reconnect callback",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000020"
+    },
+    {
+      "name": "shared list",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000021"
+    },
+    {
+      "name": "new OAuth session",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000022"
+    },
+    {
+      "name": "final disconnect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000023"
+    },
+    {
+      "name": "final disconnect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000024"
+    },
+    {
+      "name": "final disconnect",
+      "status": 200,
+      "traceId": "0HNOIH7L27SIP:00000025"
+    }
+  ],
+  "cleanup": {
+    "databaseDropped": true
+  },
+  "failures": []
+}

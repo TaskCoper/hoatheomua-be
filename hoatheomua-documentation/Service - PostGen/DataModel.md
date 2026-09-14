@@ -101,7 +101,7 @@ Bài của **một nền tảng**, mỗi `BasePost` × `Platform` đúng một d
 | `LastError` | text NULL | |
 | `UserId` | uuid NOT NULL | người thực hiện tạo, không dùng phân quyền sở hữu bài |
 | `IsDeleted` / `CreatedAt` / `UpdatedAt` | | |
-| `PlatformAccountId` | uuid NULL | **chừa sẵn** — bảng `PlatformAccount` sẽ có ở phase đăng bài, chưa đặt FK |
+| `PlatformAccountId` | uuid NULL | FK → `PlatformAccount.Id`, Restrict từ mốc 11; chưa có API gán account cho bài trong mốc này |
 | `ScheduledAt` | timestamptz NULL | **chừa sẵn** |
 | `PublishedAt` | timestamptz NULL | **chừa sẵn** |
 | `ExternalPostId` | varchar(200) NULL | **chừa sẵn** — id bài viết bên nền tảng |
@@ -471,3 +471,26 @@ PUT ảnh kiểm toàn bộ request trước mutation: tối đa 100 ô, source 
 Không đổi schema. GetOfficialVersion đọc bài/nền tảng, chính xác content được OfficialGenerationId trỏ tới (scoped PlatformPost), và các ảnh SelectedGeneratedPostImageId hợp lệ cùng bài/cặp, Succeeded có URL. Dùng transaction Repeatable Read + AsNoTracking/projection để cả mutable Manual và tập ảnh cùng thuộc một snapshot; GET không ghi gì.
 
 Readiness tính từ payload thật: có content không rỗng và ít nhất một ảnh thành công được chọn, không Generating hoặc trạng thái publish. Response có status/isReady/notReadyReasons; status ở đây là trạng thái payload, không cập nhật PlatformPost.Status. Ảnh nguồn bị soft delete không làm mất snapshot ảnh kết quả đã chốt. Mốc này không đóng băng payload cho tương lai; phase publish cần snapshot/idempotency riêng.
+
+
+## Hiện thực mốc 11 — tài khoản và phiên OAuth
+
+Migration `20260914120000_AddPostGenPlatformAccounts` thêm hai bảng, index và FK từ `PlatformPost.PlatformAccountId`. Dùng lại native `PlatformType`, không thêm giá trị enum hoặc thay schema SystemPrompt/Config. Chi tiết API: [PlatformAccounts.md](PlatformAccounts.md).
+
+| Bảng | Cột và ràng buộc |
+| --- | --- |
+| PlatformAccount | Id uuid PK; Platform native PlatformType; ExternalAccountId varchar(128) NOT NULL; PageId varchar(128) NULL; DisplayName varchar(300) NOT NULL |
+| PlatformAccount | Status varchar(20) CHECK Connected/ReauthRequired/Disabled; GrantedScopes text[] NOT NULL; ProtectedCredentials text NULL (AES-GCM); Connected bắt buộc có ciphertext |
+| PlatformAccount | AccessTokenExpiresAt/RefreshTokenExpiresAt/LastValidatedAt timestamptz NULL; LastErrorCode varchar(80) NULL; ConnectedBy uuid NOT NULL (claim, không FK sang bảng User) |
+| PlatformAccount | CreatedAt timestamptz NOT NULL; UpdatedAt timestamptz NULL; Revision bigint NOT NULL làm concurrency token; IsDeleted boolean NOT NULL |
+| PlatformAccount | RefreshLeaseId uuid NULL; RefreshLeaseUntil timestamptz NULL; unique (Platform, ExternalAccountId) cho cả Disabled; index (Status, AccessTokenExpiresAt) |
+| PlatformOAuthSession | Id uuid PK; Platform native PlatformType; StateHash varchar(64) NOT NULL unique; BrowserHash varchar(64) NOT NULL; ProtectedVerifier text NULL |
+| PlatformOAuthSession | RequestedBy uuid NOT NULL; TargetAccountId uuid NULL FK → PlatformAccount Restrict; TargetRevision bigint NULL; CreatedAt/ExpiresAt timestamptz NOT NULL; UsedAt timestamptz NULL; index ExpiresAt và TargetAccountId |
+
+Account dùng chung cho Admin, không có bảng User local. Disconnect giữ row/ID, chuyển Disabled và xóa ciphertext; không đặt IsDeleted để FE còn reconnect và lịch sử còn tham chiếu. Không xóa hard account đang được bài/phiên OAuth tham chiếu.
+
+State được claim bằng khóa hàng trong transaction ngắn rồi ghi UsedAt/xóa verifier trước HTTP. Lưu callback nhiều account cùng transaction; advisory lock theo nền tảng/external ID chống insert trùng và khóa account bảo vệ revision. Reconnect chỉ cập nhật đúng ID/revision ban đầu. General connect không kích hoạt lại account Disabled.
+
+Refresh claim lease trong transaction, gọi provider ngoài transaction, lưu với kiểm lease mới nhất. Crash/timeout của refresh Zalo cần reconnect vì token một lần có thể đã bị tiêu thụ. Disconnect/reconnect thắng kết quả refresh cũ. Khi tích hợp job mốc 12–14, writer gán account/lập lịch phải khóa cùng row account và kiểm Connected để không đua với disconnect.
+
+Nâng cấp có guard: nếu cột PlatformAccountId dành sẵn đang có giá trị từ ngoài API PostGen thì migration dừng, không tự xóa hoặc sửa giá trị; cần đối soát trước. Down bỏ FK/index trên PlatformPost rồi bỏ hai bảng mới, mất dữ liệu account/session nên chỉ dùng trên DB thử hoặc theo quy trình rollback có backup. Upgrade/downgrade/guard đã được kiểm bằng PostgreSQL local.

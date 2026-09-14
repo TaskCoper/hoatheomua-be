@@ -82,6 +82,21 @@ services:
       # Security Configuration
       SecurityOption__Pepper: ${SECURITY_PEPPER}
 
+      # PostGen accounts (runtime only; Meta opt-in, Zalo deferred).
+      PlatformAccountOptions__Meta__Enabled: ${POSTGEN_META_ENABLED:-false}
+      PlatformAccountOptions__Meta__AppId: ${POSTGEN_META_APP_ID:-}
+      PlatformAccountOptions__Meta__AppSecret: ${POSTGEN_META_APP_SECRET:-}
+      PlatformAccountOptions__Meta__GraphApiVersion: ${POSTGEN_META_GRAPH_API_VERSION:-}
+      PlatformAccountOptions__Meta__ConfigId: ${POSTGEN_META_CONFIG_ID:-}
+      PlatformAccountOptions__Meta__FacebookCallbackUrl: ${POSTGEN_META_FACEBOOK_CALLBACK_URL:-}
+      PlatformAccountOptions__Meta__InstagramCallbackUrl: ${POSTGEN_META_INSTAGRAM_CALLBACK_URL:-}
+      PlatformAccountOptions__ActiveEncryptionKeyId: ${POSTGEN_ACTIVE_ENCRYPTION_KEY_ID:-k1}
+      PlatformAccountOptions__EncryptionKeys__k1: ${POSTGEN_ENCRYPTION_KEY_K1:-}
+      PlatformAccountOptions__EncryptionKeys__k2: ${POSTGEN_ENCRYPTION_KEY_K2:-}
+      PlatformAccountOptions__OAuthStateMinutes: ${POSTGEN_OAUTH_STATE_MINUTES:-10}
+      PlatformAccountOptions__RequestTimeoutSeconds: ${POSTGEN_REQUEST_TIMEOUT_SECONDS:-30}
+      PlatformAccountOptions__Zalo__Enabled: "false"
+
       # Ahamove Configuration
       AhamoveOption__Token: ${AHAMOVE_TOKEN}
       AhamoveOption__BaseUrl: ${AHAMOVE_BASE_URL}

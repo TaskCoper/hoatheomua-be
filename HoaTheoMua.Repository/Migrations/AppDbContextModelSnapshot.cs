@@ -1968,6 +1968,57 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("OrderNhanhVnDetails");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PlatformAccount", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                    b.Property<HoaTheoMua.Repository.Enum.PlatformType>("Platform").HasColumnType("\"PlatformType\"");
+                    b.Property<string>("ExternalAccountId").IsRequired().HasMaxLength(128).HasColumnType("character varying(128)");
+                    b.Property<string>("PageId").HasMaxLength(128).HasColumnType("character varying(128)");
+                    b.Property<string>("DisplayName").IsRequired().HasMaxLength(300).HasColumnType("character varying(300)");
+                    b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)");
+                    b.Property<string[]>("GrantedScopes").IsRequired().HasColumnType("text[]");
+                    b.Property<string>("ProtectedCredentials").HasColumnType("text");
+                    b.Property<DateTimeOffset?>("AccessTokenExpiresAt").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset?>("RefreshTokenExpiresAt").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset?>("LastValidatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<string>("LastErrorCode").HasMaxLength(80).HasColumnType("character varying(80)");
+                    b.Property<Guid>("ConnectedBy").HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset?>("UpdatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<long>("Revision").IsConcurrencyToken().HasColumnType("bigint");
+                    b.Property<Guid?>("RefreshLeaseId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset?>("RefreshLeaseUntil").HasColumnType("timestamp with time zone");
+                    b.Property<bool>("IsDeleted").HasColumnType("boolean");
+                    b.HasKey("Id");
+                    b.HasIndex("Platform", "ExternalAccountId").IsUnique();
+                    b.HasIndex("Status", "AccessTokenExpiresAt");
+                    b.ToTable("PlatformAccount", (string)null, t =>
+                    {
+                        t.HasCheckConstraint("CK_PlatformAccount_Status", "\"Status\" IN ('Connected','ReauthRequired','Disabled')");
+                        t.HasCheckConstraint("CK_PlatformAccount_Credentials", "\"Status\" <> 'Connected' OR \"ProtectedCredentials\" IS NOT NULL");
+                    });
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PlatformOAuthSession", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                    b.Property<HoaTheoMua.Repository.Enum.PlatformType>("Platform").HasColumnType("\"PlatformType\"");
+                    b.Property<string>("StateHash").IsRequired().HasMaxLength(64).HasColumnType("character varying(64)");
+                    b.Property<string>("BrowserHash").IsRequired().HasMaxLength(64).HasColumnType("character varying(64)");
+                    b.Property<string>("ProtectedVerifier").HasColumnType("text");
+                    b.Property<Guid>("RequestedBy").HasColumnType("uuid");
+                    b.Property<Guid?>("TargetAccountId").HasColumnType("uuid");
+                    b.Property<long?>("TargetRevision").HasColumnType("bigint");
+                    b.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("ExpiresAt").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset?>("UsedAt").HasColumnType("timestamp with time zone");
+                    b.HasKey("Id");
+                    b.HasIndex("StateHash").IsUnique();
+                    b.HasIndex("ExpiresAt");
+                    b.HasIndex("TargetAccountId");
+                    b.ToTable("PlatformOAuthSession", (string)null);
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.PlatformPost", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2032,6 +2083,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+                    b.HasIndex("PlatformAccountId");
 
                     b.HasIndex("OfficialGenerationId");
 
@@ -2915,8 +2967,17 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("OrderNhanhVn");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PlatformOAuthSession", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.PlatformAccount", null).WithMany()
+                        .HasForeignKey("TargetAccountId").OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.PlatformPost", b =>
                 {
+                    b.HasOne("HoaTheoMua.Repository.Entity.PlatformAccount", null).WithMany()
+                        .HasForeignKey("PlatformAccountId").OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("HoaTheoMua.Repository.Entity.BasePost", null)
                         .WithMany()
                         .HasForeignKey("BasePostId")
