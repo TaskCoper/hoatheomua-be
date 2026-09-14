@@ -50,7 +50,7 @@ PUT dùng cùng các trường trên và thêm `"isPublic": false` ở cấp ngo
 
 Shape dành cho PostGen: key nền tảng `facebook`, `instagram`, `zalo`; mỗi nền tảng có 1–5 mã tỷ lệ không trùng trong `Square1x1`, `Portrait4x5`, `Portrait3x4`, `Story9x16`, `Landscape16x9`. `imageSelectionMode` là `all_images` (bỏ `imageCount`) hoặc `first_n` (`imageCount` nguyên dương).
 
-API Config chung hiện lưu JSON theo contract Config, **không validate shape, mã tỷ lệ, trùng tỷ lệ hoặc điều kiện imageCount của PostGen**. Validator riêng của hai API đã bỏ cũng được xóa; không còn cam kết trả 422 cho các lỗi ratio đó. Khi triển khai luồng generate ở mốc sau, cần kiểm tính hợp lệ khi đọc và sử dụng preset.
+API Config chung hiện lưu JSON theo contract Config, **không validate shape, mã tỷ lệ, trùng tỷ lệ hoặc điều kiện imageCount của PostGen**. Validator riêng của hai API đã bỏ cũng được xóa; không còn cam kết trả 422 cho các lỗi ratio đó. Luồng generate mốc 4 đã kiểm preset khi dùng: thiếu/sai shape, mã hoặc imageCount trả 400 trước khi gọi AI; vượt 12 cặp sau khai triển trả 422.
 
 POST tạo và PUT sửa là hai thao tác riêng, không còn upsert nguyên tử của API preset cũ. Nếu tạo trùng, đọc lại Config để lấy id rồi cập nhật. Unique index vẫn ngăn hai bản ghi còn hiệu lực.
 

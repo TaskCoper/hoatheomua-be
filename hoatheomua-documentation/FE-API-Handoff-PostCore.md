@@ -240,7 +240,7 @@ Lưu ý cho màn hình chi tiết:
 - `platforms[].content`: một object nội dung chính thức được chọn hoặc null. Không có mảng versions trong response chi tiết; API lịch sử riêng dự kiến ở mốc 5.
 - `platforms[].images`: ảnh đã chốt thành công theo `sortOrder`, có `selectedGeneratedPostImageId`, `imageUrl` và kích thước; không trả ô chưa chọn hoặc ảnh lỗi.
 - `versionNo` được tính lúc đọc. Dùng `id` / `generationId` để định danh version.
-- `Partial` được suy ra khi trạng thái là Generated/Ready và có cả ô đã chọn ảnh lẫn ô chưa chọn ảnh.
+- `Partial` được suy ra khi trạng thái lưu là Generated/Ready và có lỗi ảnh một phần (`lastError`), hoặc có cả ô đã chọn ảnh lẫn ô chưa chọn ảnh.
 - Detail chỉ trả nội dung và ảnh chốt; lịch sử nội dung/ảnh không trả kèm detail. Các trạng thái và DTO phục vụ đọc dữ liệu; không có nghĩa các thao tác sinh AI/đăng bài đã được triển khai.
 
 Bài không tồn tại hoặc đã xóa trả HTTP 404, `detail: "Post not found"`.
@@ -363,3 +363,5 @@ FE cần kiểm tra HTTP status trước, đọc body theo shape thực tế và
 - `HoaTheoMua.API/Extentions/JwtExtensions.cs`
 
 Tài liệu được đối chiếu tĩnh với source code. Lần tổng hợp này không chạy lại API hoặc xác nhận deploy.
+
+Sinh ảnh trong generate đã triển khai tại [bàn giao FE mốc 4](FE-API-Handoff-PostGen-Milestone4.md). Kích thước pixel của ảnh chốt là kích thước mục tiêu gửi AI, chưa đo từ file ảnh.

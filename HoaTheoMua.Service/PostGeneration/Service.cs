@@ -10,7 +10,7 @@ using Ai = HoaTheoMua.Service.AiService;
 
 namespace HoaTheoMua.Service.PostGeneration;
 
-public class Service(AppDbContext db, Ai.IService ai, ICurrentUserService currentUser,
+public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserService currentUser,
     PostCore.IService postCore, ILogger<Service> logger) : IService
 {
     private sealed record Target(PlatformType Platform, Guid PromptId, string Prompt);
@@ -21,14 +21,14 @@ public class Service(AppDbContext db, Ai.IService ai, ICurrentUserService curren
         if (!validation.IsValid) throw new ValidationExceptionError(validation.Errors[0].ErrorMessage);
         var userId = currentUser.GetRequiredUserId();
         var targets = await ReadTargets(request, cancellationToken);
-        var (post, platforms) = await Claim(id, targets, userId, cancellationToken);
+        var (post, platforms, imagePlan) = await Claim(id, targets, request, userId, cancellationToken);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         budget.CancelAfter(TimeSpan.FromSeconds(180));
         try
         {
             // All text calls must succeed before persisting any version in this request.
             var versions = new List<GeneratedPost>();
-            foreach (var target in targets)
+            foreach (var target in targets.Where(_ => request.Mode != "images"))
             {
                 var output = await ai.GenerateContent(new(target.Prompt, target.Platform.ToString().ToLowerInvariant(),
                     new(post.Title, post.Content, post.Hashtag)), budget.Token);
@@ -41,7 +41,12 @@ public class Service(AppDbContext db, Ai.IService ai, ICurrentUserService curren
                     UserId = userId, CreatedAt = DateTimeOffset.UtcNow
                 });
             }
-            await Persist(platforms, versions, budget.Token);
+            var images = await GenerateImages(id, imagePlan, budget.Token, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            // Retain completed image results even when the AI budget expires; bound the final DB write separately.
+            using var persist = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            persist.CancelAfter(TimeSpan.FromSeconds(10));
+            await Persist(platforms, versions, imagePlan, images, persist.Token);
         }
         catch (Exception ex)
         {
@@ -80,9 +85,10 @@ public class Service(AppDbContext db, Ai.IService ai, ICurrentUserService curren
             try
             {
                 using var json = JsonDocument.Parse(prompts[0].Value);
-                prompt = json.RootElement.GetProperty("content").GetString()!;
-                if (string.IsNullOrWhiteSpace(prompt)) throw new JsonException();
                 if (!json.RootElement.GetProperty("isActive").GetBoolean()) throw new BadRequestException($"Platform {name} is disabled");
+                // Images share their own instruction; platform Config is only needed for activation.
+                prompt = request.Mode == "images" ? "" : json.RootElement.GetProperty("content").GetString()!;
+                if (request.Mode != "images" && string.IsNullOrWhiteSpace(prompt)) throw new JsonException();
             }
             catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
             { throw new BadRequestException($"System prompt for platform {name} is not configured"); }
@@ -91,7 +97,7 @@ public class Service(AppDbContext db, Ai.IService ai, ICurrentUserService curren
         return result;
     }
 
-    private async Task<(BasePost, List<PlatformPost>)> Claim(Guid id, List<Target> targets, Guid userId, CancellationToken ct)
+    private async Task<(BasePost, List<PlatformPost>, List<ImageSelection>)> Claim(Guid id, List<Target> targets, Request.GenerateRequest request, Guid userId, CancellationToken ct)
     {
         await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
         // Same lock as PostCore update/delete; release it before any outbound HTTP call.
@@ -99,6 +105,7 @@ public class Service(AppDbContext db, Ai.IService ai, ICurrentUserService curren
             ? (await db.BasePosts.FromSqlInterpolated($"SELECT * FROM \"BasePost\" WHERE \"Id\" = {id} AND NOT \"IsDeleted\" FOR UPDATE").ToListAsync(ct)).SingleOrDefault()
             : await db.BasePosts.SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
         if (post == null) throw new NotFoundException("Post not found");
+        var imagePlan = request.Mode == "content" ? new List<ImageSelection>() : await ReadImagePlan(id, request, ct);
         var types = targets.Select(x => x.Platform).ToArray();
         var platforms = await db.PlatformPosts.Where(x => x.BasePostId == id && !x.IsDeleted && types.Contains(x.Platform)).ToListAsync(ct);
         if (platforms.Any(x => x.Status == PlatformPostStatus.Generating)) throw new ConflictException("Platform post is generating");
@@ -117,20 +124,30 @@ public class Service(AppDbContext db, Ai.IService ai, ICurrentUserService curren
         }
         await db.SaveChangesAsync(ct);
         if (transaction != null) await transaction.CommitAsync(ct);
-        return (post, platforms);
+        return (post, platforms, imagePlan);
     }
 
-    private async Task Persist(List<PlatformPost> platforms, List<GeneratedPost> versions, CancellationToken ct)
+    private async Task Persist(List<PlatformPost> platforms, List<GeneratedPost> versions, List<ImageSelection> plan, List<GeneratedPostImage> images, CancellationToken ct)
     {
         await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
         db.GeneratedPosts.AddRange(versions);
+        db.GeneratedPostImages.AddRange(images);
         await db.SaveChangesAsync(ct);
+        if (plan.Count > 0) await SelectImages(platforms, plan, images, ct);
         foreach (var platform in platforms)
         {
-            platform.OfficialGenerationId = versions.Single(x => x.PlatformPostId == platform.Id).Id;
+            var version = versions.SingleOrDefault(x => x.PlatformPostId == platform.Id);
+            if (version != null)
+            {
+                platform.OfficialGenerationId = version.Id;
+                platform.SelectedAt = DateTimeOffset.UtcNow;
+            }
             platform.Status = PlatformPostStatus.Generated;
-            platform.SelectedAt = platform.UpdatedAt = DateTimeOffset.UtcNow;
-            platform.LastError = null;
+            platform.UpdatedAt = DateTimeOffset.UtcNow;
+            var requested = plan.Where(x => x.Platform == platform.Platform).Select(x => x.Pair).ToHashSet();
+            var failures = images.Count(x => requested.Contains(new(x.SourceBasePostImageId, x.RatioCode)) && x.Status == ImageStatus.Failed);
+            platform.LastError = failures == 0 ? null : failures == requested.Count ? "All image generations failed" : "Some image generations failed";
+            if (failures > 0 && failures == requested.Count) platform.Status = PlatformPostStatus.Failed;
         }
         await db.SaveChangesAsync(ct);
         if (transaction != null) await transaction.CommitAsync(ct);
@@ -146,7 +163,7 @@ public class Service(AppDbContext db, Ai.IService ai, ICurrentUserService curren
             foreach (var platform in platforms)
             {
                 platform.Status = PlatformPostStatus.Failed;
-                platform.LastError = "Content generation failed";
+                platform.LastError = "Post generation failed";
                 platform.UpdatedAt = DateTimeOffset.UtcNow;
             }
             await db.SaveChangesAsync(cleanup.Token);

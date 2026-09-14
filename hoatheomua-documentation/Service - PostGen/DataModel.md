@@ -398,7 +398,7 @@ Giới hạn biên tập nằm trong prompt. Giới hạn chính thức của t�
 
 ### Giới hạn validate
 
-FluentValidation trong `Validate/`, chạy bởi `ValidationActionFilter` → 422. Các giới hạn cho generate bên dưới là thiết kế cho mốc sau; không áp dụng validation ratio cho `Value` khi lưu qua API Config chung.
+FluentValidation trong `Validate/`, chạy bởi `ValidationActionFilter` → 422. Giới hạn generate nội dung/ảnh đã áp dụng trong mốc 4; feedback dành cho mốc 5/6; không áp dụng validation ratio cho `Value` khi lưu qua API Config chung.
 
 | Trường | Giới hạn |
 | --- | --- |
@@ -449,3 +449,5 @@ Mapping EF của bốn native enum sẵn có cũng dùng tên có quote (`\"Plat
 GeneratedPost tiếp tục lưu lịch sử các lần sinh. Response generate/GET PostCoreDetail chỉ trả một `platforms[].content` theo OfficialGenerationId (hoặc null), không trả `platforms[].versions`. VersionNo vẫn tính theo lịch sử và không đổi khi chọn bản cũ. API lịch sử riêng nằm ở mốc 5; thay đổi response này không cần migration.
 
 Response `PostCoreDetail` không trả `value.images`. `platforms[].images` chỉ chứa ảnh thành công đang được chọn, kèm URL và kích thước theo `SortOrder`; `baseImages` vẫn là ảnh nguồn. Kho ảnh và slot chưa chọn vẫn giữ trong database, không đổi schema. API lịch sử ảnh riêng dự kiến ở mốc 6.
+
+Mốc 4: PixelWidth/PixelHeight của GeneratedPostImage là kích thước mục tiêu theo AspectRatios; proxy chỉ trả Markdown URL, chưa có kích thước thực hoặc expiresAt. Không download/rehost ảnh. Chỉ dẫn ảnh đọc từ Config postgen.image_instruction. HTTP 200 vẫn có thể chứa nền tảng Failed khi mọi ảnh yêu cầu lỗi; nội dung thành công vẫn được lưu.

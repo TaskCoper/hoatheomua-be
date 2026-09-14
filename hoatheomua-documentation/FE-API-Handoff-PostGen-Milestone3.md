@@ -1,5 +1,7 @@
 # Bàn giao Frontend — PostGen mốc 3: sinh nội dung theo nền tảng
 
+> Tài liệu này mô tả phạm vi mốc 3. Mốc 4 đã bổ sung sinh ảnh trên cùng endpoint; quy tắc từ chối yêu cầu ảnh bên dưới chỉ còn là lịch sử. Dùng [bàn giao mốc 4](FE-API-Handoff-PostGen-Milestone4.md) cho contract hiện tại.
+
 Đối chiếu code ngày **14/09/2026**, gồm thay đổi bỏ `postgen.platform.*`.
 
 ## 1. FE cần triển khai gì
@@ -246,3 +248,7 @@ Payload đầy đủ cho từng prompt và hướng dẫn Config: [PlatformConfi
 Backend đã kiểm **108 test Config/PostGen**, **48 request HTTP / 89 kiểm tra PASS**. HTTP probe dùng response AI giả lập, còn API/DB thật; một lời gọi proxy thật ở bước trước xác nhận contract text. Không coi đây là bằng chứng môi trường deployed đã sẵn sàng.
 
 Nguồn đối chiếu: [GeneratePlatformPosts.md](Service%20-%20PostGen/GeneratePlatformPosts.md), [Plan.md](Service%20-%20PostGen/Plan.md).
+
+## Bổ sung mode cho FE
+
+Khi chỉ cần sinh nội dung, gửi `mode: "content"`. Khi đã có nội dung và muốn sinh ảnh sau, gửi `mode: "images"` cùng ratios/usePreset; backend giữ nguyên nội dung chốt. Bỏ mode mặc định all nên request có chọn ảnh sẽ sinh lại cả nội dung. Xem [contract mode và ví dụ](FE-API-Handoff-PostGen-Milestone4.md).

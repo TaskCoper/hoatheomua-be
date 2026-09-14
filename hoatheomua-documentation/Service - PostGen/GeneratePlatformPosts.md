@@ -1,161 +1,88 @@
-# GeneratePlatformPosts
+# GeneratePlatformPosts — mốc 3–4
 
-Mốc 3 đã hiện thực ngày 2026-09-14. Endpoint chỉ sinh nội dung; sinh ảnh là mốc 4.
+`POST /api/v1/posts/{id:guid}/generate`, JWT Staff/Admin, heavy rate limit. HTTP đồng bộ, không retry tự động. Mốc 4 và mode content/images/all đã triển khai, kiểm thử và được đưa vào nhánh `feature/post-gen`; chưa deploy. Không cần migration mới.
 
-#### Request
+## Chọn phần cần sinh bằng `mode`
 
-`POST /api/v1/posts/{id:guid}/generate` — JWT Staff/Admin, rate policy `heavy`.
+Cùng endpoint `POST /api/v1/posts/{id}/generate`, `mode` là chuỗi `content`, `images` hoặc `all` (viết thường). Bỏ field thì mặc định `all` để tương thích request cũ; gửi null hoặc giá trị khác trả 422.
 
-```json
-{"platforms":[{"platform":"facebook"},{"platform":"instagram"}]}
-```
-
-Một đến ba nền tảng, không trùng; platform bắt buộc là facebook/instagram/zalo. `usePreset=true` hoặc `ratios` có giá trị trả 422 để tránh bỏ qua yêu cầu sinh ảnh. Có thể gửi usePreset=false hoặc bỏ trường này.
-
-Bài phải tồn tại và chưa xóa. Mỗi nền tảng chỉ cần Config prompt private, Kind=Setting, value.content không rỗng và value.isActive=true. Không đọc postgen.platform.* hoặc maxContentLength nữa. Không dùng prompt Post cũ làm fallback. Config.enabled=false chặn trước khi gọi AI.
-
-#### Response
-
-HTTP 200, cùng shape với GET chi tiết bài. Mỗi platform chỉ có một object content chốt hoặc null; không có mảng versions. Lịch sử vẫn giữ trong database, API đọc lịch sử riêng sẽ triển khai ở mốc 5. Payload thực tế từ HTTP probe dùng PostgreSQL và fake AI response:
-
-```json
-{
-  "value": {
-    "baseImages": [
-      {
-        "id": "160b023f-da2c-44a7-b032-fa2d2896d53e",
-        "imageUrl": "https://example.com/3.jpg",
-        "sortOrder": 1,
-        "width": null,
-        "height": null
-      },
-      {
-        "id": "660b4417-732a-42cb-a5a1-cf7cd51be5ce",
-        "imageUrl": "https://example.com/2.jpg",
-        "sortOrder": 2,
-        "width": null,
-        "height": null
-      },
-      {
-        "id": "faa6efc9-5bcc-4f1d-81b5-2e391f2d3f91",
-        "imageUrl": "https://example.com/1.jpg",
-        "sortOrder": 3,
-        "width": null,
-        "height": null
-      }
-    ],
-    "platforms": [
-      {
-        "platformPostId": "1c0eeab6-cd4c-4f64-a923-4ab09b875660",
-        "platform": "facebook",
-        "status": "Generated",
-        "lastError": null,
-        "content": {
-          "generationId": "ee6e7cb3-ce48-4bf4-a0f0-bc7d76364207",
-          "parentGeneratedPostId": null,
-          "versionNo": 1,
-          "source": "Ai",
-          "title": "Bó hoa Cảm Ơn",
-          "content": "Nội dung AI kiểm thử",
-          "hashtag": "#HoaTheoMua",
-          "createdAt": "2026-09-14T08:10:58.55794+00:00"
-        },
-        "images": []
-      },
-      {
-        "platformPostId": "5d61cec9-8836-4a29-814b-5e00b7a5c41e",
-        "platform": "instagram",
-        "status": "Generated",
-        "lastError": null,
-        "content": {
-          "generationId": "82f6814b-d8bb-4673-a5e8-91f4c95c6600",
-          "parentGeneratedPostId": null,
-          "versionNo": 1,
-          "source": "Ai",
-          "title": "Bó hoa Cảm Ơn",
-          "content": "Nội dung AI kiểm thử",
-          "hashtag": "#HoaTheoMua",
-          "createdAt": "2026-09-14T08:10:58.558341+00:00"
-        },
-        "images": []
-      }
-    ],
-    "basePostId": "e8e5bc6d-d39a-4588-bb19-5fa4ad426665",
-    "title": "Title đã sửa",
-    "content": "Nội dung gốc",
-    "hashtag": "#hoa",
-    "createdAt": "2026-09-14T08:10:57.971964+00:00",
-    "updatedAt": "2026-09-14T08:10:58.435467+00:00"
-  },
-  "isSuccess": true,
-  "isFailed": false,
-  "error": null,
-  "traceId": "0HNOI6UQF96NF:0000000F",
-  "timestampUtc": "2026-09-14T08:10:58.639553Z"
-}
-```
-
-Mỗi lần gọi thành công tạo một version Ai mới cho từng nền tảng được chọn, ParentGeneratedPostId=null (nguồn là BasePost), tự chọn official và chuyển Generated. Không sửa version cũ hoặc các nền tảng ngoài request. Chưa tạo ảnh; `platforms[].images` rỗng trên bài mới. Response không có `value.images`; ảnh chốt trả trực tiếp URL và kích thước khi có dữ liệu.
-
-Nếu bất kỳ lời gọi nội dung nào lỗi, không ghi version mới nào của request; giữ official cũ và chuyển các nền tảng đã claim sang Failed. Ví dụ lỗi ở nền tảng thứ hai:
-
-```json
-{
-  "title": "Bad Gateway",
-  "status": 502,
-  "detail": "An unexpected error occurred.",
-  "messageCode": "BAD_GATEWAY",
-  "errors": {
-    "detail": "AI service is unavailable"
-  },
-  "traceId": "0HNOI6FP5HTLF:00000010",
-  "timestampUtc": "2026-09-14T07:44:03.555335Z"
-}
-```
-
-#### Flow diagram
-
-```mermaid
-sequenceDiagram
-    participant U as Staff/Admin
-    participant S as PostGeneration
-    participant D as PostgreSQL
-    participant A as AI proxy
-    U->>S: POST generate (platforms)
-    S->>D: Đọc prompt và isActive
-    S->>D: Khóa BasePost, kiểm trạng thái, đặt Generating
-    S->>D: Commit claim
-    loop Nền tảng đích (tuần tự)
-        S->>A: Chat completions (system prompt + source text)
-        A-->>S: JSON trong message.content
-        S->>S: Kiểm envelope và nội dung
-    end
-    alt Tất cả thành công
-        S->>D: Transaction lưu mọi version + official
-        S-->>U: 200 PostCoreDetail
-    else Có lỗi
-        S->>D: Đặt Failed, giữ official cũ
-        S-->>U: 400 hoặc 502
-    end
-```
-
-#### Test case
-
-| Trường hợp | Kết quả |
+| Mode | Xử lý |
 | --- | --- |
-| Hai nền tảng hợp lệ | Hai PlatformPost, hai GeneratedPost, official v1 |
-| Ba prompt khác nhau, sửa Facebook | Chỉ prompt Facebook thay đổi; snapshot cũ giữ nguyên |
-| Thiếu/rỗng/sai JSON/xóa prompt, tắt nền tảng hoặc PostGen | 400 trước khi gọi AI |
-| Cùng nền tảng đang sinh | 409; không gọi AI lần hai |
-| Sửa/xóa BasePost đang sinh | 409 |
-| Nền tảng thứ hai lỗi AI | 502; không thêm version ở cả hai nền tảng |
-| Ghi official thất bại | Transaction rollback toàn bộ version mới, official trước giữ nguyên |
-| Caller hủy request | Hủy HTTP, cleanup trạng thái bằng token riêng |
-| Proxy timeout/5xx, JSON hỏng hoặc hỏi lại | 502, không retry, không tạo version |
-| Customer gọi endpoint | 403 |
-| Trùng platform hoặc yêu cầu ảnh | 422 |
-| Vượt heavy rate limit | 429 kèm Retry-After |
+| `content` | Chỉ gọi AI sinh nội dung, tạo version và chốt nội dung mới. Giữ nguyên ảnh/slot và thứ tự đã chốt. Không gửi ratios/usePreset=true; nếu gửi trả 422. Không cần Config chỉ dẫn ảnh/preset. |
+| `images` | Chỉ gọi AI sinh ảnh. Không thêm GeneratedPost, không đổi nội dung, OfficialGenerationId hoặc SelectedAt. Mỗi nền tảng phải có ratios hoặc usePreset=true; thiếu trả 422. |
+| `all` (mặc định) | Sinh nội dung trước, rồi ảnh theo lựa chọn. Không có lựa chọn ảnh thì chỉ sinh nội dung như request cũ. |
 
-Bộ test Config/PostGen: 108 PASS, gồm 5 PostgreSQL integration test. HTTP probe: 48 request, 89 kiểm tra PASS. Một lời gọi proxy thật riêng đã trả JSON đúng contract; [bằng chứng](Verification/results/proxy-content-smoke.json). [Báo cáo tổng](Verification/results/database-flow-validator.json).
+Hai lần gọi tách rời để tránh sinh nội dung hai lần:
 
-Chưa deploy. Ngân sách gọi và giới hạn vận hành nằm trong [AiServiceContract.md](AiServiceContract.md).
+```json
+{
+  "mode": "content",
+  "platforms": [{ "platform": "facebook" }]
+}
+```
+
+```json
+{
+  "mode": "images",
+  "platforms": [{
+    "platform": "facebook",
+    "ratios": [{ "ratioCode": "Story9x16", "basePostImageIds": [] }]
+  }]
+}
+```
+
+Images mode vẫn kiểm postgen.enabled và isActive trong Config nền tảng, cùng chỉ dẫn ảnh/preset khi dùng; không yêu cầu hoặc gửi value.content của prompt nội dung. Có thể sinh ảnh trước khi có nội dung: platform.content vẫn null, chưa sẵn sàng đăng. Thành công/lỗi ảnh chỉ cập nhật trạng thái xử lý, ảnh và lastError; nội dung chốt giữ nguyên kể cả khi mọi ảnh lỗi. Hủy request hoặc ghi DB lỗi vẫn giải phóng claim và giữ dữ liệu đã chốt trước.
+
+Mode áp dụng cho toàn bộ request. Các mode cùng dùng khóa/claim của nền tảng để chặn yêu cầu sinh trùng; không gọi content và images đồng thời cho cùng nền tảng. Không tự retry POST.
+
+## Request
+
+```json
+{
+  "platforms": [
+    {
+      "platform": "facebook",
+      "ratios": [{ "ratioCode": "Portrait4x5", "basePostImageIds": [] }]
+    },
+    { "platform": "instagram", "usePreset": true }
+  ]
+}
+```
+
+Ở mode all mặc định, chỉ có platform (không ratios/usePreset) vẫn sinh nội dung. Khi sinh ảnh: ratios có 1–5 tỷ lệ hợp lệ không trùng; IDs thiếu/null/[] là mọi ảnh nguồn còn hiệu lực. Các ID chỉ định phải thuộc bài, không trùng/Guid.Empty và không bị xóa. usePreset=true đọc Config chung postgen.ratio-preset và loại trừ ratios. first_n lấy theo sortOrder; all_images lấy tất cả. Thiếu hoặc sai Config khi sử dụng trả 400; vượt 12 cặp ảnh × tỷ lệ khác nhau trả 422 trước bất kỳ AI call hoặc claim nào.
+
+Chỉ dẫn ảnh là JSON string của Config postgen.image_instruction, không ghép system prompt nền tảng. Request/response FE đầy đủ tại [bàn giao mốc 4](../FE-API-Handoff-PostGen-Milestone4.md).
+
+## Giao dịch và kết quả
+
+1. Validate request, đọc prompt nền tảng đang bật.
+2. Khóa BasePost như PostCore PUT/DELETE. Snapshot ảnh nguồn, đọc preset/chỉ dẫn và kiểm ngưỡng. Claim các nền tảng Generating, commit, nhả khóa trước HTTP.
+3. Với mode content/all, sinh mọi nội dung tuần tự; một nội dung lỗi thì không sinh ảnh, không ghi version mới, giữ official trước và chuyển các nền tảng đã claim Failed.
+4. Với mode images/all, gom cặp ảnh/tỷ lệ toàn request; mỗi cặp chỉ một lời gọi AI, tối đa 3 đồng thời. Các task không truy cập DbContext. Lỗi từng ảnh giữ thành attempt Failed; task khác tiếp tục.
+5. Transaction lưu kết quả theo mode; chỉ tự chọn nội dung mới khi có GeneratedPost mới, tạo slot ảnh còn thiếu; chỉ điền ảnh thành công vào slot chưa chọn. Giữ ảnh và sortOrder đã chọn; cặp mới nối cuối. Ghi thất bại rollback cả nội dung, ảnh và slot mới.
+6. GET detail trả nội dung/ảnh đã chốt; không có value.images hoặc platforms[].versions. Lịch sử vẫn lưu trong database.
+
+Ngân sách AI 180 giây, timeout mỗi lời gọi mặc định 120 giây. Hết ngân sách ở pha ảnh vẫn lưu kết quả đã có, các cặp chưa hoàn thành thành Failed. Lưu DB được cấp tối đa 10 giây riêng. Caller hủy trước commit bỏ kết quả mới; cleanup claim tối đa 10 giây. Process crash vẫn chưa có job thu hồi claim.
+
+| Kết quả từng nền tảng | HTTP / trạng thái |
+| --- | --- |
+| Nội dung/ảnh thành công | 200 Generated; Partial nếu còn slot cũ chưa chọn |
+| Một số ảnh yêu cầu lỗi | 200 Partial, lastError, giữ nội dung hiện tại và ảnh thành công |
+| Mọi ảnh yêu cầu lỗi | 200 Failed, lastError; mode all chốt nội dung mới; mode images giữ nội dung cũ, ảnh đã chốt trước giữ nguyên |
+| Request/ratio sai hoặc vượt ngưỡng | 422 |
+| Ảnh sai bài/đã xóa, Config thiếu/sai hoặc disabled | 400 |
+| Bài không tồn tại/đã xóa | 404 |
+| Nền tảng đang sinh hoặc trạng thái không cho phép | 409 |
+| AI nội dung 400/422 | 400 |
+| AI nội dung timeout/response sai/lỗi kết nối/5xx | 502 |
+| Heavy rate limit | 429 kèm Retry-After |
+
+`isSuccess=true` ở HTTP 200 không bảo đảm mọi ảnh thành công; FE đọc status/lastError của từng nền tảng. GET detail suy ra Partial từ trạng thái Generated/Ready và LastError hoặc slot trộn đã/chưa chọn.
+
+## Giới hạn provider
+
+Parse đúng một Markdown ảnh có URL HTTP/HTTPS và finish_reason=stop; từ chối câu hỏi lại, nhiều ảnh, URL chứa credentials, URL quá 2048 ký tự. Proxy chưa trả số đo file hoặc expiresAt: pixelWidth/pixelHeight là kích thước mục tiêu gửi AI, ImageExpiresAt để null. Không tải/rehost ảnh. Chưa kiểm độ bền URL/kích thước thực/giữ sản phẩm bằng provider thật trong mốc này.
+
+## Kiểm chứng
+
+Service test và PostgreSQL integration kiểm dedup, concurrency, source/preset, timeout/cancel, giữ ảnh cũ, partial/all failure và rollback cả ảnh/slot khi ghi official lỗi. HTTP probe đi qua controller, JWT, validation, rate limiter, AiService thật với fake HttpMessageHandler, và PostgreSQL riêng. Báo cáo tại [Implementation.md](Implementation.md).

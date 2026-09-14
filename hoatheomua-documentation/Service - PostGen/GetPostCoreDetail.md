@@ -85,3 +85,5 @@ Test tự động: `HoaTheoMua.Service.Test/PostGenTest/GetPostCoreDetail.cs`; k
 - Mỗi platform chỉ trả content chốt (object hoặc null), không có versions. Giữ quy tắc đánh số version theo (CreatedAt, Id), kể cả khi chốt bản cũ; chỉ lấy text của version được chọn, metadata lịch sử vẫn dùng để tính versionNo. Lịch sử nội dung đọc qua API riêng ở mốc 5. Bỏ `value.images`; chỉ đọc ảnh được chọn, thành công, có URL, thuộc đúng bài gốc và khớp nguồn/tỷ lệ của ô. `platforms[].images` trả URL/kích thước trực tiếp, không có ô chưa chọn hoặc ảnh lỗi.
 
 Kiểm chứng cập nhật 2026-09-14: 53/53 test PostGen PASS (không skip), gồm PostgreSQL 16 cục bộ. Interceptor kiểm tra SQL thực thi: số query 1/3/6 tương ứng bài không tồn tại/chưa có platform/có platform, không SELECT các cột dư, không tracking entity. Chưa đo mức giảm latency trên dữ liệu production.
+
+Từ mốc 4, trạng thái Generated/Ready kèm LastError của lỗi ảnh một phần cũng trả Partial, kể cả khi các ô vẫn giữ ảnh chốt cũ. Mọi ảnh yêu cầu lỗi thì trạng thái lưu là Failed; nội dung và ảnh đã chốt vẫn đọc được.
