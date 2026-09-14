@@ -1,4 +1,4 @@
-# Bàn giao API cho Frontend — PostCore và CardTemplate
+# Bàn giao API cho Frontend — PostCore
 
 Ngày đối chiếu: **14/09/2026**. Nội dung dựa trên controller, DTO, service và validator hiện tại trong repository `hoatheomua-be`.
 
@@ -11,11 +11,10 @@ Ngày đối chiếu: **14/09/2026**. Nội dung dựa trên controller, DTO, se
 | GET | `/api/v1/posts/{id}` | Chi tiết bài viết, ảnh và dữ liệu nền tảng | Staff hoặc Admin | Đã triển khai trong workspace, chưa commit |
 | PUT | `/api/v1/posts/{id}` | Cập nhật bài viết và thay toàn bộ danh sách ảnh nguồn | Staff hoặc Admin | Đã triển khai trong workspace, chưa commit |
 | DELETE | `/api/v1/posts/{id}` | Xóa mềm bài viết | Staff hoặc Admin | Đã triển khai trong workspace, chưa commit |
-| GET | `/api/v1/card-templates` | Sửa response danh sách: bỏ một lớp bọc `value` | Customer hoặc Admin | Đã có trong commit `d429a51`, merge PR #339 |
 
-**Tổng: 5 endpoint mới trong workspace và 1 endpoint sửa response trong commit gần nhất.** Trạng thái triển khai lên server chưa được xác minh trong lần tổng hợp này; FE cần dùng môi trường đã có code và migration tương ứng.
+**Tổng: 5 endpoint PostCore đã triển khai trong workspace, chưa commit.** Trạng thái triển khai lên server chưa được xác minh trong lần tổng hợp này; FE cần dùng môi trường đã có code và migration tương ứng.
 
-Các API sinh AI, regenerate, chỉnh/chọn version nội dung hoặc ảnh, official, publish và schedule chưa có route thực thi trong phần PostCore hiện tại. Không dùng các route thiết kế đó để tích hợp ở đợt này. Cấu hình PostGen dùng API Config chung hiện có, không thuộc 6 endpoint trong tài liệu này.
+Các API sinh AI, regenerate, chỉnh/chọn version nội dung hoặc ảnh, official, publish và schedule chưa có route thực thi trong phần PostCore hiện tại. Không dùng các route thiết kế đó để tích hợp ở đợt này. Cấu hình PostGen dùng API Config chung hiện có, không thuộc 5 endpoint trong tài liệu này.
 
 ## 2. Quy ước chung
 
@@ -51,7 +50,7 @@ interface PaginationValue<T> {
 }
 ```
 
-`isSuccess = true`, `isFailed = false`, `error = null` khi thành công. Trong code hiện tại, factory phân trang chưa gán `timestampUtc`, nên response danh sách có thể trả thời gian mặc định `0001-01-01T00:00:00`. Dùng `createdAt` / `updatedAt` của từng item để hiển thị thời gian. GET danh sách PostCore có gán `traceId`; GET danh sách CardTemplate hiện có thể trả `traceId: null`.
+`isSuccess = true`, `isFailed = false`, `error = null` khi thành công. Trong code hiện tại, factory phân trang chưa gán `timestampUtc`, nên response danh sách có thể trả thời gian mặc định `0001-01-01T00:00:00`. Dùng `createdAt` / `updatedAt` của từng item để hiển thị thời gian. GET danh sách PostCore có gán `traceId`.
 
 ## 3. POST `/api/v1/posts` — Tạo bài viết
 
@@ -367,63 +366,11 @@ Ví dụ lỗi validation:
 
 FE cần kiểm tra HTTP status trước, đọc body theo shape thực tế và có fallback khi body rỗng. GUID sai định dạng trên route `{id:guid}` không khớp route, có thể trả 404 không có error envelope nghiệp vụ.
 
-## 9. GET `/api/v1/card-templates` — Thay đổi response
-
-Commit `d429a51` chỉ thay cách controller trả kết quả danh sách. Đây là endpoint hiện có, quyền **Customer hoặc Admin**; role Staff đơn lẻ không đủ quyền.
-
-```http
-GET /api/v1/card-templates?pageIndex=1&pageSize=10&templateType=ai
-```
-
-| Query | Kiểu | Quy tắc hiện tại |
-| --- | --- | --- |
-| `pageIndex` | integer | Giá trị không dương được đưa về 1; nên gửi tường minh |
-| `pageSize` | integer | Giá trị không dương được đưa về 10; tối đa 100; nên gửi tường minh |
-| `templateType` | string | `ai` hoặc `handmade` viết thường; bắt buộc với Customer, tùy chọn với Admin |
-| `isActive` | boolean | Tùy chọn; chỉ Admin được lọc theo giá trị này. Customer luôn chỉ thấy mẫu đang active |
-| `search` | string | Tùy chọn; tìm chứa trong tên, trim và không phân biệt hoa thường |
-
-Chỉ lấy mẫu chưa xóa. Sắp xếp theo `createdAt` giảm dần, sau đó ID giảm dần.
-
-### FE cần đổi cách đọc
-
-```ts
-// response là JSON body, chưa tính lớp `data` của Axios.
-// Trước commit:
-const oldItems = response.value.value.items;
-
-// Sau commit:
-const items = response.value.items;
-const totalCount = response.value.totalCount;
-```
-
-Với Axios, tương ứng đọc `axiosResponse.data.value.items`. Response mới vẫn có một envelope: **`ApiResponse<PaginationValue<CardTemplateItem>>`**, không phải trả thẳng mảng.
-
-```ts
-interface CardTemplateItem {
-  id: Guid;
-  name: string;
-  description: string | null;
-  imageUrl: string;
-  templateType: "ai" | "handmade";
-  isActive: boolean;
-  isDeleted: boolean;
-  createdAt: DateTimeString;
-  updatedAt: DateTimeString | null;
-}
-```
-
-Response phân trang dùng cùng các field `items`, `pageIndex`, `pageSize`, `totalCount`, `hasNextPage`, `hasPreviousPage` như GET PostCore. Không có dữ liệu trả `items: []`.
-
-Lỗi riêng: Customer không truyền `templateType` trả HTTP 400 với `detail: CARD_TEMPLATE_TYPE_REQUIRED`; loại không hợp lệ trả HTTP 400 với `detail: CARD_TEMPLATE_TYPE_INVALID`. Cả hai dùng `messageCode: BAD_REQUEST`.
-
-## 10. Nguồn đối chiếu trong repository
+## 9. Nguồn đối chiếu trong repository
 
 - `HoaTheoMua.API/Controllers/PostCoreController.cs`
 - `HoaTheoMua.Service/PostCore/Request.cs`, `Response.cs`, `Service.cs`
 - `HoaTheoMua.Service/PostCore/Validate/SavePostCoreValidator.cs`
-- `HoaTheoMua.API/Controllers/CardTemplateController.cs`
-- `HoaTheoMua.Service/CardTemplate/Service.cs`, `Response.cs`
 - `HoaTheoMua.Service/Models/ApiResponse.cs`
 - `HoaTheoMua.API/Filters/ValidationActionFilter.cs`
 - `HoaTheoMua.API/Middleware/GlobalExceptionHandlerMiddleware.cs`
