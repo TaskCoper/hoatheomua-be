@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace HoaTheoMua.Service.AiService;
 
-public class Service(HttpClient httpClient, IConfiguration configuration, ILogger<Service> logger) : IService
+public partial class Service(HttpClient httpClient, IConfiguration configuration, ILogger<Service> logger) : IService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

@@ -1,0 +1,139 @@
+{
+  "name": "GenerateSharedImagesPartial",
+  "method": "POST",
+  "url": "/api/v1/posts/9bec0fbf-c55e-45d1-8c4c-4abdf0fc962b/generate",
+  "request": {
+    "platforms": [
+      {
+        "platform": "facebook",
+        "ratios": [
+          {
+            "ratioCode": "Portrait4x5",
+            "basePostImageIds": [
+              "7ed48f36-9e49-4376-947a-be5f3b8d4a77",
+              "e4c99ab2-332a-41fe-a1c2-c2522a419eec",
+              "998d816d-2ad3-4886-87a5-5a1e21250b01"
+            ]
+          }
+        ]
+      },
+      {
+        "platform": "instagram",
+        "usePreset": true
+      }
+    ]
+  },
+  "status": 200,
+  "response": {
+    "value": {
+      "baseImages": [
+        {
+          "id": "7ed48f36-9e49-4376-947a-be5f3b8d4a77",
+          "imageUrl": "https://example.com/3.jpg",
+          "sortOrder": 1,
+          "width": null,
+          "height": null
+        },
+        {
+          "id": "e4c99ab2-332a-41fe-a1c2-c2522a419eec",
+          "imageUrl": "https://example.com/2.jpg",
+          "sortOrder": 2,
+          "width": null,
+          "height": null
+        },
+        {
+          "id": "998d816d-2ad3-4886-87a5-5a1e21250b01",
+          "imageUrl": "https://example.com/1.jpg",
+          "sortOrder": 3,
+          "width": null,
+          "height": null
+        }
+      ],
+      "platforms": [
+        {
+          "platformPostId": "b85a3c26-49ce-43fc-9bb9-bb50fff424e4",
+          "platform": "facebook",
+          "status": "Partial",
+          "lastError": "Some image generations failed",
+          "content": {
+            "generationId": "6ac85520-1b5b-46f2-8dae-2ec1e987fd95",
+            "parentGeneratedPostId": null,
+            "versionNo": 2,
+            "source": "Ai",
+            "title": "Bó hoa Cảm Ơn",
+            "content": "Nội dung AI kiểm thử",
+            "hashtag": "#HoaTheoMua",
+            "createdAt": "2026-09-14T08:33:43.352053+00:00"
+          },
+          "images": [
+            {
+              "sourceBasePostImageId": "7ed48f36-9e49-4376-947a-be5f3b8d4a77",
+              "ratioCode": "Portrait4x5",
+              "selectedGeneratedPostImageId": "d5603b06-fb47-4b66-af81-c1126596b002",
+              "imageUrl": "https://example.com/generated-1.png",
+              "pixelWidth": 1080,
+              "pixelHeight": 1350,
+              "sortOrder": 1
+            },
+            {
+              "sourceBasePostImageId": "998d816d-2ad3-4886-87a5-5a1e21250b01",
+              "ratioCode": "Portrait4x5",
+              "selectedGeneratedPostImageId": "eefd30a2-93c6-42e3-93cb-ff0c1a3e5af3",
+              "imageUrl": "https://example.com/generated-3.png",
+              "pixelWidth": 1080,
+              "pixelHeight": 1350,
+              "sortOrder": 3
+            }
+          ]
+        },
+        {
+          "platformPostId": "778b8d95-5eaf-4251-9290-46c32b2502c1",
+          "platform": "instagram",
+          "status": "Partial",
+          "lastError": "Some image generations failed",
+          "content": {
+            "generationId": "fe303c0b-70d4-424c-b487-afbf1d6bc175",
+            "parentGeneratedPostId": null,
+            "versionNo": 2,
+            "source": "Ai",
+            "title": "Bó hoa Cảm Ơn",
+            "content": "Nội dung AI kiểm thử",
+            "hashtag": "#HoaTheoMua",
+            "createdAt": "2026-09-14T08:33:43.352259+00:00"
+          },
+          "images": [
+            {
+              "sourceBasePostImageId": "7ed48f36-9e49-4376-947a-be5f3b8d4a77",
+              "ratioCode": "Portrait4x5",
+              "selectedGeneratedPostImageId": "d5603b06-fb47-4b66-af81-c1126596b002",
+              "imageUrl": "https://example.com/generated-1.png",
+              "pixelWidth": 1080,
+              "pixelHeight": 1350,
+              "sortOrder": 1
+            },
+            {
+              "sourceBasePostImageId": "998d816d-2ad3-4886-87a5-5a1e21250b01",
+              "ratioCode": "Portrait4x5",
+              "selectedGeneratedPostImageId": "eefd30a2-93c6-42e3-93cb-ff0c1a3e5af3",
+              "imageUrl": "https://example.com/generated-3.png",
+              "pixelWidth": 1080,
+              "pixelHeight": 1350,
+              "sortOrder": 3
+            }
+          ]
+        }
+      ],
+      "basePostId": "9bec0fbf-c55e-45d1-8c4c-4abdf0fc962b",
+      "title": "Title đã sửa",
+      "content": "Nội dung gốc",
+      "hashtag": "#hoa",
+      "createdAt": "2026-09-14T08:33:42.715852+00:00",
+      "updatedAt": "2026-09-14T08:33:43.066193+00:00"
+    },
+    "isSuccess": true,
+    "isFailed": false,
+    "error": null,
+    "traceId": "0HNOI7BH6F6G1:00000019",
+    "timestampUtc": "2026-09-14T08:33:43.413531Z"
+  }
+}

@@ -52,9 +52,20 @@ public class GenerationPostgres
 
             var failureOptions = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(source).AddInterceptors(new RejectOfficialWrite()).Options;
             await using var failingDb = new AppDbContext(failureOptions);
-            var successHandler = new AiContentClient.Handler((_, _) => Task.FromResult(AiContentClient.Completion()));
-            await Assert.ThrowsAsync<InvalidOperationException>(() => GeneratePlatformPosts.Service(failingDb, AiContentClient.Client(successHandler))
-                .GeneratePlatformPosts(id, GeneratePlatformPosts.Input(PlatformType.Facebook, PlatformType.Instagram)));
+            var sourceImages = await db.BasePostImages.Where(x => x.BasePostId == id).Select(x => x.Id).ToArrayAsync();
+            var imageHandler = new AiContentClient.Handler(async (request, ct) =>
+            {
+                using var json = System.Text.Json.JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
+                return GenerateImages.IsImage(json.RootElement) ? AiContentClient.Completion("![image](https://example.com/out.png)") : AiContentClient.Completion();
+            });
+            foreach (var mode in new[] { "all", "images" })
+            {
+                var input = GenerateImages.Input(sourceImages, PlatformType.Facebook, PlatformType.Instagram);
+                input.Mode = mode;
+                await Assert.ThrowsAsync<InvalidOperationException>(() => GeneratePlatformPosts.Service(failingDb, AiContentClient.Client(imageHandler))
+                    .GeneratePlatformPosts(id, input));
+            }
+            Assert.False(await db.GeneratedPostImages.AnyAsync()); Assert.False(await db.PlatformPostImages.AnyAsync());
             Assert.Equal(2, await db.GeneratedPosts.CountAsync()); // New versions rolled back with failed official update.
             Assert.Equal(officialBefore, await db.PlatformPosts.AsNoTracking().OrderBy(x => x.Id).Select(x => x.OfficialGenerationId).ToListAsync());
             Assert.All(await db.PlatformPosts.AsNoTracking().ToListAsync(), x => Assert.Equal(PlatformPostStatus.Failed, x.Status));

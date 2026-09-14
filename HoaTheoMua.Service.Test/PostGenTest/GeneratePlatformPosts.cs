@@ -122,7 +122,7 @@ public class GeneratePlatformPosts
     }
 
     [Fact]
-    public void RejectsMissingDuplicatePlatformsAndImageRequests()
+    public void RejectsMissingDuplicatePlatformsAndConflictingImageRequests()
     {
         var validator = new Gen.Validate.GenerateValidator();
         Assert.False(validator.Validate(new Gen.Request.GenerateRequest()).IsValid);
@@ -130,6 +130,8 @@ public class GeneratePlatformPosts
         Assert.False(validator.Validate(Input(PlatformType.Facebook, PlatformType.Facebook)).IsValid);
         Assert.False(validator.Validate(Input((PlatformType)99)).IsValid);
         var imageRequest = Input(PlatformType.Facebook); imageRequest.Platforms![0].UsePreset = true;
+        Assert.True(validator.Validate(imageRequest).IsValid);
+        imageRequest.Platforms[0].Ratios = new();
         Assert.False(validator.Validate(imageRequest).IsValid);
         var parsed = JsonSerializer.Deserialize<Gen.Request.GenerateRequest>("{\"platforms\":[{\"platform\":\"facebook\"}]}", new JsonSerializerOptions(JsonSerializerDefaults.Web));
         Assert.True(validator.Validate(parsed!).IsValid);

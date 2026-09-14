@@ -65,7 +65,7 @@ using var client = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:5544
 var user1 = Guid.NewGuid(); var user2 = Guid.NewGuid();
 var evidence = new List<object>();
 string Token(Guid userId, string role) => new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken("postgen-test", "postgen-test",
-    new[] { new Claim("UserId", userId.ToString()), new Claim(ClaimTypes.Role, role), new Claim("IsVerified", "true") },
+    new[] { new Claim("UserId", userId.ToString()), new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim(ClaimTypes.Role, role), new Claim("IsVerified", "true") },
     expires: DateTime.UtcNow.AddMinutes(10), signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtOption:AccessTokenKey"]!)), SecurityAlgorithms.HmacSha256)));
 async Task<JsonElement> Call(string name, HttpMethod method, string url, object? body, int status = 200, Guid? user = null, string role = "Admin")
 {
@@ -109,10 +109,10 @@ try
     await Call("CrossUserUpdate", HttpMethod.Put, url, new { title = "Sửa bởi user khác", content = "Nội dung gốc", images = images.Select(x => new { id = x.GetProperty("id").GetGuid(), imageUrl = x.GetProperty("imageUrl").GetString(), sortOrder = x.GetProperty("sortOrder").GetInt32() }).ToArray() }, 200, user2);
     var updated = await Call("UpdatePostCore", HttpMethod.Put, url, new { title = "Title đã sửa", content = "Nội dung gốc", hashtag = "#hoa", images = images.Reverse().Select((x,i) => new { id = x.GetProperty("id").GetGuid(), imageUrl = x.GetProperty("imageUrl").GetString(), sortOrder = i+1 }).ToArray() });
     Check(updated.GetProperty("value").GetProperty("baseImages")[0].GetProperty("id").GetGuid() == images[2].GetProperty("id").GetGuid(), "Reorder succeeds against PostgreSQL unique index");
-    var generationInput = new { platforms = new[] { new { platform = "facebook" }, new { platform = "instagram" } } };
+    var generationInput = new { mode = "content", platforms = new[] { new { platform = "facebook" }, new { platform = "instagram" } } };
     await Call("GenerateCustomerDenied", HttpMethod.Post, url + "/generate", generationInput, 403, role: "Customer");
     await Call("GenerateDuplicatePlatforms", HttpMethod.Post, url + "/generate", new { platforms = new[] { new { platform = "facebook" }, new { platform = "facebook" } } }, 422);
-    await Call("GenerateImagesDeferred", HttpMethod.Post, url + "/generate", new { platforms = new[] { new { platform = "facebook", usePreset = true } } }, 422);
+    await Call("GenerateConflictingImageSelection", HttpMethod.Post, url + "/generate", new { platforms = new[] { new { platform = "facebook", usePreset = true, ratios = Array.Empty<object>() } } }, 422);
     var generated = await Call("GenerateTwoPlatforms", HttpMethod.Post, url + "/generate", generationInput);
     Check(!generated.GetProperty("value").TryGetProperty("images", out _), "Generate omits shared image history");
     Check(generated.GetProperty("value").GetProperty("platforms").GetArrayLength() == 2, "Generate returns two platform posts");
@@ -141,6 +141,51 @@ try
     var presetAfter = await Call("RatioPresetUnchanged", HttpMethod.Get,
         $"/api/v1/configs/{preset.GetProperty("value").GetProperty("id").GetGuid()}", null);
     Check(presetAfter.GetProperty("value").GetProperty("value").GetProperty("instagram").GetProperty("ratios")[0].GetString() == "Portrait4x5", "Consolidated configs preserve the ratio preset");
+    // Separate test identity keeps the existing rate-limit regression deterministic.
+    var imageUser = Guid.NewGuid();
+    var sourceIds = updated.GetProperty("value").GetProperty("baseImages").EnumerateArray().Select(x => x.GetProperty("id").GetGuid()).ToArray();
+    var imageInput = new { mode = "images", platforms = new object[] {
+        new { platform = "facebook", ratios = new[] { new { ratioCode = "Portrait4x5", basePostImageIds = sourceIds } } },
+        new { platform = "instagram", usePreset = true } } };
+    var imageCallsBefore = aiHandler.ImageCalls;
+    var textCallsBeforeImages = aiHandler.Calls - aiHandler.ImageCalls;
+    aiHandler.FailImageNumber = imageCallsBefore + 2;
+    var imageGenerated = await Call("GenerateSharedImagesPartial", HttpMethod.Post, url + "/generate", imageInput, user: imageUser);
+    Check(aiHandler.ImageCalls - imageCallsBefore == 3, "Three shared image pairs produce exactly three AI image calls");
+    var imagePlatforms = imageGenerated.GetProperty("value").GetProperty("platforms").EnumerateArray().ToArray();
+    Check(imagePlatforms.All(x => x.GetProperty("status").GetString() == "Partial" && x.GetProperty("images").GetArrayLength() == 2), "Partial returns selected successful images only");
+    var selected = imagePlatforms[0].GetProperty("images").EnumerateArray().Select(x => x.GetProperty("selectedGeneratedPostImageId").GetGuid()).ToArray();
+    Check(selected.SequenceEqual(imagePlatforms[1].GetProperty("images").EnumerateArray().Select(x => x.GetProperty("selectedGeneratedPostImageId").GetGuid())), "Platforms share generated image IDs");
+    Check(imagePlatforms.All(p => p.GetProperty("images").EnumerateArray().All(x => x.GetProperty("imageUrl").GetString()!.StartsWith("https://example.com/generated-") && x.GetProperty("pixelHeight").GetInt32() == 1350)), "Official images include URLs and target dimensions");
+    var readImages = await Call("ReadSelectedImages", HttpMethod.Get, url, null);
+    Check(readImages.GetProperty("value").GetProperty("platforms")[0].GetProperty("status").GetString() == "Partial", "Partial state survives a fresh GET");
+    var retryImages = await Call("GenerateImagesAgain", HttpMethod.Post, url + "/generate", imageInput, user: imageUser);
+    var retryPlatforms = retryImages.GetProperty("value").GetProperty("platforms").EnumerateArray().ToArray();
+    Check(retryPlatforms.All(x => x.GetProperty("status").GetString() == "Generated" && x.GetProperty("images").GetArrayLength() == 3), "Retry fills previously empty slots");
+    Check(selected.All(i => retryPlatforms[0].GetProperty("images").EnumerateArray().Any(x => x.GetProperty("selectedGeneratedPostImageId").GetGuid() == i)), "Retry retains previously selected image versions");
+    var beforeInvalid = aiHandler.Calls;
+    await Call("RejectForeignImage", HttpMethod.Post, url + "/generate", new { platforms = new[] { new { platform = "facebook", ratios = new[] { new { ratioCode = "Square1x1", basePostImageIds = new[] { Guid.NewGuid() } } } } } }, 400, imageUser);
+    await Call("RejectImagePairLimit", HttpMethod.Post, url + "/generate", new { platforms = new[] { new { platform = "facebook", ratios = Enum.GetNames<AspectRatioType>().Select(r => new { ratioCode = r, basePostImageIds = sourceIds }).ToArray() } } }, 422, imageUser);
+    Check(aiHandler.Calls == beforeInvalid, "Invalid image plans do not call AI");
+    aiHandler.FailAllImages = true;
+    var allFailed = await Call("GenerateAllImagesFailed", HttpMethod.Post, url + "/generate", imageInput, user: imageUser);
+    Check(allFailed.GetProperty("value").GetProperty("platforms").EnumerateArray().All(p => p.GetProperty("status").GetString() == "Failed" && p.GetProperty("images").GetArrayLength() == 3 && p.GetProperty("content").ValueKind == JsonValueKind.Object), "All image failures retain prior images and existing content");
+    aiHandler.FailAllImages = false;
+    Check(aiHandler.Calls - aiHandler.ImageCalls == textCallsBeforeImages, "Images mode never calls content generation");
+    foreach (var platform in allFailed.GetProperty("value").GetProperty("platforms").EnumerateArray())
+    {
+        var original = generated.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == platform.GetProperty("platform").GetString());
+        Check(original.GetProperty("content").GetRawText() == platform.GetProperty("content").GetRawText(), "Image success retry and failure preserve official content exactly");
+    }
+    await Call("RejectInvalidGenerationMode", HttpMethod.Post, url + "/generate", new { mode = "unknown", platforms = new[] { new { platform = "facebook" } } }, 422, imageUser);
+    await Call("RejectImageModeWithoutSelection", HttpMethod.Post, url + "/generate", new { mode = "images", platforms = new[] { new { platform = "facebook" } } }, 422, imageUser);
+    await Call("RejectContentModeWithImages", HttpMethod.Post, url + "/generate", new { mode = "content", platforms = new[] { new { platform = "facebook", usePreset = true } } }, 422, imageUser);
+    var contentOnly = await Call("GenerateContentAfterImages", HttpMethod.Post, url + "/generate", new { mode = "content", platforms = new[] { new { platform = "instagram" } } }, user: imageUser);
+    var instagramAfter = contentOnly.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == "instagram");
+    var instagramBefore = allFailed.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == "instagram");
+    Check(instagramAfter.GetProperty("images").GetRawText() == instagramBefore.GetProperty("images").GetRawText(), "Content mode preserves selected images");
+    Check(instagramAfter.GetProperty("content").GetProperty("versionNo").GetInt32() == 2, "Only explicit content generation increments content version");
+    Check(aiHandler.ImageCalls == imageCallsBefore + 9, "Content mode does not call image generation");
     const string promptSettingsUrl = "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.";
     await Call("AnonymousPromptReadDenied", HttpMethod.Get, promptSettingsUrl, null, 401, role: "Anonymous");
     await Call("StaffPromptReadDenied", HttpMethod.Get, promptSettingsUrl, null, 403, role: "Staff");
@@ -189,13 +234,16 @@ try
     Check((await db.Configs.AsNoTracking().SingleAsync(x => x.Id == promptId)).IsDeleted, "Deleted system prompt retained in PostgreSQL");
     Check(await db.Configs.CountAsync(x => x.Group == "postgen" && x.Key == "postgen.system-prompt.facebook" && !x.IsDeleted) == 1, "Exactly one active Facebook system prompt in PostgreSQL");
     Check(!await db.Configs.AnyAsync(x => x.Group == "postgen" && x.Key.StartsWith("postgen.platform.")), "Retired platform keys removed from PostgreSQL");
-    Check(await db.GeneratedPosts.CountAsync() == 2, "Only two successful content versions persisted");
+    Check(await db.GeneratedPosts.CountAsync() == 3, "Exactly three explicit content versions persisted");
     foreach (var version in await db.GeneratedPosts.AsNoTracking().ToListAsync())
     {
         Check(version.SystemPromptConfigId.HasValue && version.SystemPromptId == null && version.ParentGeneratedPostId == null, "AI version uses Config reference with no legacy or parent prompt");
         Check(aiHandler.Prompts.Contains(version.PromptSnapshot!), "Snapshot exactly matches sent system prompt");
         Check(version.AiRequestId != null && version.AiModel == "chatgpt/gpt-5.6" && version.DurationMs.HasValue, "Provider metadata persisted");
     }
+    Check(await db.GeneratedPostImages.CountAsync(x => x.BasePostId == id) == 9, "Nine image attempts retained after soft delete");
+    Check(await db.GeneratedPostImages.CountAsync(x => x.BasePostId == id && x.Status == ImageStatus.Failed && x.ImageUrl == null && x.ErrorMessage != null) == 4, "Four failed image attempts retain errors without URL");
+    Check(await db.PlatformPostImages.CountAsync(x => x.SelectedGeneratedPostImageId != null) == 6, "Six platform slots retain selected images");
     Check(!await db.PostHistories.AnyAsync() && !await db.ClientHistories.AnyAsync(), "No legacy history writes");
     Check(!await db.GeneratedCards.AnyAsync(x => x.FormType == CardFormType.Calligraphy), "Existing CardFormType mapping remains queryable");
     Check(!await db.ClientHistories.AnyAsync(x => x.Type == ClientHistoryType.Post), "Existing ClientHistoryType mapping remains queryable");
@@ -212,16 +260,29 @@ sealed class TestRevalidate : HoaTheoMua.Service.Revalidate.IService
 // Network boundary only: real AiService serializes/parses the provider contract.
 sealed class ProbeAiHandler : HttpMessageHandler
 {
-    public int Calls { get; private set; }
+    private int calls;
+    private int imageCalls;
+    public int Calls => calls;
+    public int ImageCalls => imageCalls;
+    public int FailImageNumber { get; set; }
+    public bool FailAllImages { get; set; }
     public int FailOnCall { get; set; }
     public List<string> Prompts { get; } = new();
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Calls++;
+        var call = Interlocked.Increment(ref calls);
         using var json = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
         var messages = json.RootElement.GetProperty("messages");
+        if (messages.EnumerateArray().Any(m => m.GetProperty("content").EnumerateArray().Any(p => p.GetProperty("type").GetString() == "image_url")))
+        {
+            var imageCall = Interlocked.Increment(ref imageCalls);
+            if (FailAllImages || imageCall == FailImageNumber) return new(HttpStatusCode.InternalServerError);
+            return new(HttpStatusCode.OK) { Content = JsonContent.Create(new { id = "chatcmpl-image-" + imageCall,
+                model = "chatgpt/gpt-5.6", choices = new[] { new { index = 0, finish_reason = "stop", message = new { role = "assistant",
+                content = $"![generated image](https://example.com/generated-{imageCall}.png)" } } } }) };
+        }
         Prompts.Add(messages[0].GetProperty("content")[0].GetProperty("text").GetString()!);
-        if (Calls == FailOnCall) return new(HttpStatusCode.InternalServerError);
+        if (call == FailOnCall) return new(HttpStatusCode.InternalServerError);
         return new(HttpStatusCode.OK) { Content = JsonContent.Create(new { id = "chatcmpl-probe-" + Calls,
             model = "chatgpt/gpt-5.6", choices = new[] { new { index = 0, finish_reason = "stop", message = new { role = "assistant",
             content = JsonSerializer.Serialize(new { title = "Bó hoa Cảm Ơn", content = "Nội dung AI kiểm thử", hashtag = "#HoaTheoMua" }) } } } }) };

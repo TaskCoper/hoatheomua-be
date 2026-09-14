@@ -15,7 +15,7 @@ Các endpoint PostGen dưới đây dùng `[Authorize(Policy = JwtExtensions.Sta
 | GET | `/api/v1/posts/{id:guid}` | `GetPostCoreDetail` | kèm nội dung và ảnh chốt của nền tảng |
 | PUT | `/api/v1/posts/{id:guid}` | `UpdatePostCore` | |
 | DELETE | `/api/v1/posts/{id:guid}` | `DeletePostCore` | soft delete |
-| POST | `/api/v1/posts/{id:guid}/generate` | `GeneratePlatformPosts` | **heavy**, hiện sinh nội dung; tỷ lệ/ảnh ở mốc 4 |
+| POST | `/api/v1/posts/{id:guid}/generate` | `GeneratePlatformPosts` | **heavy**, sinh nội dung và ảnh theo lựa chọn/preset |
 | POST | `/api/v1/posts/{id:guid}/platforms/{platform}/content/regenerate` | `RegenerateContent` | **heavy**, `sourceGenerationId` + `feedback` — chỉ nội dung |
 | PUT | `/api/v1/posts/{id:guid}/platforms/{platform}/content` | `EditPlatformContent` | sửa tay nội dung → tạo version `Manual` và chốt luôn |
 | GET | `/api/v1/posts/{id:guid}/platforms/{platform}/content/versions` | `GetContentVersions` | danh sách version nội dung |
@@ -29,9 +29,9 @@ Chừa sẵn, **ghi trong tài liệu nhưng không triển khai**: `POST .../pl
 
 ### DTO chính
 
-**Mốc 3 đã chạy:** `{"platforms":[{"platform":"facebook"},{"platform":"instagram"}]}`. `usePreset=true` hoặc `ratios` có giá trị trả 422; chưa sinh ảnh. Response giữ shape PostCoreDetail. Xem [GeneratePlatformPosts.md](GeneratePlatformPosts.md).
+**Mốc 4 đã triển khai:** request chỉ có platform vẫn sinh nội dung. Thêm usePreset=true hoặc ratios để sinh ảnh, không dùng đồng thời cả hai. Response giữ shape PostCoreDetail. Xem [GeneratePlatformPosts.md](GeneratePlatformPosts.md).
 
-**Payload dự kiến mốc 4:**
+**Payload mốc 4:**
 
 `POST /api/v1/posts/{id}/generate`
 
@@ -163,7 +163,7 @@ Response luôn bọc bằng `ApiResponseFactory.Base(...)` / `BasePagination(...
 
 ## Phần đã hiện thực
 
-Mốc 1–2: 5 API Post Core; prompt/bật tắt nền tảng và preset dùng API Config chung; không còn key standard riêng. Mốc 3 đã có POST generate nội dung, AiService proxy và snapshot prompt Config. Các API version/official và sinh ảnh còn là thiết kế mốc 4–7.
+Mốc 1–2: 5 API Post Core; prompt/bật tắt nền tảng và preset dùng API Config chung; không còn key standard riêng. Mốc 3 đã có POST generate nội dung, AiService proxy và snapshot prompt Config. Sinh ảnh trong generate đã triển khai ở mốc 4; API version/official còn là thiết kế mốc 5–7.
 
 - GET danh sách: `pageIndex` mặc định 1, `pageSize` mặc định 10, clamp tối đa 100; `platform=facebook|instagram|zalo`, `keyword` tìm trong title/content, không phân biệt hoa thường.
 - POST/PUT Post Core: `{title, content, hashtag, images: [{id?, imageUrl, sortOrder, width?, height?}]}`. `sortOrder` bắt đầu từ 1, không trùng. POST không nhận id ảnh có sẵn. PUT thay toàn bộ tập; id ảnh phải thuộc bài đang sửa, URL của id cũ không thay đổi. Bỏ id cũ và thêm ảnh không id để thay nguồn.
@@ -172,3 +172,40 @@ Mốc 1–2: 5 API Post Core; prompt/bật tắt nền tảng và preset dùng A
 - Bài không tồn tại hoặc đã xóa trả 404 `Post not found`; sửa URL trên ID ảnh cũ trả 400 `Existing image URL cannot be changed; add a new image instead`. Các lỗi FluentValidation trả 422. Error envelope theo middleware hiện có là `{title,status,detail,messageCode,errors,traceId,timestampUtc}`; success dùng `{value,isSuccess,isFailed,error,traceId,timestampUtc}`.
 
 Payload và traceId kiểm thử thật nằm trong tài liệu từng endpoint.
+
+## Mốc 4 đã triển khai (2026-09-14)
+
+Generate nhận ratios hoặc usePreset, tối đa 12 cặp ảnh/tỷ lệ sau gom trùng. Bỏ trống/null/[] basePostImageIds lấy mọi ảnh nguồn còn hiệu lực. Mỗi lần thành công chỉ tự điền ô chưa chọn; giữ ảnh chốt và thứ tự cũ. 3 lời gọi ảnh đồng thời, ngân sách AI 180 giây, lưu DB tối đa 10 giây riêng. Xem [contract FE mốc 4](../FE-API-Handoff-PostGen-Milestone4.md) cho validation, partial/all failure và giới hạn kích thước mục tiêu.
+
+## Chọn phần cần sinh bằng `mode`
+
+Cùng endpoint `POST /api/v1/posts/{id}/generate`, `mode` là chuỗi `content`, `images` hoặc `all` (viết thường). Bỏ field thì mặc định `all` để tương thích request cũ; gửi null hoặc giá trị khác trả 422.
+
+| Mode | Xử lý |
+| --- | --- |
+| `content` | Chỉ gọi AI sinh nội dung, tạo version và chốt nội dung mới. Giữ nguyên ảnh/slot và thứ tự đã chốt. Không gửi ratios/usePreset=true; nếu gửi trả 422. Không cần Config chỉ dẫn ảnh/preset. |
+| `images` | Chỉ gọi AI sinh ảnh. Không thêm GeneratedPost, không đổi nội dung, OfficialGenerationId hoặc SelectedAt. Mỗi nền tảng phải có ratios hoặc usePreset=true; thiếu trả 422. |
+| `all` (mặc định) | Sinh nội dung trước, rồi ảnh theo lựa chọn. Không có lựa chọn ảnh thì chỉ sinh nội dung như request cũ. |
+
+Hai lần gọi tách rời để tránh sinh nội dung hai lần:
+
+```json
+{
+  "mode": "content",
+  "platforms": [{ "platform": "facebook" }]
+}
+```
+
+```json
+{
+  "mode": "images",
+  "platforms": [{
+    "platform": "facebook",
+    "ratios": [{ "ratioCode": "Story9x16", "basePostImageIds": [] }]
+  }]
+}
+```
+
+Images mode vẫn kiểm postgen.enabled và isActive trong Config nền tảng, cùng chỉ dẫn ảnh/preset khi dùng; không yêu cầu hoặc gửi value.content của prompt nội dung. Có thể sinh ảnh trước khi có nội dung: platform.content vẫn null, chưa sẵn sàng đăng. Thành công/lỗi ảnh chỉ cập nhật trạng thái xử lý, ảnh và lastError; nội dung chốt giữ nguyên kể cả khi mọi ảnh lỗi. Hủy request hoặc ghi DB lỗi vẫn giải phóng claim và giữ dữ liệu đã chốt trước.
+
+Mode áp dụng cho toàn bộ request. Các mode cùng dùng khóa/claim của nền tảng để chặn yêu cầu sinh trùng; không gọi content và images đồng thời cho cùng nền tảng. Không tự retry POST.

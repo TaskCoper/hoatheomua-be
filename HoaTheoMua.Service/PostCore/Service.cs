@@ -112,8 +112,8 @@ public class Service(AppDbContext db) : IService
             {
                 PlatformPostId = p.Id, Platform = p.Platform.ToString().ToLowerInvariant(),
                 Status = p.Status is PlatformPostStatus.Generated or PlatformPostStatus.Ready
-                    && platformSlots.Any(x => x.SelectedGeneratedPostImageId == null)
-                    && platformSlots.Any(x => x.SelectedGeneratedPostImageId != null) ? "Partial" : p.Status.ToString(),
+                    && (p.LastError != null || (platformSlots.Any(x => x.SelectedGeneratedPostImageId == null)
+                    && platformSlots.Any(x => x.SelectedGeneratedPostImageId != null))) ? "Partial" : p.Status.ToString(),
                 LastError = p.LastError, Content = content,
                 Images = platformSlots.Where(x => x.SelectedGeneratedPostImageId.HasValue
                     && selectedImages.TryGetValue(x.SelectedGeneratedPostImageId.Value, out var image)
