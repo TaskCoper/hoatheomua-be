@@ -14,26 +14,10 @@ public class SystemPromptConfiguration : IEntityTypeConfiguration<SystemPrompt>
         builder.Property(systemPrompt => systemPrompt.Id).HasColumnName("Id");
         builder.Property(systemPrompt => systemPrompt.Type)
             .HasColumnName("Type")
-            .HasColumnType("SystemPromptType")
+            .HasColumnType("\"SystemPromptType\"")
             .IsRequired();
         builder.Property(systemPrompt => systemPrompt.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
         builder.HasIndex(systemPrompt => systemPrompt.Type).IsUnique();
-    }
-}
-
-public class PlatformStandardConfiguration : IEntityTypeConfiguration<PlatformStandard>
-{
-    public void Configure(EntityTypeBuilder<PlatformStandard> builder)
-    {
-        builder.ToTable("PlatformStandard");
-        builder.HasKey(platformStandard => platformStandard.Id);
-        builder.Property(platformStandard => platformStandard.Id).HasColumnName("Id");
-        builder.Property(platformStandard => platformStandard.Platform)
-            .HasColumnName("Platform")
-            .HasColumnType("PlatformType")
-            .IsRequired();
-        builder.Property(platformStandard => platformStandard.Description).HasColumnName("Description").HasColumnType("text").IsRequired();
-        builder.HasIndex(platformStandard => platformStandard.Platform);
     }
 }
 
@@ -68,33 +52,6 @@ public class CardTemplateConfiguration : IEntityTypeConfiguration<CardTemplate>
             })
             .IsDescending(false, false, true)
             .HasFilter("\"IsDeleted\" = false");
-    }
-}
-
-public class BasePostConfiguration : IEntityTypeConfiguration<BasePost>
-{
-    public void Configure(EntityTypeBuilder<BasePost> builder)
-    {
-        builder.ToTable("BasePost");
-        builder.HasKey(basePost => basePost.Id);
-        builder.Property(basePost => basePost.Id).HasColumnName("Id");
-        builder.Property(basePost => basePost.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
-        builder.Property(basePost => basePost.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
-    }
-}
-
-public class GeneratedPostConfiguration : IEntityTypeConfiguration<GeneratedPost>
-{
-    public void Configure(EntityTypeBuilder<GeneratedPost> builder)
-    {
-        builder.ToTable("GeneratedPost");
-        builder.HasKey(generatedPost => generatedPost.Id);
-        builder.Property(generatedPost => generatedPost.Id).HasColumnName("Id");
-        builder.Property(generatedPost => generatedPost.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
-        builder.Property(generatedPost => generatedPost.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
-        builder.Property(generatedPost => generatedPost.UserId).HasColumnName("UserId");
-        builder.Property(generatedPost => generatedPost.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
-        builder.HasIndex(generatedPost => new { generatedPost.UserId, generatedPost.CreatedAt }).IsDescending(false, true);
     }
 }
 
@@ -146,7 +103,7 @@ public class GeneratedCardConfiguration : IEntityTypeConfiguration<GeneratedCard
             .IsRequired();
         builder.Property(generatedCard => generatedCard.FormType)
             .HasColumnName("FormType")
-            .HasColumnType("CardFormType")
+            .HasColumnType("\"CardFormType\"")
             .IsRequired();
         builder.Property(generatedCard => generatedCard.SenderName).HasColumnName("SenderName").HasMaxLength(500).IsRequired();
         builder.Property(generatedCard => generatedCard.ReceiverName).HasColumnName("ReceiverName").HasMaxLength(500).IsRequired();
@@ -220,7 +177,7 @@ public class ClientHistoryConfiguration : IEntityTypeConfiguration<ClientHistory
         builder.Property(clientHistory => clientHistory.UserId).HasColumnName("UserId");
         builder.Property(clientHistory => clientHistory.Type)
             .HasColumnName("Type")
-            .HasColumnType("ClientHistoryType")
+            .HasColumnType("\"ClientHistoryType\"")
             .IsRequired();
         builder.Property(clientHistory => clientHistory.SystemForm).HasColumnName("SystemForm").HasColumnType("jsonb");
         builder.Property(clientHistory => clientHistory.Metadata).HasColumnName("Metadata").HasColumnType("jsonb").IsRequired();

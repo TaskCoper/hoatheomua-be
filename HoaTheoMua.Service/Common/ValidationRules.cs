@@ -19,4 +19,7 @@ public static class ValidationRules
         => rule
             .Must(v => string.IsNullOrWhiteSpace(v) || Regex.IsMatch(v.Trim(), EmailRegex))
             .WithMessage("EMAIL_INVALID");
+    public static IRuleBuilderOptions<T, string?> HttpUrl<T>(this IRuleBuilder<T, string?> rule) =>
+        rule.Must(url => Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps));
 }

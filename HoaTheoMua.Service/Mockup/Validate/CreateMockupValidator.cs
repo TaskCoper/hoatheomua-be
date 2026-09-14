@@ -1,3 +1,4 @@
+using HoaTheoMua.Service.Common;
 using FluentValidation;
 
 namespace HoaTheoMua.Service.Mockup.Validate;
@@ -25,8 +26,7 @@ public class CreateMockupValidator : AbstractValidator<Request.CreateMockupReque
             .Must(url => !string.IsNullOrWhiteSpace(url))
             .When(x => x.ImageUrl is not null, ApplyConditionTo.CurrentValidator)
             .WithMessage("imageUrl không được để trống.")
-            .Must(url => Uri.TryCreate(url, UriKind.Absolute, out var uri)
-                         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            .HttpUrl()
             .When(x => !string.IsNullOrWhiteSpace(x.ImageUrl), ApplyConditionTo.CurrentValidator)
             .WithMessage("imageUrl không hợp lệ.");
     }

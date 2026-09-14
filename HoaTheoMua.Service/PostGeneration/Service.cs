@@ -1,0 +1,159 @@
+using System.Text.Json;
+using HoaTheoMua.Repository;
+using HoaTheoMua.Repository.Entity;
+using HoaTheoMua.Repository.Enum;
+using HoaTheoMua.Service.Common;
+using HoaTheoMua.Service.Exceptions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Ai = HoaTheoMua.Service.AiService;
+
+namespace HoaTheoMua.Service.PostGeneration;
+
+public class Service(AppDbContext db, Ai.IService ai, ICurrentUserService currentUser,
+    PostCore.IService postCore, ILogger<Service> logger) : IService
+{
+    private sealed record Target(PlatformType Platform, Guid PromptId, string Prompt);
+
+    public async Task<PostCore.Response.PostCoreDetail> GeneratePlatformPosts(Guid id, Request.GenerateRequest request, CancellationToken cancellationToken = default)
+    {
+        var validation = new Validate.GenerateValidator().Validate(request);
+        if (!validation.IsValid) throw new ValidationExceptionError(validation.Errors[0].ErrorMessage);
+        var userId = currentUser.GetRequiredUserId();
+        var targets = await ReadTargets(request, cancellationToken);
+        var (post, platforms) = await Claim(id, targets, userId, cancellationToken);
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(TimeSpan.FromSeconds(180));
+        try
+        {
+            // All text calls must succeed before persisting any version in this request.
+            var versions = new List<GeneratedPost>();
+            foreach (var target in targets)
+            {
+                var output = await ai.GenerateContent(new(target.Prompt, target.Platform.ToString().ToLowerInvariant(),
+                    new(post.Title, post.Content, post.Hashtag)), budget.Token);
+                versions.Add(new GeneratedPost
+                {
+                    Id = Guid.NewGuid(), PlatformPostId = platforms.Single(x => x.Platform == target.Platform).Id,
+                    Source = ContentSource.Ai, Title = output.Title, Content = output.Content, Hashtag = output.Hashtag,
+                    SystemPromptConfigId = target.PromptId, PromptSnapshot = target.Prompt,
+                    AiModel = output.Model, AiRequestId = output.RequestId, DurationMs = output.DurationMs,
+                    UserId = userId, CreatedAt = DateTimeOffset.UtcNow
+                });
+            }
+            await Persist(platforms, versions, budget.Token);
+        }
+        catch (Exception ex)
+        {
+            // Request cancellation must not leave the platform permanently Generating.
+            await ReleaseFailed(platforms.Select(x => x.Id).ToArray());
+            if (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested)
+                throw new BadGatewayException("AI service is unavailable");
+            throw;
+        }
+        return await postCore.GetPostCoreDetail(id, cancellationToken);
+    }
+
+    private async Task<List<Target>> ReadTargets(Request.GenerateRequest request, CancellationToken ct)
+    {
+        var configs = await db.Configs.AsNoTracking().Where(x => x.Group == "postgen" && !x.IsDeleted).ToListAsync(ct);
+        var enabled = configs.Where(x => x.Key == "postgen.enabled").ToList();
+        if (enabled.Count > 1) throw new BadRequestException("PostGen enabled config is invalid");
+        if (enabled.Count == 1)
+        {
+            try
+            {
+                using var json = JsonDocument.Parse(enabled[0].Value);
+                if (!json.RootElement.GetBoolean()) throw new BadRequestException("PostGen is disabled");
+            }
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+            { throw new BadRequestException("PostGen enabled config is invalid"); }
+        }
+        var result = new List<Target>();
+        foreach (var input in request.Platforms!)
+        {
+            var platform = input.Platform!.Value;
+            var name = platform.ToString().ToLowerInvariant();
+            var prompts = configs.Where(x => x.Key == "postgen.system-prompt." + name && x.Kind == "Setting" && !x.IsPublic).ToList();
+            if (prompts.Count != 1) throw new BadRequestException($"System prompt for platform {name} is not configured");
+            string prompt;
+            try
+            {
+                using var json = JsonDocument.Parse(prompts[0].Value);
+                prompt = json.RootElement.GetProperty("content").GetString()!;
+                if (string.IsNullOrWhiteSpace(prompt)) throw new JsonException();
+                if (!json.RootElement.GetProperty("isActive").GetBoolean()) throw new BadRequestException($"Platform {name} is disabled");
+            }
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
+            { throw new BadRequestException($"System prompt for platform {name} is not configured"); }
+            result.Add(new(platform, prompts[0].Id, prompt));
+        }
+        return result;
+    }
+
+    private async Task<(BasePost, List<PlatformPost>)> Claim(Guid id, List<Target> targets, Guid userId, CancellationToken ct)
+    {
+        await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
+        // Same lock as PostCore update/delete; release it before any outbound HTTP call.
+        var post = db.Database.IsRelational()
+            ? (await db.BasePosts.FromSqlInterpolated($"SELECT * FROM \"BasePost\" WHERE \"Id\" = {id} AND NOT \"IsDeleted\" FOR UPDATE").ToListAsync(ct)).SingleOrDefault()
+            : await db.BasePosts.SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
+        if (post == null) throw new NotFoundException("Post not found");
+        var types = targets.Select(x => x.Platform).ToArray();
+        var platforms = await db.PlatformPosts.Where(x => x.BasePostId == id && !x.IsDeleted && types.Contains(x.Platform)).ToListAsync(ct);
+        if (platforms.Any(x => x.Status == PlatformPostStatus.Generating)) throw new ConflictException("Platform post is generating");
+        if (platforms.Any(x => x.Status is not (PlatformPostStatus.Draft or PlatformPostStatus.Generated or PlatformPostStatus.Ready or PlatformPostStatus.Failed)))
+            throw new ConflictException("Platform post cannot be generated in its current state");
+        foreach (var target in targets)
+        {
+            var platform = platforms.SingleOrDefault(x => x.Platform == target.Platform);
+            if (platform == null)
+            {
+                platform = new PlatformPost { Id = Guid.NewGuid(), BasePostId = id, Platform = target.Platform, UserId = userId, CreatedAt = DateTimeOffset.UtcNow };
+                db.PlatformPosts.Add(platform); platforms.Add(platform);
+            }
+            platform.Status = PlatformPostStatus.Generating;
+            platform.LastError = null; platform.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+        await db.SaveChangesAsync(ct);
+        if (transaction != null) await transaction.CommitAsync(ct);
+        return (post, platforms);
+    }
+
+    private async Task Persist(List<PlatformPost> platforms, List<GeneratedPost> versions, CancellationToken ct)
+    {
+        await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
+        db.GeneratedPosts.AddRange(versions);
+        await db.SaveChangesAsync(ct);
+        foreach (var platform in platforms)
+        {
+            platform.OfficialGenerationId = versions.Single(x => x.PlatformPostId == platform.Id).Id;
+            platform.Status = PlatformPostStatus.Generated;
+            platform.SelectedAt = platform.UpdatedAt = DateTimeOffset.UtcNow;
+            platform.LastError = null;
+        }
+        await db.SaveChangesAsync(ct);
+        if (transaction != null) await transaction.CommitAsync(ct);
+    }
+
+    private async Task ReleaseFailed(Guid[] ids)
+    {
+        using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            db.ChangeTracker.Clear();
+            var platforms = await db.PlatformPosts.Where(x => ids.Contains(x.Id) && x.Status == PlatformPostStatus.Generating).ToListAsync(cleanup.Token);
+            foreach (var platform in platforms)
+            {
+                platform.Status = PlatformPostStatus.Failed;
+                platform.LastError = "Content generation failed";
+                platform.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+            await db.SaveChangesAsync(cleanup.Token);
+        }
+        catch (Exception)
+        {
+            logger.LogError("Could not release PostGen generation state for platform posts {PlatformIds}", ids);
+        }
+    }
+}

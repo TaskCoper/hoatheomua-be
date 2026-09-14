@@ -1,3 +1,4 @@
+using HoaTheoMua.Service.Common;
 using FluentValidation;
 
 namespace HoaTheoMua.Service.CardTemplate.Validate;
@@ -21,8 +22,7 @@ public class UpdateCardTemplateValidator : AbstractValidator<Request.UpdateCardT
             .When(x => x.ImageUrl is not null, ApplyConditionTo.CurrentValidator)
             .WithMessage("CARD_TEMPLATE_IMAGE_REQUIRED")
             .MaximumLength(2048).WithMessage("CARD_TEMPLATE_IMAGE_URL_LENGTH_INVALID")
-            .Must(url => Uri.TryCreate(url, UriKind.Absolute, out var uri)
-                         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            .HttpUrl()
             .When(x => !string.IsNullOrWhiteSpace(x.ImageUrl), ApplyConditionTo.CurrentValidator)
             .WithMessage("CARD_TEMPLATE_IMAGE_URL_INVALID");
     }
