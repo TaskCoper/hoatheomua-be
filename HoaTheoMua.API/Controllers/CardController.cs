@@ -17,17 +17,17 @@ public class CardController : ControllerBase
         _cardService = cardService;
     }
 
-    [HttpPost("handmade-cards")]
-    public async Task<IActionResult> CreateHandMadeCard(Request.CreateCardRequest request)
-    {
-        var result = await  _cardService.CreateHandMadeCard(request);
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
-    }
-
-    [HttpPost("ai-cards")]
-    public async Task<IActionResult> CreateCardAi(Request.CreateCardAiRequest request)
-    {
-        var result = await _cardService.CreateCardAi(request);
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
-    }
+    // [HttpPost("handmade-cards")]
+    // public async Task<IActionResult> CreateHandMadeCard(Request.CreateCardRequest request)
+    // {
+    //     var result = await  _cardService.CreateHandMadeCard(request);
+    //     return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    // }
+    //
+    // [HttpPost("ai-cards")]
+    // public async Task<IActionResult> CreateCardAi(Request.CreateCardAiRequest request)
+    // {
+    //     var result = await _cardService.CreateCardAi(request);
+    //     return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    // }
 }
