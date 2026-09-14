@@ -12,6 +12,27 @@ namespace HoaTheoMua.Service.Test.PostGenTest;
 public class UpdatePostCore
 {
     [Fact]
+    public async Task EditsTextBeforeAddingImagesLaterAndCanRemoveAllSources()
+    {
+        await using var db = CreateDb(); var service = CreateService(db);
+        var post = await service.CreatePostCore(new() { Title = "Hoa", Content = "Bản nháp" });
+        var update = new Request.UpdatePostCoreRequest { Title = "Hoa", Content = "Đã sửa", Images = new() };
+        Assert.True(new SavePostCoreValidator().Validate(update).IsValid);
+        var edited = await service.UpdatePostCore(post.BasePostId, update);
+        Assert.Equal("Đã sửa", edited.Content);
+        Assert.Empty(edited.BaseImages);
+        update.Images = Input().Images;
+        var withImages = await service.UpdatePostCore(post.BasePostId, update);
+        Assert.Equal(3, withImages.BaseImages.Count);
+        Assert.Equal("Đã sửa", withImages.Content);
+        update.Images = new();
+        var cleared = await service.UpdatePostCore(post.BasePostId, update);
+        Assert.Empty(cleared.BaseImages);
+        Assert.Equal(3, await db.BasePostImages.CountAsync(x => x.IsDeleted));
+        update.Images = null;
+        Assert.False(new SavePostCoreValidator().Validate(update).IsValid);
+    }
+    [Fact]
     public async Task ReordersRetainedImagesAndSoftDeletesRemovedSources()
     {
         await using var db = CreateDb(); var service = CreateService(db); var post = await service.CreatePostCore(Input());

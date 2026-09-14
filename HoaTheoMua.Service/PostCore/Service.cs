@@ -22,7 +22,7 @@ public class Service(AppDbContext db) : IService
             CreatedAt = DateTimeOffset.UtcNow
         };
         db.BasePosts.Add(post);
-        db.BasePostImages.AddRange(request.Images!.Select(x => NewImage(post.Id, x)));
+        db.BasePostImages.AddRange((request.Images ?? []).Select(x => NewImage(post.Id, x)));
         await db.SaveChangesAsync(cancellationToken);
         return await GetPostCoreDetail(post.Id, cancellationToken);
     }

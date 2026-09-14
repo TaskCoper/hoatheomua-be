@@ -8,6 +8,8 @@ Kiểm chứng ngày 2026-09-12 bằng HTTP cục bộ, JWT kiểm thử và Pos
 
 Policy: `StaffOrAdminPolicy`.
 
+Cập nhật 2026-09-14: `images` vẫn bắt buộc là mảng khi PUT (bỏ field hoặc null trả 422), nhưng được phép có 0–20 ảnh. Đây là toàn bộ tập ảnh nguồn cần giữ: `[]` cho bài chưa có ảnh hoặc bỏ hết ảnh nguồn; ảnh bị bỏ được soft delete. Có thể tạo bài chưa có ảnh, sửa nội dung với `images: []`, rồi gửi các ảnh mới không có id để bổ sung sau.
+
 ```json
 {
   "title": "Title đã sửa",

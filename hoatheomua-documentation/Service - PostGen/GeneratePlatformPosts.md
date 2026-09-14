@@ -86,3 +86,5 @@ Parse đúng một Markdown ảnh có URL HTTP/HTTPS và finish_reason=stop; t�
 ## Kiểm chứng
 
 Service test và PostgreSQL integration kiểm dedup, concurrency, source/preset, timeout/cancel, giữ ảnh cũ, partial/all failure và rollback cả ảnh/slot khi ghi official lỗi. HTTP probe đi qua controller, JWT, validation, rate limiter, AiService thật với fake HttpMessageHandler, và PostgreSQL riêng. Báo cáo tại [Implementation.md](Implementation.md).
+
+Bốn API version nội dung mốc 5 đã triển khai độc lập, không thay đổi mode của generate. Dùng [contract mốc 5](../FE-API-Handoff-PostGen-Milestone5.md) để sinh lại theo feedback/version nguồn, sửa tay, lấy lịch sử và chọn bản chốt.

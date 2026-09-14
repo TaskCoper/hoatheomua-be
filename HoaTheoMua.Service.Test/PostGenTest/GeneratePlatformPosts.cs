@@ -38,6 +38,22 @@ public class GeneratePlatformPosts
     }
 
     [Fact]
+    public async Task GeneratesContentForPostCreatedWithoutImages()
+    {
+        await using var db = Db(); await Seed(db);
+        var post = await new HoaTheoMua.Service.PostCore.Service(db).CreatePostCore(new() { Title = "Hoa", Content = "Bản nháp chưa có ảnh" });
+        var handler = new AiContentClient.Handler((_, _) => Task.FromResult(AiContentClient.Completion()));
+        var request = Input(PlatformType.Facebook); request.Mode = "content";
+        var result = await Service(db, AiContentClient.Client(handler)).GeneratePlatformPosts(post.BasePostId, request);
+        Assert.Empty(result.BaseImages);
+        var platform = Assert.Single(result.Platforms);
+        Assert.NotNull(platform.Content);
+        Assert.Empty(platform.Images);
+        Assert.Equal(1, handler.Calls);
+        Assert.Empty(db.GeneratedPostImages);
+    }
+
+    [Fact]
     public async Task ThreeIndependentPromptsSnapshotsVersionsAndOfficialPointers()
     {
         await using var db = Db(); var id = await Seed(db);

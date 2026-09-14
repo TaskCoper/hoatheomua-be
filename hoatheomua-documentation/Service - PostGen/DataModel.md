@@ -84,7 +84,7 @@ Entity chuyển sang `BaseEntity<Guid>, IAuditableEntity`. Index: `(CreatedAt DE
 | `IsDeleted` | boolean DEFAULT false | |
 | `CreatedAt` | timestamptz DEFAULT now() | |
 
-Index: unique `(BasePostId, SortOrder)` filtered `IsDeleted = false`. Ràng buộc "ít nhất 1 ảnh" để ở FluentValidation, không đưa xuống DB.
+Index: unique `(BasePostId, SortOrder)` filtered `IsDeleted = false`. Bài gốc được có 0–20 ảnh nguồn; validation không yêu cầu ít nhất một ảnh. POST cho phép bỏ images/null/[]; PUT vẫn gửi mảng đầy đủ, được phép rỗng. Không cần đổi schema.
 
 ### PlatformPost — bảng mới
 
@@ -161,7 +161,7 @@ Cách làm: `Source = Manual`, bản sửa tay là một dòng `GeneratedPost` n
 - Version `Manual` có `AiModel`, `PromptSnapshot`, `SystemPromptId`, `SystemPromptConfigId`, `DurationMs` đều null — không có lời gọi AI nào xảy ra.
 - **Sửa tay xong tự động thành bản chính thức**: `OfficialGenerationId` trỏ ngay vào version `Manual` vừa tạo. Người dùng đã gõ tay thì hiển nhiên là muốn dùng nó.
 - Muốn quay lại bản sửa tay sau này thì trỏ `OfficialGenerationId` về v3, y hệt cách quay về mọi version khác — không có đường đi riêng.
-- **Chống đẻ version rác**: nếu version mới nhất đang là `Manual` **và** chưa có version nào trỏ vào nó (`ParentGeneratedPostId`) thì ghi đè `Content`/`Hashtag` tại chỗ, giữ nguyên dòng và `CreatedAt` nên số thứ tự đọc ra không đổi; ngược lại tạo version mới. Vừa giữ lịch sử sạch khi người dùng gõ vài chữ rồi lưu liên tục, vừa không phá tính bất biến của version đã bị tham chiếu.
+- **Chống đẻ version rác**: nếu version mới nhất đang là `Manual`, đồng thời là bản official hiện tại **và** chưa có version nào trỏ vào nó (`ParentGeneratedPostId`) thì ghi đè `Title`/`Content`/`Hashtag` tại chỗ, giữ nguyên dòng và `CreatedAt` nên số thứ tự đọc ra không đổi; ngược lại tạo version mới. Vừa giữ lịch sử sạch khi người dùng gõ vài chữ rồi lưu liên tục, vừa không phá tính bất biến của version đã bị tham chiếu.
 
 ### Nguồn của lần paraphase tiếp theo
 
@@ -451,3 +451,9 @@ GeneratedPost tiếp tục lưu lịch sử các lần sinh. Response generate/G
 Response `PostCoreDetail` không trả `value.images`. `platforms[].images` chỉ chứa ảnh thành công đang được chọn, kèm URL và kích thước theo `SortOrder`; `baseImages` vẫn là ảnh nguồn. Kho ảnh và slot chưa chọn vẫn giữ trong database, không đổi schema. API lịch sử ảnh riêng dự kiến ở mốc 6.
 
 Mốc 4: PixelWidth/PixelHeight của GeneratedPostImage là kích thước mục tiêu theo AspectRatios; proxy chỉ trả Markdown URL, chưa có kích thước thực hoặc expiresAt. Không download/rehost ảnh. Chỉ dẫn ảnh đọc từ Config postgen.image_instruction. HTTP 200 vẫn có thể chứa nền tảng Failed khi mọi ảnh yêu cầu lỗi; nội dung thành công vẫn được lưu.
+
+## Hiện thực version nội dung mốc 5
+
+Không đổi schema. Mọi mutation mốc 5 khóa BasePost FOR UPDATE như generate/CRUD; regen claim nền tảng rồi nhả transaction trước gọi AI. Sửa/chốt bị chặn khi Generating, nên nguồn Manual không thể bị ghi đè lúc AI đang sử dụng. Persist version + official cùng transaction; rollback không để version rác hoặc thay đổi Manual dở dang.
+
+Sửa tay mới có parent là official hiện tại. Chỉ ghi đè Manual mới nhất nếu chính nó đang official và chưa có child; giữ Id/CreatedAt/parent, cập nhật UserId người sửa cuối. Chọn lại bản cũ rồi sửa tạo nhánh mới. API history chứa phiên bản theo thứ tự cũ → mới và officialId; detail không trả mảng lịch sử. Manual/select giữ trạng thái và ảnh, regenerate thành công chốt mới và Generated, lỗi giữ con trỏ cũ và Failed.

@@ -163,10 +163,10 @@ Response luôn bọc bằng `ApiResponseFactory.Base(...)` / `BasePagination(...
 
 ## Phần đã hiện thực
 
-Mốc 1–2: 5 API Post Core; prompt/bật tắt nền tảng và preset dùng API Config chung; không còn key standard riêng. Mốc 3 đã có POST generate nội dung, AiService proxy và snapshot prompt Config. Sinh ảnh trong generate đã triển khai ở mốc 4; API version/official còn là thiết kế mốc 5–7.
+Mốc 1–2: 5 API Post Core; prompt/bật tắt nền tảng và preset dùng API Config chung; không còn key standard riêng. Mốc 3 đã có POST generate nội dung, AiService proxy và snapshot prompt Config. Sinh ảnh trong generate đã triển khai ở mốc 4; Bốn API version nội dung đã triển khai ở mốc 5; version ảnh/payload official còn là thiết kế mốc 6–7.
 
 - GET danh sách: `pageIndex` mặc định 1, `pageSize` mặc định 10, clamp tối đa 100; `platform=facebook|instagram|zalo`, `keyword` tìm trong title/content, không phân biệt hoa thường.
-- POST/PUT Post Core: `{title, content, hashtag, images: [{id?, imageUrl, sortOrder, width?, height?}]}`. `sortOrder` bắt đầu từ 1, không trùng. POST không nhận id ảnh có sẵn. PUT thay toàn bộ tập; id ảnh phải thuộc bài đang sửa, URL của id cũ không thay đổi. Bỏ id cũ và thêm ảnh không id để thay nguồn.
+- POST/PUT Post Core: `{title, content, hashtag, images: [{id?, imageUrl, sortOrder, width?, height?}]}`. POST không bắt buộc ảnh: bỏ images/null/[] hợp lệ. PUT yêu cầu mảng images đầy đủ, được phép rỗng; tối đa 20 ảnh. Bài chưa có ảnh trả baseImages=[] và vẫn sinh nội dung bằng mode content được. `sortOrder` bắt đầu từ 1, không trùng. POST không nhận id ảnh có sẵn. PUT thay toàn bộ tập; id ảnh phải thuộc bài đang sửa, URL của id cũ không thay đổi. Bỏ id cũ và thêm ảnh không id để thay nguồn.
 - Detail dùng `basePostId`, `title/content/hashtag`, `createdAt/updatedAt`, `baseImages` (ảnh nguồn còn hiệu lực), `platforms` (một object `content` chính thức hoặc null, `images` chỉ gồm ảnh đã chốt thành công kèm URL/kích thước). Không có `value.images` hoặc `platforms[].versions`. Lịch sử vẫn lưu trong database; API lịch sử nội dung/ảnh riêng ở mốc 5/6.
 - Preset quản lý qua API Config chung với `AdminPolicy`; payload nằm trong `value`, đọc settings trả danh sách Config có `id`. Chi tiết tạo/đọc/sửa/xóa, quyền và giới hạn validation tại [RatioPresetConfig.md](RatioPresetConfig.md).
 - Bài không tồn tại hoặc đã xóa trả 404 `Post not found`; sửa URL trên ID ảnh cũ trả 400 `Existing image URL cannot be changed; add a new image instead`. Các lỗi FluentValidation trả 422. Error envelope theo middleware hiện có là `{title,status,detail,messageCode,errors,traceId,timestampUtc}`; success dùng `{value,isSuccess,isFailed,error,traceId,timestampUtc}`.
@@ -209,3 +209,9 @@ Hai lần gọi tách rời để tránh sinh nội dung hai lần:
 Images mode vẫn kiểm postgen.enabled và isActive trong Config nền tảng, cùng chỉ dẫn ảnh/preset khi dùng; không yêu cầu hoặc gửi value.content của prompt nội dung. Có thể sinh ảnh trước khi có nội dung: platform.content vẫn null, chưa sẵn sàng đăng. Thành công/lỗi ảnh chỉ cập nhật trạng thái xử lý, ảnh và lastError; nội dung chốt giữ nguyên kể cả khi mọi ảnh lỗi. Hủy request hoặc ghi DB lỗi vẫn giải phóng claim và giữ dữ liệu đã chốt trước.
 
 Mode áp dụng cho toàn bộ request. Các mode cùng dùng khóa/claim của nền tảng để chặn yêu cầu sinh trùng; không gọi content và images đồng thời cho cùng nền tảng. Không tự retry POST.
+
+## Mốc 5 đã triển khai (2026-09-14)
+
+Bốn route content/regenerate, content (PUT), content/versions (GET), content/official (PUT) đã chạy. POST regenerate dùng heavy rate limit; ba route còn lại không gọi AI. Source/official phải thuộc cùng PlatformPost, mọi mutation dùng khóa BasePost và chặn Generating hoặc các trạng thái xuất bản. Regenerate tự chốt bản mới; manual/select giữ ảnh và trạng thái hiện tại. Manual chỉ ghi đè tại chỗ khi đang official, mới nhất và chưa có child.
+
+GET versions trả ContentHistory gồm platformPostId/platform/officialGenerationId và versions (ContentVersion + feedback/isOfficial); mutation trả PostCoreDetail, không gắn lịch sử vào platforms. Lịch sử chưa phân trang. Body và lỗi chi tiết tại [bàn giao FE mốc 5](../FE-API-Handoff-PostGen-Milestone5.md).
