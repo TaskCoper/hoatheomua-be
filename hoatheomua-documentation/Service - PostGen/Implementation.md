@@ -185,3 +185,36 @@ Theo yêu cầu người dùng, gọi trực tiếp hàm `AiService.Service.Gene
 Tải/mở ảnh và đo bằng sips: **941×1672**, gần 9:16 (sai lệch tỷ lệ khoảng 0,053%), **không đạt đúng 1080×1920**. Hình có bố cục dọc với hoa/bình/máy ảnh/sách còn nhận diện được, nhưng chi tiết được dựng lại; chưa chứng minh giữ nguyên mọi chi tiết sản phẩm. Hàm hiện chỉ kiểm Markdown/URL, chưa đo hoặc chuẩn hóa kích thước. PixelWidth/PixelHeight trong luồng lưu DB vẫn là kích thước mục tiêu. URL tải được tại thời điểm kiểm, không chứng minh tồn tại vĩnh viễn.
 
 Evidence: [proxy-image-9x16-smoke.json](Verification/results/proxy-image-9x16-smoke.json). Các kết quả fake AI/PostgreSQL trước đó giữ nguyên phạm vi lịch sử.
+
+
+## 2026-09-15 — Mốc 11: tài khoản nền tảng và OAuth
+
+Đã triển khai trên nhánh `feature/post-gen`, chưa deploy. Mốc 9–10 vẫn tạm hoãn.
+
+- Thêm PlatformAccount, PlatformOAuthSession, FK từ PlatformPost và migration `20260914120000_AddPostGenPlatformAccounts`. Migration giữ nguyên native enum, guard các PlatformAccountId đã có từ bên ngoài API; không âm thầm xóa dữ liệu. EF scaffold gặp NullReferenceException ở comparer của snapshot enum hiện hữu, nên migration/snapshot được cập nhật tường minh và kiểm trực tiếp bằng PostgreSQL, gồm Down/Up và guard rollback.
+- Sáu API Admin cho list/connect/reconnect/refresh/disconnect và callback có state một lần, proof cookie cùng trình duyệt. Callback AllowAnonymous, không cần JWT. Token AES-256-GCM, khóa từ môi trường, có keyId để rotation; không trả token ra response.
+- Instagram chọn Facebook Login/Page liên kết; Meta refresh chỉ kiểm token và profile hiện có. Zalo PKCE, endpoint token oauth.zaloapp.com, xoay vòng cặp token; refresh có lease và revision, kết quả cũ không ghi đè disconnect/reconnect.
+- Disconnect xóa token local, giữ account ID, chặn khi có Scheduled/Publishing; không thu hồi quyền app cho các tài khoản khác. Chưa có cron refresh hoặc tác vụ publish. Callback trả JSON, FE mở popup và tải lại danh sách khi đóng.
+- Hướng dẫn cấu hình app/secret/callback/keyring và giới hạn kiểm chứng tại [PlatformAccounts.md](PlatformAccounts.md); [bàn giao FE mốc 11](../FE-API-Handoff-PostGen-Milestone11.md).
+
+Kiểm chứng:
+
+| Bộ kiểm tra | Kết quả |
+| --- | --- |
+| Release build solution và AccountProbe | PASS; còn warning có sẵn, không lỗi build |
+| PlatformAccountTest | 23 PASS, 0 skip; includes PostgreSQL migration/constraint/concurrency |
+| Full solution test với PostgreSQL local | 989 PASS, 0 fail, 0 skip |
+| HTTP AccountProbe | 38 request, 236 assertion PASS, 25 fake provider calls |
+| AI thật / provider thật | 0 lời gọi; chưa kiểm App Review hoặc kết nối tài khoản thật |
+| Cleanup database của test/probe | Mỗi lượt tự DROP database riêng; kiểm cuối chỉ còn postgres. Đã dừng/xóa container htm-postgen-m11-test |
+
+HTTP đã phát hiện và sửa việc đọc outer state không tồn tại của Zalo: state nằm trong query redirect_uri, controller phải lấy đúng vị trí để tạo cookie. Sau sửa, toàn bộ luồng ba nền tảng pass. Bằng chứng có traceId thật của response ở [database-flow-validator.json](AccountVerification/results/database-flow-validator.json).
+
+Tái chạy với `POSTGEN_TEST_CONNECTION_STRING` trỏ PostgreSQL **local dùng riêng cho kiểm thử**:
+
+```bash
+dotnet test HoaTheoMua.sln -c Release --no-build --no-restore
+dotnet run --project "hoatheomua-documentation/Service - PostGen/AccountVerification/AccountProbe.csproj" -c Release
+```
+
+AccountProbe tạo/xóa database có prefix account_probe_, chỉ mở cổng loopback 55442, tất cả OAuth HTTP dùng fake handler. Chạy từ thư mục AccountVerification để lưu evidence vào đúng thư mục results của tài liệu. Không đưa secret thật vào file evidence.

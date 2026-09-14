@@ -25,7 +25,13 @@ Các endpoint PostGen dưới đây dùng `[Authorize(Policy = JwtExtensions.Sta
 | PUT | `/api/v1/posts/{id:guid}/platforms/{platform}/images` | `UpdatePlatformImages` | ghi đè toàn bộ ô ảnh của nền tảng: ảnh nào, tỷ lệ nào, version nào, thứ tự nào |
 | GET | `/api/v1/posts/{id:guid}/platforms/{platform}/official` | `GetOfficialVersion` | payload sẽ đem đi đăng |
 
-Chừa sẵn, **ghi trong tài liệu nhưng không triển khai**: `POST .../platforms/{platform}/publish`, `POST .../platforms/{platform}/schedule`, `DELETE .../platforms/{platform}/schedule`, `GET /api/v1/post-gen/platform-accounts`.
+Chừa sẵn, **ghi trong tài liệu nhưng không triển khai**: `POST .../platforms/{platform}/publish`, `POST .../platforms/{platform}/schedule`, `DELETE .../platforms/{platform}/schedule`.
+
+### Tài khoản nền tảng — mốc 11
+
+Nhóm `/api/v1/post-gen/platform-accounts` đã triển khai: GET list, POST `/{platform}/connect`, GET `/{platform}/callback`, POST `/{id}/reconnect`, POST `/{id}/refresh`, DELETE `/{id}`. **AdminPolicy** cho quản trị; callback AllowAnonymous nhưng bắt buộc OAuth state và cookie trình duyệt của phiên hợp lệ. Không áp dụng StaffOrAdminPolicy của nhóm bài cho nhóm account.
+
+Chi tiết DTO, lỗi, OAuth và cấu hình ở [PlatformAccounts.md](PlatformAccounts.md); bàn giao [FE mốc 11](../FE-API-Handoff-PostGen-Milestone11.md). Không có API trả token hoặc đăng bài trong nhóm này.
 
 ### DTO chính
 

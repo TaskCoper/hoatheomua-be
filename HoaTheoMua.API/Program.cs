@@ -32,6 +32,7 @@ using HoaTheoMua.Service.DependencyInjection.Extensions;
 using SystemPromptService = HoaTheoMua.Service.SystemPrompt;
 using PostCoreService = HoaTheoMua.Service.PostCore;
 using PostGenerationService = HoaTheoMua.Service.PostGeneration;
+using PlatformAccountService = HoaTheoMua.Service.PlatformAccount;
 using AiService = HoaTheoMua.Service.AiService;
 using MockupService = HoaTheoMua.Service.Mockup;
 using CardTemplateService = HoaTheoMua.Service.CardTemplate;
@@ -118,6 +119,17 @@ builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
 builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
 builder.Services.AddScoped<PostCoreService.IService, PostCoreService.Service>();
 builder.Services.AddScoped<PostGenerationService.IService, PostGenerationService.Service>();
+builder.Services.Configure<PlatformAccountService.PlatformAccountOptions>(builder.Configuration.GetSection(nameof(PlatformAccountService.PlatformAccountOptions)));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<PlatformAccountService.TokenProtector>();
+builder.Services.AddScoped<PlatformAccountService.IService, PlatformAccountService.Service>();
+builder.Services.AddHttpClient<PlatformAccountService.IOAuthProvider, PlatformAccountService.OAuthProvider>("PostGenOAuth", client =>
+{
+    client.Timeout = Timeout.InfiniteTimeSpan;
+    client.MaxResponseContentBufferSize = 1024 * 1024;
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false })
+  .RemoveAllLoggers(); // OAuth endpoints can carry secrets in query parameters; do not log request URLs.
+
 builder.Services.AddHttpClient<AiService.IService, AiService.Service>("PostGenAi", client =>
 {
     client.Timeout = Timeout.InfiniteTimeSpan; // Per-call timeout and total generation budget use cancellation tokens.

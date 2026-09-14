@@ -55,6 +55,7 @@ public class PlatformPostConfiguration : IEntityTypeConfiguration<PlatformPost>
         b.Property(x => x.IsDeleted).HasDefaultValue(false);
         b.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         b.HasOne<BasePost>().WithMany().HasForeignKey(x => x.BasePostId).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne<PlatformAccount>().WithMany().HasForeignKey(x => x.PlatformAccountId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<GeneratedPost>().WithMany().HasForeignKey(x => x.OfficialGenerationId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => new { x.BasePostId, x.Platform }).IsUnique().HasFilter("\"IsDeleted\" = false");
         b.HasIndex(x => new { x.Status, x.ScheduledAt }).HasFilter("\"Status\" = 'Scheduled'");
