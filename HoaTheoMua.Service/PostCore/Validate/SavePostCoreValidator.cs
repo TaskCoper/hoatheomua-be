@@ -9,8 +9,10 @@ public class SavePostCoreValidator : AbstractValidator<Request.SavePostCoreReque
         RuleFor(x => x.Title).NotEmpty().MaximumLength(500);
         RuleFor(x => x.Content).NotEmpty().MaximumLength(20000);
         RuleFor(x => x.Hashtag).MaximumLength(1000);
-        RuleFor(x => x.Images).NotNull().Must(x => x is { Count: >= 1 and <= 20 })
-            .WithMessage("Post must have between 1 and 20 images");
+        RuleFor(x => x.Images).Must(x => x == null || x.Count <= 20)
+            .WithMessage("Post must have at most 20 images");
+        RuleFor(x => x.Images).NotNull().When(x => x is Request.UpdatePostCoreRequest)
+            .WithMessage("Images must be supplied when updating a post; use an empty array for no images");
         RuleForEach(x => x.Images).NotNull().SetValidator(new ImageValidator());
         RuleFor(x => x.Images).Must(x => x == null || x.Where(i => i != null).Select(i => i.SortOrder).Distinct().Count() == x.Count)
             .WithMessage("Duplicate image order");

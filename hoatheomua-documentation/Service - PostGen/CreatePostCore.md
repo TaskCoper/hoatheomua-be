@@ -8,6 +8,16 @@ Kiểm chứng ngày 2026-09-12 bằng HTTP cục bộ, JWT kiểm thử và Pos
 
 Policy: `StaffOrAdminPolicy`.
 
+Cập nhật 2026-09-14: ảnh nguồn không bắt buộc khi tạo bài. Có thể bỏ `images`, gửi `null` hoặc `[]`; response trả `baseImages: []` và `platforms: []`. Title/content vẫn bắt buộc. Nếu gửi ảnh: tối đa 20, từng ảnh vẫn phải có URL HTTP(S), thứ tự hợp lệ và không trùng.
+
+Ví dụ tạo bài trước, bổ sung ảnh sau bằng `PUT /api/v1/posts/{id}`:
+
+```json
+{ "title": "Hoa mùa thu", "content": "Nội dung gốc" }
+```
+
+Có thể gọi generate với `mode: "content"` ngay khi chưa có ảnh. Chỉ chọn sinh ảnh sau khi đã bổ sung ảnh nguồn.
+
 ```json
 {
   "title": "Hoa mùa thu",
@@ -94,7 +104,8 @@ flowchart TD
 #### Test case
 
 - Tạo bài có 3 ảnh: 200, ảnh trả đúng thứ tự.
-- Không có ảnh: 422; URL không phải HTTP(S), trùng thứ tự, title/content/hashtag quá dài: validator từ chối.
+- Bỏ images / null / []: tạo thành công, đọc lại có baseImages rỗng; có thể sửa nội dung trước và bổ sung ảnh qua PUT sau.
+- Hơn 20 ảnh, URL không phải HTTP(S), phần tử null, trùng thứ tự, title/content/hashtag quá dài: validator từ chối.
 - BasePost không lưu UserId; không ghi PostHistory/ClientHistory.
 
 Test tự động: `HoaTheoMua.Service.Test/PostGenTest/CreatePostCore.cs`; kiểm DB thật tại `PostGenPostgres.cs`.

@@ -77,7 +77,7 @@ interface PaginationValue<T> {
 | `title` | string | Bắt buộc, không rỗng/toàn khoảng trắng, tối đa 500 ký tự |
 | `content` | string | Bắt buộc, không rỗng/toàn khoảng trắng, tối đa 20.000 ký tự |
 | `hashtag` | string hoặc null | Không bắt buộc, tối đa 1.000 ký tự; là một chuỗi, không phải mảng |
-| `images` | array | Bắt buộc, từ 1 đến 20 phần tử; không được chứa phần tử null |
+| `images` | array hoặc null | Không bắt buộc khi POST: bỏ field / null / [] đều hợp lệ; tối đa 20 phần tử, không được chứa phần tử null |
 | `images[].id` | GUID hoặc null | Khi tạo mới phải bỏ field này hoặc gửi null |
 | `images[].imageUrl` | string | Bắt buộc, URL tuyệt đối HTTP/HTTPS, tối đa 2.048 ký tự |
 | `images[].sortOrder` | integer | Từ 1 trở lên, không trùng trong cùng request; không bắt buộc liên tiếp |
@@ -86,7 +86,7 @@ interface PaginationValue<T> {
 
 ### Response 200
 
-Kiểu: `ApiResponse<PostCoreDetail>`. Tạo bài viết chỉ lưu nội dung và ảnh nguồn, chưa sinh AI hoặc tạo bài cho nền tảng.
+Kiểu: `ApiResponse<PostCoreDetail>`. Tạo bài viết chỉ lưu nội dung và ảnh nguồn nếu có, chưa sinh AI hoặc tạo bài cho nền tảng. Khi chưa có ảnh, `baseImages` trả `[]`. FE cho phép lưu bài trước khi upload, sửa nội dung với `images: []`, bổ sung ảnh qua PUT sau. Có thể sinh nội dung bằng `mode: "content"` trước khi thêm ảnh.
 
 ```json
 {
@@ -237,7 +237,7 @@ Lưu ý cho màn hình chi tiết:
 
 - `baseImages`: ảnh nguồn còn hiệu lực, sắp xếp theo `sortOrder`; dùng để điền form sửa bài.
 - Không còn `value.images`; lịch sử ảnh vẫn ở database, API đọc lịch sử riêng dự kiến ở mốc 6.
-- `platforms[].content`: một object nội dung chính thức được chọn hoặc null. Không có mảng versions trong response chi tiết; API lịch sử riêng dự kiến ở mốc 5.
+- `platforms[].content`: một object nội dung chính thức được chọn hoặc null. Không có mảng versions trong response chi tiết; API content/versions riêng đã có ở mốc 5.
 - `platforms[].images`: ảnh đã chốt thành công theo `sortOrder`, có `selectedGeneratedPostImageId`, `imageUrl` và kích thước; không trả ô chưa chọn hoặc ảnh lỗi.
 - `versionNo` được tính lúc đọc. Dùng `id` / `generationId` để định danh version.
 - `Partial` được suy ra khi trạng thái lưu là Generated/Ready và có lỗi ảnh một phần (`lastError`), hoặc có cả ô đã chọn ảnh lẫn ô chưa chọn ảnh.
@@ -280,7 +280,7 @@ Body có các field và giới hạn giống POST. **PUT thay toàn bộ nội d
 | Xóa ảnh nguồn | Bỏ ảnh đó khỏi mảng `images` gửi lên |
 | Thay nguồn ảnh | Bỏ phần tử có ID cũ, thêm phần tử không ID với URL mới |
 
-ID ảnh phải thuộc bài đang sửa và còn hiệu lực; không được là GUID rỗng hoặc trùng trong request. Không được đổi URL của ảnh có ID cũ. `width`/`height` của ảnh giữ lại cũng được cập nhật theo request; bỏ field sẽ đưa về null. Sau khi sửa vẫn phải còn 1–20 ảnh.
+ID ảnh phải thuộc bài đang sửa và còn hiệu lực; không được là GUID rỗng hoặc trùng trong request. Không được đổi URL của ảnh có ID cũ. `width`/`height` của ảnh giữ lại cũng được cập nhật theo request; bỏ field sẽ đưa về null. Sau khi sửa được có 0–20 ảnh. PUT vẫn yêu cầu gửi mảng `images`; bỏ field/null trả 422. Gửi `[]` để bài không có ảnh nguồn (các ảnh nguồn bị bỏ được soft delete).
 
 Response 200: `ApiResponse<PostCoreDetail>`. FE nên dùng response để cập nhật lại ID ảnh mới, thứ tự và `updatedAt`.
 
@@ -365,3 +365,5 @@ FE cần kiểm tra HTTP status trước, đọc body theo shape thực tế và
 Tài liệu được đối chiếu tĩnh với source code. Lần tổng hợp này không chạy lại API hoặc xác nhận deploy.
 
 Sinh ảnh trong generate đã triển khai tại [bàn giao FE mốc 4](FE-API-Handoff-PostGen-Milestone4.md). Kích thước pixel của ảnh chốt là kích thước mục tiêu gửi AI, chưa đo từ file ảnh.
+
+API sinh lại, sửa tay, lịch sử và chọn nội dung đã có trong [bàn giao FE mốc 5](FE-API-Handoff-PostGen-Milestone5.md).

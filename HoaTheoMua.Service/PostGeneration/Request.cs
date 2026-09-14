@@ -5,6 +5,21 @@ namespace HoaTheoMua.Service.PostGeneration;
 
 public class Request
 {
+    public class RegenerateContentRequest
+    {
+        public Guid? SourceGenerationId { get; set; }
+        public string? Feedback { get; set; }
+    }
+    public class EditContentRequest
+    {
+        public string? Title { get; set; }
+        public string? Content { get; set; }
+        public string? Hashtag { get; set; }
+    }
+    public class SelectContentRequest
+    {
+        public Guid GenerationId { get; set; }
+    }
     public class GenerateRequest
     {
         public string Mode { get; set; } = "all";

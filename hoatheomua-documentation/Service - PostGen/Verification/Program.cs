@@ -92,7 +92,20 @@ try
 {
     await Call("AnonymousDenied", HttpMethod.Get, "/api/v1/posts", null, 401, role: "Anonymous");
     await Call("CustomerDenied", HttpMethod.Get, "/api/v1/posts", null, 403, role: "Customer");
-    await Call("CreateWithoutImages", HttpMethod.Post, "/api/v1/posts", new { title = "x", content = "y", images = Array.Empty<object>() }, 422);
+    foreach (var (name, body) in new (string, object)[] {
+        ("Omitted", new { title = "x", content = "y" }),
+        ("Null", new { title = "x", content = "y", images = (object?)null }),
+        ("Empty", new { title = "x", content = "y", images = Array.Empty<object>() }) })
+    {
+        var draft = await Call("CreateWithoutImages" + name, HttpMethod.Post, "/api/v1/posts", body);
+        var draftUrl = "/api/v1/posts/" + draft.GetProperty("value").GetProperty("basePostId").GetGuid();
+        Check(draft.GetProperty("value").GetProperty("baseImages").GetArrayLength() == 0, "Draft has no source images");
+        await Call("EditWithoutImages" + name, HttpMethod.Put, draftUrl, new { title = "x", content = "Updated draft", images = Array.Empty<object>() });
+        await Call("UpdateMissingImagesRejected" + name, HttpMethod.Put, draftUrl, new { title = "x", content = "y" }, 422);
+        var attached = await Call("AttachImagesLater" + name, HttpMethod.Put, draftUrl, input);
+        Check(attached.GetProperty("value").GetProperty("baseImages").GetArrayLength() == 3, "Can attach source images after creation");
+        await Call("DeleteDraft" + name, HttpMethod.Delete, draftUrl, null);
+    }
     var created = await Call("CreatePostCore", HttpMethod.Post, "/api/v1/posts", input);
     var id = created.GetProperty("value").GetProperty("basePostId").GetGuid();
     var url = $"/api/v1/posts/{id}";
@@ -186,6 +199,52 @@ try
     Check(instagramAfter.GetProperty("images").GetRawText() == instagramBefore.GetProperty("images").GetRawText(), "Content mode preserves selected images");
     Check(instagramAfter.GetProperty("content").GetProperty("versionNo").GetInt32() == 2, "Only explicit content generation increments content version");
     Check(aiHandler.ImageCalls == imageCallsBefore + 9, "Content mode does not call image generation");
+    var versionUser = Guid.NewGuid();
+    var contentUrl = url + "/platforms/facebook/content";
+    var originalContent = generated.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == "facebook").GetProperty("content");
+    var sourceV1 = originalContent.GetProperty("generationId").GetGuid();
+    await Call("ContentHistoryAnonymousDenied", HttpMethod.Get, contentUrl + "/versions", null, 401, role: "Anonymous");
+    await Call("ContentEditCustomerDenied", HttpMethod.Put, contentUrl, new { content = "Denied" }, 403, role: "Customer");
+    await Call("ContentSelectCustomerDenied", HttpMethod.Put, contentUrl + "/official", new { generationId = sourceV1 }, 403, role: "Customer");
+    await Call("ContentRegenerateCustomerDenied", HttpMethod.Post, contentUrl + "/regenerate", new {}, 403, role: "Customer");
+    await Call("ContentMissingPlatform", HttpMethod.Get, url + "/platforms/zalo/content/versions", null, 404, versionUser);
+    await Call("ContentUnknownPlatform", HttpMethod.Get, url + "/platforms/tiktok/content/versions", null, 422, versionUser);
+    var regeneratedContent = await Call("RegenerateContentFromVersion", HttpMethod.Post, contentUrl + "/regenerate", new { sourceGenerationId = sourceV1, feedback = "First feedback" }, user: versionUser);
+    var v2 = regeneratedContent.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == "facebook").GetProperty("content");
+    Check(v2.GetProperty("parentGeneratedPostId").GetGuid() == sourceV1 && v2.GetProperty("versionNo").GetInt32() == 2, "Regenerate preserves source lineage and selects v2");
+    var beforeManualCalls = aiHandler.Calls;
+    var manualResponse = await Call("EditContentManual", HttpMethod.Put, contentUrl, new { title = "Manual", content = "Manual from HTTP", hashtag = "#manual" }, user: versionUser, role: "Staff");
+    var manualVersion = manualResponse.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == "facebook").GetProperty("content");
+    var manualId = manualVersion.GetProperty("generationId").GetGuid();
+    var manualAgain = await Call("EditContentManualAgain", HttpMethod.Put, contentUrl, new { title = "Manual", content = "Manual saved twice", hashtag = "#manual" }, user: user2);
+    var manualAgainVersion = manualAgain.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == "facebook").GetProperty("content");
+    Check(manualAgainVersion.GetProperty("generationId").GetGuid() == manualId && manualAgainVersion.GetProperty("versionNo").GetInt32() == 3 && aiHandler.Calls == beforeManualCalls, "Repeated cross-user manual saves reuse v3 without AI");
+    await Call("RegenerateContentFromManual", HttpMethod.Post, contentUrl + "/regenerate", new { sourceGenerationId = manualId, feedback = "Only this feedback" }, user: versionUser);
+    Check(aiHandler.ContentInputs.Last().GetProperty("previousContent").GetProperty("content").GetString() == "Manual saved twice", "AI receives the selected manual source");
+    Check(aiHandler.ContentInputs.Last().GetProperty("feedback").GetString() == "Only this feedback" && !aiHandler.ContentInputs.Last().ToString().Contains("First feedback"), "Feedback is not accumulated");
+    var history = await Call("GetContentVersions", HttpMethod.Get, contentUrl + "/versions", null, user: versionUser, role: "Staff");
+    var contentVersions = history.GetProperty("value").GetProperty("versions").EnumerateArray().ToArray();
+    Check(contentVersions.Select(v => v.GetProperty("source").GetString()).SequenceEqual(new[] { "Ai", "Ai", "Manual", "Ai" }), "Four content versions follow Ai Ai Manual Ai lifecycle");
+    Check(contentVersions.Count(v => v.GetProperty("isOfficial").GetBoolean()) == 1, "Exactly one official content in history");
+    var historyAgain = await Call("GetContentVersionsAgain", HttpMethod.Get, contentUrl + "/versions", null, user: versionUser);
+    Check(history.GetProperty("value").GetRawText() == historyAgain.GetProperty("value").GetRawText(), "History ordering and version numbers remain stable");
+    await Call("RegenerateContentBranchFromOld", HttpMethod.Post, contentUrl + "/regenerate", new { sourceGenerationId = sourceV1, feedback = "Branch from oldest" }, user: versionUser);
+    Check(aiHandler.ContentInputs.Last().GetProperty("previousContent").GetProperty("content").GetString() == originalContent.GetProperty("content").GetString(), "Branch sends original version rather than latest content");
+    var beforeSelectionCalls = aiHandler.Calls;
+    var selectedOld = await Call("SelectOfficialOldContent", HttpMethod.Put, contentUrl + "/official", new { generationId = sourceV1 }, user: versionUser);
+    var selectedFacebook = selectedOld.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == "facebook");
+    Check(selectedFacebook.GetProperty("content").GetProperty("versionNo").GetInt32() == 1 && aiHandler.Calls == beforeSelectionCalls, "Selecting old content does not generate or create a version");
+    Check(selectedFacebook.GetProperty("images").GetRawText() == allFailed.GetProperty("value").GetProperty("platforms").EnumerateArray().Single(p => p.GetProperty("platform").GetString() == "facebook").GetProperty("images").GetRawText(), "All content workflows preserve selected image IDs and ordering");
+    Check(!selectedFacebook.TryGetProperty("versions", out _), "Mutation detail still omits history");
+    var foreignContent = instagramAfter.GetProperty("content").GetProperty("generationId").GetGuid();
+    await Call("ContentForeignSourceRejected", HttpMethod.Post, contentUrl + "/regenerate", new { sourceGenerationId = foreignContent }, 400, versionUser);
+    await Call("ContentForeignOfficialRejected", HttpMethod.Put, contentUrl + "/official", new { generationId = foreignContent }, 400, versionUser);
+    await Call("ContentEmptyBodyRejected", HttpMethod.Put, contentUrl, new { content = " " }, 422, versionUser);
+    await Call("ContentFeedbackLimitRejected", HttpMethod.Post, contentUrl + "/regenerate", new { feedback = new string('x', 2001) }, 422, versionUser);
+    aiHandler.FailOnCall = aiHandler.Calls + 1;
+    await Call("ContentRegenerationFailure", HttpMethod.Post, contentUrl + "/regenerate", new {}, 502, versionUser);
+    var afterContentFailure = await Call("ContentHistoryAfterFailure", HttpMethod.Get, contentUrl + "/versions", null, user: versionUser);
+    Check(afterContentFailure.GetProperty("value").GetProperty("versions").GetArrayLength() == 5 && afterContentFailure.GetProperty("value").GetProperty("officialGenerationId").GetGuid() == sourceV1, "Failed content regeneration adds no version and keeps selected old content");
     const string promptSettingsUrl = "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.";
     await Call("AnonymousPromptReadDenied", HttpMethod.Get, promptSettingsUrl, null, 401, role: "Anonymous");
     await Call("StaffPromptReadDenied", HttpMethod.Get, promptSettingsUrl, null, 403, role: "Staff");
@@ -226,6 +285,7 @@ try
     var after = await Call("DeletedPostList", HttpMethod.Get, "/api/v1/posts", null);
     Check(after.GetProperty("value").GetProperty("items").GetArrayLength() == 0, "Deleted post excluded from list");
     await Call("DeletedPostDetail", HttpMethod.Get, url, null, 404);
+    await Call("DeletedPostContentHistory", HttpMethod.Get, contentUrl + "/versions", null, 404, versionUser);
     await using var scope = app.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     Check((await db.BasePosts.SingleAsync(x => x.Id == id)).IsDeleted, "Post is soft deleted in PostgreSQL");
     Check(await db.BasePostImages.CountAsync(x => x.BasePostId == id && x.IsDeleted) == 3, "Source images retained in PostgreSQL");
@@ -234,13 +294,16 @@ try
     Check((await db.Configs.AsNoTracking().SingleAsync(x => x.Id == promptId)).IsDeleted, "Deleted system prompt retained in PostgreSQL");
     Check(await db.Configs.CountAsync(x => x.Group == "postgen" && x.Key == "postgen.system-prompt.facebook" && !x.IsDeleted) == 1, "Exactly one active Facebook system prompt in PostgreSQL");
     Check(!await db.Configs.AnyAsync(x => x.Group == "postgen" && x.Key.StartsWith("postgen.platform.")), "Retired platform keys removed from PostgreSQL");
-    Check(await db.GeneratedPosts.CountAsync() == 3, "Exactly three explicit content versions persisted");
-    foreach (var version in await db.GeneratedPosts.AsNoTracking().ToListAsync())
+    Check(await db.GeneratedPosts.CountAsync() == 7, "Seven content versions persisted across both platforms");
+    foreach (var version in await db.GeneratedPosts.AsNoTracking().Where(x => x.Source == ContentSource.Ai).ToListAsync())
     {
-        Check(version.SystemPromptConfigId.HasValue && version.SystemPromptId == null && version.ParentGeneratedPostId == null, "AI version uses Config reference with no legacy or parent prompt");
+        Check(version.SystemPromptConfigId.HasValue && version.SystemPromptId == null, "AI version uses Config reference with no legacy prompt");
         Check(aiHandler.Prompts.Contains(version.PromptSnapshot!), "Snapshot exactly matches sent system prompt");
         Check(version.AiRequestId != null && version.AiModel == "chatgpt/gpt-5.6" && version.DurationMs.HasValue, "Provider metadata persisted");
     }
+    var manualStored = await db.GeneratedPosts.SingleAsync(x => x.Source == ContentSource.Manual);
+    Check(manualStored.Id == manualId && manualStored.Content == "Manual saved twice" && manualStored.SystemPromptConfigId == null && manualStored.PromptSnapshot == null && manualStored.AiModel == null, "Manual row remains preserved without AI metadata");
+    Check(await db.GeneratedPosts.CountAsync(x => x.ParentGeneratedPostId == manualId) == 1, "Generated child pins manual revision");
     Check(await db.GeneratedPostImages.CountAsync(x => x.BasePostId == id) == 9, "Nine image attempts retained after soft delete");
     Check(await db.GeneratedPostImages.CountAsync(x => x.BasePostId == id && x.Status == ImageStatus.Failed && x.ImageUrl == null && x.ErrorMessage != null) == 4, "Four failed image attempts retain errors without URL");
     Check(await db.PlatformPostImages.CountAsync(x => x.SelectedGeneratedPostImageId != null) == 6, "Six platform slots retain selected images");
@@ -268,6 +331,7 @@ sealed class ProbeAiHandler : HttpMessageHandler
     public bool FailAllImages { get; set; }
     public int FailOnCall { get; set; }
     public List<string> Prompts { get; } = new();
+    public List<JsonElement> ContentInputs { get; } = new();
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var call = Interlocked.Increment(ref calls);
@@ -282,6 +346,8 @@ sealed class ProbeAiHandler : HttpMessageHandler
                 content = $"![generated image](https://example.com/generated-{imageCall}.png)" } } } }) };
         }
         Prompts.Add(messages[0].GetProperty("content")[0].GetProperty("text").GetString()!);
+        using var contentInput = JsonDocument.Parse(messages[1].GetProperty("content")[0].GetProperty("text").GetString()!);
+        ContentInputs.Add(contentInput.RootElement.Clone());
         if (call == FailOnCall) return new(HttpStatusCode.InternalServerError);
         return new(HttpStatusCode.OK) { Content = JsonContent.Create(new { id = "chatcmpl-probe-" + Calls,
             model = "chatgpt/gpt-5.6", choices = new[] { new { index = 0, finish_reason = "stop", message = new { role = "assistant",

@@ -118,3 +118,9 @@ Evidence: [proxy-image-9x16-smoke.json](Verification/results/proxy-image-9x16-sm
 ## Điều phối theo mode
 
 PostGeneration hỗ trợ mode content/images/all (mặc định all). Content chỉ gọi GenerateContent, images chỉ gọi GenerateImage; all sinh text trước rồi ảnh. Images vẫn đọc isActive từ Config nền tảng nhưng không cần nội dung prompt, không ghi version hoặc đổi official nội dung. Không đổi contract proxy. Mọi kiểm thử thay đổi mode dùng fake HttpMessageHandler, không gọi provider thật.
+
+## Sinh lại nội dung mốc 5
+
+RegeneratePlatformContent dùng lại GenerateContent qua cùng proxy: system message là prompt Config hiện tại, source là bài gốc, previousContent là Title/Content/Hashtag của sourceGenerationId được chọn (hoặc null khi sinh từ bài gốc), feedback chỉ của request hiện tại. Không gửi ảnh hoặc cộng dồn feedback. Mọi version Ai thành công lưu ParentGeneratedPostId/FeedbackInput cùng snapshot prompt/provider metadata, rồi tự chốt trong cùng transaction.
+
+Khóa bài gốc khi snapshot/claim, nhả trước HTTP; các thao tác sửa/chốt/sinh cùng nền tảng trả 409 khi Generating. Regenerate lỗi/cancel không ghi version mới, giữ official cũ và giải phóng claim thành Failed. Sửa tay, lịch sử và chọn official không gọi AI/Config. Mốc 5 chỉ kiểm proxy bằng fake HttpMessageHandler.

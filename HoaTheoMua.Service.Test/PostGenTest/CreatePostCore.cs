@@ -24,13 +24,30 @@ public class CreatePostCore
         Assert.Empty(db.ClientHistories);
     }
     [Theory]
-    [InlineData(0)]
     [InlineData(21)]
     public void RejectsImageCountOutsideLimits(int count)
     {
         var input = Input();
         input.Images = Enumerable.Range(1, count).Select(x => new Request.ImageInput { ImageUrl = "https://example.com/a.jpg", SortOrder = x }).ToList();
         Assert.False(new CreatePostCoreValidator().Validate(input).IsValid);
+    }
+    [Theory]
+    [InlineData("{\"title\":\"Hoa\",\"content\":\"Nội dung\"}")]
+    [InlineData("{\"title\":\"Hoa\",\"content\":\"Nội dung\",\"images\":null}")]
+    [InlineData("{\"title\":\"Hoa\",\"content\":\"Nội dung\",\"images\":[]}")]
+    public async Task CreatesWithoutImagesAndCanReadBack(string json)
+    {
+        var input = System.Text.Json.JsonSerializer.Deserialize<Request.CreatePostCoreRequest>(json,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
+        Assert.True(new CreatePostCoreValidator().Validate(input).IsValid);
+        await using var db = CreateDb(); var service = CreateService(db);
+        var result = await service.CreatePostCore(input);
+        Assert.Equal(input.Content, result.Content);
+        Assert.Empty(result.BaseImages);
+        Assert.Empty(result.Platforms);
+        Assert.Empty(await db.BasePostImages.ToListAsync());
+        Assert.Empty((await service.GetPostCoreDetail(result.BasePostId)).BaseImages);
+        Assert.Equal(result.BasePostId, (await db.BasePosts.SingleAsync()).Id);
     }
     [Theory]
     [InlineData("file:///tmp/image.jpg")]

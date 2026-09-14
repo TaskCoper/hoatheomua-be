@@ -1,0 +1,451 @@
+{
+  "skill": "database-flow-validator",
+  "status": "PASS",
+  "date": "2026-09-14",
+  "flow": "Generate modes content/images/all; image-only preserves official content and content-only preserves selected images",
+  "environment": "Local disposable PostgreSQL 16; fake AI HttpMessageHandler and cache revalidation; real controller/service/JWT/validation/rate limiter",
+  "assertions": {
+    "release_build": "PASS",
+    "postgen_tests": {
+      "passed": 86,
+      "failed": 0,
+      "skipped": 0,
+      "postgres_integration_tests": 5
+    },
+    "http_requests": 58,
+    "http_checks_passed": 124,
+    "images_mode_content_calls": 0,
+    "images_mode_keeps_content_version_id_body_and_selected_at": true,
+    "images_mode_can_run_before_content": true,
+    "content_mode_keeps_images_slots_order_and_timestamps": true,
+    "all_or_omitted_keeps_legacy_behavior": true,
+    "invalid_modes_or_conflicting_selection_return_422_before_claim": true,
+    "platform_activation_still_checked_for_images": true,
+    "images_mode_does_not_require_content_prompt_body": true,
+    "postgres_rollback_for_all_and_images_modes": true,
+    "live_ai_calls": 0
+  },
+  "queries": [
+    "Temporary integration database prefixes remaining: 0",
+    "GeneratedPost count after explicit content/images scenarios: 3",
+    "GeneratedPostImage attempts after image scenarios: 9"
+  ],
+  "correlation_ids": [
+    {
+      "name": "AnonymousDenied",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 401,
+      "trace_id": "0HNOI7NNR6S01:00000001"
+    },
+    {
+      "name": "CustomerDenied",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "CreateWithoutImages",
+      "method": "POST",
+      "url": "/api/v1/posts",
+      "status": 422,
+      "trace_id": "0HNOI7NNR6S01:00000003"
+    },
+    {
+      "name": "CreatePostCore",
+      "method": "POST",
+      "url": "/api/v1/posts",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000004"
+    },
+    {
+      "name": "GetPostCoreList",
+      "method": "GET",
+      "url": "/api/v1/posts?pageSize=200&keyword=hoa",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000005"
+    },
+    {
+      "name": "GetPostCoreDetail",
+      "method": "GET",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000006"
+    },
+    {
+      "name": "FilterByPlatform",
+      "method": "GET",
+      "url": "/api/v1/posts?platform=facebook",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000007"
+    },
+    {
+      "name": "CrossUserRead",
+      "method": "GET",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000008"
+    },
+    {
+      "name": "CrossUserList",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000009"
+    },
+    {
+      "name": "CrossUserUpdate",
+      "method": "PUT",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000000A"
+    },
+    {
+      "name": "UpdatePostCore",
+      "method": "PUT",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000000B"
+    },
+    {
+      "name": "GenerateCustomerDenied",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "GenerateDuplicatePlatforms",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 422,
+      "trace_id": "0HNOI7NNR6S01:0000000D"
+    },
+    {
+      "name": "GenerateConflictingImageSelection",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 422,
+      "trace_id": "0HNOI7NNR6S01:0000000E"
+    },
+    {
+      "name": "GenerateTwoPlatforms",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000000F"
+    },
+    {
+      "name": "GenerateSecondPlatformFailure",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 502,
+      "trace_id": "0HNOI7NNR6S01:00000010"
+    },
+    {
+      "name": "FailedGenerationPreservesOfficial",
+      "method": "GET",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000011"
+    },
+    {
+      "name": "RemovedPresetGet",
+      "method": "GET",
+      "url": "/api/v1/post-gen/presets",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "RemovedPresetPut",
+      "method": "PUT",
+      "url": "/api/v1/post-gen/presets",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "RemovedStandardGet",
+      "method": "GET",
+      "url": "/api/v1/platform-standards",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "RemovedStandardPut",
+      "method": "PUT",
+      "url": "/api/v1/platform-standards/d7fa2244-0770-4368-b3a5-1a6a8628d3f0",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "CreateRatioConfig",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000016"
+    },
+    {
+      "name": "RemovedPlatformConfigKeys",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.platform.",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000017"
+    },
+    {
+      "name": "RatioPresetUnchanged",
+      "method": "GET",
+      "url": "/api/v1/configs/6ade3fa2-6911-4a20-a3b1-ac7958479845",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000018"
+    },
+    {
+      "name": "GenerateSharedImagesPartial",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000019"
+    },
+    {
+      "name": "ReadSelectedImages",
+      "method": "GET",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000001A"
+    },
+    {
+      "name": "GenerateImagesAgain",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000001B"
+    },
+    {
+      "name": "RejectForeignImage",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 400,
+      "trace_id": "0HNOI7NNR6S01:0000001C"
+    },
+    {
+      "name": "RejectImagePairLimit",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 422,
+      "trace_id": "0HNOI7NNR6S01:0000001D"
+    },
+    {
+      "name": "GenerateAllImagesFailed",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000001E"
+    },
+    {
+      "name": "RejectInvalidGenerationMode",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 422,
+      "trace_id": "0HNOI7NNR6S01:0000001F"
+    },
+    {
+      "name": "RejectImageModeWithoutSelection",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 422,
+      "trace_id": "0HNOI7NNR6S01:00000020"
+    },
+    {
+      "name": "RejectContentModeWithImages",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 422,
+      "trace_id": "0HNOI7NNR6S01:00000021"
+    },
+    {
+      "name": "GenerateContentAfterImages",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000022"
+    },
+    {
+      "name": "AnonymousPromptReadDenied",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 401,
+      "trace_id": "0HNOI7NNR6S01:00000023"
+    },
+    {
+      "name": "StaffPromptReadDenied",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "ReadPlatformPrompts",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000025"
+    },
+    {
+      "name": "StaffPromptUpdateDenied",
+      "method": "PUT",
+      "url": "/api/v1/configs/74e25814-f51b-4c91-94c4-561583829b9c",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "UpdateFacebookPrompt",
+      "method": "PUT",
+      "url": "/api/v1/configs/74e25814-f51b-4c91-94c4-561583829b9c",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000027"
+    },
+    {
+      "name": "SecondAdminReadsPrompt",
+      "method": "GET",
+      "url": "/api/v1/configs/74e25814-f51b-4c91-94c4-561583829b9c",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000028"
+    },
+    {
+      "name": "DisableFacebookViaPrompt",
+      "method": "PUT",
+      "url": "/api/v1/configs/74e25814-f51b-4c91-94c4-561583829b9c",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000029"
+    },
+    {
+      "name": "GenerateDisabledPrompt",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 400,
+      "trace_id": "0HNOI7NNR6S01:0000002A"
+    },
+    {
+      "name": "EnableFacebookViaPrompt",
+      "method": "PUT",
+      "url": "/api/v1/configs/74e25814-f51b-4c91-94c4-561583829b9c",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000002B"
+    },
+    {
+      "name": "OtherSystemPromptsUnchanged",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000002C"
+    },
+    {
+      "name": "RejectDuplicatePrompt",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 400,
+      "trace_id": "0HNOI7NNR6S01:0000002D"
+    },
+    {
+      "name": "SystemPromptsPrivate",
+      "method": "GET",
+      "url": "/api/v1/configs/public?groupName=postgen&key=postgen.system-prompt.",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000002E"
+    },
+    {
+      "name": "DeleteFacebookPrompt",
+      "method": "DELETE",
+      "url": "/api/v1/configs/74e25814-f51b-4c91-94c4-561583829b9c",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:0000002F"
+    },
+    {
+      "name": "DeletedPromptExcluded",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.facebook",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000030"
+    },
+    {
+      "name": "GenerateMissingPromptNoFallback",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 400,
+      "trace_id": "0HNOI7NNR6S01:00000031"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt0",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 400,
+      "trace_id": "0HNOI7NNR6S01:00000032"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt1",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 400,
+      "trace_id": "0HNOI7NNR6S01:00000033"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt2",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 400,
+      "trace_id": "0HNOI7NNR6S01:00000034"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt3",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 400,
+      "trace_id": "0HNOI7NNR6S01:00000035"
+    },
+    {
+      "name": "GenerateHeavyRateLimited",
+      "method": "POST",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409/generate",
+      "status": 429,
+      "trace_id": null
+    },
+    {
+      "name": "RecreateFacebookPrompt",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000037"
+    },
+    {
+      "name": "DeletePostCore",
+      "method": "DELETE",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000038"
+    },
+    {
+      "name": "DeletedPostList",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 200,
+      "trace_id": "0HNOI7NNR6S01:00000039"
+    },
+    {
+      "name": "DeletedPostDetail",
+      "method": "GET",
+      "url": "/api/v1/posts/fa16abf6-56f3-4e2d-b070-4944ce90d409",
+      "status": 404,
+      "trace_id": "0HNOI7NNR6S01:0000003A"
+    }
+  ],
+  "cleanup": {
+    "temporary_integration_databases_remaining": 0,
+    "container": "htm-postgen-mode-test-20260914",
+    "container_and_volume_removed": true
+  },
+  "failures": [],
+  "limits": [
+    "No live AI requests in this change, respecting provider rate limits.",
+    "No new migration, commit or deployment. Image dimensions remain requested targets; previous live smoke documented actual dimensions separately."
+  ]
+}

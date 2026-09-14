@@ -101,10 +101,7 @@ public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserServic
     {
         await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
         // Same lock as PostCore update/delete; release it before any outbound HTTP call.
-        var post = db.Database.IsRelational()
-            ? (await db.BasePosts.FromSqlInterpolated($"SELECT * FROM \"BasePost\" WHERE \"Id\" = {id} AND NOT \"IsDeleted\" FOR UPDATE").ToListAsync(ct)).SingleOrDefault()
-            : await db.BasePosts.SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
-        if (post == null) throw new NotFoundException("Post not found");
+        var post = await LockBasePost(id, ct);
         var imagePlan = request.Mode == "content" ? new List<ImageSelection>() : await ReadImagePlan(id, request, ct);
         var types = targets.Select(x => x.Platform).ToArray();
         var platforms = await db.PlatformPosts.Where(x => x.BasePostId == id && !x.IsDeleted && types.Contains(x.Platform)).ToListAsync(ct);
@@ -172,5 +169,13 @@ public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserServic
         {
             logger.LogError("Could not release PostGen generation state for platform posts {PlatformIds}", ids);
         }
+    }
+    private async Task<BasePost> LockBasePost(Guid id, CancellationToken ct)
+    {
+        var post = db.Database.IsRelational()
+            ? (await db.BasePosts.FromSqlInterpolated($"SELECT * FROM \"BasePost\" WHERE \"Id\" = {id} AND NOT \"IsDeleted\" FOR UPDATE").ToListAsync(ct)).SingleOrDefault()
+            : await db.BasePosts.SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
+        if (post == null) throw new NotFoundException("Post not found");
+        return post;
     }
 }

@@ -1,6 +1,6 @@
 # Bàn giao FE — PostGen mốc 4: sinh ảnh
 
-Cập nhật 2026-09-14. Mốc 4 và mode content/images/all đã triển khai, kiểm thử và được đưa vào nhánh `feature/post-gen`; chưa deploy. Dùng cùng API và quyền Staff/Admin của mốc 3; không thêm route. Mốc 5–7 (sinh lại theo feedback, lịch sử/chọn bản và payload official riêng) chưa triển khai.
+Cập nhật 2026-09-14. Mốc 4 và mode content/images/all đã triển khai, kiểm thử và được đưa vào nhánh `feature/post-gen`; chưa deploy. Dùng cùng API và quyền Staff/Admin của mốc 3; không thêm route. Mốc 5 (version nội dung) đã triển khai; xem [bàn giao mốc 5](FE-API-Handoff-PostGen-Milestone5.md). Mốc 6–7 (version/chốt ảnh và payload official riêng) chưa triển khai.
 
 ## Chọn phần cần sinh bằng `mode`
 
@@ -111,4 +111,4 @@ Tổng ngân sách AI 180 giây, tối đa 3 lời gọi ảnh đồng thời; t
 
 Chỉ dẫn ảnh chung nằm ở Config `postgen.image_instruction`, group `postgen`, kind `Setting`, private; `value` là **JSON string**, không phải object `{content}`. Ba prompt nền tảng vẫn chỉ dùng cho nội dung. Admin quản trị bằng API Config chung.
 
-Các luồng cần kiểm: chọn cùng ảnh/tỷ lệ trên hai nền tảng; kết hợp preset và chọn tay; ảnh lỗi một phần; gọi lại giữ ảnh đã chốt; vượt 12 cặp; reload vẫn có nội dung, URL ảnh và trạng thái đúng. Không hiển thị nút chọn lịch sử/sinh lại theo feedback/đăng bài như chức năng đã có.
+Các luồng cần kiểm: chọn cùng ảnh/tỷ lệ trên hai nền tảng; kết hợp preset và chọn tay; ảnh lỗi một phần; gọi lại giữ ảnh đã chốt; vượt 12 cặp; reload vẫn có nội dung, URL ảnh và trạng thái đúng. Lịch sử/sinh lại theo feedback/chọn version nội dung đã có ở mốc 5; lịch sử/chọn ảnh và đăng bài chưa triển khai.

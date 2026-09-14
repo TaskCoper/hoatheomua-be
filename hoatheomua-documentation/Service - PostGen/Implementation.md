@@ -1,4 +1,4 @@
-# PostGen — Hiện thực mốc 0–4
+# PostGen — Hiện thực mốc 0–5
 
 Ngày thực hiện ban đầu: 2026-09-12; cập nhật 2026-09-14. Mốc 0–2 đã commit/push trên feature/post-gen. Config prompt/schema, AI client, generate của mốc 3 và contract response chỉ trả nội dung/ảnh chốt được đưa vào nhánh feature/post-gen; chưa deploy.
 
@@ -15,6 +15,7 @@ Ngày thực hiện ban đầu: 2026-09-12; cập nhật 2026-09-14. Mốc 0–2
 | 2 — Cấu hình | Prompt/bật tắt nền tảng và preset quản lý bằng API Config chung với quyền Admin |
 | 3 — Sinh nội dung | Config prompt, AiService proxy, POST generate, snapshot/version/official và rollback khi lỗi |
 | 4 — Sinh ảnh | GenerateImage, preset/chọn tay, dedup, 3 call song song, partial failure, giữ ảnh chốt và rollback |
+| 5 — Version nội dung | Regenerate theo source/feedback, Manual coalescing, history riêng và chọn official; giữ ảnh |
 
 Feature folder: `HoaTheoMua.Service/PostCore/` và `HoaTheoMua.Service/PostGen/` (chỉ còn ánh xạ tỷ lệ ảnh); PostGenController/service/DI chuẩn nền tảng đã bỏ. Quy tắc `HttpUrl()` dùng chung tại PostCore, CardTemplate, Mockup.
 
@@ -30,15 +31,30 @@ Các điều chỉnh triển khai đáng chú ý:
 - Post Core PUT thay toàn bộ tập ảnh. Giữ ID/URL ảnh cũ; ảnh mới tạo ID mới, ảnh bỏ đi soft delete. Đảo thứ tự thực hiện trong transaction với khóa dòng bài gốc. Chi tiết contract tại [UpdatePostCore.md](UpdatePostCore.md).
 - GetPostCoreDetail chỉ SELECT cột cần dùng, đọc không tracking, ghép lịch sử bằng lookup; bỏ query version/slot khi chưa có platform. Chi tiết và kiểm chứng SQL tại [GetPostCoreDetail.md](GetPostCoreDetail.md).
 
-## Kiểm chứng hiện tại — mode content/images/all (2026-09-14)
+## Kiểm chứng hiện tại — tạo bài không bắt buộc ảnh (2026-09-14)
+
+- POST cho phép bỏ images/null/[]; trả baseImages rỗng và lưu bài bình thường. PUT nhận 0–20 ảnh nhưng vẫn yêu cầu mảng đầy đủ để tránh vô tình bỏ ảnh khi quên field. Có thể sửa nội dung trước, thêm ảnh sau hoặc gửi [] để soft delete toàn bộ ảnh nguồn.
+- **27 test tạo/sửa bài và sinh nội dung PASS, 0 fail/skip**. Kiểm đủ ba dạng request không ảnh, đọc lại, sửa bản chưa có ảnh, thêm ảnh sau, bỏ ảnh nguồn, validation và sinh content bằng AI mock khi bài không có ảnh.
+- Release build API/probe PASS (0 lỗi). HTTP probe đã đổi kịch bản không ảnh từ 422 sang 200 và thêm bước bổ sung ảnh sau; chưa chạy lại HTTP/PostgreSQL trong lần sửa này. Kết quả 102 test và 79 HTTP request bên dưới thuộc lần kiểm chứng mốc 5 trước thay đổi này.
+- Không cần migration; không gọi AI thật; chưa deploy. Contract FE cập nhật tại [Post Core](../FE-API-Handoff-PostCore.md).
+
+## Kiểm chứng bước trước — mốc 5 version nội dung (2026-09-14)
+
+- Bốn API PostGeneration đã triển khai trên nhánh `feature/post-gen`; chưa deploy, không cần migration. Regenerate dùng snapshot source/feedback/prompt rồi tự chốt version mới. Manual chỉ coalesce khi đang official/mới nhất/chưa có child, chọn lại bản cũ rồi sửa tạo nhánh mới. GET history riêng, detail vẫn chỉ trả bản chốt. Không thay đổi ảnh, publish hoặc version ảnh mốc 6.
+- Release build solution và probe PASS. **102 test PostGen PASS, 0 fail/skip**, gồm **6 PostgreSQL integration test**. **79 HTTP request / 168 kiểm tra PASS**. Kiểm chuỗi Ai→Ai→Manual→Ai, feedback riêng từng lần, branch từ v1, cùng một Manual ID khi lưu liên tiếp, chọn bản cũ, auth/validation/foreign source, soft delete và AI lỗi không thêm version.
+- PostgreSQL kiểm 2 manual save đồng thời chỉ tạo một version Manual, chặn sửa nguồn/chốt/generate khi regeneration đang chạy, rollback khi ghi official lỗi (regenerate, tạo Manual, ghi đè Manual, chọn version cũ). Query kiểm parent/official khác nền tảng đều bằng 0. HTTP giữ 6 version Ai + 1 Manual, các ảnh/slot giữ nguyên.
+- AI dùng mock, **0 lời gọi proxy thật**. Database integration đã tự dọn; container/volume tạm được dọn sau kiểm tra. History chưa phân trang; chưa có ETag phát hiện form cũ, các lần lưu được khóa tuần tự.
+- Báo cáo: [database-flow-validator.json](Verification/results/database-flow-validator.json). [HTTP evidence](Verification/results/content-version-api-evidence.json). [Bàn giao FE mốc 5](../FE-API-Handoff-PostGen-Milestone5.md).
+
+## Kiểm chứng bước trước — mode content/images/all (2026-09-14)
 
 - Thêm mode mặc định all để tương thích. Content chỉ sinh nội dung và giữ ảnh/slot; images chỉ sinh ảnh, giữ GeneratedPost/OfficialGenerationId/SelectedAt. Images chạy được khi chưa có nội dung và chỉ cần isActive từ Config nền tảng; không yêu cầu prompt body. Content không nhận lựa chọn ảnh, images yêu cầu lựa chọn mỗi nền tảng; mode null/sai trả 422.
 - Build solution/probe PASS. **86 test PostGen PASS (0 fail/skip), gồm 5 PostgreSQL integration**, **58 HTTP request / 124 kiểm tra PASS**. PostgreSQL rollback kiểm cả all và images; HTTP kiểm sinh nội dung trước rồi sinh ảnh không tăng version nội dung, sau đó sinh nội dung riêng giữ ảnh chốt.
-- Database integration và container/volume tạm đã dọn. Toàn bộ AI dùng mock; **0 call proxy thật**. Không thêm migration. Thay đổi mốc 4 và mode được đưa vào nhánh `feature/post-gen`, chưa deploy. Báo cáo [database-flow-validator.json](Verification/results/database-flow-validator.json); hướng dẫn [FE mốc 4](../FE-API-Handoff-PostGen-Milestone4.md).
+- Database integration và container/volume tạm đã dọn. Toàn bộ AI dùng mock; **0 call proxy thật**. Không thêm migration. Thay đổi mốc 4 và mode được đưa vào nhánh `feature/post-gen`, chưa deploy. Báo cáo [generation-mode-flow-20260914.json](Verification/results/generation-mode-flow-20260914.json); hướng dẫn [FE mốc 4](../FE-API-Handoff-PostGen-Milestone4.md).
 
 ## Kiểm chứng bước trước — mốc 4 sinh ảnh (2026-09-14)
 
-- Đã triển khai local, chưa commit/deploy; không thêm migration. Chỉ dẫn ảnh chung từ Config `postgen.image_instruction`, preset từ `postgen.ratio-preset`. HTTP generate hỗ trợ chọn ảnh/tỷ lệ, tối đa 12 cặp sau gom trùng, tối đa 3 call ảnh đồng thời, ngân sách AI 180 giây + tối đa 10 giây lưu kết quả. Giữ ảnh đã chốt, tự điền ô còn trống.
+- Đã triển khai trên nhánh `feature/post-gen`, chưa deploy; không thêm migration. Chỉ dẫn ảnh chung từ Config `postgen.image_instruction`, preset từ `postgen.ratio-preset`. HTTP generate hỗ trợ chọn ảnh/tỷ lệ, tối đa 12 cặp sau gom trùng, tối đa 3 call ảnh đồng thời, ngân sách AI 180 giây + tối đa 10 giây lưu kết quả. Giữ ảnh đã chốt, tự điền ô còn trống.
 - Release solution và probe build PASS. **76 test PostGen PASS, 0 FAIL, 0 SKIP**, gồm 5 PostgreSQL integration test. **54 HTTP request / 129 kiểm tra PASS**. HTTP kiểm dùng chung ID ảnh, preset, Partial rồi retry, giữ ảnh cũ, mọi ảnh lỗi, giới hạn và ảnh sai bài. PostgreSQL kiểm rollback cả nội dung/ảnh/slot khi cập nhật official lỗi.
 - HTTP probe dùng fake AI và cache revalidation; các tầng còn lại và PostgreSQL thật. Đã sửa JWT kiểm thử thêm NameIdentifier đúng NameClaimType của dự án để các danh tính có nhóm rate limit riêng. Không thay cơ chế auth/rate limit production.
 - 9 attempt ảnh (5 thành công, 4 lỗi), 6 slot có ảnh chốt; không có tham chiếu ảnh hỏng/sai nguồn/tỷ lệ. Lịch sử còn sau soft delete. Test database riêng đã tự dọn; container/volume probe được dọn sau kiểm tra.
@@ -139,7 +155,7 @@ Probe dùng `POSTGEN_TEST_CONNECTION_STRING`, tự tạo JWT kiểm thử, tạo
 
 ## Phần tiếp theo
 
-Mốc 4 đã hoàn thành local. Tiếp theo mốc 5: sinh lại nội dung theo nguồn/feedback, sửa tay, đọc lịch sử và chọn nội dung chốt. Mốc 6–7 bổ sung lịch sử/chọn ảnh và payload official. Publishing vẫn ngoài phạm vi; các trường tương ứng chỉ dành sẵn trong schema.
+Mốc 5 đã hoàn thành trên nhánh `feature/post-gen`. Tiếp theo mốc 6: sinh lại ảnh, đọc lịch sử, chọn/sắp xếp ảnh theo nền tảng. Mốc 7 bổ sung payload official. Publishing vẫn ngoài phạm vi; các trường tương ứng chỉ dành sẵn trong schema.
 
 Seed giới hạn nền tảng lấy từ kế hoạch; chưa được xác minh để dùng cho phase đăng bài. Migration dừng nếu BasePost/GeneratedPost cũ có dữ liệu ngoài giả định để không tự xóa nguồn ảnh cũ; cần backfill riêng trong trường hợp đó.
 
