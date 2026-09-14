@@ -1,15 +1,14 @@
 using HoaTheoMua.Repository;
+using FlowerReferenceEntity = HoaTheoMua.Repository.Entity.FlowerReference;
 using HoaTheoMua.Service.Exceptions;
-using HoaTheoMua.Service.Mockup;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using MockupEntity = HoaTheoMua.Repository.Entity.Mockup;
-using MockupService = HoaTheoMua.Service.Mockup.Service;
+using FlowerReferenceService = HoaTheoMua.Service.FlowerReference.Service;
 
-namespace HoaTheoMua.Service.Test.MockupTest;
+namespace HoaTheoMua.Service.Test.FlowerReferenceTest;
 
-public class ToggleMockupStatus
+public class ToggleFlowerReferenceStatus
 {
     [Theory]
     [InlineData(true, false)]
@@ -18,12 +17,12 @@ public class ToggleMockupStatus
     {
         await using var db = CreateDbContext();
         var mockup = Mockup(isActive: initialStatus);
-        await db.Mockups.AddAsync(mockup);
+        await db.FlowerReferences.AddAsync(mockup);
         await db.SaveChangesAsync();
         var before = DateTimeOffset.UtcNow;
 
-        var result = await CreateService(db).ToggleMockupStatus(mockup.Id);
-        var saved = await db.Mockups.SingleAsync(x => x.Id == mockup.Id);
+        var result = await CreateService(db).ToggleFlowerReferenceStatus(mockup.Id);
+        var saved = await db.FlowerReferences.SingleAsync(x => x.Id == mockup.Id);
 
         Assert.Equal(expectedStatus, result.IsActive);
         Assert.Equal(expectedStatus, saved.IsActive);
@@ -39,10 +38,10 @@ public class ToggleMockupStatus
         await using var db = CreateDbContext();
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
-            CreateService(db).ToggleMockupStatus(Guid.NewGuid()));
+            CreateService(db).ToggleFlowerReferenceStatus(Guid.NewGuid()));
 
-        Assert.Equal("Mockup không hợp lệ hoặc đã bị xóa.", exception.Message);
-        Assert.Empty(db.Mockups);
+        Assert.Equal("FlowerReference không hợp lệ hoặc đã bị xóa.", exception.Message);
+        Assert.Empty(db.FlowerReferences);
     }
 
     [Fact]
@@ -50,12 +49,12 @@ public class ToggleMockupStatus
     {
         await using var db = CreateDbContext();
         var mockup = Mockup(isActive: true, isDeleted: true);
-        await db.Mockups.AddAsync(mockup);
+        await db.FlowerReferences.AddAsync(mockup);
         await db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<NotFoundException>(() => CreateService(db).ToggleMockupStatus(mockup.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => CreateService(db).ToggleFlowerReferenceStatus(mockup.Id));
 
-        var saved = await db.Mockups.SingleAsync(x => x.Id == mockup.Id);
+        var saved = await db.FlowerReferences.SingleAsync(x => x.Id == mockup.Id);
         Assert.True(saved.IsActive);
         Assert.True(saved.IsDeleted);
         Assert.Null(saved.UpdatedAt);
@@ -65,16 +64,17 @@ public class ToggleMockupStatus
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);
 
-    private static MockupService CreateService(AppDbContext dbContext) =>
+    private static FlowerReferenceService CreateService(AppDbContext dbContext) =>
         new(dbContext, new HttpContextAccessor());
 
-    private static MockupEntity Mockup(bool isActive, bool isDeleted = false) => new()
+    private static FlowerReferenceEntity Mockup(bool isActive, bool isDeleted = false) => new()
     {
         Id = Guid.NewGuid(),
         Name = "Mockup Sinh Nhật 1",
         ImageUrl = "https://storage.example.com/mockups/test.jpg",
         IsActive = isActive,
         IsDeleted = isDeleted,
+        Type = HoaTheoMua.Repository.Enum.FlowerReferenceType.Flower,
         CreatedAt = new DateTimeOffset(2026, 8, 28, 12, 0, 0, TimeSpan.Zero)
     };
 }

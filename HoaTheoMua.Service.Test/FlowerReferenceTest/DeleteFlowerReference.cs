@@ -1,14 +1,14 @@
 using HoaTheoMua.Repository;
+using FlowerReferenceEntity = HoaTheoMua.Repository.Entity.FlowerReference;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using MockupEntity = HoaTheoMua.Repository.Entity.Mockup;
-using MockupService = HoaTheoMua.Service.Mockup.Service;
+using FlowerReferenceService = HoaTheoMua.Service.FlowerReference.Service;
 
-namespace HoaTheoMua.Service.Test.MockupTest;
+namespace HoaTheoMua.Service.Test.FlowerReferenceTest;
 
-public class DeleteMockup
+public class DeleteFlowerReference
 {
     [Theory]
     [InlineData(true)]
@@ -17,11 +17,11 @@ public class DeleteMockup
     {
         await using var db = CreateDbContext();
         var mockup = Mockup(isActive);
-        await db.Mockups.AddAsync(mockup);
+        await db.FlowerReferences.AddAsync(mockup);
         await db.SaveChangesAsync();
 
-        var result = await CreateService(db).DeleteMockup(mockup.Id);
-        var saved = await db.Mockups.SingleAsync(x => x.Id == mockup.Id);
+        var result = await CreateService(db).DeleteFlowerReference(mockup.Id);
+        var saved = await db.FlowerReferences.SingleAsync(x => x.Id == mockup.Id);
 
         Assert.Equal(mockup.Id, result.Id);
         Assert.Equal("Mockup Sinh Nhật 1", result.Name);
@@ -38,10 +38,10 @@ public class DeleteMockup
         await using var db = CreateDbContext();
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
-            CreateService(db).DeleteMockup(Guid.NewGuid()));
+            CreateService(db).DeleteFlowerReference(Guid.NewGuid()));
 
-        Assert.Equal("Mockup không tồn tại.", exception.Message);
-        Assert.Empty(db.Mockups);
+        Assert.Equal("FlowerReference không tồn tại.", exception.Message);
+        Assert.Empty(db.FlowerReferences);
     }
 
     [Fact]
@@ -49,13 +49,13 @@ public class DeleteMockup
     {
         await using var db = CreateDbContext();
         var mockup = Mockup(isActive: true, isDeleted: true);
-        await db.Mockups.AddAsync(mockup);
+        await db.FlowerReferences.AddAsync(mockup);
         await db.SaveChangesAsync();
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => CreateService(db).DeleteMockup(mockup.Id));
-        var saved = await db.Mockups.SingleAsync(x => x.Id == mockup.Id);
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => CreateService(db).DeleteFlowerReference(mockup.Id));
+        var saved = await db.FlowerReferences.SingleAsync(x => x.Id == mockup.Id);
 
-        Assert.Equal("Mockup đã bị xóa trước đó.", exception.Message);
+        Assert.Equal("FlowerReference không tồn tại.", exception.Message);
         Assert.True(saved.IsDeleted);
         Assert.True(saved.IsActive);
     }
@@ -64,16 +64,17 @@ public class DeleteMockup
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);
 
-    private static MockupService CreateService(AppDbContext dbContext) =>
+    private static FlowerReferenceService CreateService(AppDbContext dbContext) =>
         new(dbContext, new HttpContextAccessor());
 
-    private static MockupEntity Mockup(bool isActive, bool isDeleted = false) => new()
+    private static FlowerReferenceEntity Mockup(bool isActive, bool isDeleted = false) => new()
     {
         Id = Guid.NewGuid(),
         Name = "Mockup Sinh Nhật 1",
         ImageUrl = "https://storage.example.com/mockups/test.jpg",
         IsActive = isActive,
         IsDeleted = isDeleted,
+        Type = HoaTheoMua.Repository.Enum.FlowerReferenceType.Flower,
         CreatedAt = new DateTimeOffset(2026, 8, 28, 12, 0, 0, TimeSpan.Zero)
     };
 }
