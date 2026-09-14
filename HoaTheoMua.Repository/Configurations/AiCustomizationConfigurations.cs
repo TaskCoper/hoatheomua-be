@@ -14,7 +14,7 @@ public class SystemPromptConfiguration : IEntityTypeConfiguration<SystemPrompt>
         builder.Property(systemPrompt => systemPrompt.Id).HasColumnName("Id");
         builder.Property(systemPrompt => systemPrompt.Type)
             .HasColumnName("Type")
-            .HasColumnType("SystemPromptType")
+            .HasColumnType("\"SystemPromptType\"")
             .IsRequired();
         builder.Property(systemPrompt => systemPrompt.Content).HasColumnName("Content").HasColumnType("text").IsRequired();
         builder.HasIndex(systemPrompt => systemPrompt.Type).IsUnique();
@@ -30,7 +30,7 @@ public class PlatformStandardConfiguration : IEntityTypeConfiguration<PlatformSt
         builder.Property(platformStandard => platformStandard.Id).HasColumnName("Id");
         builder.Property(platformStandard => platformStandard.Platform)
             .HasColumnName("Platform")
-            .HasColumnType("PlatformType")
+            .HasColumnType("\"PlatformType\"")
             .IsRequired();
         builder.Property(platformStandard => platformStandard.Description).HasColumnName("Description").HasColumnType("text").IsRequired();
         builder.HasIndex(platformStandard => platformStandard.Platform);
@@ -146,10 +146,8 @@ public class GeneratedCardConfiguration : IEntityTypeConfiguration<GeneratedCard
             .IsRequired();
         builder.Property(generatedCard => generatedCard.FormType)
             .HasColumnName("FormType")
-            .HasColumnType("CardFormType")
+            .HasColumnType("\"CardFormType\"")
             .IsRequired();
-        builder.Property(generatedCard => generatedCard.SenderName).HasColumnName("SenderName").HasMaxLength(500).IsRequired();
-        builder.Property(generatedCard => generatedCard.ReceiverName).HasColumnName("ReceiverName").HasMaxLength(500).IsRequired();
         builder.Property(generatedCard => generatedCard.MessageContent).HasColumnName("MessageContent").HasColumnType("text").IsRequired();
         builder.Property(generatedCard => generatedCard.AttachedImageUrl).HasColumnName("AttachedImageUrl").HasMaxLength(2048);
         builder.Property(generatedCard => generatedCard.SizeName).HasColumnName("SizeName").HasMaxLength(100).IsRequired();
@@ -190,21 +188,25 @@ public class PostHistoryConfiguration : IEntityTypeConfiguration<PostHistory>
     }
 }
 
-public class MockupConfiguration : IEntityTypeConfiguration<Mockup>
+public class FlowerReferenceConfiguration : IEntityTypeConfiguration<FlowerReference>
 {
-    public void Configure(EntityTypeBuilder<Mockup> builder)
+    public void Configure(EntityTypeBuilder<FlowerReference> builder)
     {
-        builder.ToTable("Mockup");
-        builder.HasKey(mockup => mockup.Id);
-        builder.Property(mockup => mockup.Id).HasColumnName("Id");
-        builder.Property(mockup => mockup.Name).HasColumnName("Name").HasMaxLength(50).IsRequired();
-        builder.Property(mockup => mockup.Description).HasColumnName("Description").HasMaxLength(200);
-        builder.Property(mockup => mockup.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
-        builder.Property(mockup => mockup.IsActive).HasColumnName("IsActive").HasDefaultValue(true);
-        builder.Property(mockup => mockup.IsDeleted).HasColumnName("IsDeleted").HasDefaultValue(false);
-        builder.Property(mockup => mockup.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
-        builder.Property(mockup => mockup.UpdatedAt).HasColumnName("UpdatedAt");
-        builder.HasIndex(mockup => new { mockup.IsActive, mockup.CreatedAt })
+        builder.ToTable("FlowerReference");
+        builder.HasKey(flowerReference => flowerReference.Id);
+        builder.Property(flowerReference => flowerReference.Id).HasColumnName("Id");
+        builder.Property(flowerReference => flowerReference.Name).HasColumnName("Name").HasMaxLength(50).IsRequired();
+        builder.Property(flowerReference => flowerReference.Description).HasColumnName("Description").HasMaxLength(200);
+        builder.Property(flowerReference => flowerReference.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
+        builder.Property(flowerReference => flowerReference.Type)
+            .HasColumnName("Type")
+            .HasColumnType("\"FlowerReferenceType\"")
+            .IsRequired();
+        builder.Property(flowerReference => flowerReference.IsActive).HasColumnName("IsActive").HasDefaultValue(true);
+        builder.Property(flowerReference => flowerReference.IsDeleted).HasColumnName("IsDeleted").HasDefaultValue(false);
+        builder.Property(flowerReference => flowerReference.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
+        builder.Property(flowerReference => flowerReference.UpdatedAt).HasColumnName("UpdatedAt");
+        builder.HasIndex(flowerReference => new { flowerReference.IsActive, flowerReference.CreatedAt })
             .IsDescending(false, true)
             .HasFilter("\"IsDeleted\" = false");
     }
@@ -220,12 +222,12 @@ public class ClientHistoryConfiguration : IEntityTypeConfiguration<ClientHistory
         builder.Property(clientHistory => clientHistory.UserId).HasColumnName("UserId");
         builder.Property(clientHistory => clientHistory.Type)
             .HasColumnName("Type")
-            .HasColumnType("ClientHistoryType")
+            .HasColumnType("\"ClientHistoryType\"")
             .IsRequired();
         builder.Property(clientHistory => clientHistory.SystemForm).HasColumnName("SystemForm").HasColumnType("jsonb");
         builder.Property(clientHistory => clientHistory.Metadata).HasColumnName("Metadata").HasColumnType("jsonb").IsRequired();
         builder.Property(clientHistory => clientHistory.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");
-        builder.Property(clientHistory => clientHistory.RootId).HasColumnName("RootID").IsRequired();
+        builder.Property(clientHistory => clientHistory.RootId).HasColumnName("RootId").IsRequired();
         builder.Property(clientHistory => clientHistory.BaseId).HasColumnName("BaseId");
         builder.Property(clientHistory => clientHistory.OutputId).HasColumnName("OutputId");
 

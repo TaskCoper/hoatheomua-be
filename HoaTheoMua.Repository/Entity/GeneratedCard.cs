@@ -13,8 +13,6 @@ public class GeneratedCard
     public GeneratedCardType CardType { get; set; }
 
     public CardFormType FormType { get; set; }
-    public string SenderName { get; set; } = null!;
-    public string ReceiverName { get; set; } = null!;
     public string MessageContent { get; set; } = null!;
     public string? AttachedImageUrl { get; set; }
 

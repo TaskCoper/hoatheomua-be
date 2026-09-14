@@ -10,5 +10,7 @@ public class OrderDetailConfiguration : IEntityTypeConfiguration<OrderDetails>
     {
         builder.Property(x => x.Metadata)
             .HasColumnType("jsonb");
+        builder.Property(x => x.SnapshotCard)
+            .HasColumnType("jsonb");
     }
 }
