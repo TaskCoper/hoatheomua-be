@@ -18,12 +18,6 @@ namespace HoaTheoMua.Repository.Migrations
                 table: "ClientHistory",
                 newName: "RootId");
 
-            migrationBuilder.AddColumn<string>(
-                name: "SnapshotCard",
-                table: "OrderDetails",
-                type: "jsonb",
-                nullable: true);
-
             migrationBuilder.Sql("CREATE TYPE \"FlowerReferenceType\" AS ENUM ('flower', 'bundle');");
 
             migrationBuilder.DropPrimaryKey(name: "PK_Mockup", table: "Mockup");
@@ -64,9 +58,7 @@ namespace HoaTheoMua.Repository.Migrations
             migrationBuilder.AddPrimaryKey(name: "PK_Mockup", table: "Mockup", column: "Id");
 
             migrationBuilder.Sql("DROP TYPE \"FlowerReferenceType\";");
-
-            migrationBuilder.DropColumn(name: "SnapshotCard", table: "OrderDetails");
-
+            
             migrationBuilder.RenameColumn(
                 name: "RootId",
                 table: "ClientHistory",

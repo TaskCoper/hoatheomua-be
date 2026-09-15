@@ -1416,9 +1416,6 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("SnapshotCard")
-                        .HasColumnType("jsonb");
-
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
