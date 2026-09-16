@@ -21,5 +21,5 @@ public interface IService
     Task<string> UpdateLabelProductNhanhVn(List<Request.UpdateLabelProductNhanhVnRequest> requests);
     Task<Response.GetProductDetailByCustomerResponse> GetProductDetailByCustomer(Guid id);
     Task<List<Response.InventoryCheckError>?> CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request);
-    Task<string> UpdateDescriptionProduct(Guid id, Request.UpdateProductDescriptionRequest request);
+    Task<string> UpdateProduct(Guid id, Request.UpdateProductDescriptionRequest request);
 }

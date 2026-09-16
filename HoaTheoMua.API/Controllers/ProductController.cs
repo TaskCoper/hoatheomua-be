@@ -161,7 +161,7 @@ public class ProductController: ControllerBase
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] Request.UpdateProductDescriptionRequest request)
     {
-        var result = await _productService.UpdateDescriptionProduct(id, request);
+        var result = await _productService.UpdateProduct(id, request);
         JsonElement jsonData = JsonSerializer.SerializeToElement(new
         {
             entity = "product",

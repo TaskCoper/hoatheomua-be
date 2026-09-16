@@ -1975,7 +1975,7 @@ public class Service : IService
         return list.Count > 0 ? list : null;
     }
 
-    public async Task<string> UpdateDescriptionProduct(Guid id, Request.UpdateProductDescriptionRequest request)
+    public async Task<string> UpdateProduct(Guid id, Request.UpdateProductDescriptionRequest request)
     {
         if (request.Description?.Length > 20000)
         {
