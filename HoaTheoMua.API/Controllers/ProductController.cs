@@ -156,4 +156,18 @@ public class ProductController: ControllerBase
         var result = await _productService.CheckInventoryAvailability(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
+    
+    [HttpPut("/api/v1/products/{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] Request.UpdateProductRequestV2 request)
+    {
+        var result = await _productService.UpdateProductV2(id, request);
+        JsonElement jsonData = JsonSerializer.SerializeToElement(new
+        {
+            entity = "product",
+            id = new[] { result }
+        });
+        await _revalidateService.RevalidateApi(jsonData);
+        return Ok(ApiResponseFactory.Base("Update sản phẩm thành công", true, "", HttpContext.TraceIdentifier));
+    }
 }

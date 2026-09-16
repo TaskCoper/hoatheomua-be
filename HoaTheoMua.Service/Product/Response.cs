@@ -16,6 +16,7 @@ public class Response
         public string? ParentProductCode { get; set; }
         public string? ParentProductName { get; set; }
         public string? Barcode { get; set; }
+        public string? Description { get; set; }
         public string? ProductType { get; set; }
         public string? ProductCode { get; set; }
         public string? ProductName { get; set; }
