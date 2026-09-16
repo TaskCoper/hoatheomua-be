@@ -86,6 +86,7 @@ public class Product : BaseEntity<Guid>, IAuditableEntity
     public double? Position { get; set; }
     public bool IsPin { get; set; }
     public decimal? Factor { get; set; }
+    public string? Description { get; set; }
     public bool IsActive { get; set; }
 
     public ICollection<CategoryProductDetail> CategoryProductDetails { get; set; } = new List<CategoryProductDetail>();

@@ -13,6 +13,12 @@ public class Request
         [JsonPropertyName("paginator")]
         public ProductPaginator? Paginator { get; set; } = null;
     }
+    
+    public class  RequestUpdatePrivateDescription
+    {
+        public required Guid ProductId { get; set; } = Guid.Empty;
+        public string? Description { get; set; } = null;
+    }
 
     public class ProductFilters
     {
@@ -200,6 +206,11 @@ public class Request
     public class GetProductWithList
     {
         public List<Guid> ProductIds { get; set; }
+    }
+
+    public class UpdateProductDescriptionRequest
+    {
+        public string? Description { get; set; }
     }
     
     public class GetMaterialsRequest
