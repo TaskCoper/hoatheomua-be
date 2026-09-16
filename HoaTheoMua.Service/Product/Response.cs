@@ -119,6 +119,7 @@ public class Response
     public string? ProductType { get; set; }  
     public string? ProductCode { get; set; }  
     public string? ProductName { get; set; }  
+    public string? Description { get; set; }
     public string? OtherName { get; set; }  
     public string? Unit { get; set; }  
     public string? CoverImage { get; set; }  

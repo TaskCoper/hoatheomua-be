@@ -687,6 +687,7 @@ public class Service : IService
             ProductType = product.ProductType,
             ProductCode = product.ProductCode,
             ProductName = product.ProductName,
+            Description = product.Description,
             OtherName = product.OtherName,
             Unit = product.Unit,
             CoverImage = product.CoverImage,
