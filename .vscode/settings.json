@@ -1,0 +1,11 @@
+{
+  "csharp-dev-tools.entityFramework.migrationPreferences": {
+    "HoaTheoMua.sln": {
+      "startupProject": "HoaTheoMua.API\\HoaTheoMua.API.csproj",
+      "migrationsProject": "HoaTheoMua.Repository\\HoaTheoMua.Repository.csproj",
+      "dbContextClass": "AppDbContext",
+      "migrationsFolder": "Migrations",
+      "targetMigration": "changeMockupTable"
+    }
+  }
+}
