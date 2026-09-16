@@ -124,7 +124,6 @@ public class Request
 
     public class  UpdateProductRequestV2
     {
-        public required Guid ProductId { get; set; } = Guid.Empty;
         public string? Description { get; set; } = null;
     }
     public class UpdateProductRequest
