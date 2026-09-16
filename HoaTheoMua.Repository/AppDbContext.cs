@@ -38,7 +38,7 @@ public class AppDbContext : DbContext
     public virtual DbSet<GeneratedFlower> GeneratedFlowers { get; set; }
     public virtual DbSet<GeneratedCard> GeneratedCards { get; set; }
     public virtual DbSet<PostHistory> PostHistories { get; set; }
-    public virtual DbSet<Mockup> Mockups { get; set; }
+    public virtual DbSet<FlowerReference> FlowerReferences { get; set; }
     public virtual DbSet<ClientHistory> ClientHistories { get; set; }
 
     public virtual DbSet<OrderDetails> OrderDetails { get; set; }
@@ -60,6 +60,7 @@ public class AppDbContext : DbContext
         modelBuilder.HasPostgresEnum<PlatformType>(name: "PlatformType");
         modelBuilder.HasPostgresEnum<CardFormType>(name: "CardFormType");
         modelBuilder.HasPostgresEnum<ClientHistoryType>(name: "ClientHistoryType");
+        modelBuilder.HasPostgresEnum<FlowerReferenceType>(name: "FlowerReferenceType");
         modelBuilder.ApplyConfigurationsFromAssembly(AssemblyReference.Assembly);
 
         // MassTransit transactional outbox/inbox. All three are required: the webhook publishes
