@@ -24,7 +24,7 @@ public partial class Service
         if (request.Platforms!.Any(x => x.UsePreset))
         {
             var rows = await db.Configs.AsNoTracking().Where(x => x.Group == "postgen" && x.Key == "postgen.ratio-preset"
-                && x.Kind == "Setting" && !x.IsPublic && !x.IsDeleted).ToListAsync(ct);
+                && x.Kind != null && x.Kind.Trim().ToLower() == "setting" && !x.IsPublic && !x.IsDeleted).ToListAsync(ct);
             if (rows.Count != 1) throw new BadRequestException("Ratio preset is not configured");
             preset = rows[0].Value;
         }
@@ -51,7 +51,7 @@ public partial class Service
     private async Task<string> ReadImageInstruction(CancellationToken ct)
     {
         var rows = await db.Configs.AsNoTracking().Where(x => x.Group == "postgen" && x.Key == "postgen.image_instruction"
-            && x.Kind == "Setting" && !x.IsDeleted && !x.IsPublic).ToListAsync(ct);
+            && x.Kind != null && x.Kind.Trim().ToLower() == "setting" && !x.IsDeleted && !x.IsPublic).ToListAsync(ct);
         try
         {
             if (rows.Count != 1) throw new JsonException();
