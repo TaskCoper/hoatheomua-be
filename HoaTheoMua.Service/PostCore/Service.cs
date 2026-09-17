@@ -48,6 +48,7 @@ public class Service(AppDbContext db) : IService
                 BasePostId = x.Id, Title = x.Title, Content = x.Content, Hashtag = x.Hashtag,
                 CreatedAt = x.CreatedAt, UpdatedAt = x.UpdatedAt
             }).ToListAsync(cancellationToken);
+        await LoadPublishedChildren(items, cancellationToken);
         var response = ApiResponseFactory.BasePagination(items, page, size, count);
         response.Value.HasNextPage = (long)page * size < count;
         return response;
@@ -61,6 +62,7 @@ public class Service(AppDbContext db) : IService
                 BasePostId = x.Id, Title = x.Title, Content = x.Content, Hashtag = x.Hashtag,
                 CreatedAt = x.CreatedAt, UpdatedAt = x.UpdatedAt
             }).FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundException("Post not found");
+        await LoadPublishedChildren([result], cancellationToken);
         result.BaseImages = await db.BasePostImages.AsNoTracking().Where(x => x.BasePostId == id && !x.IsDeleted)
             .OrderBy(x => x.SortOrder).Select(x => new Response.BaseImage
             {
@@ -187,6 +189,31 @@ public class Service(AppDbContext db) : IService
         await db.SaveChangesAsync(cancellationToken);
         if (transaction != null) await transaction.CommitAsync(cancellationToken);
         return new Response.DeletedPost(id, true);
+    }
+
+    private async Task LoadPublishedChildren(IReadOnlyCollection<Response.PostCoreSummary> posts, CancellationToken ct)
+    {
+        if (posts.Count == 0) return;
+        var ids = posts.Select(x => x.BasePostId).ToArray();
+        // Load the page's publication history in one query. The immutable snapshot is what was actually posted.
+        var publications = await db.PostPublications.AsNoTracking()
+            .Where(x => ids.Contains(x.BasePostId) && x.Status == "Succeeded")
+            .OrderByDescending(x => x.CompletedAt).ThenBy(x => x.Id)
+            .Select(x => new { x.BasePostId, x.Id, x.PlatformPostId, x.PlatformAccountId, x.Status,
+                x.Snapshot, x.ExternalPostId, x.ExternalPostUrl, x.CompletedAt }).ToListAsync(ct);
+        var children = publications.ToLookup(x => x.BasePostId, x =>
+        {
+            var snapshot = PostPublishing.Store.Read<PostPublishing.PublicationSnapshot>(x.Snapshot);
+            return new Response.PublishedPost
+            {
+                PublicationId = x.Id, PlatformPostId = x.PlatformPostId, PlatformAccountId = x.PlatformAccountId,
+                Platform = snapshot.Platform.ToString().ToLowerInvariant(), Status = x.Status,
+                Title = snapshot.Title, Content = snapshot.Content, Hashtag = snapshot.Hashtag,
+                ImageUrls = snapshot.Images.OrderBy(image => image.Order).Select(image => image.Url).ToList(),
+                ExternalPostId = x.ExternalPostId, ExternalPostUrl = x.ExternalPostUrl, PublishedAt = x.CompletedAt
+            };
+        });
+        foreach (var post in posts) post.Children = children[post.BasePostId].ToList();
     }
 
     private async Task RequireNoPublication(Guid id, CancellationToken ct)
