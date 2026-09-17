@@ -14,13 +14,13 @@ public class Response
     }
     public class PublishedPost
     {
-        public Guid PublicationId { get; set; }
+        public Guid? PublicationId { get; set; }
         public Guid PlatformPostId { get; set; }
-        public Guid PlatformAccountId { get; set; }
+        public Guid? PlatformAccountId { get; set; }
         public string Platform { get; set; } = null!;
         public string Status { get; set; } = null!;
         public string? Title { get; set; }
-        public string Content { get; set; } = null!;
+        public string? Content { get; set; }
         public string? Hashtag { get; set; }
         public List<string> ImageUrls { get; set; } = new();
         public string? ExternalPostId { get; set; }

@@ -12,7 +12,7 @@ namespace HoaTheoMua.Service.Test.PostGenTest;
 public class GetPostCoreList
 {
     [Fact]
-    public async Task ChildrenContainOnlySuccessfulPublicationsWithPublishedSnapshot()
+    public async Task ChildrenIncludeAllPublicationStatesAndPreservePublishedSnapshot()
     {
         await using var db = CreateDb();
         var service = CreateService(db);
@@ -30,8 +30,10 @@ public class GetPostCoreList
         var items = result.Value.Items.Cast<Response.PostCoreSummary>().ToList();
         Assert.Empty(items.Single(x => x.BasePostId == unpublished.BasePostId).Children);
         var children = items.Single(x => x.BasePostId == post.BasePostId).Children;
-        Assert.Equal(new[] { instagram.Id, facebook.Id }, children.Select(x => x.PublicationId));
-        Assert.Equal(new[] { "instagram", "facebook" }, children.Select(x => x.Platform));
+        Assert.Equal(9, children.Count);
+        Assert.Equal(new Guid?[] { instagram.Id, facebook.Id }, children.Take(2).Select(x => x.PublicationId));
+        Assert.All(children.Skip(2), x => Assert.Null(x.PublishedAt));
+        Assert.Equal(new[] { "instagram", "facebook" }, children.Take(2).Select(x => x.Platform));
         var child = children[0];
         Assert.Equal(instagram.PlatformPostId, child.PlatformPostId);
         Assert.Equal(instagram.PlatformAccountId, child.PlatformAccountId);
@@ -45,6 +47,60 @@ public class GetPostCoreList
         Assert.Equal(instagram.CompletedAt, child.PublishedAt);
         Assert.Equal(children.Select(x => x.PublicationId),
             (await service.GetPostCoreDetail(post.BasePostId)).Children.Select(x => x.PublicationId));
+    }
+
+    [Theory]
+    [InlineData(PlatformPostStatus.Draft)]
+    [InlineData(PlatformPostStatus.Generating)]
+    [InlineData(PlatformPostStatus.Generated)]
+    [InlineData(PlatformPostStatus.Failed)]
+    [InlineData(PlatformPostStatus.Ready)]
+    public async Task UnpublishedPlatformUsesSelectedContentAndImages(PlatformPostStatus status)
+    {
+        await using var db = CreateDb(); var service = CreateService(db);
+        var post = await service.CreatePostCore(Input());
+        var platform = new PlatformPost { Id = Guid.NewGuid(), BasePostId = post.BasePostId,
+            Platform = PlatformType.Facebook, Status = status, OfficialGenerationId = Guid.NewGuid() };
+        db.PlatformPosts.Add(platform);
+        db.GeneratedPosts.Add(new() { Id = platform.OfficialGenerationId.Value, PlatformPostId = platform.Id,
+            Title = "Selected", Content = "Selected content", Hashtag = "#selected" });
+        db.GeneratedPosts.Add(new() { Id = Guid.NewGuid(), PlatformPostId = platform.Id,
+            Content = "Newer but not selected", CreatedAt = DateTimeOffset.UtcNow });
+        var sourceId = post.BaseImages[0].Id;
+        var image = new GeneratedPostImage { Id = Guid.NewGuid(), BasePostId = post.BasePostId,
+            SourceBasePostImageId = sourceId, SourceImageUrl = post.BaseImages[0].ImageUrl, RatioCode = AspectRatioType.Square1x1,
+            Status = ImageStatus.Succeeded, ImageUrl = "https://example.com/selected.jpg" };
+        db.GeneratedPostImages.Add(image);
+        db.PlatformPostImages.Add(new() { Id = Guid.NewGuid(), PlatformPostId = platform.Id,
+            SourceBasePostImageId = sourceId, RatioCode = image.RatioCode, SelectedGeneratedPostImageId = image.Id });
+        db.PlatformPosts.Add(new() { Id = Guid.NewGuid(), BasePostId = post.BasePostId, Platform = PlatformType.Zalo, IsDeleted = true });
+        await db.SaveChangesAsync();
+        var item = Assert.IsType<Response.PostCoreSummary>(Assert.Single((await service.GetPostCoreList(new())).Value.Items));
+        var child = Assert.Single(item.Children);
+        Assert.Equal(platform.Id, child.PlatformPostId); Assert.Equal(status.ToString(), child.Status);
+        Assert.Null(child.PublicationId); Assert.Null(child.PlatformAccountId); Assert.Null(child.PublishedAt);
+        Assert.Equal("Selected content", child.Content);
+        Assert.Equal(new[] { image.ImageUrl }, child.ImageUrls);
+        Assert.Equal(child.PlatformPostId, Assert.Single((await service.GetPostCoreDetail(post.BasePostId)).Children).PlatformPostId);
+    }
+
+    [Fact]
+    public async Task RetriesUseLatestPublicationAndDraftWithoutSelectionHasNullContent()
+    {
+        await using var db = CreateDb(); var service = CreateService(db);
+        var post = await service.CreatePostCore(Input());
+        var older = Publication(post.BasePostId, PlatformType.Facebook, "Failed", 1);
+        var latest = Publication(post.BasePostId, PlatformType.Facebook, "Queued", 2);
+        latest.PlatformPostId = older.PlatformPostId;
+        older.CreatedAt = DateTimeOffset.UtcNow.AddDays(-1); latest.CreatedAt = DateTimeOffset.UtcNow;
+        db.PostPublications.AddRange(older, latest);
+        db.PlatformPosts.Add(new() { Id = older.PlatformPostId, BasePostId = post.BasePostId,
+            Platform = PlatformType.Facebook, Status = PlatformPostStatus.Publishing });
+        await db.SaveChangesAsync();
+        var item = Assert.IsType<Response.PostCoreSummary>(Assert.Single((await service.GetPostCoreList(new())).Value.Items));
+        var child = Assert.Single(item.Children);
+        Assert.Equal(latest.Id, child.PublicationId); Assert.Equal("Queued", child.Status);
+        Assert.Null(child.PublishedAt); Assert.Null(child.Content); Assert.Empty(child.ImageUrls);
     }
 
     [Fact]

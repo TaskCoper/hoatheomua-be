@@ -15,7 +15,7 @@ using InsightsService = HoaTheoMua.Service.PostInsights.Service;
 
 namespace HoaTheoMua.Service.Test.PostPublishingTest;
 
-public class Insights
+public partial class Insights
 {
     private sealed class Handler : HttpMessageHandler
     {
