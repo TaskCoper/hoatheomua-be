@@ -31,6 +31,10 @@ public sealed class OAuthProvider(HttpClient http, IOptions<PlatformAccountOptio
         ? ["pages_show_list", "pages_read_engagement", "instagram_basic", "instagram_content_publish"]
         : ["pages_show_list", "pages_read_engagement", "pages_manage_posts"];
 
+    // Request analytics consent without making it mandatory for connecting/publishing.
+    public static string[] RequestedScopes(PlatformType platform) =>
+        [.. RequiredScopes(platform), platform == PlatformType.Instagram ? "instagram_manage_insights" : "read_insights"];
+
     public string AuthorizeUrl(PlatformType platform, string state, string verifier)
     {
         Options.RequireConfigured(platform);
@@ -48,7 +52,7 @@ public sealed class OAuthProvider(HttpClient http, IOptions<PlatformAccountOptio
         if (Options.Meta.ConfigId.Length > 0)
             parameters["config_id"] = Options.Meta.ConfigId;
         else
-            parameters["scope"] = string.Join(',', RequiredScopes(platform));
+            parameters["scope"] = string.Join(',', RequestedScopes(platform));
         return Query($"https://www.facebook.com/{Options.Meta.GraphApiVersion}/dialog/oauth", parameters);
     }
 
