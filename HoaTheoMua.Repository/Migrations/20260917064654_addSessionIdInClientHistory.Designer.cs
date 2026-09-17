@@ -14,8 +14,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HoaTheoMua.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260917062847_AddFieldInTableGeneratedFlower")]
-    partial class AddFieldInTableGeneratedFlower
+    [Migration("20260917064654_addSessionIdInClientHistory")]
+    partial class addSessionIdInClientHistory
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -512,6 +512,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("RootId");
 
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("SystemForm")
                         .HasColumnType("jsonb")
                         .HasColumnName("SystemForm");
@@ -819,9 +822,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
                         .HasColumnName("RawImage");
-
-                    b.Property<Guid?>("SessionId")
-                        .HasColumnType("uuid");
 
                     b.Property<decimal>("SizeBasePrice")
                         .HasPrecision(18, 2)

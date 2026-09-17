@@ -8,6 +8,7 @@ public class ClientHistory
     public Guid UserId { get; set; }
     public ClientHistoryType Type { get; set; }
     public string? SystemForm { get; set; }
+    public Guid? SessionId { get; set; }
     public string Metadata { get; set; } = null!;
     public Guid RootId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

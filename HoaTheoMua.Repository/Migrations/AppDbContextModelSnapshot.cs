@@ -509,6 +509,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("RootId");
 
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("SystemForm")
                         .HasColumnType("jsonb")
                         .HasColumnName("SystemForm");
@@ -816,9 +819,6 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
                         .HasColumnName("RawImage");
-
-                    b.Property<Guid?>("SessionId")
-                        .HasColumnType("uuid");
 
                     b.Property<decimal>("SizeBasePrice")
                         .HasPrecision(18, 2)

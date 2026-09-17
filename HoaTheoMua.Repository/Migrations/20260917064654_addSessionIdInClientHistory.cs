@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace HoaTheoMua.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class AddFieldInTableGeneratedFlower : Migration
+    public partial class addSessionIdInClientHistory : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -27,7 +27,7 @@ namespace HoaTheoMua.Repository.Migrations
 
             migrationBuilder.AddColumn<Guid>(
                 name: "SessionId",
-                table: "GeneratedCard",
+                table: "ClientHistory",
                 type: "uuid",
                 nullable: true);
         }
@@ -45,7 +45,7 @@ namespace HoaTheoMua.Repository.Migrations
 
             migrationBuilder.DropColumn(
                 name: "SessionId",
-                table: "GeneratedCard");
+                table: "ClientHistory");
         }
     }
 }
