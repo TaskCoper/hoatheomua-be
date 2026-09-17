@@ -17,8 +17,11 @@ public class FormPromptConfigs
         options = Array.Empty<object>(), required = false, inputType = "textarea", validations = Array.Empty<object>()
     });
 
-    [Fact]
-    public async Task AllPlatformsAndRegenerationUseFormValueVerbatimAndKeepSnapshots()
+    [Theory]
+    [InlineData("Setting")]
+    [InlineData("setting")]
+    [InlineData(" SETTING ")]
+    public async Task AllPlatformsAndRegenerationUseFormValueVerbatimAndKeepSnapshots(string kind)
     {
         await using var db = Db(); var (id, images) = await GenerateImages.Seed(db, 1);
         foreach (var name in new[] { "facebook", "instagram", "zalo" })
@@ -26,6 +29,8 @@ public class FormPromptConfigs
         const string instruction = "  Giữ nguyên hoa, mở rộng nền.\n";
         (await db.Configs.SingleAsync(x => x.Key == "postgen.image_instruction")).Value = Form(instruction);
         db.Configs.Add(new() { Id = Guid.NewGuid(), Group = "postgen", Key = "postgen.enabled", Kind = "Setting", Value = Form(true) });
+        foreach (var config in db.ChangeTracker.Entries<HoaTheoMua.Repository.Entity.Config>())
+            config.Entity.Kind = kind;
         await db.SaveChangesAsync();
         var prompts = new List<string>(); var imageCalls = 0;
         var handler = new AiContentClient.Handler(async (request, ct) =>

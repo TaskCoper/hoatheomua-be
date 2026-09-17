@@ -68,7 +68,8 @@ public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserServic
         {
             var platform = input.Platform!.Value;
             var name = platform.ToString().ToLowerInvariant();
-            var prompts = configs.Where(x => x.Key == "postgen.system-prompt." + name && x.Kind == "Setting" && !x.IsPublic).ToList();
+            var prompts = configs.Where(x => x.Key == "postgen.system-prompt." + name
+                && string.Equals(x.Kind?.Trim(), "Setting", StringComparison.OrdinalIgnoreCase) && !x.IsPublic).ToList();
             if (prompts.Count != 1) throw new BadRequestException($"System prompt for platform {name} is not configured");
             string prompt;
             try
