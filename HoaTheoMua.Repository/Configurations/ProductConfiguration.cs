@@ -20,6 +20,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.ParentProductId)
             .HasMaxLength(100);
+        
+        builder.Property(p => p.Description)
+            .HasMaxLength(20000);
 
         // Tra biến thể combo theo sản phẩm cha: !IsDeleted && ProductType == "Combo" && ParentProductId IN (...).
         builder.HasIndex(p => new { p.ParentProductId, p.ProductType })

@@ -687,6 +687,7 @@ public class Service : IService
             ProductType = product.ProductType,
             ProductCode = product.ProductCode,
             ProductName = product.ProductName,
+            Description = product.Description,
             OtherName = product.OtherName,
             Unit = product.Unit,
             CoverImage = product.CoverImage,
@@ -836,6 +837,7 @@ public class Service : IService
             ProductType = product.ProductType,
             ProductCode = product.ProductCode,
             ProductName = product.ProductName,
+            Description = product.Description,
             OtherName = product.OtherName,
             Unit = product.Unit,
             CoverImage = product.CoverImage,
@@ -1972,6 +1974,31 @@ public class Service : IService
         }
 
         return list.Count > 0 ? list : null;
+    }
+
+    public async Task<string> UpdateProductV2(Guid id, Request.UpdateProductRequestV2 request)
+    {
+        if (request.Description?.Length > 20000)
+        {
+            throw new BadRequestException("Description must not exceed 20000 characters.");
+        }
+
+        var product = await _dbContext.Products
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+
+        if (product == null)
+        {
+            throw new BadRequestException("Product does not exist.");
+        }
+
+        if (request.Description != null)
+        {
+            product.Description = request.Description;
+        }
+        
+        await _dbContext.SaveChangesAsync();
+
+        return product.Id.ToString();
     }
 
     public async Task<string> UpdateLabelProductNhanhVn(List<Request.UpdateLabelProductNhanhVnRequest> requests)

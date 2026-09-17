@@ -34,7 +34,7 @@ using PostCoreService = HoaTheoMua.Service.PostCore;
 using PostGenerationService = HoaTheoMua.Service.PostGeneration;
 using PlatformAccountService = HoaTheoMua.Service.PlatformAccount;
 using AiService = HoaTheoMua.Service.AiService;
-using MockupService = HoaTheoMua.Service.Mockup;
+using FlowerReferenceService = HoaTheoMua.Service.FlowerReference;
 using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 
 
@@ -62,6 +62,7 @@ dataSourceBuilder.MapEnum<SystemPromptType>("SystemPromptType");
 dataSourceBuilder.MapEnum<PlatformType>("PlatformType");
 dataSourceBuilder.MapEnum<CardFormType>("CardFormType");
 dataSourceBuilder.MapEnum<ClientHistoryType>("ClientHistoryType");
+dataSourceBuilder.MapEnum<FlowerReferenceType>("FlowerReferenceType");
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -116,7 +117,7 @@ builder.Services.AddScoped<ProductImportService.IService, ProductImportService.S
 builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
-builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
+builder.Services.AddScoped<FlowerReferenceService.IService, FlowerReferenceService.Service>();
 builder.Services.AddScoped<PostCoreService.IService, PostCoreService.Service>();
 builder.Services.AddScoped<PostGenerationService.IService, PostGenerationService.Service>();
 builder.Services.Configure<HoaTheoMua.Service.PostPublishing.PublishingOptions>(builder.Configuration.GetSection("PublishingOptions"));
