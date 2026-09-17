@@ -56,11 +56,11 @@ public partial class Service
         {
             if (rows.Count != 1) throw new JsonException();
             using var json = JsonDocument.Parse(rows[0].Value);
-            var instruction = json.RootElement.GetString()!;
+            var instruction = ConfigValues.Unwrap(json.RootElement).GetString()!;
             if (string.IsNullOrWhiteSpace(instruction)) throw new JsonException();
             return instruction;
         }
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
         { throw new BadRequestException("Image instruction is not configured"); }
     }
 

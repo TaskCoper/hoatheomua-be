@@ -12,6 +12,81 @@ namespace HoaTheoMua.Service.Test.PostGenTest;
 public class GetPostCoreList
 {
     [Fact]
+    public async Task ChildrenContainOnlySuccessfulPublicationsWithPublishedSnapshot()
+    {
+        await using var db = CreateDb();
+        var service = CreateService(db);
+        var post = await service.CreatePostCore(Input());
+        var unpublished = await service.CreatePostCore(Input());
+        var facebook = Publication(post.BasePostId, PlatformType.Facebook, "Succeeded", 1);
+        var instagram = Publication(post.BasePostId, PlatformType.Instagram, "Succeeded", 2);
+        db.PostPublications.AddRange(facebook, instagram);
+        foreach (var status in new[] { "Queued", "Scheduled", "Publishing", "Failed", "Cancelled", "NeedsReview", "Closed" })
+            db.PostPublications.Add(Publication(post.BasePostId, PlatformType.Facebook, status, 3));
+        await db.SaveChangesAsync();
+
+        var result = await service.GetPostCoreList(new());
+        Assert.Equal(2, result.Value.TotalCount);
+        var items = result.Value.Items.Cast<Response.PostCoreSummary>().ToList();
+        Assert.Empty(items.Single(x => x.BasePostId == unpublished.BasePostId).Children);
+        var children = items.Single(x => x.BasePostId == post.BasePostId).Children;
+        Assert.Equal(new[] { instagram.Id, facebook.Id }, children.Select(x => x.PublicationId));
+        Assert.Equal(new[] { "instagram", "facebook" }, children.Select(x => x.Platform));
+        var child = children[0];
+        Assert.Equal(instagram.PlatformPostId, child.PlatformPostId);
+        Assert.Equal(instagram.PlatformAccountId, child.PlatformAccountId);
+        Assert.Equal("Succeeded", child.Status);
+        Assert.Equal("Published title", child.Title);
+        Assert.Equal("Published content", child.Content);
+        Assert.Equal("#published", child.Hashtag);
+        Assert.Equal(new[] { "https://example.com/first.jpg", "https://example.com/second.jpg" }, child.ImageUrls);
+        Assert.Equal(instagram.ExternalPostId, child.ExternalPostId);
+        Assert.Equal(instagram.ExternalPostUrl, child.ExternalPostUrl);
+        Assert.Equal(instagram.CompletedAt, child.PublishedAt);
+        Assert.Equal(children.Select(x => x.PublicationId),
+            (await service.GetPostCoreDetail(post.BasePostId)).Children.Select(x => x.PublicationId));
+    }
+
+    [Fact]
+    public async Task ChildrenStayWithTheirParentAndDoNotChangePagination()
+    {
+        await using var db = CreateDb();
+        var service = CreateService(db);
+        var older = await service.CreatePostCore(Input());
+        var newer = await service.CreatePostCore(Input());
+        (await db.BasePosts.SingleAsync(x => x.Id == older.BasePostId)).CreatedAt = DateTimeOffset.UtcNow.AddDays(-1);
+        var oldPublication = Publication(older.BasePostId, PlatformType.Facebook, "Succeeded", 1);
+        var newPublication = Publication(newer.BasePostId, PlatformType.Instagram, "Succeeded", 2);
+        db.PostPublications.AddRange(oldPublication, newPublication);
+        await db.SaveChangesAsync();
+        var first = await service.GetPostCoreList(new() { PageIndex = 1, PageSize = 1 });
+        Assert.True(first.Value.HasNextPage);
+        var second = await service.GetPostCoreList(new() { PageIndex = 2, PageSize = 1 });
+        Assert.Equal(2, second.Value.TotalCount);
+        Assert.False(second.Value.HasNextPage);
+        var item = Assert.IsType<Response.PostCoreSummary>(Assert.Single(second.Value.Items));
+        Assert.Equal(older.BasePostId, item.BasePostId);
+        Assert.Equal(oldPublication.Id, Assert.Single(item.Children).PublicationId);
+        Assert.Empty((await service.GetPostCoreList(new() { PageIndex = 3, PageSize = 1 })).Value.Items);
+    }
+
+    private static PostPublication Publication(Guid basePostId, PlatformType platform, string status, int day)
+    {
+        var job = new PostPublication
+        {
+            Id = Guid.NewGuid(), BasePostId = basePostId, PlatformPostId = Guid.NewGuid(),
+            PlatformAccountId = Guid.NewGuid(), Status = status,
+            ExternalPostId = "external-post", ExternalPostUrl = "https://example.com/published",
+            CompletedAt = new DateTimeOffset(2026, 9, day, 0, 0, 0, TimeSpan.Zero)
+        };
+        job.Snapshot = System.Text.Json.JsonSerializer.Serialize(new HoaTheoMua.Service.PostPublishing.PublicationSnapshot(
+            basePostId, job.PlatformPostId, job.PlatformAccountId, "external-account", null, platform, "v25.0", "1",
+            Guid.NewGuid(), "Published title", "Published content", "#published", "Published content #published",
+            [new(Guid.NewGuid(), "https://example.com/second.jpg", 2), new(Guid.NewGuid(), "https://example.com/first.jpg", 1)]));
+        return job;
+    }
+
+    [Fact]
     public async Task ListsSharedPostsAndFiltersDeletionKeywordAndPlatform()
     {
         await using var db = CreateDb();

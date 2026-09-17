@@ -74,10 +74,9 @@ public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserServic
             try
             {
                 using var json = JsonDocument.Parse(prompts[0].Value);
-                if (!json.RootElement.GetProperty("isActive").GetBoolean()) throw new BadRequestException($"Platform {name} is disabled");
-                // Images share their own instruction; platform Config is only needed for activation.
-                prompt = request.Mode == "images" ? "" : json.RootElement.GetProperty("content").GetString()!;
-                if (request.Mode != "images" && string.IsNullOrWhiteSpace(prompt)) throw new JsonException();
+                var parsed = ConfigValues.PlatformPrompt(json.RootElement, request.Mode != "images");
+                if (!parsed.Active) throw new BadRequestException($"Platform {name} is disabled");
+                prompt = parsed.Text;
             }
             catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
             { throw new BadRequestException($"System prompt for platform {name} is not configured"); }
@@ -95,9 +94,9 @@ public partial class Service(AppDbContext db, Ai.IService ai, ICurrentUserServic
             try
             {
                 using var json = JsonDocument.Parse(enabled[0].Value);
-                if (!json.RootElement.GetBoolean()) throw new BadRequestException("PostGen is disabled");
+                if (!ConfigValues.Unwrap(json.RootElement).GetBoolean()) throw new BadRequestException("PostGen is disabled");
             }
-            catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
             { throw new BadRequestException("PostGen enabled config is invalid"); }
         }
     }
