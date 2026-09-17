@@ -23,7 +23,7 @@ public class GeneratedCard
     public int SizeMaxWords { get; set; }
     public int WordCount { get; set; }
     public string? WordConfigSnapshot { get; set; }
-
+    public Guid? SessionId { get; set; }
     public decimal BasePrice { get; set; }
     public decimal ExtraPrice { get; set; }
     public decimal TotalPrice { get; set; }

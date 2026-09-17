@@ -817,6 +817,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("character varying(2048)")
                         .HasColumnName("RawImage");
 
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("SizeBasePrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
@@ -897,6 +900,16 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)")
                         .HasColumnName("ImageUrl");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("Metadata");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("Name");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
