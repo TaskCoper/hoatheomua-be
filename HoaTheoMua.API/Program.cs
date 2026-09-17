@@ -124,6 +124,8 @@ builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Store>();
 builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Worker>();
 builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Recovery>();
 builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.IService, HoaTheoMua.Service.PostPublishing.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostInsights.IService, HoaTheoMua.Service.PostInsights.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostInsights.MetaInsightsClient>();
 builder.Services.AddHostedService<HoaTheoMua.Service.PostPublishing.RecoveryHostedService>();
 HoaTheoMua.Service.PostPublishing.Registration.AddPostGenPublishingAdapters(builder.Services);
 builder.Services.Configure<PlatformAccountService.PlatformAccountOptions>(builder.Configuration.GetSection(nameof(PlatformAccountService.PlatformAccountOptions)));

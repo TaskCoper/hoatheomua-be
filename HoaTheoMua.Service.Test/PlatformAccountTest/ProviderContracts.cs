@@ -37,7 +37,7 @@ public class ProviderContracts
         else
         {
             Assert.False(query.ContainsKey("config_id"));
-            Assert.Equal(string.Join(',', OAuthProvider.RequiredScopes(platform)), query["scope"]);
+            Assert.Equal(string.Join(',', OAuthProvider.RequestedScopes(platform)), query["scope"]);
         }
     }
 
