@@ -48,7 +48,7 @@ public class Service(AppDbContext db) : IService
                 BasePostId = x.Id, Title = x.Title, Content = x.Content, Hashtag = x.Hashtag,
                 CreatedAt = x.CreatedAt, UpdatedAt = x.UpdatedAt
             }).ToListAsync(cancellationToken);
-        await LoadPublishedChildren(items, cancellationToken);
+        await LoadChildren(items, cancellationToken);
         var response = ApiResponseFactory.BasePagination(items, page, size, count);
         response.Value.HasNextPage = (long)page * size < count;
         return response;
@@ -62,7 +62,7 @@ public class Service(AppDbContext db) : IService
                 BasePostId = x.Id, Title = x.Title, Content = x.Content, Hashtag = x.Hashtag,
                 CreatedAt = x.CreatedAt, UpdatedAt = x.UpdatedAt
             }).FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundException("Post not found");
-        await LoadPublishedChildren([result], cancellationToken);
+        await LoadChildren([result], cancellationToken);
         result.BaseImages = await db.BasePostImages.AsNoTracking().Where(x => x.BasePostId == id && !x.IsDeleted)
             .OrderBy(x => x.SortOrder).Select(x => new Response.BaseImage
             {
@@ -191,29 +191,72 @@ public class Service(AppDbContext db) : IService
         return new Response.DeletedPost(id, true);
     }
 
-    private async Task LoadPublishedChildren(IReadOnlyCollection<Response.PostCoreSummary> posts, CancellationToken ct)
+    private async Task LoadChildren(IReadOnlyCollection<Response.PostCoreSummary> posts, CancellationToken ct)
     {
         if (posts.Count == 0) return;
         var ids = posts.Select(x => x.BasePostId).ToArray();
-        // Load the page's publication history in one query. The immutable snapshot is what was actually posted.
+        // Read jobs for this page in a batch; retries do not create duplicate children.
         var publications = await db.PostPublications.AsNoTracking()
-            .Where(x => ids.Contains(x.BasePostId) && x.Status == "Succeeded")
-            .OrderByDescending(x => x.CompletedAt).ThenBy(x => x.Id)
+            .Where(x => ids.Contains(x.BasePostId)
+                && !db.PlatformPosts.Any(p => p.Id == x.PlatformPostId && p.IsDeleted))
+            .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
             .Select(x => new { x.BasePostId, x.Id, x.PlatformPostId, x.PlatformAccountId, x.Status,
                 x.Snapshot, x.ExternalPostId, x.ExternalPostUrl, x.CompletedAt }).ToListAsync(ct);
-        var children = publications.ToLookup(x => x.BasePostId, x =>
+        var children = publications.GroupBy(x => x.PlatformPostId).Select(g => g.First()).Select(x =>
         {
             var snapshot = PostPublishing.Store.Read<PostPublishing.PublicationSnapshot>(x.Snapshot);
-            return new Response.PublishedPost
+            return (x.BasePostId, Child: new Response.PublishedPost
             {
                 PublicationId = x.Id, PlatformPostId = x.PlatformPostId, PlatformAccountId = x.PlatformAccountId,
                 Platform = snapshot.Platform.ToString().ToLowerInvariant(), Status = x.Status,
                 Title = snapshot.Title, Content = snapshot.Content, Hashtag = snapshot.Hashtag,
                 ImageUrls = snapshot.Images.OrderBy(image => image.Order).Select(image => image.Url).ToList(),
-                ExternalPostId = x.ExternalPostId, ExternalPostUrl = x.ExternalPostUrl, PublishedAt = x.CompletedAt
-            };
-        });
-        foreach (var post in posts) post.Children = children[post.BasePostId].ToList();
+                ExternalPostId = x.ExternalPostId, ExternalPostUrl = x.ExternalPostUrl,
+                PublishedAt = x.Status == "Succeeded" ? x.CompletedAt : null
+            });
+        }).ToList();
+        var platforms = await db.PlatformPosts.AsNoTracking()
+            .Where(x => ids.Contains(x.BasePostId) && !x.IsDeleted)
+            .Select(x => new { x.Id, x.BasePostId, x.Platform, x.Status, x.PlatformAccountId, x.OfficialGenerationId })
+            .ToListAsync(ct);
+        var pending = platforms.Where(p => !children.Any(x => x.Child.PlatformPostId == p.Id && x.Child.Status == "Succeeded")).ToList();
+        if (pending.Count > 0)
+        {
+            var platformIds = pending.Select(x => x.Id).ToArray();
+            var generationIds = pending.Where(x => x.OfficialGenerationId.HasValue).Select(x => x.OfficialGenerationId!.Value).ToArray();
+            var contents = await db.GeneratedPosts.AsNoTracking()
+                .Where(x => generationIds.Contains(x.Id) && platformIds.Contains(x.PlatformPostId))
+                .Select(x => new { x.Id, x.PlatformPostId, x.Title, x.Content, x.Hashtag }).ToDictionaryAsync(x => x.Id, ct);
+            var images = await (from slot in db.PlatformPostImages.AsNoTracking()
+                join image in db.GeneratedPostImages.AsNoTracking() on slot.SelectedGeneratedPostImageId equals image.Id
+                join platform in db.PlatformPosts.AsNoTracking() on slot.PlatformPostId equals platform.Id
+                where platformIds.Contains(slot.PlatformPostId) && image.BasePostId == platform.BasePostId
+                    && image.SourceBasePostImageId == slot.SourceBasePostImageId && image.RatioCode == slot.RatioCode
+                    && image.Status == ImageStatus.Succeeded && image.ImageUrl != null
+                orderby slot.SortOrder, slot.Id
+                select new { slot.PlatformPostId, image.ImageUrl }).ToListAsync(ct);
+            var byPlatform = images.ToLookup(x => x.PlatformPostId, x => x.ImageUrl!);
+            foreach (var platform in pending)
+            {
+                var child = children.FirstOrDefault(x => x.Child.PlatformPostId == platform.Id).Child;
+                if (child == null)
+                {
+                    child = new Response.PublishedPost { PlatformPostId = platform.Id,
+                        PlatformAccountId = platform.PlatformAccountId, Platform = platform.Platform.ToString().ToLowerInvariant(),
+                        Status = platform.Status.ToString() };
+                    children.Add((platform.BasePostId, child));
+                }
+                // Unpublished children show the currently selected version, never an obsolete failed attempt's text.
+                var content = platform.OfficialGenerationId.HasValue
+                    ? contents.GetValueOrDefault(platform.OfficialGenerationId.Value) : null;
+                if (content?.PlatformPostId != platform.Id) content = null;
+                child.Title = content?.Title; child.Content = content?.Content; child.Hashtag = content?.Hashtag;
+                child.ImageUrls = byPlatform[platform.Id].ToList();
+            }
+        }
+        var byPost = children.ToLookup(x => x.BasePostId, x => x.Child);
+        foreach (var post in posts) post.Children = byPost[post.BasePostId]
+            .OrderByDescending(x => x.PublishedAt).ThenBy(x => x.Platform).ThenBy(x => x.PlatformPostId).ToList();
     }
 
     private async Task RequireNoPublication(Guid id, CancellationToken ct)

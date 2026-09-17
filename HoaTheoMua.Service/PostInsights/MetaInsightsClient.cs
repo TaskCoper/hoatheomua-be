@@ -5,7 +5,7 @@ using HoaTheoMua.Service.PostPublishing;
 
 namespace HoaTheoMua.Service.PostInsights;
 
-public sealed class MetaInsightsClient(MetaPublishingClient graph)
+public sealed partial class MetaInsightsClient(MetaPublishingClient graph)
 {
     private static readonly string[] InstagramMetrics = ["views", "reach", "likes", "comments", "saved", "shares", "total_interactions"];
 

@@ -14,9 +14,10 @@ namespace HoaTheoMua.Service.PostInsights;
 public interface IService
 {
     Task<Response.Insights> Get(Guid publicationId, CancellationToken ct = default);
+    Task<Response.AccountInsights> GetAccount(Guid accountId, AccountInsightsRequest request, CancellationToken ct = default);
 }
 
-public sealed class Service(AppDbContext db, ICurrentUserService user, TokenProtector protector,
+public sealed partial class Service(AppDbContext db, ICurrentUserService user, TokenProtector protector,
     MetaInsightsClient client, IOptions<PlatformAccountOptions> settings, TimeProvider clock) : IService
 {
     public async Task<Response.Insights> Get(Guid publicationId, CancellationToken ct = default)
