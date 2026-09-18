@@ -1656,7 +1656,10 @@ public class Service : IService
 
         if (product == null)
         {
-            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
+            // API detail cho customer luôn trả payload thành công. Khi sản phẩm không
+            // tồn tại (hoặc đã bị xóa), trả response mặc định để các field rỗng thay
+            // vì phát sinh lỗi PRODUCT_NOT_FOUND.
+            return new Response.GetProductDetailByCustomerResponse();
         }
 
         // ParentProductId của Nhanh.vn là NhanhProductId của sản phẩm cha,
