@@ -5,6 +5,53 @@ namespace HoaTheoMua.Service.Flower;
 
 public class Response
 {
+    public class CustomerFlowerSessionResponse
+    {
+        public Guid SessionId { get; set; }
+        public DateTimeOffset LatestCreatedAt { get; set; }
+        public List<CustomerGeneratedFlowerResponse> Flowers { get; set; } = [];
+    }
+
+    public class CustomerGeneratedFlowerResponse
+    {
+        public Guid HistoryId { get; set; }
+        public string Operation { get; set; } = null!;
+        public Guid? RegeneratedFromFlowerId { get; set; }
+        public Guid ProductId { get; set; }
+        public Guid RootProductId { get; set; }
+        public Guid Id { get; set; }
+        public string Name { get; set; } = null!;
+        public string ImageUrl { get; set; } = null!;
+        public Guid UserId { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public JsonElement Metadata { get; set; }
+    }
+
+    public class AdminGeneratedFlowerResponse
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = null!;
+        public string ImageUrl { get; set; } = null!;
+        public Guid UserId { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public JsonElement Metadata { get; set; }
+        public ClientHistoryResponse? ClientHistory { get; set; }
+    }
+
+    public class ClientHistoryResponse
+    {
+        public Guid Id { get; set; }
+        public Guid UserId { get; set; }
+        public string Type { get; set; } = null!;
+        public JsonElement? SystemForm { get; set; }
+        public JsonElement Metadata { get; set; }
+        public Guid RootId { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public Guid BaseId { get; set; }
+        public Guid OutputId { get; set; }
+        public Guid? SesionId { get; set; }
+    }
+
     public class GeneratedFlowerResponse
     {
         public Guid Id { get; init; }

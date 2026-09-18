@@ -8,7 +8,6 @@ namespace HoaTheoMua.Controllers;
 
 [ApiController]
 [Route("api")]
-[Authorize(Policy = JwtExtensions.CustomerPolicy)]
 public class FlowerController : ControllerBase
 {
     private readonly IService _flowerService;
@@ -18,7 +17,28 @@ public class FlowerController : ControllerBase
         _flowerService = flowerService;
     }
 
+    [HttpGet("v1/generated-flowers")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> GetCustomerGeneratedFlowers(
+        [FromQuery] Request.CustomerGeneratedFlowerListRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _flowerService.GetCustomerGeneratedFlowers(request, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("v1/admin/generated-flowers")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetAdminGeneratedFlowers(
+        [FromQuery] Request.AdminGeneratedFlowerListRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _flowerService.GetAdminGeneratedFlowers(request, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("ai-flowers")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> CreateAiFlower(Request.CreateFlowerRequest request)
     {
         var result = await _flowerService.CreateAiFlower(request);
@@ -26,6 +46,7 @@ public class FlowerController : ControllerBase
     }
 
     [HttpPost("ai-flowers/{sourceFlowerId}/regenerate")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> RegenerateAiFlower(Guid sourceFlowerId, Request.RegenerateFlowerRequest request)
     {
         var result = await _flowerService.RegenerateAiFlower(sourceFlowerId, request);

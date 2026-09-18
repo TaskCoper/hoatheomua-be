@@ -30,6 +30,133 @@ public class Service : IService
         _products = products;
     }
 
+    public async Task<HoaTheoMua.Service.Models.BasePaginationResponse> GetCustomerGeneratedFlowers(
+        Request.CustomerGeneratedFlowerListRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateCustomerListRequest(request);
+        var userId = _currentUser.GetRequiredUserId();
+
+        var historyQuery = _db.ClientHistories.AsNoTracking()
+            .Where(history => history.UserId == userId
+                && history.Type == ClientHistoryType.Flower
+                && history.SessionId.HasValue);
+        if (request.SessionId.HasValue)
+            historyQuery = historyQuery.Where(history => history.SessionId == request.SessionId.Value);
+
+        var histories = await historyQuery.ToListAsync(cancellationToken);
+        var outputIds = histories.Select(history => history.OutputId).Distinct().ToArray();
+        var flowers = outputIds.Length == 0
+            ? []
+            : await _db.GeneratedFlowers.AsNoTracking()
+                .Where(flower => flower.UserId == userId && outputIds.Contains(flower.Id))
+                .ToListAsync(cancellationToken);
+        var flowerById = flowers.ToDictionary(flower => flower.Id);
+
+        var validItems = new List<(Guid SessionId, Response.CustomerGeneratedFlowerResponse Flower)>();
+        foreach (var history in histories)
+        {
+            if (!history.SessionId.HasValue
+                || !flowerById.TryGetValue(history.OutputId, out var flower)
+                || !TryGetProductId(flower.Metadata, out var productId)
+                || productId != history.BaseId
+                || history.RootId == Guid.Empty
+                || !TryParseFlowerHistory(history.Metadata, out var operation, out var regeneratedFromFlowerId))
+            {
+                continue;
+            }
+
+            validItems.Add((history.SessionId.Value, new Response.CustomerGeneratedFlowerResponse
+            {
+                HistoryId = history.Id,
+                Operation = operation,
+                RegeneratedFromFlowerId = regeneratedFromFlowerId,
+                ProductId = history.BaseId,
+                RootProductId = history.RootId,
+                Id = flower.Id,
+                Name = flower.Name,
+                ImageUrl = flower.ImageUrl,
+                UserId = flower.UserId,
+                CreatedAt = flower.CreatedAt,
+                Metadata = ParseJson(flower.Metadata)
+            }));
+        }
+
+        var groups = validItems
+            .GroupBy(item => item.SessionId)
+            .Select(group => new Response.CustomerFlowerSessionResponse
+            {
+                SessionId = group.Key,
+                LatestCreatedAt = group.Max(item => item.Flower.CreatedAt),
+                Flowers = group
+                    .Select(item => item.Flower)
+                    .OrderByDescending(flower => flower.CreatedAt)
+                    .ThenByDescending(flower => flower.Id)
+                    .ToList()
+            })
+            .OrderByDescending(group => group.LatestCreatedAt)
+            .ThenByDescending(group => group.SessionId)
+            .ToList();
+
+        var totalCount = groups.Count;
+        var items = groups
+            .Skip((request.PageIndex - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToList();
+        return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
+            items,
+            request.PageIndex,
+            request.PageSize,
+            totalCount);
+    }
+
+    public async Task<HoaTheoMua.Service.Models.BasePaginationResponse> GetAdminGeneratedFlowers(
+        Request.AdminGeneratedFlowerListRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateAdminListRequest(request);
+        var query = _db.GeneratedFlowers.AsNoTracking();
+        if (request.GeneratedFlowerId.HasValue)
+            query = query.Where(flower => flower.Id == request.GeneratedFlowerId.Value);
+
+        var flowers = await query
+            .OrderByDescending(flower => flower.CreatedAt)
+            .ThenByDescending(flower => flower.Id)
+            .ToListAsync(cancellationToken);
+        if (request.ProductId.HasValue)
+            flowers = flowers
+                .Where(flower => TryGetProductId(flower.Metadata, out var productId)
+                    && productId == request.ProductId.Value)
+                .ToList();
+
+        var totalCount = flowers.Count;
+        var pagedFlowers = flowers
+            .Skip((request.PageIndex - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToList();
+        var flowerIds = pagedFlowers.Select(flower => flower.Id).ToArray();
+        var histories = flowerIds.Length == 0
+            ? []
+            : await _db.ClientHistories.AsNoTracking()
+                .Where(history => history.Type == ClientHistoryType.Flower && flowerIds.Contains(history.OutputId))
+                .OrderByDescending(history => history.CreatedAt)
+                .ThenByDescending(history => history.Id)
+                .ToListAsync(cancellationToken);
+        var historyByFlower = histories
+            .GroupBy(history => (history.OutputId, history.UserId))
+            .ToDictionary(group => group.Key, group => group.First());
+        var items = pagedFlowers
+            .Select(flower => ToAdminResponse(
+                flower,
+                historyByFlower.GetValueOrDefault((flower.Id, flower.UserId))))
+            .ToList();
+        return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
+            items,
+            request.PageIndex,
+            request.PageSize,
+            totalCount);
+    }
+
     public async Task<Response.GeneratedFlowerResponse> CreateAiFlower(Request.CreateFlowerRequest request)
     {
         var userId = _currentUser.GetRequiredUserId();
@@ -356,6 +483,142 @@ public class Service : IService
         Id = flower.Id, Name = flower.Name, ImageUrl = flower.ImageUrl,
         Metadata = JsonDocument.Parse(flower.Metadata).RootElement.Clone(), CreatedAt = flower.CreatedAt
     };
+
+    private static void ValidateAdminListRequest(Request.AdminGeneratedFlowerListRequest request)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (request.GeneratedFlowerId == Guid.Empty)
+        {
+            errors["generatedFlowerId"] = ["GeneratedFlowerId không được là GUID rỗng."];
+        }
+
+        if (request.ProductId == Guid.Empty)
+        {
+            errors["productId"] = ["ProductId không được là GUID rỗng."];
+        }
+
+        if (request.PageIndex < 1)
+        {
+            errors["pageIndex"] = ["PageIndex phải lớn hơn hoặc bằng 1."];
+        }
+
+        if (request.PageSize is not (5 or 10 or 20 or 30 or 40 or 50))
+        {
+            errors["pageSize"] = ["PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50."];
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new QueryValidationException(string.Join(" ", errors.SelectMany(error => error.Value)));
+        }
+    }
+
+    private static void ValidateCustomerListRequest(Request.CustomerGeneratedFlowerListRequest request)
+    {
+        var errors = new List<string>();
+        if (request.SessionId == Guid.Empty)
+            errors.Add("SessionId không được là GUID rỗng.");
+        if (request.PageIndex < 1)
+            errors.Add("PageIndex phải lớn hơn hoặc bằng 1.");
+        if (request.PageSize is not (5 or 10 or 20 or 30 or 40 or 50))
+            errors.Add("PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50.");
+        if (errors.Count > 0)
+            throw new QueryValidationException(string.Join(" ", errors));
+    }
+
+    private static Response.AdminGeneratedFlowerResponse ToAdminResponse(
+        GeneratedFlower flower,
+        ClientHistory? history) => new()
+    {
+        Id = flower.Id,
+        Name = flower.Name,
+        ImageUrl = flower.ImageUrl,
+        UserId = flower.UserId,
+        CreatedAt = flower.CreatedAt,
+        Metadata = ParseJson(flower.Metadata),
+        ClientHistory = history is null
+            ? null
+            : new Response.ClientHistoryResponse
+            {
+                Id = history.Id,
+                UserId = history.UserId,
+                Type = "flower",
+                SystemForm = ParseNullableJson(history.SystemForm),
+                Metadata = ParseJson(history.Metadata),
+                RootId = history.RootId,
+                CreatedAt = history.CreatedAt,
+                BaseId = history.BaseId,
+                OutputId = history.OutputId,
+                SesionId = history.SessionId
+            }
+    };
+
+    private static JsonElement ParseJson(string value)
+    {
+        using var document = JsonDocument.Parse(value);
+        return document.RootElement.Clone();
+    }
+
+    private static JsonElement? ParseNullableJson(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : ParseJson(value);
+
+    private static bool TryGetProductId(string metadata, out Guid productId)
+    {
+        productId = Guid.Empty;
+        try
+        {
+            var parsed = ParseJson(metadata);
+            return parsed.ValueKind == JsonValueKind.Object
+                && parsed.TryGetProperty("subId", out var subId)
+                && subId.ValueKind == JsonValueKind.String
+                && Guid.TryParse(subId.GetString(), out productId)
+                && productId != Guid.Empty;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryParseFlowerHistory(
+        string metadata,
+        out string operation,
+        out Guid? regeneratedFromFlowerId)
+    {
+        operation = string.Empty;
+        regeneratedFromFlowerId = null;
+        try
+        {
+            var parsed = ParseJson(metadata);
+            if (parsed.ValueKind != JsonValueKind.Object
+                || !parsed.TryGetProperty("operation", out var operationElement)
+                || operationElement.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            operation = operationElement.GetString() ?? string.Empty;
+            if (operation is not ("create" or "regenerate")) return false;
+            if (!parsed.TryGetProperty("regeneratedFromFlowerId", out var parent)
+                || parent.ValueKind == JsonValueKind.Null)
+            {
+                return operation == "create";
+            }
+
+            return operation == "regenerate"
+                && parent.ValueKind == JsonValueKind.String
+                && Guid.TryParse(parent.GetString(), out var parentId)
+                && parentId != Guid.Empty
+                && (regeneratedFromFlowerId = parentId).HasValue;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private sealed class QueryValidationException(string detail)
+        : AppException("Bad Request", 400, "VALIDATION_ERROR", detail);
 
     private Task<Dictionary<Guid, (int? SellableQuantity, string? StockStatus, string? UnavailableReason)>> CalculateAvailableQty(Guid productId) =>
         (_products as ProductServiceImplementation)?.CalculateAvailableQty([productId])

@@ -4,6 +4,46 @@ namespace HoaTheoMua.Service.Card;
 
 public class Response
 {
+    public class AdminGeneratedCardResponse
+    {
+        public Guid? HistoryId { get; set; }
+        public ClientHistoryResponse? ClientHistory { get; set; }
+        public Guid GeneratedCardId { get; set; }
+        public string ImageUrl { get; set; } = null!;
+        public string? RawImage { get; set; }
+        public Guid UserId { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public string CardType { get; set; } = "ai";
+        public string FormType { get; set; } = null!;
+        public string MessageContent { get; set; } = null!;
+        public string? AttachedImageUrl { get; set; }
+        public string SizeName { get; set; } = null!;
+        public decimal SizeWidth { get; set; }
+        public decimal SizeHeight { get; set; }
+        public decimal SizeBasePrice { get; set; }
+        public int SizeMaxWords { get; set; }
+        public int WordCount { get; set; }
+        public JsonElement? WordConfigSnapshot { get; set; }
+        public decimal BasePrice { get; set; }
+        public decimal ExtraPrice { get; set; }
+        public decimal TotalPrice { get; set; }
+        public string? CardTemplateName { get; set; }
+    }
+
+    public class ClientHistoryResponse
+    {
+        public Guid Id { get; set; }
+        public Guid UserId { get; set; }
+        public string Type { get; set; } = null!;
+        public JsonElement? SystemForm { get; set; }
+        public JsonElement Metadata { get; set; }
+        public Guid RootId { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public Guid BaseId { get; set; }
+        public Guid OutputId { get; set; }
+        public Guid? SesionId { get; set; }
+    }
+
     public class CreateCardResponse
     {
         public Guid Id { get; set; }

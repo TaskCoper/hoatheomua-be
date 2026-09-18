@@ -2,6 +2,21 @@ namespace HoaTheoMua.Service.Flower;
 
 public class Request
 {
+    public class CustomerGeneratedFlowerListRequest
+    {
+        public Guid? SessionId { get; set; }
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+    }
+
+    public class AdminGeneratedFlowerListRequest
+    {
+        public Guid? GeneratedFlowerId { get; set; }
+        public Guid? ProductId { get; set; }
+        public int PageIndex { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+    }
+
     public class CreateFlowerRequest
     {
         public string? Name { get; set; }

@@ -8,7 +8,6 @@ namespace HoaTheoMua.Controllers;
 
 [ApiController]
 [Route("api")]
-[Authorize(Policy = JwtExtensions.CustomerPolicy)]
 public class CardController : ControllerBase
 {
     private readonly IService _cardService;
@@ -17,7 +16,18 @@ public class CardController : ControllerBase
         _cardService = cardService;
     }
 
+    [HttpGet("v1/admin/generated-cards")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> GetAdminGeneratedCards(
+        [FromQuery] Request.AdminGeneratedCardListRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _cardService.GetAdminGeneratedCards(request, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("handmade-cards")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> CreateHandMadeCard(Request.CreateCardRequest request)
     {
         var result = await  _cardService.CreateHandMadeCard(request);
@@ -25,6 +35,7 @@ public class CardController : ControllerBase
     }
     
     [HttpPost("ai-cards")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> CreateCardAi(Request.CreateCardAiRequest request)
     {
         var result = await _cardService.CreateCardAi(request);

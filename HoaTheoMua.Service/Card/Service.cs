@@ -24,6 +24,74 @@ public class Service : IService
         _ai = ai;
     }
 
+    public async Task<HoaTheoMua.Service.Models.BasePaginationResponse> GetAdminGeneratedCards(
+        Request.AdminGeneratedCardListRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateAdminListRequest(request);
+
+        CardFormType? formType = null;
+        if (!string.IsNullOrWhiteSpace(request.FormType))
+        {
+            if (!TryParseFormType(request.FormType.Trim(), out var parsedFormType))
+            {
+                throw new AdminListValidationException("FormType chỉ nhận go_may hoặc calligraphy.");
+            }
+
+            formType = parsedFormType;
+        }
+
+        var size = string.IsNullOrWhiteSpace(request.Size) ? null : request.Size.Trim();
+        var cardTemplateName = string.IsNullOrWhiteSpace(request.CardTemplateName)
+            ? null
+            : request.CardTemplateName.Trim();
+
+        var query = _dbContext.GeneratedCards
+            .AsNoTracking()
+            .Where(card => card.CardType == GeneratedCardType.Ai);
+        if (request.Id.HasValue)
+            query = query.Where(card => card.Id == request.Id.Value);
+        if (formType.HasValue)
+            query = query.Where(card => card.FormType == formType.Value);
+
+        var cards = await query
+            .OrderByDescending(card => card.CreatedAt)
+            .ThenByDescending(card => card.Id)
+            .ToListAsync(cancellationToken);
+        if (size is not null)
+            cards = cards.Where(card => string.Equals(card.SizeName, size, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var cardIds = cards.Select(card => card.Id).ToArray();
+        var histories = cardIds.Length == 0
+            ? []
+            : await _dbContext.ClientHistories.AsNoTracking()
+                .Where(history => history.Type == ClientHistoryType.Card && cardIds.Contains(history.OutputId))
+                .OrderByDescending(history => history.CreatedAt)
+                .ThenByDescending(history => history.Id)
+                .ToListAsync(cancellationToken);
+        var historyByCard = histories
+            .GroupBy(history => (history.OutputId, history.UserId))
+            .ToDictionary(group => group.Key, group => group.First());
+
+        var records = cards
+            .Select(card => (Card: card, History: historyByCard.GetValueOrDefault((card.Id, card.UserId))))
+            .Where(record => cardTemplateName is null
+                || TryGetCardTemplateName(record.History?.Metadata, out var templateName)
+                && templateName.Contains(cardTemplateName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var totalCount = records.Count;
+        var items = records
+            .Skip((request.PageIndex - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(record => ToAdminResponse(record.Card, record.History))
+            .ToList();
+        return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
+            items,
+            request.PageIndex,
+            request.PageSize,
+            totalCount);
+    }
+
     //Handmade not call AI
     public async Task<Response.CreateCardResponse> CreateHandMadeCard(Request.CreateCardRequest request)
     {
@@ -726,6 +794,125 @@ public class Service : IService
         TryParseFormType(value, out var formType)
             ? formType
             : throw new ConflictException("SnapshotCard có formType không hợp lệ.");
+
+    private static void ValidateAdminListRequest(Request.AdminGeneratedCardListRequest request)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (request.Id == Guid.Empty)
+        {
+            errors["id"] = ["Id không được là GUID rỗng."];
+        }
+
+        if (request.PageIndex < 1)
+        {
+            errors["pageIndex"] = ["PageIndex phải lớn hơn hoặc bằng 1."];
+        }
+
+        if (request.PageSize is not (5 or 10 or 20 or 30 or 40 or 50))
+        {
+            errors["pageSize"] = ["PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50."];
+        }
+
+        if (request.FormType is not null && string.IsNullOrWhiteSpace(request.FormType))
+        {
+            errors["formType"] = ["FormType chỉ nhận go_may hoặc calligraphy."];
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new AdminListValidationException(string.Join(" ", errors.SelectMany(error => error.Value)));
+        }
+    }
+
+    private static Response.AdminGeneratedCardResponse ToAdminResponse(
+        GeneratedCard card,
+        ClientHistory? history)
+    {
+        JsonElement? metadata = history is null ? null : ParseJson(history.Metadata);
+        return new Response.AdminGeneratedCardResponse
+        {
+            HistoryId = history?.Id,
+            ClientHistory = history is null
+                ? null
+                : new Response.ClientHistoryResponse
+                {
+                    Id = history.Id,
+                    UserId = history.UserId,
+                    Type = "card",
+                    SystemForm = ParseNullableJson(history.SystemForm),
+                    Metadata = metadata!.Value,
+                    RootId = history.RootId,
+                    CreatedAt = history.CreatedAt,
+                    BaseId = history.BaseId,
+                    OutputId = history.OutputId,
+                    SesionId = history.SessionId
+                },
+            GeneratedCardId = card.Id,
+            ImageUrl = card.ImageUrl,
+            RawImage = card.RawImage,
+            UserId = card.UserId,
+            CreatedAt = card.CreatedAt,
+            CardType = "ai",
+            FormType = card.FormType == CardFormType.Calligraphy ? "calligraphy" : "go_may",
+            MessageContent = card.MessageContent,
+            AttachedImageUrl = card.AttachedImageUrl,
+            SizeName = card.SizeName,
+            SizeWidth = card.SizeWidth,
+            SizeHeight = card.SizeHeight,
+            SizeBasePrice = card.SizeBasePrice,
+            SizeMaxWords = card.SizeMaxWords,
+            WordCount = card.WordCount,
+            WordConfigSnapshot = ParseNullableJson(card.WordConfigSnapshot),
+            BasePrice = card.BasePrice,
+            ExtraPrice = card.ExtraPrice,
+            TotalPrice = card.TotalPrice,
+            CardTemplateName = metadata.HasValue ? GetCardTemplateName(metadata.Value) : null
+        };
+    }
+
+    private static JsonElement ParseJson(string value)
+    {
+        using var document = JsonDocument.Parse(value);
+        return document.RootElement.Clone();
+    }
+
+    private static JsonElement? ParseNullableJson(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : ParseJson(value);
+
+    private static string? GetCardTemplateName(JsonElement metadata)
+    {
+        if (metadata.ValueKind != JsonValueKind.Object
+            || !metadata.TryGetProperty("cardTemplate", out var cardTemplate)
+            || cardTemplate.ValueKind != JsonValueKind.Object
+            || !cardTemplate.TryGetProperty("name", out var name)
+            || name.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return name.GetString();
+    }
+
+    private static bool TryGetCardTemplateName(string? metadata, out string templateName)
+    {
+        templateName = string.Empty;
+        if (string.IsNullOrWhiteSpace(metadata)) return false;
+        try
+        {
+            var parsed = ParseJson(metadata);
+            var name = GetCardTemplateName(parsed);
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            templateName = name;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private sealed class AdminListValidationException(string detail)
+        : AppException("Bad Request", 400, "VALIDATION_ERROR", detail);
 
     private static Response.CreateCardResponse ToResponse(GeneratedCard card) => new()
     {
