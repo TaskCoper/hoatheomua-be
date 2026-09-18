@@ -62,6 +62,25 @@ public class LocalProductSearchTest
     }
 
     [Fact]
+    public async Task GetProductDetailByCustomer_NotFound_ReturnsEmptyResponse()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+
+        var result = await service.GetProductDetailByCustomer(Guid.NewGuid());
+
+        Assert.Equal(Guid.Empty, result.Id);
+        Assert.Null(result.ProductName);
+        Assert.Null(result.CoverImage);
+        Assert.Null(result.Price);
+        Assert.Null(result.OldPrice);
+        Assert.Null(result.SellableQuantity);
+        Assert.Null(result.NhanhProductId);
+        Assert.False(result.IsActive);
+        Assert.Null(result.Parent);
+    }
+
+    [Fact]
     public async Task GetLocalProducts_PriceRangeFilter_Success()
     {
         // Arrange
