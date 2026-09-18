@@ -24,4 +24,5 @@ public interface IService
     Task<string> CancelOrder(Guid id);
     Task<string> UpdateAhaMoveService(Request.UpdateAhamoveRequest request);
     Task<BasePaginationResponse> GetOrderByAdmin(string? search, int  pageIndex, int pageSize);
+    Task<Response.CalculateCardPriceResponse>CalculateCardPrice(Request.CalculateCardPriceRequest request);
 }

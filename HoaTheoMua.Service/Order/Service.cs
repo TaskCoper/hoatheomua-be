@@ -1517,4 +1517,197 @@ public class Service : IService
 
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
+
+    public async Task<Response.CalculateCardPriceResponse> CalculateCardPrice(Request.CalculateCardPriceRequest request)
+    {
+        if (request == null || request.CardTemplateId == Guid.Empty)
+            throw new BadRequestException("CARD_INPUT_INVALID");
+
+        var isAi = request.CardType == GeneratedCardType.Ai;
+        var isHandmade = request.CardType == GeneratedCardType.Handmade;
+
+        if (!isAi && !isHandmade)
+            throw new BadRequestException("CARD_TYPE_INVALID");
+
+        var template = await _dbContext.CardTemplates
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.Id == request.CardTemplateId &&
+                !x.IsDeleted);
+
+        if (template == null || !template.IsActive)
+            throw new BadRequestException("CARD_TEMPLATE_UNAVAILABLE");
+
+        if ((isAi && template.TemplateType != CardTemplateType.Ai) ||
+            (isHandmade && template.TemplateType != CardTemplateType.Handmade))
+        {
+            throw new BadRequestException("CARD_TEMPLATE_TYPE_INVALID");
+        }
+
+        var wordCount = string.IsNullOrWhiteSpace(request.MessageContent)
+            ? 0
+            : request.MessageContent
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                .Length;
+
+        CardFormType formType;
+
+        if (isHandmade)
+        {
+            // Handmade không được chọn size
+            // FormType chỉ có thể là Calligraphy
+            if (!string.IsNullOrWhiteSpace(request.SizeName) ||
+                (request.FormType.HasValue &&
+                 request.FormType != CardFormType.Calligraphy))
+            {
+                throw new BadRequestException("HANDMADE_CARD_INPUT_INVALID");
+            }
+
+            formType = CardFormType.Calligraphy;
+        }
+        else
+        {
+            // AI -> GoMay | Calligraphy và luôn phải có tên template
+            if (request.FormType is not (
+                    CardFormType.GoMay or CardFormType.Calligraphy))
+            {
+                throw new BadRequestException("CARD_FORM_TYPE_INVALID");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.SizeName))
+                throw new BadRequestException("CARD_SIZE_REQUIRED");
+
+            formType = request.FormType.Value;
+        }
+
+        // ConfigHelper lấy field value dạng chuỗi từ wrapper Config.Value.
+        var configs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "card_config");
+
+        Response.CardSizePrice? size = null;
+
+        if (isAi)//thì phải chọn size
+        {
+            var sizeJson = configs.GetValue<string>("card_config.sizes");
+
+            if (string.IsNullOrWhiteSpace(sizeJson))
+                throw new BadRequestException("CARD_SIZE_CONFIG_MISSING");
+
+            Response.CardConfigItems<Response.CardSizePrice>? sizeConfig;
+
+            try
+            {
+                sizeConfig =
+                    System.Text.Json.JsonSerializer.Deserialize<Response.CardConfigItems<Response.CardSizePrice>>(sizeJson);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                throw new BadRequestException("CARD_SIZE_CONFIG_INVALID");
+            }
+
+            if (sizeConfig?.Items == null ||
+                sizeConfig.Items.Count == 0 ||
+                sizeConfig.Items.Any(x =>
+                    string.IsNullOrWhiteSpace(x.Name) ||
+                    x.Width <= 0 ||
+                    x.Height <= 0 ||
+                    x.BasePrice < 0 ||
+                    x.MaxWords <= 0))
+            {
+                throw new BadRequestException("CARD_SIZE_CONFIG_INVALID");
+            }
+            //tìm kiếm thằng cùng size trong cái list -> ra đc chỉ 1 thằng
+            var matchingSizes = sizeConfig.Items
+                .Where(x =>
+                    string.Equals(
+                        x.Name,
+                        request.SizeName!.Trim(),
+                        StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (matchingSizes.Count != 1)
+                throw new BadRequestException("CARD_SIZE_INVALID");
+
+            size = matchingSizes[0];
+
+            if (wordCount > size.MaxWords)
+                throw new BadRequestException(
+                    "CARD_MESSAGE_EXCEEDS_MAX_WORDS");
+        }
+
+        Response.CardWordPrice? priceRule = null;
+
+        if (formType == CardFormType.Calligraphy)
+        {
+            var priceJson = configs.GetValue<string>("card_config.prices");
+
+            if (string.IsNullOrWhiteSpace(priceJson))
+                throw new BadRequestException("CARD_PRICE_CONFIG_MISSING");
+
+            Response.CardConfigItems<Response.CardWordPrice>? priceConfig;
+
+            try
+            {
+                priceConfig =
+                    System.Text.Json.JsonSerializer.Deserialize<
+                        Response.CardConfigItems<Response.CardWordPrice>>(
+                        priceJson);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                throw new BadRequestException("CARD_PRICE_CONFIG_INVALID");
+            }
+
+            if (priceConfig?.Items == null ||
+                priceConfig.Items.Count == 0 ||
+                priceConfig.Items.Any(x =>
+                    x.MinWords < 0 ||
+                    x.MaxWords < x.MinWords ||
+                    x.ExtraPrice < 0))
+            {
+                throw new BadRequestException("CARD_PRICE_CONFIG_INVALID");
+            }
+
+            var matchingRules = priceConfig.Items
+                .Where(x =>
+                    x.MinWords <= wordCount &&
+                    wordCount <= x.MaxWords)
+                .ToList();
+
+            if (matchingRules.Count != 1)
+            {
+                throw new BadRequestException(
+                    "CARD_PRICE_RULE_NOT_FOUND_OR_AMBIGUOUS");
+            }
+
+            priceRule = matchingRules[0];
+        }
+
+        var basePrice = size?.BasePrice ?? 0m;
+        var extraPrice = priceRule?.ExtraPrice ?? 0m;
+        var cardTypeName = isAi ? "ai" : "handmade";
+
+        return new Response.CalculateCardPriceResponse
+        {
+            CardType = cardTypeName,
+
+            FormType = formType == CardFormType.GoMay
+                ? "go_may"
+                : "calligraphy",
+
+            CardTemplate = new Response.CardTemplatePrice
+            {
+                TemplateId = template.Id,
+                TemplateName = template.Name,
+                TemplateType = cardTypeName,
+                TemplateImageUrl = template.ImageUrl
+            },
+
+            CardSize = size,
+            CardConfig = priceRule,
+            WordCount = wordCount,
+            BasePrice = basePrice,
+            ExtraPrice = extraPrice,
+            TotalPrice = basePrice + extraPrice
+        };
+    }
 }

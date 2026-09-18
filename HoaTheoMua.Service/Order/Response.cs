@@ -277,5 +277,62 @@ public class Response
         [JsonPropertyName("contact")]
         public string Contact { get; set; } = null!;
     }
-
+    //Card Price
+    public class CalculateCardPriceResponse  
+    {  
+        public string CardType { get; set; } = string.Empty; // ai | handmade  
+        public string FormType { get; set; } = string.Empty; // go_may | calligraphy  
+        public CardTemplatePrice CardTemplate { get; set; } = new();  
+        public CardSizePrice? CardSize { get; set; }    // Handmade: null  
+        public CardWordPrice? CardConfig { get; set; } // AI go_may: null  
+        public int WordCount { get; set; }  
+        public decimal BasePrice { get; set; }  
+        public decimal ExtraPrice { get; set; }  
+        public decimal TotalPrice { get; set; }       // giá một thiệp  
+    }  
+  
+    public class CardTemplatePrice  
+    {  
+        public Guid TemplateId { get; set; }  
+        public string TemplateName { get; set; } = string.Empty;  
+        public string TemplateType { get; set; } = string.Empty;  
+        public string TemplateImageUrl { get; set; } = string.Empty;  
+    }  
+  
+    public class CardSizePrice  
+    {  
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty; 
+        [JsonPropertyName("width")]
+        public decimal Width { get; set; }  
+        [JsonPropertyName("height")]
+        public decimal Height { get; set; }  
+  
+        [JsonPropertyName("base_price")]  
+        public decimal BasePrice { get; set; }  
+  
+        [JsonPropertyName("max_words")]  
+        public int MaxWords { get; set; }  
+    }  
+  
+    public class CardWordPrice  
+    {  
+        [JsonPropertyName("min_words")]  
+        public int MinWords { get; set; }  
+  
+        [JsonPropertyName("max_words")]  
+        public int MaxWords { get; set; }  
+  
+        [JsonPropertyName("extra_price")]  
+        public decimal ExtraPrice { get; set; }  
+    }  
+  
+    public class CardConfigItems<T>  
+    {  
+        [JsonPropertyName("items")]  
+        public List<T> Items { get; set; } = new();  
+    }
+    //Card Price
+    
+    
 }

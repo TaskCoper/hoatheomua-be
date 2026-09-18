@@ -93,5 +93,15 @@ public class Request
         public string? TrackingNumber { get; set; }
         public decimal? ShippingFee { get; set; }
     }
+    
+    public class CalculateCardPriceRequest  
+    {  
+        // History cũng là Ai; sourceGeneratedCardId không cần để tính tiền.  
+        public GeneratedCardType CardType { get; set; }  
+        public Guid CardTemplateId { get; set; }  
+        public string? SizeName { get; set; }          // bắt buộc với AI  
+        public CardFormType? FormType { get; set; }    // AI bắt buộc; Handmade luôn Calligraphy  
+        public string? MessageContent { get; set; }  
+    }
 
 }

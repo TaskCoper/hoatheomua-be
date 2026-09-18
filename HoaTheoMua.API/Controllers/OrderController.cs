@@ -101,6 +101,13 @@ public class OrderController : ControllerBase
         return Ok(result);
     }
     
+    [HttpPost("/api/v1/orders/card-price")]  
+    public async Task<IActionResult> CalculateCardPrice([FromBody] Request.CalculateCardPriceRequest request)  
+    {  
+        var result = await _orderService.CalculateCardPrice(request);  
+  
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));  
+    }
     // [HttpPost("/api/v1/orders/taxcode")]
     // [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
     // public async Task<IActionResult> GetInfoTaxCode([FromQuery] string taxCode)
