@@ -1,0 +1,210 @@
+{
+  "status": "PASS",
+  "checks": 91,
+  "requests": 39,
+  "cleanup": true,
+  "evidence": [
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publication-preview?accountId=c33b5650-0c16-42ef-8fad-015e0cc178dd",
+      "status": 401
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publish",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publications",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa",
+      "status": 401
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa/cancel",
+      "status": 401
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa/retry",
+      "status": 401
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa/recheck",
+      "status": 401
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa/resolve",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publication-preview?accountId=c33b5650-0c16-42ef-8fad-015e0cc178dd",
+      "status": 403
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publish",
+      "status": 403
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publications",
+      "status": 403
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa",
+      "status": 403
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa/cancel",
+      "status": 403
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa/retry",
+      "status": 403
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa/recheck",
+      "status": 403
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/3991b29d-3bad-4db0-bd57-5cf504715ffa/resolve",
+      "status": 403
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publication-preview?accountId=c33b5650-0c16-42ef-8fad-015e0cc178dd",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publish",
+      "status": 202
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publish",
+      "status": 202
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publish",
+      "status": 409
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300",
+      "status": 409
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300",
+      "status": 409
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/content",
+      "status": 409
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/images",
+      "status": 409
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/content/versions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a/cancel",
+      "status": 409
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a/retry",
+      "status": 409
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a/recheck",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/post-gen/publications/c7e90e6f-b93f-4b37-aafc-b2984a34987a/resolve",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publications?pageIndex=1&pageSize=1",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publication-preview?accountId=c33b5650-0c16-42ef-8fad-015e0cc178dd",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/eb12c04d-af11-445a-ade5-32f8a4ac1300/platforms/facebook/publish",
+      "status": 409
+    },
+    {
+      "provider": "fake",
+      "Publishes": 1,
+      "aiCalls": 0,
+      "queueTransport": "RabbitMQ",
+      "database": "PostgreSQL"
+    }
+  ]
+}

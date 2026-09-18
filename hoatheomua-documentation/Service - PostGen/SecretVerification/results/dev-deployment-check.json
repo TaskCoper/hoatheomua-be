@@ -1,0 +1,47 @@
+{
+  "checked_at": "2026-09-14T21:25:33.591214+00:00",
+  "status": "BLOCKED",
+  "env_file": ".docker/.env.dev",
+  "local_validation": {
+    "postgen_validator": "PASS",
+    "encryption_key_bytes": 32,
+    "compose_yaml": "PASS",
+    "legacy_compose": "PASS",
+    "facebook_publishing_enabled": true,
+    "instagram_publishing_enabled": true,
+    "schedule_defaults": {
+      "min_lead_seconds": 60,
+      "max_days": 30,
+      "lateness_seconds": 900
+    },
+    "env_ignored_by_git": true
+  },
+  "github": {
+    "environment": "dev",
+    "missing_environment_secrets": [
+      "POSTGEN_PUBLISH_FACEBOOK_ENABLED",
+      "POSTGEN_PUBLISH_INSTAGRAM_ENABLED"
+    ],
+    "repository_postgen_secret_names": [],
+    "latest_deploy_run": "https://github.com/TaskCoper/hoatheomua-be/actions/runs/34888171721",
+    "commit": "8effaf783d98f8f75686d6ad44ae060f5db4d696",
+    "deploy_job_conclusion": "success",
+    "deploy_completed_at": "2026-09-14T20:21:01Z",
+    "publishing_code_paths_in_deployed_commit": []
+  },
+  "findings": [
+    "The latest successful dev deployment has no PostPublishing or PostPublication code.",
+    "Local milestones 12–14 are still uncommitted on feature/post-gen.",
+    "CI reads GitHub Secrets, not the ignored local .docker/.env.dev file.",
+    "Publishing enable flags exist locally but are absent from GitHub dev environment and repository secret lists.",
+    "Schedule settings are optional and resolve to defaults."
+  ],
+  "limitations": [
+    "GitHub secret values and live container environment were not read.",
+    "Organization-level secret availability was not checked.",
+    "No deploy or GitHub secret mutation was performed."
+  ],
+  "redactions": [
+    "No secret values stored."
+  ]
+}

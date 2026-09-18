@@ -102,16 +102,15 @@ public class Service : IService
 
         var ahamoveConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
 
-        // The instant-delivery kill switch and the idle_time delay are Ahamove settings. XanhSm has
-        // neither: it is always allowed and collects "now".
+        // Both couriers allow 90 minutes for flower preparation.
         var allowInstantDelivery = !isAhamove || ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
 
         // Unix seconds the courier will collect the parcel. Computed once here and carried in the
         // result: the POS step must show the same moment, and recomputing it there would drift.
-        var delayCallAhamove = ahamoveConfigs.GetValue("ahamove.idle_time", 0);
+        const int delayCallAhamove = 90 * 60;
         var delayTime = isAhamove
-            ? (delayCallAhamove > 0 ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove : 0L)
-            : DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
+            : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + XanhSm.XanhSmConstants.PreparationTimeSeconds;
 
         var shouldDispatch = order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery;
         if (shouldDispatch)

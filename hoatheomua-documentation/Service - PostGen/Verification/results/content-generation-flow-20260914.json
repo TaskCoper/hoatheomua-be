@@ -1,0 +1,461 @@
+{
+  "skill": "database-flow-validator",
+  "status": "PASS",
+  "date": "2026-09-14",
+  "flow": "PostGen chat completions content generation, atomic versions and Config prompt provenance",
+  "environment": "Disposable local PostgreSQL 16; deployment databases untouched",
+  "assertions": {
+    "service_and_migration_tests": {
+      "passed": 105,
+      "failed": 0,
+      "skipped": 0,
+      "postgres_integration_tests": 4
+    },
+    "http_requests": 55,
+    "probe_checks_passed": 102,
+    "release_build": "PASS",
+    "seed_values_match_three_documented_payloads": true,
+    "custom_active_prompt_and_metadata_preserved": true,
+    "deleted_prompt_history_preserved": true,
+    "up_duplicate_active_keys_abort_atomically": true,
+    "unique_index_enforced_across_kinds": true,
+    "config_reference_fk_restrict_enforced": true,
+    "legacy_system_prompt_reference_preserved": true,
+    "manual_nullable_references_supported": true,
+    "prompt_snapshot_preserved_after_config_update_and_soft_delete": true,
+    "down_with_references_aborts_atomically": true,
+    "down_keeps_config_data": true,
+    "up_down_up_preserves_active_configs": true,
+    "model_matches_snapshot": true,
+    "no_native_enum_changes": true,
+    "admin_updates_each_platform_independently": true,
+    "staff_denied": true,
+    "prompts_private": true,
+    "api_delete_and_recreate_allocates_new_id": true,
+    "exactly_one_active_prompt_per_platform": true,
+    "exact_system_prompt_sent_and_snapshotted": true,
+    "text_image_serialization_preserves_order": true,
+    "two_platforms_create_two_versions": true,
+    "partial_content_failure_writes_no_new_versions": true,
+    "concurrent_same_platform_rejected_409": true,
+    "core_update_delete_blocked_while_generating": true,
+    "official_write_failure_rolls_back_versions": true,
+    "prior_official_content_preserved_after_failure": true,
+    "request_cancellation_releases_generating": true,
+    "invalid_ai_content_rejected": true,
+    "content_call_never_retried": true,
+    "heavy_limiter_429_with_retry_after": true,
+    "missing_prompt_never_falls_back_to_legacy": true
+  },
+  "queries": [
+    "Compare jsonb_agg(to_jsonb(Config) ORDER BY Id) before failed Up and after rollback/reapply",
+    "Compare full Config row before and after seed migration for an existing active prompt",
+    "Check information_schema.columns for GeneratedPost.SystemPromptConfigId after failed Up/Down",
+    "Attempt duplicate active prompt keys and invalid Config FK; expect PostgreSQL unique/FK violations",
+    "Attempt hard delete of a referenced Config; expect FK Restrict violation",
+    "Read GeneratedPost prompt snapshot after Config update and soft delete",
+    "Count pg_database names matching postgen_test_%, platform_config_test_%, prompt_config_test_%: zero after tests",
+    "Compare GeneratedPost count and official IDs before and after a simulated official pointer write failure",
+    "Read persisted Config prompt reference, exact snapshot and AI metadata after HTTP generate",
+    "Assert no Generating state remains after provider failure or cancellation"
+  ],
+  "correlation_ids": [
+    {
+      "name": "AnonymousDenied",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 401,
+      "trace_id": "0HNOI64ULPRAT:00000001"
+    },
+    {
+      "name": "CustomerDenied",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "CreateWithoutImages",
+      "method": "POST",
+      "url": "/api/v1/posts",
+      "status": 422,
+      "trace_id": "0HNOI64ULPRAT:00000003"
+    },
+    {
+      "name": "CreatePostCore",
+      "method": "POST",
+      "url": "/api/v1/posts",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000004"
+    },
+    {
+      "name": "GetPostCoreList",
+      "method": "GET",
+      "url": "/api/v1/posts?pageSize=200&keyword=hoa",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000005"
+    },
+    {
+      "name": "GetPostCoreDetail",
+      "method": "GET",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000006"
+    },
+    {
+      "name": "FilterByPlatform",
+      "method": "GET",
+      "url": "/api/v1/posts?platform=facebook",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000007"
+    },
+    {
+      "name": "CrossUserRead",
+      "method": "GET",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000008"
+    },
+    {
+      "name": "CrossUserList",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000009"
+    },
+    {
+      "name": "CrossUserUpdate",
+      "method": "PUT",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000000A"
+    },
+    {
+      "name": "UpdatePostCore",
+      "method": "PUT",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000000B"
+    },
+    {
+      "name": "GenerateCustomerDenied",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "GenerateDuplicatePlatforms",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 422,
+      "trace_id": "0HNOI64ULPRAT:0000000D"
+    },
+    {
+      "name": "GenerateImagesDeferred",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 422,
+      "trace_id": "0HNOI64ULPRAT:0000000E"
+    },
+    {
+      "name": "GenerateTwoPlatforms",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000000F"
+    },
+    {
+      "name": "GenerateSecondPlatformFailure",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 502,
+      "trace_id": "0HNOI64ULPRAT:00000010"
+    },
+    {
+      "name": "FailedGenerationPreservesOfficial",
+      "method": "GET",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000011"
+    },
+    {
+      "name": "RemovedPresetGet",
+      "method": "GET",
+      "url": "/api/v1/post-gen/presets",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "RemovedPresetPut",
+      "method": "PUT",
+      "url": "/api/v1/post-gen/presets",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "RemovedStandardGet",
+      "method": "GET",
+      "url": "/api/v1/platform-standards",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "RemovedStandardPut",
+      "method": "PUT",
+      "url": "/api/v1/platform-standards/c310bfcf-81cb-4a63-b836-5ea182e32696",
+      "status": 404,
+      "trace_id": null
+    },
+    {
+      "name": "CreateRatioConfig",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000016"
+    },
+    {
+      "name": "AnonymousConfigDenied",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.platform.",
+      "status": 401,
+      "trace_id": "0HNOI64ULPRAT:00000017"
+    },
+    {
+      "name": "StaffConfigDenied",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.platform.",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "ReadPlatformConfigs",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.platform.",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000019"
+    },
+    {
+      "name": "UpdatePlatformConfig",
+      "method": "PUT",
+      "url": "/api/v1/configs/e9b6e350-39e6-49d6-a200-000000000002",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000001A"
+    },
+    {
+      "name": "ReadUpdatedPlatformConfig",
+      "method": "GET",
+      "url": "/api/v1/configs/e9b6e350-39e6-49d6-a200-000000000002",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000001B"
+    },
+    {
+      "name": "OtherPlatformsUnchanged",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.platform.",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000001C"
+    },
+    {
+      "name": "DeletePlatformConfig",
+      "method": "DELETE",
+      "url": "/api/v1/configs/e9b6e350-39e6-49d6-a200-000000000002",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000001D"
+    },
+    {
+      "name": "DeletedPlatformExcluded",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.platform.instagram",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000001E"
+    },
+    {
+      "name": "CreatePlatformConfig",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000001F"
+    },
+    {
+      "name": "RejectDuplicatePlatformKey",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 400,
+      "trace_id": "0HNOI64ULPRAT:00000020"
+    },
+    {
+      "name": "PlatformConfigsPrivate",
+      "method": "GET",
+      "url": "/api/v1/configs/public?groupName=postgen&key=postgen.platform.",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000021"
+    },
+    {
+      "name": "RatioPresetUnchanged",
+      "method": "GET",
+      "url": "/api/v1/configs/1c8eabed-a328-4a6a-96da-c55e43401221",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000022"
+    },
+    {
+      "name": "StaffPromptReadDenied",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "ReadPlatformPrompts",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000024"
+    },
+    {
+      "name": "StaffPromptUpdateDenied",
+      "method": "PUT",
+      "url": "/api/v1/configs/5e7c589c-e3c4-41f2-baea-d653c870f442",
+      "status": 403,
+      "trace_id": null
+    },
+    {
+      "name": "UpdateFacebookPrompt",
+      "method": "PUT",
+      "url": "/api/v1/configs/5e7c589c-e3c4-41f2-baea-d653c870f442",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000026"
+    },
+    {
+      "name": "SecondAdminReadsPrompt",
+      "method": "GET",
+      "url": "/api/v1/configs/5e7c589c-e3c4-41f2-baea-d653c870f442",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000027"
+    },
+    {
+      "name": "OtherSystemPromptsUnchanged",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000028"
+    },
+    {
+      "name": "RejectDuplicatePrompt",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 400,
+      "trace_id": "0HNOI64ULPRAT:00000029"
+    },
+    {
+      "name": "SystemPromptsPrivate",
+      "method": "GET",
+      "url": "/api/v1/configs/public?groupName=postgen&key=postgen.system-prompt.",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000002A"
+    },
+    {
+      "name": "DeleteFacebookPrompt",
+      "method": "DELETE",
+      "url": "/api/v1/configs/5e7c589c-e3c4-41f2-baea-d653c870f442",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000002B"
+    },
+    {
+      "name": "DeletedPromptExcluded",
+      "method": "GET",
+      "url": "/api/v1/configs/settings?groupName=postgen&key=postgen.system-prompt.facebook",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:0000002C"
+    },
+    {
+      "name": "GenerateMissingPromptNoFallback",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 400,
+      "trace_id": "0HNOI64ULPRAT:0000002D"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt0",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 400,
+      "trace_id": "0HNOI64ULPRAT:0000002E"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt1",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 400,
+      "trace_id": "0HNOI64ULPRAT:0000002F"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt2",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 400,
+      "trace_id": "0HNOI64ULPRAT:00000030"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt3",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 400,
+      "trace_id": "0HNOI64ULPRAT:00000031"
+    },
+    {
+      "name": "GenerateMissingPromptRateAttempt4",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 400,
+      "trace_id": "0HNOI64ULPRAT:00000032"
+    },
+    {
+      "name": "GenerateHeavyRateLimited",
+      "method": "POST",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c/generate",
+      "status": 429,
+      "trace_id": null
+    },
+    {
+      "name": "RecreateFacebookPrompt",
+      "method": "POST",
+      "url": "/api/v1/configs",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000034"
+    },
+    {
+      "name": "DeletePostCore",
+      "method": "DELETE",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000035"
+    },
+    {
+      "name": "DeletedPostList",
+      "method": "GET",
+      "url": "/api/v1/posts",
+      "status": 200,
+      "trace_id": "0HNOI64ULPRAT:00000036"
+    },
+    {
+      "name": "DeletedPostDetail",
+      "method": "GET",
+      "url": "/api/v1/posts/66becd41-1320-4665-967c-bed777195b0c",
+      "status": 404,
+      "trace_id": "0HNOI64ULPRAT:00000037"
+    }
+  ],
+  "cleanup": {
+    "temporary_test_databases_remaining": 0,
+    "container": "htm-postgen-content-test-20260914",
+    "container_and_volume_removed": true
+  },
+  "failures": [],
+  "limits": [
+    "HTTP/PostgreSQL probe uses a fake AI HttpMessageHandler and a revalidation stub; controllers, services, validation, JWT policies, rate limiting and persistence are real.",
+    "One separate live proxy call confirmed HTTP 200 and JSON title/content/hashtag, provider id chatcmpl-98193ffb08d04da1aef8a3b1.",
+    "No image generation implemented or tested yet; no deployment performed.",
+    "Abrupt process termination or unavailable database may prevent generation-state cleanup; no automatic job recovery yet."
+  ]
+}

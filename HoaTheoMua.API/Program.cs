@@ -30,7 +30,12 @@ using XanhSmService = HoaTheoMua.Service.XanhSm;
 using FulfillmentService = HoaTheoMua.Service.Fulfillment;
 using HoaTheoMua.Service.DependencyInjection.Extensions;
 using SystemPromptService = HoaTheoMua.Service.SystemPrompt;
-using MockupService = HoaTheoMua.Service.Mockup;
+using PostCoreService = HoaTheoMua.Service.PostCore;
+using PostGenerationService = HoaTheoMua.Service.PostGeneration;
+using PlatformAccountService = HoaTheoMua.Service.PlatformAccount;
+using AiService = HoaTheoMua.Service.AiService;
+using FlowerReferenceService = HoaTheoMua.Service.FlowerReference;
+using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,9 +58,11 @@ builder.Services.AddEndpointsApiExplorer();
 var connectionString = builder.Configuration.GetConnectionString("PostgresSql");
 var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
 dataSourceBuilder.EnableDynamicJson();
-dataSourceBuilder.MapEnum<SystemPromptType>("system_prompt_types");
-dataSourceBuilder.MapEnum<PlatformType>("platform_type");
-dataSourceBuilder.MapEnum<CardFormType>("form_type");
+dataSourceBuilder.MapEnum<SystemPromptType>("SystemPromptType");
+dataSourceBuilder.MapEnum<PlatformType>("PlatformType");
+dataSourceBuilder.MapEnum<CardFormType>("CardFormType");
+dataSourceBuilder.MapEnum<ClientHistoryType>("ClientHistoryType");
+dataSourceBuilder.MapEnum<FlowerReferenceType>("FlowerReferenceType");
 var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -90,6 +97,10 @@ builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
+builder.Services.AddScoped<XanhSmService.XanhSmWebhookService>();
+builder.Services.AddScoped<XanhSmService.XanhSmDeliveryCompletionService>();
+builder.Services.AddHttpClient<NhanhVnService.INhanhVnDeliveryStatusClient, NhanhVnService.NhanhVnDeliveryStatusClient>(
+    "NhanhVnDeliveryStatus", client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>("AhamoveService");
@@ -106,9 +117,37 @@ builder.Services.AddScoped<ProductImportService.IService, ProductImportService.S
 builder.Services.AddScoped<OrderNhanhVnImportService.IService, OrderNhanhVnImportService.Service>();
 builder.Services.AddScoped<RevalidateService.IService, RevalidateService.Service>();
 builder.Services.AddScoped<MaterialService.IService, MaterialService.Service>();
-builder.Services.AddScoped<MockupService.IService, MockupService.Service>();
+builder.Services.AddScoped<FlowerReferenceService.IService, FlowerReferenceService.Service>();
+builder.Services.AddScoped<PostCoreService.IService, PostCoreService.Service>();
+builder.Services.AddScoped<PostGenerationService.IService, PostGenerationService.Service>();
+builder.Services.Configure<HoaTheoMua.Service.PostPublishing.PublishingOptions>(builder.Configuration.GetSection("PublishingOptions"));
+builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Store>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Worker>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Recovery>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.IService, HoaTheoMua.Service.PostPublishing.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostInsights.IService, HoaTheoMua.Service.PostInsights.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostInsights.MetaInsightsClient>();
+builder.Services.AddHostedService<HoaTheoMua.Service.PostPublishing.RecoveryHostedService>();
+HoaTheoMua.Service.PostPublishing.Registration.AddPostGenPublishingAdapters(builder.Services);
+builder.Services.Configure<PlatformAccountService.PlatformAccountOptions>(builder.Configuration.GetSection(nameof(PlatformAccountService.PlatformAccountOptions)));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<PlatformAccountService.TokenProtector>();
+builder.Services.AddScoped<PlatformAccountService.IService, PlatformAccountService.Service>();
+builder.Services.AddHttpClient<PlatformAccountService.IOAuthProvider, PlatformAccountService.OAuthProvider>("PostGenOAuth", client =>
+{
+    client.Timeout = Timeout.InfiniteTimeSpan;
+    client.MaxResponseContentBufferSize = 1024 * 1024;
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false })
+  .RemoveAllLoggers(); // OAuth endpoints can carry secrets in query parameters; do not log request URLs.
+
+builder.Services.AddHttpClient<AiService.IService, AiService.Service>("PostGenAi", client =>
+{
+    client.Timeout = Timeout.InfiniteTimeSpan; // Per-call timeout and total generation budget use cancellation tokens.
+    client.MaxResponseContentBufferSize = 1024 * 1024;
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 
 builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
+builder.Services.AddScoped<CardTemplateService.IService, CardTemplateService.Service>();
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
 // registering it with AddScoped would silently hand it the unnamed default HttpClient the way
 // Webhook.Service and Revalidate.Service currently get theirs.

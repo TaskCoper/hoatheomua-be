@@ -610,7 +610,9 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 FullNameReceiver = TestFullNameReceiver
             };
 
+            var beforeCreate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             await service.CreateOrder(request);
+            var afterCreate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
             var order = Assert.Single(orders);
             Assert.Equal(ShippingGateway.XanhSm, order.ShippingGateway);
@@ -627,7 +629,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                         point.PackageTypes!.SequenceEqual(
                             new[] { HoaTheoMua.Service.XanhSm.XanhSmConstants.FlowersPackageType })) &&
                     points.Any(point => point.Type == "DROP OFF" && point.PhoneNumber == "+84901234567")),
-                It.Is<long>(orderTime => orderTime > 0),
+                It.Is<long>(orderTime => orderTime >= beforeCreate + 5400 && orderTime <= afterCreate + 5400),
                 It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -666,6 +668,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 CreateMockProductService(),
                 xanhSmService: xanhSmService.Object);
 
+            var beforeEstimate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var result = await service.EstimateXanhSmShippingFee(
                 new OrderRequest.EstimateXanhSmShippingFeeRequest
                 {
@@ -684,7 +687,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(5.33, result.Distance);
             Assert.Equal("km", result.DistanceUnit);
             Assert.Equal(702, result.Duration);
-            Assert.True(result.OrderTime > 0);
+            Assert.InRange(result.OrderTime, beforeEstimate + 5400,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 5400);
             Assert.Equal(expiresAt, result.ExpiresAt);
             xanhSmService.Verify(service => service.EstimateDoorToDoorAsync(
                 It.Is<IReadOnlyCollection<HoaTheoMua.Service.XanhSm.XanhSmDeliveryPointRequest>>(points =>

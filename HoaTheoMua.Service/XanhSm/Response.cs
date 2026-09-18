@@ -259,6 +259,9 @@ public class XanhSmEstimatedTrip
 
 public class XanhSmDelivery
 {
+    [JsonPropertyName("sub_status")]
+    public string? SubStatus { get; set; }
+
     [JsonPropertyName("id")]
     public string? Id { get; set; }
 

@@ -19,6 +19,7 @@ public class Order : BaseEntity<Guid>, IAuditableEntity
     public required string TrackNumber { get; set; }
     //public string Metadata { get; set; }
     public int? NhanhOrderId { get; set; }
+    public string? NhanhCompletedShippingOrderId { get; set; }
     public string? NhanhTrackingUrl { get; set; }
     public string? ShippingPartyOrderId { get; set; }
     public string? ShippingTrackingUrl { get; set; }

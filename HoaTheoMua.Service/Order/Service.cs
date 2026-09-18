@@ -906,7 +906,7 @@ public class Service : IService
 
         var orderTime = request.OrderTime > 0
             ? request.OrderTime
-            : DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + XanhSmConstants.PreparationTimeSeconds;
         var quote = await _xanhSmService.EstimateDoorToDoorAsync(
             CreateXanhSmPoints(
                 companyAddress,
@@ -968,7 +968,7 @@ public class Service : IService
 
         var orderTime = request.OrderTime > 0
             ? request.OrderTime
-            : DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + XanhSmConstants.PreparationTimeSeconds;
         var quote = await _xanhSmService.EstimateDoorToDoorAsync(
             CreateXanhSmPoints(
                 companyAddress,
