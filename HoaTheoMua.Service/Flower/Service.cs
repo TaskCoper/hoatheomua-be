@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
@@ -11,6 +10,7 @@ using ProductService = HoaTheoMua.Service.Product.IService;
 using ProductServiceImplementation = HoaTheoMua.Service.Product.Service;
 using FlowerReferenceEntity = HoaTheoMua.Repository.Entity.FlowerReference;
 using Microsoft.EntityFrameworkCore;
+using static HoaTheoMua.Service.Flower.MappingFlower;
 
 namespace HoaTheoMua.Service.Flower;
 
@@ -363,100 +363,8 @@ public class Service : IService
 
     private sealed class FlowerException(int statusCode, string messageCode, string detail)
         : AppException("Flower", statusCode, messageCode, detail);
-
-    private class FlowerMetadata
-    {
-        [JsonPropertyName("subId")] 
-        public Guid SubId { get; set; }
-        [JsonPropertyName("aiCustomize")] 
-        public bool AiCustomize { get; set; }
-        [JsonPropertyName("ribbon")] 
-        public ProductSnapshot? Ribbon { get; set; }
-        [JsonPropertyName("wrappingPaper")] 
-        public ProductSnapshot? WrappingPaper { get; set; }
-        [JsonPropertyName("AdditionCustome")] 
-        public List<MaterialSnapshot> AdditionCustome { get; set; } = [];
-        [JsonPropertyName("materials")] 
-        public List<MaterialSnapshot> Materials { get; set; } = [];
-    }
-
-    private class HistoryMetadata
-    {
-        [JsonPropertyName("schemaVersion")] 
-        public int SchemaVersion { get; set; }
-        [JsonPropertyName("operation")] 
-        public string Operation { get; set; } = null!;
-        [JsonPropertyName("product")] 
-        public ProductSnapshot? Product { get; set; }
-        [JsonPropertyName("bundle")]
-        public ReferenceSnapshot? Bundle { get; set; }
-        [JsonPropertyName("mockup")] 
-        public ReferenceSnapshot? Mockup { get; set; }
-        [JsonPropertyName("logoConfig")] 
-        public object? LogoConfig { get; set; }
-        [JsonPropertyName("regeneratedFromFlowerId")] 
-        public Guid? RegeneratedFromFlowerId { get; set; }
-        [JsonPropertyName("systemPromptSource")] 
-        public string? SystemPromptSource { get; set; }
-        [JsonPropertyName("validatedAt")] 
-        public DateTimeOffset ValidatedAt { get; set; }
-    }
-
-    private class ProductSnapshot
-    {
-        [JsonPropertyName("id")] 
-        public Guid Id { get; set; }
-        [JsonPropertyName("name")] 
-        public string? Name { get; set; }
-        [JsonPropertyName("attributes")] 
-        public object? Attributes { get; set; }
-        [JsonPropertyName("image")] 
-        public ImageSnapshot Image { get; set; } = new();
-        [JsonPropertyName("observedStatus")] 
-        public object? ObservedStatus { get; set; }
-    }
-
-    private class ReferenceSnapshot
-    {
-        [JsonPropertyName("id")] 
-        public Guid Id { get; set; }
-        [JsonPropertyName("name")] 
-        public string? Name { get; set; }
-        [JsonPropertyName("description")] 
-        public string? Description { get; set; }
-        [JsonPropertyName("image")] 
-        public ImageSnapshot Image { get; set; } = new();
-        [JsonPropertyName("observedStatus")] 
-        public object? ObservedStatus { get; set; }
-    }
-
-    private class ImageSnapshot
-    {
-        [JsonPropertyName("url")] 
-        public string? Url { get; set; }
-    }
-
-    private class MaterialSnapshot
-    {
-        [JsonPropertyName("matId")] 
-        public Guid MatId { get; set; }
-        [JsonPropertyName("quantity")] 
-        public decimal Quantity { get; set; }
-        [JsonPropertyName("name")] 
-        public string? Name { get; set; }
-        [JsonPropertyName("isCore")] 
-        public bool IsCore { get; set; }
-    }
-
-    private class PromptSnapshot
-    {
-        [JsonPropertyName("type")] 
-        public string Type { get; set; } = "flower";
-        [JsonPropertyName("content")] 
-        public string Content { get; set; } = null!;
-    }
     
-    /*
+/*
      * config systemPrompt Flower
 {
   "Key": "system_prompt.flower",

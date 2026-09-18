@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ai = HoaTheoMua.Service.AiService;
+using static HoaTheoMua.Service.Card.MappingCard;
 
 namespace HoaTheoMua.Service.Card;
 
@@ -67,10 +68,8 @@ public class Service : IService
         if (request.MessageContent is null)
             throw new BadRequestException("MessageContent là bắt buộc.");
 
-        var sizeConfig = await LoadCardConfigAsync("card_config.sizes");
-        var priceConfig = await LoadCardConfigAsync("card_config.prices");
-        var sizes = DeserializeConfig<ConfigItems<SizeConfigItem>>(sizeConfig).Items;
-        var priceRules = DeserializeConfig<ConfigItems<PriceConfigItem>>(priceConfig).Items;
+        var sizes = (await LoadAndDeserializeCardConfigAsync<ConfigItems<SizeConfigItem>>("card_config.sizes")).Items;
+        var priceRules = (await LoadAndDeserializeCardConfigAsync<ConfigItems<PriceConfigItem>>("card_config.prices")).Items;
         if (sizes.Count == 0 || priceRules.Count == 0)
             throw new ConflictException("Card Config không có dữ liệu sử dụng được.");
 
@@ -157,7 +156,7 @@ public class Service : IService
         return ToResponse(card);
     }
 
-    private async Task<JsonElement> LoadCardConfigAsync(string key)
+    private async Task<T> LoadAndDeserializeCardConfigAsync<T>(string key)
     {
         var normalizedKey = key.Trim().ToLower();
 
@@ -182,9 +181,9 @@ public class Service : IService
             if (value.ValueKind == JsonValueKind.String)
             {
                 using var inner = JsonDocument.Parse(value.GetString()!);
-                return inner.RootElement.Clone();
+                return DeserializeConfig<T>(inner.RootElement.Clone());
             }
-            return value.Clone();
+            return DeserializeConfig<T>(value.Clone());
         }
         catch (JsonException)
         {
@@ -206,46 +205,20 @@ public class Service : IService
             throw new ConflictException("Card Config không thể parse.");
         }
     }
-
-    private sealed class ConfigItems<T>
-    {
-        public List<T> Items { get; set; } = new();
-    }
-
-    private sealed class SizeConfigItem
-    {
-        public string Name { get; set; } = "";
-        public decimal Width { get; set; }
-        public decimal Height { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("base_price")]
-        public decimal BasePrice { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("max_words")]
-        public int MaxWords { get; set; }
-    }
-
-    private sealed class PriceConfigItem
-    {
-        [System.Text.Json.Serialization.JsonPropertyName("min_words")]
-        public int MinWords { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("max_words")]
-        public int MaxWords { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("extra_price")]
-        public decimal ExtraPrice { get; set; }
-    }
-
+    
     public async Task<Response.CreateCardResponse> CreateCardAi(Request.CreateCardAiRequest request)
     {
         var createMode = request.OrderDetailIdSpecified || request.VirtualIdSpecified;
         var regenerateMode = request.SourceCardIdSpecified;
-        if (createMode == regenerateMode || (regenerateMode && (!request.SourceCardId.HasValue || request.SourceCardId == Guid.Empty)) || (createMode && (!request.OrderDetailId.HasValue || !request.VirtualId.HasValue
-            || request.OrderDetailId == Guid.Empty || request.VirtualId == Guid.Empty)))
+        if (createMode == regenerateMode
+            || (regenerateMode && (!request.SourceCardId.HasValue || request.SourceCardId == Guid.Empty))
+            || (createMode && (!request.OrderDetailId.HasValue || !request.VirtualId.HasValue
+                || request.OrderDetailId == Guid.Empty || request.VirtualId == Guid.Empty)))
             throw new BadRequestException("VALIDATION_ERROR");
 
         var userId = _currentUser.GetRequiredUserId();
         if (regenerateMode)
         {
-            if (request.OrderDetailIdSpecified || request.VirtualIdSpecified)
-                throw new BadRequestException("VALIDATION_ERROR");
             var sourceCard = await _dbContext.GeneratedCards
                 .FirstOrDefaultAsync(x => x.Id == request.SourceCardId && x.UserId == userId)
                 ?? throw new NotFoundException("Không tìm thấy source Card.");
@@ -287,7 +260,14 @@ public class Service : IService
             CreatedAt = card.CreatedAt,
             SystemForm = JsonSerializer.Serialize(cardSnapshot.SystemPrompt),
             SessionId = null,
-            Metadata = BuildHistoryMetadata(cardSnapshot, baseId, rootId, orderDetail.Id, request.VirtualId.Value, generatedFlowerId)
+            Metadata = BuildHistoryMetadata(
+                cardSnapshot,
+                baseId,
+                rootId,
+                orderDetail.Id,
+                request.VirtualId.Value,
+                generatedFlowerId,
+                "create")
         };
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
@@ -684,9 +664,16 @@ public class Service : IService
         TotalPrice = snapshot.TotalPrice
     };
 
-    private static string BuildHistoryMetadata(CardSnapshot snapshot, Guid baseId, Guid rootId, Guid orderDetailId, Guid virtualId, Guid? generatedFlowerId) => JsonSerializer.Serialize(new
+    private static string BuildHistoryMetadata(
+        CardSnapshot snapshot,
+        Guid baseId,
+        Guid rootId,
+        Guid orderDetailId,
+        Guid virtualId,
+        Guid? generatedFlowerId,
+        string operation) => JsonSerializer.Serialize(new
     {
-        operation = "create",
+        operation,
         orderDetailId,
         virtualId,
         sourceType = generatedFlowerId.HasValue ? "generated_flower" : "product",
@@ -715,85 +702,7 @@ public class Service : IService
 
     private sealed record AiResult(string Content, string ImageUrl, string RawImage);
 
-    private sealed class CardSnapshot
-    {
-        public Guid VirtualId { get; set; }
-        public string CardType { get; set; } = "";
-        public SnapshotSource Source { get; set; } = new();
-        public string? RawImage { get; set; }
-        public SnapshotTemplate CardTemplate { get; set; } = new();
-        public SnapshotSize CardSize { get; set; } = new();
-        public JsonElement? CardConfig { get; set; }
-        public string MessageContent { get; set; } = "";
-        public string FormType { get; set; } = "";
-        public string? AttachedImageUrl { get; set; }
-        public int WordCount { get; set; }
-        public decimal BasePrice { get; set; }
-        public decimal ExtraPrice { get; set; }
-        public decimal TotalPrice { get; set; }
-        public SnapshotPrompt SystemPrompt { get; set; } = new();
-        public DateTimeOffset ValidatedAt { get; set; }
-        public string Status { get; set; } = "";
-        public List<Guid> IdResult { get; set; } = new();
-        public Guid? FinalGeneratedCardId { get; set; }
-    }
-
-    private sealed class SnapshotSource
-    {
-        public string Type { get; set; } = "";
-        public Guid Id { get; set; }
-        public string ImageUrl { get; set; } = "";
-    }
-
-    private sealed class SnapshotTemplate
-    {
-        public Guid TemplateId { get; set; }
-        public string TemplateName { get; set; } = "";
-        public string TemplateType { get; set; } = "";
-        public string TemplateImageUrl { get; set; } = "";
-    }
-
-    private sealed class SnapshotSize
-    {
-        public string Name { get; set; } = "";
-        public decimal Width { get; set; }
-        public decimal Height { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("base_price")]
-        public decimal BasePrice { get; set; }
-        [System.Text.Json.Serialization.JsonPropertyName("max_words")]
-        public int MaxWords { get; set; }
-    }
-
-    private sealed class SnapshotPrompt
-    {
-        public string Type { get; set; } = "";
-        public string Content { get; set; } = "";
-    }
-
-    private sealed class SourceHistoryMetadata
-    {
-        public Guid? OrderDetailId { get; set; }
-        public Guid? VirtualId { get; set; }
-        public string SourceType { get; set; } = "";
-        public Guid? GeneratedFlowerId { get; set; }
-        public SourceHistorySource? Source { get; set; }
-        public SourceHistoryTemplate? CardTemplate { get; set; }
-    }
-
-    private sealed class SourceHistorySource
-    {
-        public string Type { get; set; } = "";
-        public Guid Id { get; set; }
-        public string ImageUrl { get; set; } = "";
-    }
-
-    private sealed class SourceHistoryTemplate
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = "";
-        public string TemplateType { get; set; } = "";
-        public string ImageUrl { get; set; } = "";
-    }
+    
 
     private static bool TryParseFormType(string value, out CardFormType formType)
     {
