@@ -1,9 +1,121 @@
 ﻿using System.Text.Json.Serialization;
 
+using Newtonsoft.Json;
+
 namespace HoaTheoMua.Service.Webhook;
 
 public class Request
 {
+   // Snapshot đã lưu trong OrderDetails.Metadata. Đây không phải payload từ
+   // gateway; Webhook dùng class này để đọc lại dữ liệu đã chốt ở CreateOrder.
+   public class OrderDetailMetadata
+   {
+      [JsonProperty("productMetadata")]
+      public List<ProductMetadataSnapshot?>? ProductMetadata { get; set; }
+   }
+
+   public class ProductMetadataSnapshot
+   {
+      [JsonProperty("generatedFlower")]
+      public Guid? GeneratedFlower { get; set; }
+
+      [JsonProperty("snapShotCard")]
+      public CardSnapshot? SnapShotCard { get; set; }
+   }
+
+   public class CardSnapshot
+   {
+      [JsonProperty("virtualId")]
+      public Guid VirtualId { get; set; }
+
+      [JsonProperty("cardId")]
+      public Guid? CardId { get; set; }
+
+      [JsonProperty("cardType")]
+      public string CardType { get; set; } = string.Empty;
+
+      [JsonProperty("source")]
+      public CardSourceSnapshot? Source { get; set; }
+
+      [JsonProperty("cardTemplate")]
+      public CardTemplateSnapshot? CardTemplate { get; set; }
+
+      [JsonProperty("cardSize")]
+      public CardSizeSnapshot? CardSize { get; set; }
+
+      [JsonProperty("cardConfig")]
+      public CardConfigSnapshot? CardConfig { get; set; }
+
+      [JsonProperty("messageContent")]
+      public string MessageContent { get; set; } = string.Empty;
+
+      [JsonProperty("formType")]
+      public string FormType { get; set; } = string.Empty;
+
+      [JsonProperty("attachedImageUrl")]
+      public string? AttachedImageUrl { get; set; }
+
+      [JsonProperty("wordCount")]
+      public int WordCount { get; set; }
+
+      [JsonProperty("basePrice")]
+      public decimal BasePrice { get; set; }
+
+      [JsonProperty("extraPrice")]
+      public decimal ExtraPrice { get; set; }
+
+      [JsonProperty("totalPrice")]
+      public decimal TotalPrice { get; set; }
+
+      [JsonProperty("validatedAt")]
+      public DateTimeOffset ValidatedAt { get; set; }
+   }
+
+   public class CardSourceSnapshot
+   {
+      [JsonProperty("type")]
+      public string Type { get; set; } = string.Empty;
+
+      [JsonProperty("id")]
+      public Guid Id { get; set; }
+
+      [JsonProperty("imageUrl")]
+      public string ImageUrl { get; set; } = string.Empty;
+   }
+
+   public class CardTemplateSnapshot
+   {
+      [JsonProperty("templateId")]
+      public Guid TemplateId { get; set; }
+
+      [JsonProperty("templateName")]
+      public string TemplateName { get; set; } = string.Empty;
+
+      [JsonProperty("templateType")]
+      public string TemplateType { get; set; } = string.Empty;
+
+      [JsonProperty("templateImageUrl")]
+      public string TemplateImageUrl { get; set; } = string.Empty;
+   }
+
+   public class CardSizeSnapshot
+   {
+      [JsonProperty("name")]
+      public string Name { get; set; } = string.Empty;
+   }
+
+   public class CardConfigSnapshot
+   {
+      [JsonProperty("min_words")]
+      public int MinWords { get; set; }
+
+      [JsonProperty("max_words")]
+      public int MaxWords { get; set; }
+
+      [JsonProperty("extra_price")]
+      public decimal ExtraPrice { get; set; }
+   }
+
    public class SepayWebhookRequest
    {
       public string Gateway { get; set; } = null!;

@@ -539,6 +539,14 @@ public class Service : IService
             if (generatedFlowerIds.Count > 1)
                 throw new BadRequestException("ORDER_ITEM_GENERATED_FLOWER_MISMATCH");
 
+            // Một dòng Order chỉ đại diện cho Combo thường, hoặc một mẫu hoa AI.
+            // Không cho trộn một lựa chọn có Flower với lựa chọn không có Flower,
+            // vì khi đã có Flower thì Flower đó áp dụng cho toàn bộ Number của dòng.
+            
+            if (generatedFlowerIds.Count == 1 &&
+                selections.Any(x => !x.GeneratedFlowerId.HasValue))
+                throw new BadRequestException("ORDER_ITEM_GENERATED_FLOWER_MISMATCH");
+
             var isCombo = specificationsByCombo.TryGetValue(
                 orderItem.ProductId, out var comboSpecifications);
 
