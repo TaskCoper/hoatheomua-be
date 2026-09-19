@@ -2,6 +2,7 @@
 using System.Transactions;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
+using Newtonsoft.Json;
 
 namespace HoaTheoMua.Service.Order;
 
@@ -366,19 +367,37 @@ public class Response
 
     public class ResolvedMaterial
     {
+        [JsonProperty("matId")]
         public Guid MatId { get; set; }
+
+        [JsonProperty("quantity")]
         public decimal Quantity { get; set; }
+
+        [JsonProperty("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonProperty("isCore")]
         public bool IsCore { get; set; }
     }
 
     public class ResolvedAccessory
     {
+        [JsonProperty("id")]
         public Guid Id { get; set; }
+
+        [JsonProperty("name")]
         public string? Name { get; set; }
+
+        [JsonProperty("label")]
         public string? Label { get; set; }
+
+        [JsonProperty("imageUrl")]
         public string? ImageUrl { get; set; }
+
+        [JsonProperty("isActive")]
         public bool IsActive { get; set; }
+
+        [JsonProperty("isDeleted")]
         public bool IsDeleted { get; set; }
     }
     
@@ -395,11 +414,22 @@ public class Response
     
     public class FlowerOrderMetadata
     {
+        [JsonProperty("subId")]
         public Guid SubId { get; set; }
+
+        [JsonProperty("aiCustomize")]
         public bool AiCustomize { get; set; }
+
+        [JsonProperty("materials")]
         public List<ResolvedMaterial>? Materials { get; set; }
+
+        [JsonProperty("AdditionCustome")]
         public List<ResolvedMaterial>? AdditionCustome { get; set; }
+
+        [JsonProperty("ribbon")]
         public ResolvedAccessory? Ribbon { get; set; }
+
+        [JsonProperty("wrappingPaper")]
         public ResolvedAccessory? WrappingPaper { get; set; }
     }
     

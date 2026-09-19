@@ -11,10 +11,19 @@ public class Request
 
     public class MaterialSnapshot
     {
+        [JsonProperty("matId")]
         public Guid MatId { get; set; }
+
+        [JsonProperty("quantity")]
         public decimal Quantity { get; set; }
+
+        [JsonProperty("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonProperty("price")]
         public decimal? Price { get; set; }
+
+        [JsonProperty("isCore")]
         public bool IsCore { get; set; }
     }
 
