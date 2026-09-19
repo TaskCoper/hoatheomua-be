@@ -18,7 +18,8 @@ public class Service : IService
         _httpContext = httpContext;
     }
 
-    public async Task<BasePaginationResponse> GetCardTemplate(int pageIndex, int pageSize, bool? isActive, string? templateType, string? search = null)
+    public async Task<BasePaginationResponse> GetCardTemplate(int pageIndex, int pageSize, bool? isActive, string? templateType, string? search = null,
+        List<Guid>? productIds = null)
     {
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
@@ -85,7 +86,84 @@ public class Service : IService
             })
             .ToListAsync();
 
-        return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+        var productIdsToFind = productIds?.Where(id => id != Guid.Empty).Distinct().ToArray() ?? [];
+        var products = productIdsToFind.Length == 0
+            ? []
+            : await _dbContext.Products.AsNoTracking()
+                .Where(product => productIdsToFind.Contains(product.Id) && !product.IsDeleted)
+                .Select(product => new { product.Id, product.ProductName })
+                .ToListAsync();
+
+        var productCardHistories = productIdsToFind.Length == 0
+            ? []
+            : await _dbContext.ClientHistories.AsNoTracking()
+                .Where(history => productIdsToFind.Contains(history.RootId)
+                    && (history.Type == ClientHistoryType.Card || history.Type == ClientHistoryType.HandmadeCard))
+                .Select(history => new { history.RootId, history.OutputId })
+                .ToListAsync();
+
+        var flowerHistories = productIdsToFind.Length == 0
+            ? []
+            : await _dbContext.ClientHistories.AsNoTracking()
+                .Where(history => history.Type == ClientHistoryType.Flower && productIdsToFind.Contains(history.RootId))
+                .Select(history => new { ProductId = history.RootId, GeneratedFlowerId = history.OutputId })
+                .ToListAsync();
+        var flowerProductById = flowerHistories
+            .GroupBy(history => history.GeneratedFlowerId)
+            .ToDictionary(group => group.Key, group => group.First().ProductId);
+        var flowerIds = flowerProductById.Keys.ToArray();
+        var flowerCardHistories = flowerIds.Length == 0
+            ? []
+            : await _dbContext.ClientHistories.AsNoTracking()
+                .Where(history => flowerIds.Contains(history.RootId)
+                    && (history.Type == ClientHistoryType.Card || history.Type == ClientHistoryType.HandmadeCard))
+                .Select(history => new { history.RootId, history.OutputId })
+                .ToListAsync();
+
+        var cardLinks = productCardHistories
+            .Select(history => new { ProductId = history.RootId, CardId = history.OutputId })
+            .Concat(flowerCardHistories.Select(history => new
+            {
+                ProductId = flowerProductById[history.RootId],
+                CardId = history.OutputId
+            }))
+            .Distinct()
+            .ToList();
+        var cardIds = cardLinks.Select(link => link.CardId).Distinct().ToArray();
+        var cardsById = cardIds.Length == 0
+            ? new Dictionary<Guid, Repository.Entity.GeneratedCard>()
+            : (await _dbContext.GeneratedCards.AsNoTracking()
+                    .Where(card => cardIds.Contains(card.Id))
+                    .ToListAsync())
+                .ToDictionary(card => card.Id);
+
+        var generatedCardsByProduct = cardLinks
+            .Where(link => cardsById.ContainsKey(link.CardId))
+            .GroupBy(link => link.ProductId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(link => cardsById[link.CardId])
+                    .OrderByDescending(card => card.CreatedAt)
+                    .ThenByDescending(card => card.Id)
+                    .Select(card => new Response.GeneratedCardResponse { Id = card.Id, Name = card.Content })
+                    .ToList());
+
+        var response = ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+        return new CardTemplatePaginationResponse
+        {
+            IsSuccess = response.IsSuccess,
+            IsFailed = response.IsFailed,
+            Error = response.Error,
+            TraceId = response.TraceId,
+            TimestampUtc = response.TimestampUtc,
+            Value = response.Value,
+            Products = products.Select(product => new Response.ProductGeneratedCardResponse
+            {
+                ProductId = product.Id,
+                ProductName = product.ProductName ?? string.Empty,
+                GeneratedCards = generatedCardsByProduct.GetValueOrDefault(product.Id) ?? []
+            }).ToList()
+        };
     }
 
     public async Task<Response.CardTemplateResponse> GetCardTemplateDetail(Guid id)
@@ -218,5 +296,9 @@ public class Service : IService
         await _dbContext.SaveChangesAsync();
 
         return "Đã xóa mẫu thiệp thành công.";
+    }
+    private sealed class CardTemplatePaginationResponse : BasePaginationResponse
+    {
+        public List<Response.ProductGeneratedCardResponse> Products { get; set; } = [];
     }
 }
