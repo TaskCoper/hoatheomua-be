@@ -350,11 +350,11 @@ public class Service : IService
     private async Task<PromptSnapshot?> LoadPrompt()
     {
         var configs = await _db.Configs.AsNoTracking()
-            .Where(x => x.Key == "system_prompt.flower" && !x.IsDeleted)
+            .Where(x => x.Key == "imagegen.flower_prompt" && !x.IsDeleted)
             .ToListAsync();
         if (configs.Count == 0) return null;
         if (configs.Count != 1
-            || !string.Equals(configs[0].Group?.Trim(), "system_prompt", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(configs[0].Group?.Trim(), "imagegen", StringComparison.OrdinalIgnoreCase)
             || !string.Equals(configs[0].Kind?.Trim(), "setting", StringComparison.OrdinalIgnoreCase)
             || !configs[0].IsPublic)
         {
@@ -626,24 +626,17 @@ public class Service : IService
 
     private sealed class FlowerException(int statusCode, string messageCode, string detail)
         : AppException("Flower", statusCode, messageCode, detail);
-    
-/*
-     * config systemPrompt Flower
-{
-  "Key": "system_prompt.flower",
-  "Group": "system_prompt",
-  "Kind": "Setting",
-  "IsPublic": false,
-  "Value": {
-    "group": "system_prompt",
-    "label": "Flower",
-    "value": "Nội dung prompt tạo ảnh bó hoa...",
-    "options": [],
-    "required": false,
-    "inputType": "textarea",
-    "description": "{\"logo\":\"https://taskcoper.hcm.ss.bfcplatform.vn/general/u1utst-fb.webp\",\"isActive\":true}",
-    "validations": []
-  }
-}
-     */
+
+    /*
+         * config systemPrompt Flower
+    {
+      "group": "imagegen",
+      "label": "Prompt ảnh hoa",
+      "value": "Tạo ảnh hoa thật đẹp\n\n10 điểm",
+      "options": [],
+      "required": false,
+      "inputType": "textarea",
+      "validations": []
+    }
+         */
 }

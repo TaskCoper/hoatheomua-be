@@ -770,11 +770,11 @@ public class Service : IService
     private async Task<SnapshotPrompt?> LoadSystemPromptCardAsync()
     {
         var configs = await _dbContext.Configs.AsNoTracking()
-            .Where(x => x.Key == "system_prompt.card" && !x.IsDeleted)
+            .Where(x => x.Key == "imagegen.card_prompt" && !x.IsDeleted)
             .ToListAsync();
         if (configs.Count == 0) return null;
         if (configs.Count != 1
-            || !string.Equals(configs[0].Group?.Trim(), "system_prompt", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(configs[0].Group?.Trim(), "imagegen", StringComparison.OrdinalIgnoreCase)
             || !string.Equals(configs[0].Kind?.Trim(), "setting", StringComparison.OrdinalIgnoreCase)
             || !configs[0].IsPublic)
         {
@@ -1131,24 +1131,17 @@ public class Service : IService
         ExtraPrice = card.ExtraPrice, 
         TotalPrice = card.TotalPrice
     };
-    
+
     /*
      * config systemPromptCard
 {
-  "Key": "system_prompt.flower",
-  "Group": "system_prompt",
-  "Kind": "Setting",
-  "IsPublic": false,
-  "Value": {
-    "group": "system_prompt",
-    "label": "Flower",
-    "value": "Nội dung prompt tạo ảnh bó hoa...",
-    "options": [],
-    "required": false,
-    "inputType": "textarea",
-    "description": "{\"logo\":\"https://taskcoper.hcm.ss.bfcplatform.vn/general/u1utst-fb.webp\",\"isActive\":true}",
-    "validations": []
-  }
+  "group": "imagegen",
+  "label": "Prompt thiệp",
+  "value": "Tạo ảnh thiệp thật đẹp\n\n10 điểm",
+  "options": [],
+  "required": false,
+  "inputType": "textarea",
+  "validations": []
 }
      */
 }
