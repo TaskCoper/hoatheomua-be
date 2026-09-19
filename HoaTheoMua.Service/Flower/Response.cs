@@ -24,7 +24,20 @@ public class Response
         public string ImageUrl { get; set; } = null!;
         public Guid UserId { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
+        // Snapshot cấu hình đúng tại lúc tạo version Flower này.
+        public CustomerFlowerReferenceResponse? Product { get; set; }
+        public CustomerFlowerReferenceResponse? Bundle { get; set; }
+        public CustomerFlowerReferenceResponse? Mockup { get; set; }
+        public CustomerFlowerReferenceResponse? Ribbon { get; set; }
+        public CustomerFlowerReferenceResponse? WrappingPaper { get; set; }
         public JsonElement Metadata { get; set; }
+    }
+
+    public class CustomerFlowerReferenceResponse
+    {
+        public Guid Id { get; set; }
+        public string? Name { get; set; }
+        public string? ImageUrl { get; set; }
     }
 
     public class AdminGeneratedFlowerResponse
@@ -55,6 +68,7 @@ public class Response
     public class GeneratedFlowerResponse
     {
         public Guid Id { get; init; }
+        public Guid SessionId { get; init; } // phải có dòng này
         public string Name { get; init; } = null!;
         public string ImageUrl { get; init; } = null!;
         public JsonElement Metadata { get; init; }
