@@ -36,6 +36,8 @@ public class ConflictException : AppException
 {
     public ConflictException(string detail)
         : base("Conflict", 409, "CONFLICT", detail) { }
+    public ConflictException(string messageCode, string detail)
+        : base("Conflict", 409, messageCode, detail) { }
 }
 
 public class UnauthorizedException : AppException
