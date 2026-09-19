@@ -219,7 +219,7 @@ public class Service : IService
             .Distinct()
             .ToList() ?? new List<Guid>();
 
-        var labels = request.Labels?
+        var labels = request.labels?
             .Where(label => !string.IsNullOrWhiteSpace(label))
             .Select(label => label.Trim().ToLower().Replace(" ", ""))
             .Distinct()
@@ -458,9 +458,9 @@ public class Service : IService
             }
         }
         
-        if (request.IsActive.HasValue)
+        if (request.isActive.HasValue)
         {
-            query = query.Where(x => x.IsActive == request.IsActive.Value);
+            query = query.Where(x => x.IsActive == request.isActive.Value);
         }
         
         if (request.productType.HasValue)

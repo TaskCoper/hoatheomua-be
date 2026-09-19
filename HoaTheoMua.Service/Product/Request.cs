@@ -101,8 +101,8 @@ public class Request
         public List<Guid>? categoryIds { get; set; }
         public ProductType? productType  { get; set; }
         public bool? isPin { get; set; }
-        public bool? IsActive { get; set; }
-        public List<string>? Labels { get; set; }
+        public bool? isActive { get; set; }
+        public List<string>? labels { get; set; }
     }
     
     public class MoveProductRequest

@@ -6,12 +6,12 @@ public class Request
 {
     public class AdminGeneratedCardListRequest
     {
-        public Guid? Id { get; set; }
-        public string? FormType { get; set; }
-        public string? Size { get; set; }
-        public string? CardTemplateName { get; set; }
-        public int PageIndex { get; set; } = 1;
-        public int PageSize { get; set; } = 10;
+        public Guid? id { get; set; }
+        public string? formType { get; set; }
+        public string? size { get; set; }
+        public string? cardTemplateName { get; set; }
+        public int pageIndex { get; set; } = 1;
+        public int pageSize { get; set; } = 10;
     }
 
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]

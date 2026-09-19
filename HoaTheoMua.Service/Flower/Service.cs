@@ -41,8 +41,8 @@ public class Service : IService
             .Where(history => history.UserId == userId
                 && history.Type == ClientHistoryType.Flower
                 && history.SessionId.HasValue);
-        if (request.SessionId.HasValue)
-            historyQuery = historyQuery.Where(history => history.SessionId == request.SessionId.Value);
+        if (request.sessionId.HasValue)
+            historyQuery = historyQuery.Where(history => history.SessionId == request.sessionId.Value);
 
         var histories = await historyQuery.ToListAsync(cancellationToken);
         var outputIds = histories.Select(history => history.OutputId).Distinct().ToArray();
@@ -119,13 +119,13 @@ public class Service : IService
 
         var totalCount = groups.Count;
         var items = groups
-            .Skip((request.PageIndex - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((request.pageIndex - 1) * request.pageSize)
+            .Take(request.pageSize)
             .ToList();
         return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
             items,
-            request.PageIndex,
-            request.PageSize,
+            request.pageIndex,
+            request.pageSize,
             totalCount);
     }
 
@@ -135,23 +135,23 @@ public class Service : IService
     {
         ValidateAdminListRequest(request);
         var query = _db.GeneratedFlowers.AsNoTracking();
-        if (request.GeneratedFlowerId.HasValue)
-            query = query.Where(flower => flower.Id == request.GeneratedFlowerId.Value);
+        if (request.generatedFlowerId.HasValue)
+            query = query.Where(flower => flower.Id == request.generatedFlowerId.Value);
 
         var flowers = await query
             .OrderByDescending(flower => flower.CreatedAt)
             .ThenByDescending(flower => flower.Id)
             .ToListAsync(cancellationToken);
-        if (request.ProductId.HasValue)
+        if (request.productId.HasValue)
             flowers = flowers
                 .Where(flower => TryGetProductId(flower.Metadata, out var productId)
-                    && productId == request.ProductId.Value)
+                    && productId == request.productId.Value)
                 .ToList();
 
         var totalCount = flowers.Count;
         var pagedFlowers = flowers
-            .Skip((request.PageIndex - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((request.pageIndex - 1) * request.pageSize)
+            .Take(request.pageSize)
             .ToList();
         var flowerIds = pagedFlowers.Select(flower => flower.Id).ToArray();
         var histories = flowerIds.Length == 0
@@ -171,8 +171,8 @@ public class Service : IService
             .ToList();
         return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
             items,
-            request.PageIndex,
-            request.PageSize,
+            request.pageIndex,
+            request.pageSize,
             totalCount);
     }
 
@@ -506,22 +506,22 @@ public class Service : IService
     private static void ValidateAdminListRequest(Request.AdminGeneratedFlowerListRequest request)
     {
         var errors = new Dictionary<string, string[]>();
-        if (request.GeneratedFlowerId == Guid.Empty)
+        if (request.generatedFlowerId == Guid.Empty)
         {
             errors["generatedFlowerId"] = ["GeneratedFlowerId không được là GUID rỗng."];
         }
 
-        if (request.ProductId == Guid.Empty)
+        if (request.productId == Guid.Empty)
         {
             errors["productId"] = ["ProductId không được là GUID rỗng."];
         }
 
-        if (request.PageIndex < 1)
+        if (request.pageIndex < 1)
         {
             errors["pageIndex"] = ["PageIndex phải lớn hơn hoặc bằng 1."];
         }
 
-        if (request.PageSize is not (5 or 10 or 20 or 30 or 40 or 50))
+        if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))
         {
             errors["pageSize"] = ["PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50."];
         }
@@ -535,11 +535,11 @@ public class Service : IService
     private static void ValidateCustomerListRequest(Request.CustomerGeneratedFlowerListRequest request)
     {
         var errors = new List<string>();
-        if (request.SessionId == Guid.Empty)
+        if (request.sessionId == Guid.Empty)
             errors.Add("SessionId không được là GUID rỗng.");
-        if (request.PageIndex < 1)
+        if (request.pageIndex < 1)
             errors.Add("PageIndex phải lớn hơn hoặc bằng 1.");
-        if (request.PageSize is not (5 or 10 or 20 or 30 or 40 or 50))
+        if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))
             errors.Add("PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50.");
         if (errors.Count > 0)
             throw new QueryValidationException(string.Join(" ", errors));

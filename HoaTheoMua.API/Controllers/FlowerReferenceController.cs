@@ -22,7 +22,7 @@ public class FlowerReferenceController : ControllerBase
     [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
     public async Task<IActionResult> GetFlowerReference([FromQuery] Request.GetFlowerReferenceRequest request)
     {
-        var result = await _flowerReferenceService.GetFlowerReference(request.PageIndex, request.PageSize, request.IsActive, request.Type, request.Search);
+        var result = await _flowerReferenceService.GetFlowerReference(request.pageIndex, request.pageSize, request.isActive, request.type, request.search);
         return Ok(result);
     }
     
