@@ -350,6 +350,203 @@ public class Service : IService
         return ToResponse(card);
     }
 
+    public async Task<string> UpdateFinalGeneratedCardId(Request.UpdateFinalGeneratedCardId request)
+    {
+        if (request.OrderDetailId == Guid.Empty || request.VirtualId == Guid.Empty || request.GeneratedCardId == Guid.Empty)
+            throw new BadRequestException("VALIDATION_ERROR");
+
+        var userId = _currentUser.GetRequiredUserId();
+        var orderDetail = await _dbContext.OrderDetails
+            .Include(x => x.Order)
+            .FirstOrDefaultAsync(x => x.Id == request.OrderDetailId
+                && x.Order.UserId == userId
+                && !x.IsDeleted
+                && !x.Order.IsDeleted)
+            ?? throw new NotFoundException("Không tìm thấy OrderDetail.");
+
+        var (metadata, snapshotNode, snapshot, _) = FindAiSnapshot(orderDetail.Metadata, request.VirtualId);
+        if (!snapshot.IdResult.Contains(request.GeneratedCardId))
+            throw new ConflictException("GENERATED_CARD_NOT_IN_SNAPSHOT", "GeneratedCard không thuộc kết quả của Snapshot Card.");
+
+        snapshotNode["finalGeneratedCardId"] = request.GeneratedCardId.ToString();
+        orderDetail.Metadata = metadata.ToJsonString();
+        await _dbContext.SaveChangesAsync();
+
+        return "Final generated card updated successfully.";
+    }
+
+    public async Task<Response.OrderDetailCardsResponse> GetCardByOrderDetailId(Guid orderDetailId)
+    {
+        if (orderDetailId == Guid.Empty)
+            throw new BadRequestException("OrderDetailId không được là GUID rỗng.");
+
+        var userId = _currentUser.GetRequiredUserId();
+        var orderDetail = await _dbContext.OrderDetails
+            .AsNoTracking()
+            .Include(x => x.Order)
+            .FirstOrDefaultAsync(x => x.Id == orderDetailId
+                && x.Order.UserId == userId
+                && !x.IsDeleted
+                && !x.Order.IsDeleted)
+            ?? throw new NotFoundException("Không tìm thấy OrderDetail.");
+
+        var groups = ParseOrderDetailCardGroups(orderDetail.Metadata);
+        var cardIds = groups.SelectMany(x => x.IdResult).Distinct().ToArray();
+        var cards = cardIds.Length == 0
+            ? []
+            : await _dbContext.GeneratedCards
+                .AsNoTracking()
+                .Where(x => x.UserId == userId && cardIds.Contains(x.Id))
+                .ToListAsync();
+        if (cards.Count != cardIds.Length)
+            throw new ConflictException("ORDER_DETAIL_CARD_REFERENCE_INVALID", "OrderDetail tham chiếu Card không tồn tại hoặc không thuộc user.");
+
+        var histories = cardIds.Length == 0
+            ? []
+            : await _dbContext.ClientHistories
+                .AsNoTracking()
+                .Where(x => x.UserId == userId
+                    && (x.Type == ClientHistoryType.Card || x.Type == ClientHistoryType.HandmadeCard)
+                    && cardIds.Contains(x.OutputId))
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync();
+        var cardsById = cards.ToDictionary(x => x.Id);
+        var historiesByCardId = histories.GroupBy(x => x.OutputId).ToDictionary(x => x.Key, x => x.First());
+
+        return new Response.OrderDetailCardsResponse
+        {
+            OrderDetailId = orderDetailId,
+            Flowers = groups.Select(group =>
+            {
+                var candidates = group.IdResult.Select(cardId =>
+                    ToOrderDetailCardResponse(
+                        cardsById[cardId],
+                        historiesByCardId.GetValueOrDefault(cardId),
+                        cardId == group.FinalGeneratedCardId)).ToList();
+                return new Response.FlowerCardGroupResponse
+                {
+                    VirtualId = group.VirtualId,
+                    SourceType = group.GeneratedFlowerId.HasValue ? "generated_flower" : group.SourceType,
+                    ProductId = group.ProductId,
+                    GeneratedFlowerId = group.GeneratedFlowerId,
+                    CardType = group.CardType,
+                    CandidateCards = candidates,
+                    SelectedCard = candidates.FirstOrDefault(x => x.IsSelected)
+                };
+            }).ToList()
+        };
+    }
+
+    private static List<OrderDetailCardGroup> ParseOrderDetailCardGroups(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson)) return [];
+
+        try
+        {
+            var metadata = JsonNode.Parse(metadataJson)?.AsObject() ?? throw new JsonException();
+            if (metadata["productMetadata"] is null) return [];
+            var products = metadata["productMetadata"] as JsonArray ?? throw new JsonException();
+            var groups = new List<OrderDetailCardGroup>();
+            foreach (var productNode in products)
+            {
+                var product = productNode as JsonObject ?? throw new JsonException();
+                if (product["snapShotCard"] is null) continue;
+                var snapshotNode = product["snapShotCard"] as JsonObject ?? throw new JsonException();
+                var snapshot = snapshotNode.Deserialize<CardSnapshot>(new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                    ?? throw new JsonException();
+                if (snapshot.Source is null || snapshot.IdResult is null
+                    || snapshot.VirtualId == Guid.Empty || string.IsNullOrWhiteSpace(snapshot.CardType)
+                    || snapshot.IdResult.Any(x => x == Guid.Empty)
+                    || snapshot.IdResult.Distinct().Count() != snapshot.IdResult.Count)
+                    throw new ConflictException("ORDER_DETAIL_CARD_SNAPSHOT_INVALID", "Snapshot Card không hợp lệ.");
+                if (snapshot.FinalGeneratedCardId.HasValue && !snapshot.IdResult.Contains(snapshot.FinalGeneratedCardId.Value))
+                    throw new ConflictException("ORDER_DETAIL_CARD_REFERENCE_INVALID", "FinalGeneratedCardId không thuộc idResult.");
+
+                var generatedFlowerId = Guid.TryParse(product["generatedFlower"]?.ToString(), out var flowerId)
+                    ? flowerId
+                    : (Guid?)null;
+                groups.Add(new OrderDetailCardGroup(
+                    snapshot.VirtualId,
+                    string.IsNullOrWhiteSpace(snapshot.Source.Type) ? "product" : snapshot.Source.Type,
+                    snapshot.Source.Id == Guid.Empty ? null : snapshot.Source.Id,
+                    generatedFlowerId,
+                    snapshot.CardType,
+                    snapshot.IdResult,
+                    snapshot.FinalGeneratedCardId));
+            }
+
+            if (groups.Select(x => x.VirtualId).Distinct().Count() != groups.Count)
+                throw new ConflictException("ORDER_DETAIL_CARD_SNAPSHOT_INVALID", "OrderDetail có virtualId bị trùng.");
+            if (groups.SelectMany(x => x.IdResult).Distinct().Count() != groups.Sum(x => x.IdResult.Count))
+                throw new ConflictException("ORDER_DETAIL_CARD_REFERENCE_INVALID", "Một Card đang thuộc nhiều Snapshot Card.");
+            return groups;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
+        {
+            throw new ConflictException("ORDER_DETAIL_CARD_SNAPSHOT_INVALID", "OrderDetail.Metadata không đúng cấu trúc Card.");
+        }
+    }
+
+    private static Response.CardItemResponse ToOrderDetailCardResponse(
+        GeneratedCard card,
+        ClientHistory? history,
+        bool isSelected)
+    {
+        var (operation, regeneratedFromCardId) = ParseCardHistory(history);
+        return new Response.CardItemResponse
+        {
+            Id = card.Id,
+            CardType = card.CardType == GeneratedCardType.Ai ? "ai" : "handmade",
+            FormType = card.FormType == CardFormType.Calligraphy ? "calligraphy" : "go_may",
+            ImageUrl = card.ImageUrl,
+            RawImage = card.RawImage,
+            MessageContent = card.MessageContent,
+            AttachedImageUrl = card.AttachedImageUrl,
+            SizeName = card.SizeName,
+            SizeWidth = card.SizeWidth,
+            SizeHeight = card.SizeHeight,
+            TotalPrice = card.TotalPrice,
+            CreatedAt = card.CreatedAt,
+            Operation = operation,
+            RegeneratedFromCardId = regeneratedFromCardId,
+            IsSelected = isSelected
+        };
+    }
+
+    private static (string Operation, Guid? RegeneratedFromCardId) ParseCardHistory(ClientHistory? history)
+    {
+        if (history is null) return ("create", null);
+        try
+        {
+            using var metadata = JsonDocument.Parse(history.Metadata);
+            var root = metadata.RootElement;
+            var operation = root.TryGetProperty("operation", out var operationNode)
+                && operationNode.ValueKind == JsonValueKind.String
+                && operationNode.GetString() is { Length: > 0 } value
+                    ? value
+                    : "create";
+            var regeneratedFromCardId = root.TryGetProperty("regeneratedFromCardId", out var sourceNode)
+                && sourceNode.ValueKind == JsonValueKind.String
+                && Guid.TryParse(sourceNode.GetString(), out var sourceId)
+                    ? sourceId
+                    : (Guid?)null;
+            return (operation, regeneratedFromCardId);
+        }
+        catch (JsonException)
+        {
+            throw new ConflictException("CARD_HISTORY_INVALID", "Card History chứa Metadata không hợp lệ.");
+        }
+    }
+
+    private sealed record OrderDetailCardGroup(
+        Guid VirtualId,
+        string SourceType,
+        Guid? ProductId,
+        Guid? GeneratedFlowerId,
+        string CardType,
+        List<Guid> IdResult,
+        Guid? FinalGeneratedCardId);
+
     private async Task<AiResult> GenerateAiCard(CardSnapshot snapshot)
     {
         var sourceImage = string.IsNullOrWhiteSpace(snapshot.RawImage) ? snapshot.Source.ImageUrl : snapshot.RawImage;

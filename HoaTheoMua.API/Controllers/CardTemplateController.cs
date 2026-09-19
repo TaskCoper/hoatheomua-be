@@ -28,9 +28,10 @@ public class CardTemplateController : ControllerBase
 
     [HttpGet("")]
     [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
-    public async Task<IActionResult> GetCardTemplate(int pageIndex, int pageSize, bool? isActive, string? templateType, string? search = null)
+    public async Task<IActionResult> GetCardTemplate(int pageIndex, int pageSize, bool? isActive, string? templateType, string? search = null,
+        [FromQuery] List<Guid>? productIds = null)
     {
-        var result = await _cardTemplateService.GetCardTemplate(pageIndex, pageSize, isActive, templateType, search);
+        var result = await _cardTemplateService.GetCardTemplate(pageIndex, pageSize, isActive, templateType, search, productIds);
         return Ok(result);
     }
     
@@ -58,3 +59,22 @@ public class CardTemplateController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 }
+
+/*
+ *[HttpGet("")]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    public async Task<IActionResult> GetCardTemplate(int pageIndex, int pageSize, bool? isActive, string? templateType, string? search = null)
+    {
+        var result = await _cardTemplateService.GetCardTemplate(pageIndex, pageSize, isActive, templateType, search);
+        return Ok(result);
+        //nhận vào mảng param product, từ generateCard --> client his -> 1. Card đc tạo ra từ product đó luông 2. card đó đc tạo ra từ GF mà GF đc tạo ra từ product đó
+        //dựa vào rootId
+        
+        // thông tin + [ { name, n}]
+        
+    }
+    
+    //api nhận vào orderDetailId, virutalId và genreeated Card Id --> tìm đc cục nào trong mảng, udpate genetared mà anh anh gửi xuống update vào finalGenredCard
+    //api nhận vào orderDetail lấy hết các card thuoi7c5 orderDetial đó
+ * 
+ */

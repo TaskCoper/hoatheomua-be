@@ -64,6 +64,42 @@ public class Response
         public decimal ExtraPrice { get; set; }
         public decimal TotalPrice { get; set; }
     }
+
+    public class OrderDetailCardsResponse
+    {
+        public Guid OrderDetailId { get; set; }
+        public List<FlowerCardGroupResponse> Flowers { get; set; } = [];
+    }
+
+    public class FlowerCardGroupResponse
+    {
+        public Guid VirtualId { get; set; }
+        public string SourceType { get; set; } = "";
+        public Guid? ProductId { get; set; }
+        public Guid? GeneratedFlowerId { get; set; }
+        public string CardType { get; set; } = "";
+        public CardItemResponse? SelectedCard { get; set; }
+        public List<CardItemResponse> CandidateCards { get; set; } = [];
+    }
+
+    public class CardItemResponse
+    {
+        public Guid Id { get; set; }
+        public string CardType { get; set; } = "";
+        public string FormType { get; set; } = "";
+        public string ImageUrl { get; set; } = "";
+        public string? RawImage { get; set; }
+        public string MessageContent { get; set; } = "";
+        public string? AttachedImageUrl { get; set; }
+        public string SizeName { get; set; } = "";
+        public decimal SizeWidth { get; set; }
+        public decimal SizeHeight { get; set; }
+        public decimal TotalPrice { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public string Operation { get; set; } = "create";
+        public Guid? RegeneratedFromCardId { get; set; }
+        public bool IsSelected { get; set; }
+    }
     
     public class WordConfigSnapshot
     {

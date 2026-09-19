@@ -68,4 +68,11 @@ public class Request
         [JsonIgnore] public bool CardTemplateIdSpecified { get; private set; }
         [JsonIgnore] public bool MessageContentSpecified { get; private set; }
     }
+
+    public class UpdateFinalGeneratedCardId
+    {
+        public Guid OrderDetailId { get; set; }
+        public Guid VirtualId { get; set; }
+        public Guid GeneratedCardId { get; set; }
+    }
 }
