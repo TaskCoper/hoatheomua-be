@@ -93,7 +93,10 @@ public class Service : IService
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var privateDescription = await BuildPrivateDescriptionAsync(order, companyAddress?.Remarks);
+        // Legacy: privateDescription từng chứa ghi chú, thông tin người nhận,
+        // lịch giao và hóa đơn. Chi tiết Order hiện được xem tại trang Admin.
+        // var privateDescription = await BuildPrivateDescriptionAsync(order, companyAddress?.Remarks);
+        var privateDescription = $"http://localhost:3000/htm/system-orders/{order.Id}";
 
         var tags = order.TagIds ?? new List<long>();
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
@@ -907,6 +910,8 @@ public class Service : IService
                .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken)
            ?? throw new FulfillmentPermanentException($"Order {orderId} not found");
 
+    #if false
+    // Legacy privateDescription builder. Giữ lại để đối chiếu dữ liệu Nhanh.vn cũ.
     private async Task<string> BuildPrivateDescriptionAsync(OrderEntity order, string? companyRemarks)
     {
         var privateDescription = companyRemarks ?? "Đến nơi lấy hàng đọc mã đơn để nhận hàng";
@@ -956,6 +961,7 @@ public class Service : IService
 
         return privateDescription;
     }
+    #endif
 
     private async Task<string> ConvertTimeDeliveryAsync(OrderEntity order)
     {
