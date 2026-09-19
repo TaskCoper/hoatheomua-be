@@ -814,8 +814,8 @@ public class Service : IService
         if (hasAiCard)
         {
             // Key tạm thời; ConfigHelper trả trực tiếp field value của Config.
-            var promptConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ai_prompt");
-            systemPromptContent = promptConfigs.GetValue<string>("ai_prompt.card");
+            var promptConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "imagegen");
+            systemPromptContent = promptConfigs.GetValue<string>("imagegen.card_prompt");
 
             if (string.IsNullOrWhiteSpace(systemPromptContent))
                 throw new BadRequestException("CARD_SYSTEM_PROMPT_UNAVAILABLE");
