@@ -332,7 +332,86 @@ public class Response
         [JsonPropertyName("items")]  
         public List<T> Items { get; set; } = new();  
     }
-    //Card Price
+    //
     
+    //Prepare for Order
+    public class PreparedOrder
+    {
+        public List<ResolvedBouquet> Bouquets { get; set; } = new();
+        public List<PreparedOrderItem> PurchaseItems { get; set; } = new();
+        public List<StockRequirement> StockRequirements { get; set; } = new();
+    }
     
+    public class StockRequirement
+    {
+        public Guid ProductId { get; set; }
+        public decimal Quantity { get; set; }
+    }
+    
+    public class ResolvedBouquet
+    {
+        public Guid OrderLineId { get; set; }
+        public int ItemId { get; set; }
+        public Guid ProductId { get; set; }
+        public int Number { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public Guid? GeneratedFlowerId { get; set; }
+        public bool AiCustomize { get; set; }
+        public List<ResolvedMaterial> Materials { get; set; } = new();
+        public List<ResolvedMaterial> AdditionCustome { get; set; } = new();
+        public ResolvedAccessory? Ribbon { get; set; }
+        public ResolvedAccessory? WrappingPaper { get; set; }
+        public List<Request.BouquetCardSelection> Cards { get; set; } = new();
+    }
+
+    public class ResolvedMaterial
+    {
+        public Guid MatId { get; set; }
+        public decimal Quantity { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public bool IsCore { get; set; }
+    }
+
+    public class ResolvedAccessory
+    {
+        public Guid Id { get; set; }
+        public string? Name { get; set; }
+        public string? Label { get; set; }
+        public string? ImageUrl { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsDeleted { get; set; }
+    }
+    
+    public class PreparedOrderItem
+    {
+        // Mỗi Product FE gửi có một LineId riêng. Item phát sinh (giấy, ribbon,
+        // phần tăng thêm) không cần Metadata nên cũng có một LineId riêng.
+        public Guid LineId { get; set; }
+        public Guid ProductId { get; set; }
+        public int Number { get; set; }
+        public int ItemId { get; set; }
+        public bool IsSourceItem { get; set; }
+    }
+    
+    public class FlowerOrderMetadata
+    {
+        public Guid SubId { get; set; }
+        public bool AiCustomize { get; set; }
+        public List<ResolvedMaterial>? Materials { get; set; }
+        public List<ResolvedMaterial>? AdditionCustome { get; set; }
+        public ResolvedAccessory? Ribbon { get; set; }
+        public ResolvedAccessory? WrappingPaper { get; set; }
+    }
+    
+    ///
+    public class CurrentProductSnapshot
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string? CoverImage { get; set; }
+        public string? Label { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsDeleted { get; set; }
+    }
 }

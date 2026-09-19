@@ -243,29 +243,17 @@ public class Service : IService
             }
         }
 
-        var itemIds = request.Items
-            .Select(x => x.ItemId.ToString())
-            .Distinct()
-            .ToList();
-        
+        var preparedOrder = await PrepareOrderItems(request, userId);
 
-        // var nhanhConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "nhanhvn");
-        // var products = await FetchNhanhProductsAsync(request.Items, nhanhConfigs);
+        // Lấy Product sau Prepare để bao gồm Combo gốc, phần tăng, giấy và ribbon.
+        var products = await FetchLocalProducts(preparedOrder.PurchaseItems);
+        var quantityByItemId = preparedOrder.PurchaseItems
+            .GroupBy(x => x.ItemId)
+            .ToDictionary(x => x.Key, x => x.Sum(item => item.Number));
+        var productByItemId = products.ToDictionary(x => x.Id);
 
-        var products = await FetchLocalProductsAsync(request.Items);
-
-        // Requested quantity keyed by product id — reused for pricing and order details.
-        var quantityByItemId = request.Items.ToDictionary(x => x.ItemId, x => x.Number);
-        var productIdByItemId = request.Items.ToDictionary(x => x.ItemId, x => x.ProductId);
-
-        // Every requested item must exist in the catalog before we check stock or shipping.
-        var catalogIds = products.Select(x => x.Id).ToHashSet();
-        if (request.Items.Any(x => !catalogIds.Contains(x.ItemId)))
-        {
-            throw new BadRequestException("Đơn hàng không tồn tại trong hệ thống");
-        }
-
-        var comboSnapshots = await EnsureItemsInStockAsync(request.Items);
+        await EnsureItemsInStock(preparedOrder.StockRequirements);
+        var metadataByLineId = await BuildOrderDetailsMetadata(preparedOrder, userId);
 
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
@@ -293,7 +281,12 @@ public class Service : IService
 
         var totalShippingFee = await EstimateShippingFeeAsync(request, products, quantityByItemId, companyAddress);
 
-        var totalProductFee = products.Sum(x => x.Prices.Retail * quantityByItemId[x.Id]);
+        var totalProductFee = preparedOrder.PurchaseItems.Sum(item =>
+                                  productByItemId[item.ItemId].Prices.Retail * item.Number) +
+                              metadataByLineId.Values
+                                  .SelectMany(x => x.ProductMetadata)
+                                  .Where(x => x.SnapShotCard != null)
+                                  .Sum(x => x.SnapShotCard!.TotalPrice);
         var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
 
         var newOrder = new Repository.Entity.Order()
@@ -334,32 +327,42 @@ public class Service : IService
             InvoiceType = request.InvoiceType,
         };
 
-        var newOrderDetails = products.Select(x =>
+        var metadataByOrderDetailId = new Dictionary<Guid, Request.OrderDetailMetadata>();
+        var newOrderDetails = preparedOrder.PurchaseItems.Select(item =>
         {
-            comboSnapshots.TryGetValue(x.Id, out var metadata);
-            return new OrderDetails
+            var product = productByItemId[item.ItemId];
+            metadataByLineId.TryGetValue(item.LineId, out var metadata);
+            var orderDetail = new OrderDetails
             {
                 Id = Guid.NewGuid(),
                 OrderId = newOrder.Id,
-                ProductId = productIdByItemId[x.Id],
-                Name = x.Name,
-                ItemId = x.Id,
-                Price = (int)x.Prices.Retail,
-                Number = quantityByItemId[x.Id],
-                Height = x.Shipping.Height,
-                Weight = x.Shipping.Weight,
-                Length = x.Shipping.Length,
-                Width = x.Shipping.Width,
-                Metadata =
-                     metadata == null
-                     ? null
-                     : JsonConvert.SerializeObject(metadata),
-
+                ProductId = item.ProductId,
+                Name = product.Name,
+                ItemId = item.ItemId,
+                Price = product.Prices.Retail,
+                Number = item.Number,
+                Height = product.Shipping.Height,
+                Weight = product.Shipping.Weight,
+                Length = product.Shipping.Length,
+                Width = product.Shipping.Width,
                 CreatedAt = DateTime.UtcNow,
             };
+
+            if (metadata != null)
+                metadataByOrderDetailId[orderDetail.Id] = metadata;
+
+            return orderDetail;
         }).ToList();
-
-
+        
+        foreach (var orderDetail in newOrderDetails)
+        {
+            orderDetail.Metadata = metadataByOrderDetailId.TryGetValue(orderDetail.Id, out var metadata)
+                ? JsonConvert.SerializeObject(metadata)
+                : null;
+        }
+        
+        CreateOrderResponse paymentResponse;
+        
         if (request.PaymentGateway == PaymentGateway.BaoKim)
         {
             var baoKimTokenResponse = await _baoKimService.CreateAccessToken();
@@ -407,6 +410,570 @@ public class Service : IService
         }
 
         throw new BadRequestException("Not support other gateway");
+    }
+    //Format dữ liệu -> nhanhvn + snapshot
+    private async Task<Response.PreparedOrder> PrepareOrderItems(Request.CreateOrderRequest request, Guid userId)
+    {
+        if (request?.Items == null || request.Items.Count == 0 ||
+            request.Items.Any(x => x.ItemId <= 0 || x.ProductId == Guid.Empty || x.Number <= 0))
+            throw new BadRequestException("ORDER_ITEMS_INVALID");
+
+        var flowerIds = request.Items
+            .SelectMany(x => x.Bouquets ?? new List<Request.BouquetSelection>())
+            .Where(x => x?.GeneratedFlowerId.HasValue == true)
+            .Select(x => x.GeneratedFlowerId!.Value)
+            .Distinct()
+            .ToList();
+
+        var productIds = request.Items.Select(x => x.ProductId).Distinct().ToList();
+
+        var specifications = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(x => productIds.Contains(x.SubId) && !x.IsDeleted)
+            .Select(x => new
+            {
+                x.SubId,
+                x.MatId,
+                x.Quantity,
+                x.IsCore,
+                x.IsActive,
+                MaterialDeleted = x.Mat.IsDeleted,
+                MaterialName = x.Mat.ProductName
+            })
+            .ToListAsync();
+
+        var specificationsByCombo = specifications
+            .GroupBy(x => x.SubId)
+            .ToDictionary(x => x.Key, x => x.ToList());
+
+        var flowers = flowerIds.Count == 0
+            ? new Dictionary<Guid, GeneratedFlower>()
+            : await _dbContext.GeneratedFlowers
+                .AsNoTracking()
+                .Where(x => flowerIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id);
+
+        var histories = flowerIds.Count == 0
+            ? new List<ClientHistory>()
+            : await _dbContext.ClientHistories
+                .AsNoTracking()
+                .Where(x => flowerIds.Contains(x.OutputId) &&
+                            x.Type == ClientHistoryType.Flower)
+                .ToListAsync();
+
+        var historyByFlowerId = histories.ToDictionary(x => x.OutputId, x => x);
+
+        var result = new Response.PreparedOrder();
+        var sourceItems = new List<Response.PreparedOrderItem>();
+        var extraItemsByProductId = new Dictionary<Guid, Response.PreparedOrderItem>();
+        var stockByProductId = new Dictionary<Guid, decimal>();
+
+        void AddStockRequirement(Guid productId, decimal quantity)
+        {
+            if (productId == Guid.Empty || quantity <= 0)
+                throw new BadRequestException("ORDER_STOCK_QUANTITY_INVALID");
+
+            stockByProductId.TryGetValue(productId, out var currentQuantity);
+            stockByProductId[productId] = currentQuantity + quantity;
+        }
+
+        void AddExtraPurchaseItem(Guid productId, decimal quantity)
+        {
+            if (productId == Guid.Empty || quantity <= 0 ||
+                quantity != decimal.Truncate(quantity) || quantity > int.MaxValue)
+                throw new BadRequestException("ORDER_ITEM_QUANTITY_INVALID");
+
+            var number = (int)quantity;
+            if (!extraItemsByProductId.TryGetValue(productId, out var item))
+            {
+                extraItemsByProductId[productId] = new Response.PreparedOrderItem
+                {
+                    LineId = Guid.NewGuid(),
+                    ProductId = productId,
+                    Number = number,
+                    IsSourceItem = false
+                };
+                return;
+            }
+
+            try
+            {
+                item.Number = checked(item.Number + number);
+            }
+            catch (OverflowException)
+            {
+                throw new BadRequestException("ORDER_ITEM_QUANTITY_INVALID");
+            }
+        }
+
+        foreach (var orderItem in request.Items)
+        {
+            var orderLineId = Guid.NewGuid();
+            // Mỗi phần tử FE gửi luôn là một dòng nguồn riêng. Không gộp ở đây,
+            // vì hai Flower khác nhau có thể cùng ProductId/ItemId.
+            sourceItems.Add(new Response.PreparedOrderItem
+            {
+                LineId = orderLineId,
+                ProductId = orderItem.ProductId,
+                Number = orderItem.Number,
+                ItemId = orderItem.ItemId,
+                IsSourceItem = true
+            });
+
+            if (orderItem.Bouquets?.Count > orderItem.Number)
+                throw new BadRequestException("BOUQUET_COUNT_MISMATCH");
+
+            var selections = orderItem.Bouquets ?? new List<Request.BouquetSelection>();
+
+            var cards = selections
+                .Where(x => x.Card != null)
+                .Select(x => x.Card!)
+                .ToList();
+
+            var generatedFlowerIds = selections
+                .Where(x => x.GeneratedFlowerId.HasValue)
+                .Select(x => x.GeneratedFlowerId!.Value)
+                .Distinct()
+                .ToList();
+
+            if (generatedFlowerIds.Count > 1)
+                throw new BadRequestException("ORDER_ITEM_GENERATED_FLOWER_MISMATCH");
+
+            var isCombo = specificationsByCombo.TryGetValue(
+                orderItem.ProductId, out var comboSpecifications);
+
+            if (!isCombo)
+            {
+                //tồn kho product thường thường
+                if (generatedFlowerIds.Count > 0)
+                    throw new BadRequestException("GENERATED_FLOWER_SOURCE_INVALID");
+
+                AddStockRequirement(orderItem.ProductId, orderItem.Number);
+
+                if (cards.Count > 0)
+                    result.Bouquets.Add(new Response.ResolvedBouquet
+                    {
+                        OrderLineId = orderLineId,
+                        ItemId = orderItem.ItemId,
+                        ProductId = orderItem.ProductId,
+                        Number = orderItem.Number,
+                        Cards = cards
+                    });
+
+                continue;
+            }
+            //checkout từ combo 
+
+            if (comboSpecifications!.Count == 0 ||
+                comboSpecifications.Any(x => !x.IsActive || x.MaterialDeleted ||
+                                             !x.Quantity.HasValue || x.Quantity <= 0) ||
+                !comboSpecifications.Any(x => x.IsCore))
+                throw new BadRequestException("COMBO_SPECIFICATION_INVALID");
+
+            var comboMaterials = comboSpecifications.Select(x =>
+                new Response.ResolvedMaterial
+                {
+                    MatId = x.MatId,
+                    Quantity = x.Quantity!.Value,
+                    Name = x.MaterialName ?? string.Empty,
+                    IsCore = x.IsCore
+                }).ToList();
+
+            if (generatedFlowerIds.Count == 0)
+            {
+                // tồn kho combo thường
+                foreach (var material in comboMaterials.Where(x => x.IsCore))
+                    AddStockRequirement(material.MatId, material.Quantity * orderItem.Number);
+
+                result.Bouquets.Add(new Response.ResolvedBouquet
+                {
+                    OrderLineId = orderLineId,
+                    ItemId = orderItem.ItemId,
+                    ProductId = orderItem.ProductId,
+                    Number = orderItem.Number,
+                    Materials = comboMaterials,
+                    Cards = cards
+                });
+
+                continue;
+            }
+
+            //có mẫu hoa AI -> lấy của nó cho combo thường -> ko bị trùng
+            var flowerId = generatedFlowerIds[0];
+            if (!flowers.TryGetValue(flowerId, out var flower))
+                throw new BadRequestException("GENERATED_FLOWER_NOT_FOUND");
+            if (flower.UserId != userId)
+                throw new BadRequestException("GENERATED_FLOWER_NOT_OWNED");
+
+            if (!historyByFlowerId.TryGetValue(flowerId, out var flowerHistory) ||
+                flowerHistory.UserId != userId ||
+                flowerHistory.RootId != orderItem.ProductId)
+                throw new BadRequestException("GENERATED_FLOWER_SOURCE_INVALID");
+
+            Response.FlowerOrderMetadata? flowerMetadata;
+            try
+            {
+                flowerMetadata = JsonConvert.DeserializeObject<Response.FlowerOrderMetadata>(flower.Metadata);
+            }
+            catch (JsonException)
+            {
+                throw new BadRequestException("GENERATED_FLOWER_METADATA_INVALID");
+            }
+
+            if (flowerMetadata == null)
+                throw new BadRequestException("GENERATED_FLOWER_METADATA_INVALID");
+
+            flowerMetadata.AdditionCustome ??= new List<Response.ResolvedMaterial>();
+
+            if (flowerMetadata.SubId != orderItem.ProductId ||
+                !flowerMetadata.AiCustomize ||
+                flowerMetadata.Materials is not { Count: > 0 } ||
+                flowerMetadata.Ribbon == null || flowerMetadata.Ribbon.Id == Guid.Empty ||
+                flowerMetadata.WrappingPaper == null || flowerMetadata.WrappingPaper.Id == Guid.Empty)
+                throw new BadRequestException("GENERATED_FLOWER_METADATA_INVALID");
+
+            result.Bouquets.Add(new Response.ResolvedBouquet
+            {
+                OrderLineId = orderLineId,
+                ItemId = orderItem.ItemId,
+                ProductId = orderItem.ProductId,
+                Number = orderItem.Number,
+                Name = flower.Name,
+                GeneratedFlowerId = flowerId,
+                AiCustomize = true,
+                Materials = flowerMetadata.Materials,
+                AdditionCustome = flowerMetadata.AdditionCustome,
+                Ribbon = flowerMetadata.Ribbon,
+                WrappingPaper = flowerMetadata.WrappingPaper,
+                Cards = cards
+            });
+            //combo nguồn của mẫu hoa hiện có 
+            foreach (var material in flowerMetadata.Materials.Where(x => x.IsCore))
+                AddStockRequirement(material.MatId, material.Quantity * orderItem.Number);
+            // phần add thêm được xem là product thường
+            foreach (var addition in flowerMetadata.AdditionCustome)
+            {
+                var quantity = addition.Quantity * orderItem.Number;
+                AddStockRequirement(addition.MatId, quantity);
+                AddExtraPurchaseItem(addition.MatId, quantity);
+            }
+
+            AddStockRequirement(flowerMetadata.WrappingPaper.Id, orderItem.Number);
+            AddStockRequirement(flowerMetadata.Ribbon.Id, orderItem.Number);
+            AddExtraPurchaseItem(flowerMetadata.WrappingPaper.Id, orderItem.Number);
+            AddExtraPurchaseItem(flowerMetadata.Ribbon.Id, orderItem.Number);
+        }
+        
+        result.PurchaseItems = sourceItems
+            .Concat(extraItemsByProductId.Values)
+            .ToList();
+        
+        result.StockRequirements = stockByProductId
+            .Select(x => new Response.StockRequirement
+            {
+                ProductId = x.Key,
+                Quantity = x.Value
+            })
+            .ToList();
+
+        return result;
+    }
+    
+    private async Task<List<NhanhProductData>> FetchLocalProducts(List<Response.PreparedOrderItem> items)
+    {
+        if (items.Count == 0 ||
+            items.Any(x => x.ProductId == Guid.Empty || x.Number <= 0))
+            throw new BadRequestException("ORDER_ITEMS_INVALID");
+
+        var productIds = items.Select(x => x.ProductId).Distinct().ToList();
+        var productRows = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => productIds.Contains(x.Id))
+            .Select(x => new
+            {
+                x.Id,
+                x.NhanhProductId,
+                x.ProductName,
+                x.Price,
+                x.Height,
+                x.Weight,
+                x.Length,
+                x.Width,
+                x.IsActive,
+                x.IsDeleted
+            })
+            .ToListAsync();
+
+        if (productRows.Count != productIds.Count ||
+            productRows.Any(x => !x.IsActive || x.IsDeleted))
+            throw new BadRequestException("ORDER_PRODUCT_UNAVAILABLE");
+
+        if (productRows.Any(x => string.IsNullOrWhiteSpace(x.NhanhProductId) ||
+                                 !int.TryParse(x.NhanhProductId, out _)) ||
+            productRows.GroupBy(x => x.NhanhProductId).Any(x => x.Count() > 1))
+            throw new BadRequestException("ORDER_PRODUCT_ITEM_ID_INVALID");
+
+        var productRowsById = productRows.ToDictionary(x => x.Id);
+
+        foreach (var item in items)
+        {
+            var product = productRowsById[item.ProductId];
+            var itemId = int.Parse(product.NhanhProductId!);
+
+            // ItemId của dòng Customer gửi phải khớp catalog local.
+            if (item.IsSourceItem && item.ItemId != itemId)
+                throw new BadRequestException("ORDER_ITEM_PRODUCT_MISMATCH");
+
+            item.ItemId = itemId;
+        }
+
+        // Shipping chỉ cần một ProductData cho mỗi ItemId Nhanh; quantity đã
+        // được cộng riêng ở CreateOrder. OrderDetails vẫn được tạo theo từng
+        // PreparedOrderItem, không theo danh sách này.
+        return productRows.Select(product => new NhanhProductData
+        {
+            Id = int.Parse(product.NhanhProductId!),
+            Name = product.ProductName ?? string.Empty,
+            Prices = new NhanhPrices
+            {
+                Retail = product.Price ?? 0m
+            },
+            Shipping = new NhanhShipping
+            {
+                Height = (double)(product.Height ?? 0m),
+                Weight = (double)(product.Weight ?? 0m),
+                Length = (double)(product.Length ?? 0m),
+                Width = (double)(product.Width ?? 0m)
+            }
+        }).ToList();
+    }
+    
+     private async Task<Dictionary<Guid, Request.OrderDetailMetadata>> BuildOrderDetailsMetadata(Response.PreparedOrder preparedOrder, Guid userId)
+    {
+        var productIds = preparedOrder.PurchaseItems.Select(x => x.ProductId)
+            .Concat(preparedOrder.Bouquets.Select(x => x.ProductId))
+            .Concat(preparedOrder.Bouquets.SelectMany(x => x.Materials).Select(x => x.MatId))
+            .Concat(preparedOrder.Bouquets.SelectMany(x => x.AdditionCustome).Select(x => x.MatId))
+            .Concat(preparedOrder.Bouquets.Where(x => x.Ribbon != null).Select(x => x.Ribbon!.Id))
+            .Concat(preparedOrder.Bouquets.Where(x => x.WrappingPaper != null).Select(x => x.WrappingPaper!.Id))
+            .Distinct()
+            .ToList();
+
+        var productSnapshots = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => productIds.Contains(x.Id))
+            .Select(x => new Response.CurrentProductSnapshot
+            {
+                Id = x.Id,
+                Name = x.ProductName ?? string.Empty,
+                Price = x.Price ?? 0m,
+                CoverImage = x.CoverImage,
+                Label = x.ProductLabel,
+                IsActive = x.IsActive,
+                IsDeleted = x.IsDeleted
+            })
+            .ToListAsync();
+
+        if (productSnapshots.Count != productIds.Count)
+            throw new BadRequestException("ORDER_PRODUCT_UNAVAILABLE");
+
+        var productById = productSnapshots.ToDictionary(x => x.Id);
+
+        var sourceCardIds = preparedOrder.Bouquets
+            .SelectMany(x => x.Cards)
+            .Where(x => x.SourceGeneratedCardId.HasValue)
+            .Select(x => x.SourceGeneratedCardId!.Value)
+            .Distinct()
+            .ToList();
+
+        var sourceCards = sourceCardIds.Count == 0
+            ? new Dictionary<Guid, GeneratedCard>()
+            : await _dbContext.GeneratedCards
+                .AsNoTracking()
+                .Where(x => sourceCardIds.Contains(x.Id) && x.UserId == userId)
+                .ToDictionaryAsync(x => x.Id);
+
+        if (sourceCards.Count != sourceCardIds.Count ||
+            sourceCards.Values.Any(x => x.CardType != GeneratedCardType.Ai ||
+                                        string.IsNullOrWhiteSpace(x.RawImage)))
+            throw new BadRequestException("CARD_HISTORY_SOURCE_INVALID");
+
+        var hasAiCard = preparedOrder.Bouquets
+            .SelectMany(x => x.Cards)
+            .Any(x => x.CardType == GeneratedCardType.Ai);
+        
+        string? systemPromptContent = null;
+        if (hasAiCard)
+        {
+            // Key tạm thời; ConfigHelper trả trực tiếp field value của Config.
+            var promptConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ai_prompt");
+            systemPromptContent = promptConfigs.GetValue<string>("ai_prompt.card");
+
+            if (string.IsNullOrWhiteSpace(systemPromptContent))
+                throw new BadRequestException("CARD_SYSTEM_PROMPT_UNAVAILABLE");
+        }
+
+        var result = new Dictionary<Guid, Request.OrderDetailMetadata>();
+
+        Request.MaterialSnapshot ToMaterialSnapshot(Response.ResolvedMaterial material)
+        {
+            if (!productById.TryGetValue(material.MatId, out var product))
+                throw new BadRequestException("ORDER_PRODUCT_UNAVAILABLE");
+
+            return new Request.MaterialSnapshot
+            {
+                MatId = material.MatId,
+                Quantity = material.Quantity,
+                Name = product.Name,
+                Price = product.Price,
+                IsCore = material.IsCore
+            };
+        }
+
+        Request.AccessorySnapshot? ToAccessorySnapshot(Response.ResolvedAccessory? accessory)
+        {
+            if (accessory == null)
+                return null;
+            if (!productById.TryGetValue(accessory.Id, out var product))
+                throw new BadRequestException("ORDER_PRODUCT_UNAVAILABLE");
+
+            return new Request.AccessorySnapshot
+            {
+                Id = accessory.Id,
+                Name = accessory.Name ?? product.Name,
+                Label = accessory.Label ?? product.Label,
+                ImageUrl = accessory.ImageUrl,
+                Price = product.Price,
+                IsActive = accessory.IsActive,
+                IsDeleted = accessory.IsDeleted
+            };
+        }
+
+        async Task<Request.CardSnapshot> BuildCardSnapshotAsync(
+            Response.ResolvedBouquet bouquet,
+            Request.BouquetCardSelection card)
+        {
+            if (!productById.TryGetValue(bouquet.ProductId, out var sourceProduct) ||
+                string.IsNullOrWhiteSpace(sourceProduct.CoverImage))
+                throw new BadRequestException("CARD_SOURCE_PRODUCT_INVALID");
+
+            if (card.CardType == GeneratedCardType.Handmade &&
+                card.SourceGeneratedCardId.HasValue)
+                throw new BadRequestException("HANDMADE_CARD_HISTORY_NOT_SUPPORTED");
+
+            var price = await CalculateCardPrice(new Request.CalculateCardPriceRequest
+            {
+                CardType = card.CardType,
+                CardTemplateId = card.CardTemplateId,
+                SizeName = card.SizeName,
+                FormType = card.FormType,
+                MessageContent = card.MessageContent
+            });
+
+            string? rawImage = null;
+            if (card.SourceGeneratedCardId.HasValue)
+                rawImage = sourceCards[card.SourceGeneratedCardId.Value].RawImage;
+
+            var snapshot = new Request.CardSnapshot
+            {
+                VirtualId = Guid.NewGuid(),
+                CardType = price.CardType,
+                Source = new Request.CardSourceSnapshot
+                {
+                    Type = "product",
+                    Id = bouquet.ProductId,
+                    ImageUrl = sourceProduct.CoverImage
+                },
+                RawImage = rawImage,
+                CardTemplate = new Request.CardTemplateSnapshot
+                {
+                    TemplateId = price.CardTemplate.TemplateId,
+                    TemplateName = price.CardTemplate.TemplateName,
+                    TemplateType = price.CardTemplate.TemplateType,
+                    TemplateImageUrl = price.CardTemplate.TemplateImageUrl
+                },
+                CardSize = price.CardSize == null
+                    ? null
+                    : new Request.CardSizeSnapshot
+                    {
+                        Name = price.CardSize.Name,
+                        Width = price.CardSize.Width,
+                        Height = price.CardSize.Height,
+                        BasePrice = price.CardSize.BasePrice,
+                        MaxWords = price.CardSize.MaxWords
+                    },
+                CardConfig = price.CardConfig == null
+                    ? null
+                    : new Request.CardConfigSnapshot
+                    {
+                        MinWords = price.CardConfig.MinWords,
+                        MaxWords = price.CardConfig.MaxWords,
+                        ExtraPrice = price.CardConfig.ExtraPrice
+                    },
+                MessageContent = card.MessageContent ?? string.Empty,
+                FormType = price.FormType,
+                AttachedImageUrl = card.AttachedImageUrl,
+                Quantity = 1,
+                WordCount = price.WordCount,
+                BasePrice = price.BasePrice,
+                ExtraPrice = price.ExtraPrice,
+                TotalPrice = price.TotalPrice,
+                ValidatedAt = DateTimeOffset.UtcNow
+            };
+
+            if (card.CardType == GeneratedCardType.Ai)
+            {
+                snapshot.SystemPrompt = new Request.SystemPromptSnapshot
+                {
+                    Type = "card",
+                    Content = systemPromptContent!
+                };
+                snapshot.Status = "not yet";
+                snapshot.IdResult = new List<Guid>();
+                snapshot.FinalGeneratedCardId = null;
+            }
+
+            return snapshot;
+        }
+
+        foreach (var bouquet in preparedOrder.Bouquets)
+        {
+            var metadata = new Request.OrderDetailMetadata();
+            var sourceProduct = productById[bouquet.ProductId];
+
+            Request.ProductMetadataSnapshot BuildProductMetadata(Request.CardSnapshot? cardSnapshot)
+            {
+                return new Request.ProductMetadataSnapshot
+                {
+                    Name = string.IsNullOrWhiteSpace(bouquet.Name) ? sourceProduct.Name : bouquet.Name,
+                    SubId = bouquet.ProductId,
+                    GeneratedFlower = bouquet.GeneratedFlowerId,
+                    AiCustomize = bouquet.AiCustomize,
+                    Ribbon = ToAccessorySnapshot(bouquet.Ribbon),
+                    WrappingPaper = ToAccessorySnapshot(bouquet.WrappingPaper),
+                    AdditionCustome = bouquet.AdditionCustome.Select(ToMaterialSnapshot).ToList(),
+                    Materials = bouquet.Materials.Select(ToMaterialSnapshot).ToList(),
+                    SnapShotCard = cardSnapshot
+                };
+            }
+
+            if (bouquet.Cards.Count == 0)
+            {
+                metadata.ProductMetadata.Add(BuildProductMetadata(null));
+            }
+            else
+            {
+                foreach (var card in bouquet.Cards)
+                {
+                    var cardSnapshot = await BuildCardSnapshotAsync(bouquet, card);
+                    metadata.ProductMetadata.Add(BuildProductMetadata(cardSnapshot));
+                }
+            }
+
+            result[bouquet.OrderLineId] = metadata;
+        }
+
+        return result;
     }
 
     public async Task<Response.LimitCoreProductResponse> GetLimitCoreProduct(Guid comboId)
@@ -614,157 +1181,27 @@ public class Service : IService
         return result.Data;
     }
 
-    // Verifies every requested item has enough locally synchronized stock.
-    private async Task<Dictionary<int, Request.OrderDetailMetadata>> EnsureItemsInStockAsync(List<AhaMoveRequest.Items> items)
+    private async Task EnsureItemsInStock(List<Response.StockRequirement> requirements)
     {
-        var productIds = items
-            .Select(x => x.ProductId)
-            .ToHashSet();
-
-        var specifications = await _dbContext.ComboSpecifications
+        var requiredProductIds = requirements.Select(x => x.ProductId).ToList();
+        var availableForSaleByProductId = await _dbContext.Products
             .AsNoTracking()
-            .Where(x =>
-                productIds.Contains(x.SubId) &&
-                !x.IsDeleted)
+            .Where(x => requiredProductIds.Contains(x.Id) && !x.IsDeleted && x.IsActive)
             .Select(x => new
             {
-                x.SubId,
-                x.MatId,
-                x.IsCore,
-                x.IsActive,
-                MaterialIsDeleted = x.Mat.IsDeleted,
-                MaterialName = x.Mat.ProductName,
-                PriceMat = x.Mat.Price,
-                Quantity = x.Quantity ?? 0m,
-                x.Mat.NhanhProductId
-            })
-            .ToListAsync();
-
-        var comboIds = specifications
-            .Select(x => x.SubId)
-            .ToHashSet();
-
-
-        var materialSpecifications = specifications
-            .Where(x =>
-                x.IsActive &&
-                !x.MaterialIsDeleted &&
-                x.Quantity > 0)
-            .ToLookup(x => x.SubId);
-
-        var comboSnapshots = new Dictionary<int, Request.OrderDetailMetadata>();
-
-
-        var stockItems = new List<(int ItemId, decimal Number)>();
-
-        foreach (var item in items)
-        {
-            if (!comboIds.Contains(item.ProductId))
-            {
-                stockItems.Add((item.ItemId, item.Number));
-
-                continue;
-            }
-
-            var coreMaterials = materialSpecifications[item.ProductId]
-                .Where(x => x.IsCore)
-                .ToList();
-
-            if (coreMaterials.Count == 0)
-            {
-                throw new BadRequestException(
-                    $"Combo ProductId={item.ItemId} không có vật liệu core hợp lệ");
-            }
-
-            var comboMaterials = materialSpecifications[item.ProductId]
-                .ToList();
-
-            if (comboMaterials.Count == 0)
-            {
-                throw new BadRequestException(
-                    $"Combo ProductId={item.ItemId} không có vật liệu hợp lệ");
-            }
-
-
-            comboSnapshots[item.ItemId] = new Request.OrderDetailMetadata()
-            {
-                SubId = item.ProductId,
-                Materials = comboMaterials
-                    .Select(x => new Request.MaterialSnapshot()
-                    {
-                        MatId = x.MatId,
-                        Quantity = x.Quantity,
-                        Name = x.MaterialName ?? string.Empty,
-                        Price = x.PriceMat,
-                        IsCore = x.IsCore
-                    })
-                    .ToList()
-            };
-
-
-            foreach (var material in coreMaterials)
-            {
-                if (!int.TryParse(material.NhanhProductId, out var materialItemId))
-                {
-                    throw new BadRequestException(
-                        $"Vật liệu MatId={material.MatId} không có NhanhProductId hợp lệ");
-                }
-
-                stockItems.Add((
-                    materialItemId,
-                    item.Number * material.Quantity));
-            }
-        }
-        //step này: đã có được các ItemtId và số lượng cần mua của Item đó 
-        var itemRequest = stockItems
-            .GroupBy(x => x.ItemId)
-            .Select(x => new
-            {
-                ItemId = x.Key,
-                Number = x.Sum(item => item.Number)
-            })
-            .ToList();
-        //map ra nó ItemId để vào product lấy ra được số lượng có thể bán
-        // => map ra nhanhproductId với số lượng có thể bán của của ItemId đó
-        // => Từ đó tạo ra thành một cái Dictionary vơi
-        var nhanhProductIds = itemRequest
-            .Select(x => x.ItemId.ToString())
-            .ToList();
-
-        var availableForSaleByItemId = await _dbContext.Products
-            .AsNoTracking()
-            .Where(x =>
-                !x.IsDeleted &&
-                x.IsActive &&
-                x.NhanhProductId != null &&
-                nhanhProductIds.Contains(x.NhanhProductId))
-            .Select(x => new
-            {
-                x.NhanhProductId,
+                x.Id,
                 AvailableForSale = x.AvailableForSale ?? 0m
             })
-            .ToDictionaryAsync(
-                x => x.NhanhProductId!,
-                x => x.AvailableForSale);
+            .ToDictionaryAsync(x => x.Id, x => x.AvailableForSale);
 
-        foreach (var item in itemRequest)
+        foreach (var requirement in requirements)
         {
-            if (!availableForSaleByItemId.TryGetValue(
-                    item.ItemId.ToString(),
-                    out var availableForSale))
-            {
-                throw new BadRequestException(
-                    $"Sản phẩm Id={item.ItemId} không tồn tại hoặc đã ngừng hoạt động");
-            }
+            if (!availableForSaleByProductId.TryGetValue(requirement.ProductId, out var availableForSale))
+                throw new BadRequestException("ORDER_PRODUCT_UNAVAILABLE");
 
-            if (item.Number > availableForSale)
-            {
-                throw new BadRequestException(
-                    $"Không đủ hàng (Yêu cầu: {item.Number}, Kho có: {availableForSale})");
-            }
+            if (requirement.Quantity > availableForSale)
+                throw new BadRequestException("CORE_MATERIAL_INSUFFICIENT");
         }
-
-        return comboSnapshots;
     }
 
     // Calls Ahamove to estimate the shipping fee from the shop's warehouse to the buyer.
