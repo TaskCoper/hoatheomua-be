@@ -36,6 +36,8 @@ using PlatformAccountService = HoaTheoMua.Service.PlatformAccount;
 using AiService = HoaTheoMua.Service.AiService;
 using FlowerReferenceService = HoaTheoMua.Service.FlowerReference;
 using CardTemplateService = HoaTheoMua.Service.CardTemplate;
+using CardService = HoaTheoMua.Service.Card;
+using FlowerService = HoaTheoMua.Service.Flower;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -148,6 +150,8 @@ builder.Services.AddHttpClient<AiService.IService, AiService.Service>("PostGenAi
 
 builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
 builder.Services.AddScoped<CardTemplateService.IService, CardTemplateService.Service>();
+builder.Services.AddScoped<CardService.IService, CardService.Service>();
+builder.Services.AddScoped<FlowerService.IService, FlowerService.Service>();
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
 // registering it with AddScoped would silently hand it the unnamed default HttpClient the way
 // Webhook.Service and Revalidate.Service currently get theirs.

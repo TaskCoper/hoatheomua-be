@@ -219,10 +219,18 @@ public class Service : IService
             .Distinct()
             .ToList() ?? new List<Guid>();
 
+        var labels = request.Labels?
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .Select(label => label.Trim().ToLower().Replace(" ", ""))
+            .Distinct()
+            .ToList() ?? new List<string>();
+
         var query = _dbContext.Products
             .AsNoTracking()
             .Include(p => p.CategoryProductDetails)
             .ThenInclude(cpd => cpd.CategoryProduct)
+            .Include(p => p.SubIds)
+            .ThenInclude(cs => cs.Mat)
             .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty) && x.IsActive);
@@ -253,6 +261,11 @@ public class Service : IService
             query = query.Where(x => x.CategoryProductDetails.Any(cpd =>
                 !cpd.IsDeleted &&
                 categoryIds.Contains(cpd.CategoryProductId)));
+        }
+
+        if (labels.Count > 0)
+        {
+            query = query.Where(BuildProductLabelFilter(labels));
         }
 
         IOrderedQueryable<HoaTheoMua.Repository.Entity.Product> orderedQuery;
@@ -367,6 +380,20 @@ public class Service : IService
         }
 
         return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
+    }
+
+    private static Expression<Func<HoaTheoMua.Repository.Entity.Product, bool>> BuildProductLabelFilter(
+        IReadOnlyCollection<string> labels)
+    {
+        // Chuẩn hóa nhãn cần tìm: viết thường, bỏ khoảng trắng, bọc dấu phẩy để so khớp nguyên nhãn
+        var normalizedLabels = labels
+            .Select(label => $",{label.ToLower().Replace(" ", "")},")
+            .ToList();
+
+        return product =>
+            product.ProductLabel != null &&
+            normalizedLabels.Any(label =>
+                ("," + product.ProductLabel.ToLower().Replace(" ", "") + ",").Contains(label));
     }
 
     public async Task<BasePaginationResponse> GetLocalProductsV2(Request.LocalProductQueryRequest request)
@@ -587,6 +614,17 @@ public class Service : IService
         {
             throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
         }
+
+        response.Materials = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(cs => cs.SubId == id && !cs.IsDeleted && !cs.Mat.IsDeleted)
+            .Select(cs => new Response.ComboSpecification
+            {
+                Id = cs.Mat.Id,
+                ProductName = cs.Mat.ProductName,
+                CoverImage = cs.Mat.CoverImage
+            })
+            .ToListAsync();
 
         // Giai đoạn 2: Xác định sản phẩm cha nếu sản phẩm hiện tại là biến thể.
         var isParentProduct = string.IsNullOrWhiteSpace(response.ParentProductId);
@@ -965,6 +1003,15 @@ public class Service : IService
                         : new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
                 })
                 .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>(),
+            Materials = product.SubIds?
+                .Where(cs => !cs.IsDeleted && cs.Mat != null && !cs.Mat.IsDeleted)
+                .Select(cs => new Response.ComboSpecification
+                {
+                    Id = cs.Mat.Id,
+                    ProductName = cs.Mat.ProductName,
+                    CoverImage = cs.Mat.CoverImage
+                })
+                .ToList() ?? new List<Response.ComboSpecification>()
         };
     }
 
