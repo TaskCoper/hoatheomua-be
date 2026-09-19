@@ -656,6 +656,22 @@ public class Service : IService
                 .ToListAsync();
 
         // Giai đoạn 4: Chuẩn bị sản phẩm chính và biến thể để tính tồn kho khả dụng.
+        // Biến thể dùng cùng cấu tạo với Product cha. Quantity của mỗi vật liệu
+        // được điều chỉnh theo Factor riêng của biến thể; Materials của cha giữ nguyên.
+        var parentMaterials = response.Materials ?? new List<Response.ComboSpecification>();
+        foreach (var child in response.Children)
+        {
+            var factor = child.Factor ?? 1m;
+            child.Materials = parentMaterials.Select(material => new Response.ComboSpecification
+            {
+                Id = material.Id,
+                ProductName = material.ProductName,
+                CoverImage = material.CoverImage,
+                Quantity = material.Quantity * factor,
+                Price = material.Price
+            }).ToList();
+        }
+
         var productsToCalculate = new List<ProductQtyProjection>
         {
             new()
