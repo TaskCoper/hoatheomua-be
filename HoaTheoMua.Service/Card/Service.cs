@@ -775,8 +775,8 @@ public class Service : IService
         if (configs.Count == 0) return null;
         if (configs.Count != 1
             || !string.Equals(configs[0].Group?.Trim(), "imagegen", StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(configs[0].Kind?.Trim(), "setting", StringComparison.OrdinalIgnoreCase)
-            || !configs[0].IsPublic)
+            || !string.Equals(configs[0].Kind?.Trim(), "setting", StringComparison.OrdinalIgnoreCase))
+            // || !configs[0].IsPublic)
         {
             throw new ConflictException(
                 "SYSTEM_PROMPT_INVALID",
