@@ -1646,8 +1646,9 @@ public class Service : IService
                     Length = x.Length,
                     Width = x.Width,
                     Height = x.Height,
-                    Snapshot = isAdmin && !string.IsNullOrWhiteSpace(x.Metadata)
-                        ? JsonConvert.DeserializeObject<Request.OrderDetailMetadata>(x.Metadata)
+                    // Admin dùng snapshot này để xem đầy đủ Flower, phụ kiện và Card.
+                    Snapshot = isAdmin
+                        ? DeserializeOrderDetailMetadata(x.Metadata)
                         : null,
 
                 };
@@ -1664,6 +1665,22 @@ public class Service : IService
             }
         };
         return ApiResponseFactory.Base(orderDetails);
+    }
+
+    private static Request.OrderDetailMetadata? DeserializeOrderDetailMetadata(string? metadata)
+    {
+        if (string.IsNullOrWhiteSpace(metadata))
+            return null;
+
+        try
+        {
+            return JsonConvert.DeserializeObject<Request.OrderDetailMetadata>(metadata);
+        }
+        catch (JsonException)
+        {
+            // Metadata cũ hoặc lỗi không được làm trang Admin mất toàn bộ Order.
+            return null;
+        }
     }
 
     public async Task<string> GetStatusOrder(Guid id)
