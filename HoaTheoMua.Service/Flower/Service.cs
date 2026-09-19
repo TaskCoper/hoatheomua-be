@@ -56,10 +56,24 @@ public class Service : IService
         var validItems = new List<(Guid SessionId, Response.CustomerGeneratedFlowerResponse Flower)>();
         foreach (var history in histories)
         {
+            FlowerMetadata? flowerMetadata;
+            HistoryMetadata? historyMetadata;
+            try
+            {
+                flowerMetadata = JsonSerializer.Deserialize<FlowerMetadata>(flowerById
+                    .GetValueOrDefault(history.OutputId)?.Metadata ?? string.Empty, JsonOptions);
+                historyMetadata = JsonSerializer.Deserialize<HistoryMetadata>(history.Metadata, JsonOptions);
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+
             if (!history.SessionId.HasValue
                 || !flowerById.TryGetValue(history.OutputId, out var flower)
-                || !TryGetProductId(flower.Metadata, out var productId)
-                || productId != history.BaseId
+                || flowerMetadata == null
+                || historyMetadata == null
+                || flowerMetadata.SubId != history.BaseId
                 || history.RootId == Guid.Empty
                 || !TryParseFlowerHistory(history.Metadata, out var operation, out var regeneratedFromFlowerId))
             {
@@ -71,13 +85,18 @@ public class Service : IService
                 HistoryId = history.Id,
                 Operation = operation,
                 RegeneratedFromFlowerId = regeneratedFromFlowerId,
-                ProductId = history.BaseId,
+                ProductId = flowerMetadata.SubId,
                 RootProductId = history.RootId,
                 Id = flower.Id,
                 Name = flower.Name,
                 ImageUrl = flower.ImageUrl,
                 UserId = flower.UserId,
                 CreatedAt = flower.CreatedAt,
+                Product = ToCustomerReference(historyMetadata.Product),
+                Bundle = ToCustomerReference(historyMetadata.Bundle),
+                Mockup = ToCustomerReference(historyMetadata.Mockup),
+                Ribbon = ToCustomerReference(flowerMetadata.Ribbon),
+                WrappingPaper = ToCustomerReference(flowerMetadata.WrappingPaper),
                 Metadata = ParseJson(flower.Metadata)
             }));
         }
@@ -220,7 +239,7 @@ public class Service : IService
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return ToResponse(flower);
+        return ToResponse(flower, history.SessionId!.Value);
     }
 
     public async Task<Response.GeneratedFlowerResponse> RegenerateAiFlower(
@@ -289,7 +308,7 @@ public class Service : IService
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
-        return ToResponse(flower);
+        return ToResponse(flower, history.SessionId!.Value);
     }
 
     private async Task<Ai.Response.GeneratedImage> GenerateImage(string? productImage, string bundleImage,
@@ -371,7 +390,7 @@ public class Service : IService
                 || content.ValueKind != JsonValueKind.String)
                 throw new JsonException();
 
-            ValidatePromptDescription(root);
+            // ValidatePromptDescription(root);
             var prompt = content.GetString();
             return string.IsNullOrWhiteSpace(prompt) ? null : new PromptSnapshot { Content = prompt };
         }
@@ -381,14 +400,14 @@ public class Service : IService
         }
     }
 
-    private static void ValidatePromptDescription(JsonElement root)
-    {
-        if (!root.TryGetProperty("description", out var description) || description.ValueKind != JsonValueKind.String)
-            throw new JsonException();
-        using var parsed = JsonDocument.Parse(description.GetString()!);
-        if (parsed.RootElement.ValueKind != JsonValueKind.Object)
-            throw new JsonException();
-    }
+    // private static void ValidatePromptDescription(JsonElement root)
+    // {
+    //     if (!root.TryGetProperty("description", out var description) || description.ValueKind != JsonValueKind.String)
+    //         throw new JsonException();
+    //     using var parsed = JsonDocument.Parse(description.GetString()!);
+    //     if (parsed.RootElement.ValueKind != JsonValueKind.Object)
+    //         throw new JsonException();
+    // }
 
     private static PromptSnapshot? ParseSourcePrompt(string? value)
     {
@@ -478,9 +497,9 @@ public class Service : IService
         MatId = product.Id, Quantity = quantity, Name = product.ProductName, IsCore = isCore
     };
 
-    private static Response.GeneratedFlowerResponse ToResponse(GeneratedFlower flower) => new()
+    private static Response.GeneratedFlowerResponse ToResponse(GeneratedFlower flower, Guid sessionId) => new()
     {
-        Id = flower.Id, Name = flower.Name, ImageUrl = flower.ImageUrl,
+        Id = flower.Id, SessionId = sessionId, Name = flower.Name, ImageUrl = flower.ImageUrl,
         Metadata = JsonDocument.Parse(flower.Metadata).RootElement.Clone(), CreatedAt = flower.CreatedAt
     };
 
@@ -561,6 +580,32 @@ public class Service : IService
 
     private static JsonElement? ParseNullableJson(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : ParseJson(value);
+
+    private static Response.CustomerFlowerReferenceResponse? ToCustomerReference(ProductSnapshot? snapshot)
+    {
+        if (snapshot == null)
+            return null;
+
+        return new Response.CustomerFlowerReferenceResponse
+        {
+            Id = snapshot.Id,
+            Name = snapshot.Name,
+            ImageUrl = snapshot.Image.Url
+        };
+    }
+
+    private static Response.CustomerFlowerReferenceResponse? ToCustomerReference(ReferenceSnapshot? snapshot)
+    {
+        if (snapshot == null)
+            return null;
+
+        return new Response.CustomerFlowerReferenceResponse
+        {
+            Id = snapshot.Id,
+            Name = snapshot.Name,
+            ImageUrl = snapshot.Image.Url
+        };
+    }
 
     private static bool TryGetProductId(string metadata, out Guid productId)
     {
