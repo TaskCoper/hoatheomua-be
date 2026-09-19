@@ -622,7 +622,9 @@ public class Service : IService
             {
                 Id = cs.Mat.Id,
                 ProductName = cs.Mat.ProductName,
-                CoverImage = cs.Mat.CoverImage
+                CoverImage = cs.Mat.CoverImage,
+                Quantity = cs.Quantity ?? 0m,
+                Price = cs.Mat.Price ?? 0m
             })
             .ToListAsync();
 
@@ -1009,7 +1011,9 @@ public class Service : IService
                 {
                     Id = cs.Mat.Id,
                     ProductName = cs.Mat.ProductName,
-                    CoverImage = cs.Mat.CoverImage
+                    CoverImage = cs.Mat.CoverImage,
+                    Quantity = cs.Quantity ?? 0m,
+                    Price = cs.Mat.Price ?? 0m
                 })
                 .ToList() ?? new List<Response.ComboSpecification>()
         };

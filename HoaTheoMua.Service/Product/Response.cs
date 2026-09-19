@@ -205,6 +205,8 @@ public class Response
         public Guid Id { get; set; }
         public string? ProductName { get; set; }
         public string? CoverImage { get; set; }
+        public decimal Quantity { get; set; }
+        public decimal Price { get; set; }
     }
 
     public class ComboSpecificationResponse 
