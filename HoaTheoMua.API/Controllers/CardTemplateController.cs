@@ -28,9 +28,10 @@ public class CardTemplateController : ControllerBase
 
     [HttpGet("")]
     [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
-    public async Task<IActionResult> GetCardTemplate(int pageIndex, int pageSize, bool? isActive, string? templateType, string? search = null)
+    public async Task<IActionResult> GetCardTemplate(int pageIndex, int pageSize, bool? isActive, string? templateType, string? search = null,
+        [FromQuery] List<Guid>? productIds = null)
     {
-        var result = await _cardTemplateService.GetCardTemplate(pageIndex, pageSize, isActive, templateType, search);
+        var result = await _cardTemplateService.GetCardTemplate(pageIndex, pageSize, isActive, templateType, search, productIds);
         return Ok(result);
     }
     
