@@ -791,7 +791,7 @@ public class Service : IService
                 || content.ValueKind != JsonValueKind.String)
                 throw new JsonException();
 
-            ValidatePromptDescription(root);
+            // ValidatePromptDescription(root);
             var prompt = content.GetString();
             return string.IsNullOrWhiteSpace(prompt) ? null : new SnapshotPrompt { Type = "card", Content = prompt };
         }
@@ -801,14 +801,14 @@ public class Service : IService
         }
     }
 
-    private static void ValidatePromptDescription(JsonElement root)
-    {
-        if (!root.TryGetProperty("description", out var description) || description.ValueKind != JsonValueKind.String)
-            throw new JsonException();
-        using var parsed = JsonDocument.Parse(description.GetString()!);
-        if (parsed.RootElement.ValueKind != JsonValueKind.Object)
-            throw new JsonException();
-    }
+    // private static void ValidatePromptDescription(JsonElement root)
+    // {
+    //     if (!root.TryGetProperty("description", out var description) || description.ValueKind != JsonValueKind.String)
+    //         throw new JsonException();
+    //     using var parsed = JsonDocument.Parse(description.GetString()!);
+    //     if (parsed.RootElement.ValueKind != JsonValueKind.Object)
+    //         throw new JsonException();
+    // }
 
     private static void ValidateRegeneratedWordCount(GeneratedCard sourceCard, int wordCount)
     {
