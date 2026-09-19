@@ -2,6 +2,7 @@
 using System.Transactions;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
+using Newtonsoft.Json;
 
 namespace HoaTheoMua.Service.Order;
 
@@ -277,5 +278,170 @@ public class Response
         [JsonPropertyName("contact")]
         public string Contact { get; set; } = null!;
     }
+    //Card Price
+    public class CalculateCardPriceResponse  
+    {  
+        public string CardType { get; set; } = string.Empty; // ai | handmade  
+        public string FormType { get; set; } = string.Empty; // go_may | calligraphy  
+        public CardTemplatePrice CardTemplate { get; set; } = new();  
+        public CardSizePrice? CardSize { get; set; }    // Handmade: null  
+        public CardWordPrice? CardConfig { get; set; } // AI go_may: null  
+        public int WordCount { get; set; }  
+        public decimal BasePrice { get; set; }  
+        public decimal ExtraPrice { get; set; }  
+        public decimal TotalPrice { get; set; }       // giá một thiệp  
+    }  
+  
+    public class CardTemplatePrice  
+    {  
+        public Guid TemplateId { get; set; }  
+        public string TemplateName { get; set; } = string.Empty;  
+        public string TemplateType { get; set; } = string.Empty;  
+        public string TemplateImageUrl { get; set; } = string.Empty;  
+    }  
+  
+    public class CardSizePrice  
+    {  
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty; 
+        [JsonPropertyName("width")]
+        public decimal Width { get; set; }  
+        [JsonPropertyName("height")]
+        public decimal Height { get; set; }  
+  
+        [JsonPropertyName("base_price")]  
+        public decimal BasePrice { get; set; }  
+  
+        [JsonPropertyName("max_words")]  
+        public int MaxWords { get; set; }  
+    }  
+  
+    public class CardWordPrice  
+    {  
+        [JsonPropertyName("min_words")]  
+        public int MinWords { get; set; }  
+  
+        [JsonPropertyName("max_words")]  
+        public int MaxWords { get; set; }  
+  
+        [JsonPropertyName("extra_price")]  
+        public decimal ExtraPrice { get; set; }  
+    }  
+  
+    public class CardConfigItems<T>  
+    {  
+        [JsonPropertyName("items")]  
+        public List<T> Items { get; set; } = new();  
+    }
+    //
+    
+    //Prepare for Order
+    public class PreparedOrder
+    {
+        public List<ResolvedBouquet> Bouquets { get; set; } = new();
+        public List<PreparedOrderItem> PurchaseItems { get; set; } = new();
+        public List<StockRequirement> StockRequirements { get; set; } = new();
+    }
+    
+    public class StockRequirement
+    {
+        public Guid ProductId { get; set; }
+        public decimal Quantity { get; set; }
+    }
+    
+    public class ResolvedBouquet
+    {
+        public Guid OrderLineId { get; set; }
+        public int ItemId { get; set; }
+        public Guid ProductId { get; set; }
+        public int Number { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public Guid? GeneratedFlowerId { get; set; }
+        public bool AiCustomize { get; set; }
+        public List<ResolvedMaterial> Materials { get; set; } = new();
+        public List<ResolvedMaterial> AdditionCustome { get; set; } = new();
+        public ResolvedAccessory? Ribbon { get; set; }
+        public ResolvedAccessory? WrappingPaper { get; set; }
+        public List<Request.BouquetCardSelection> Cards { get; set; } = new();
+    }
 
+    public class ResolvedMaterial
+    {
+        [JsonProperty("matId")]
+        public Guid MatId { get; set; }
+
+        [JsonProperty("quantity")]
+        public decimal Quantity { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonProperty("isCore")]
+        public bool IsCore { get; set; }
+    }
+
+    public class ResolvedAccessory
+    {
+        [JsonProperty("id")]
+        public Guid Id { get; set; }
+
+        [JsonProperty("name")]
+        public string? Name { get; set; }
+
+        [JsonProperty("label")]
+        public string? Label { get; set; }
+
+        [JsonProperty("imageUrl")]
+        public string? ImageUrl { get; set; }
+
+        [JsonProperty("isActive")]
+        public bool IsActive { get; set; }
+
+        [JsonProperty("isDeleted")]
+        public bool IsDeleted { get; set; }
+    }
+    
+    public class PreparedOrderItem
+    {
+        // Mỗi Product FE gửi có một LineId riêng. Item phát sinh (giấy, ribbon,
+        // phần tăng thêm) không cần Metadata nên cũng có một LineId riêng.
+        public Guid LineId { get; set; }
+        public Guid ProductId { get; set; }
+        public int Number { get; set; }
+        public int ItemId { get; set; }
+        public bool IsSourceItem { get; set; }
+    }
+    
+    public class FlowerOrderMetadata
+    {
+        [JsonProperty("subId")]
+        public Guid SubId { get; set; }
+
+        [JsonProperty("aiCustomize")]
+        public bool AiCustomize { get; set; }
+
+        [JsonProperty("materials")]
+        public List<ResolvedMaterial>? Materials { get; set; }
+
+        [JsonProperty("AdditionCustome")]
+        public List<ResolvedMaterial>? AdditionCustome { get; set; }
+
+        [JsonProperty("ribbon")]
+        public ResolvedAccessory? Ribbon { get; set; }
+
+        [JsonProperty("wrappingPaper")]
+        public ResolvedAccessory? WrappingPaper { get; set; }
+    }
+    
+    ///
+    public class CurrentProductSnapshot
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string? CoverImage { get; set; }
+        public string? Label { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsDeleted { get; set; }
+    }
 }

@@ -24,6 +24,7 @@ public class AhaMoveRequest
       public int ItemId { get; set; }
       public Guid ProductId { get; set; }
       public int Number { get; set; }
+      public List<Order.Request.BouquetSelection>? Bouquets { get; set; }
    }
 
    public class AhaMoveShippingFeeRequest
