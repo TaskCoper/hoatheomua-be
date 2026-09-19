@@ -102,6 +102,7 @@ public class Request
         public ProductType? productType  { get; set; }
         public bool? isPin { get; set; }
         public bool? IsActive { get; set; }
+        public List<string>? Labels { get; set; }
     }
     
     public class MoveProductRequest
@@ -205,7 +206,7 @@ public class Request
     {
         public List<Guid> ProductIds { get; set; }
     }
-    
+
     public class GetMaterialsRequest
     {
         public int PageIndex { get; set; } = 1;
