@@ -5,6 +5,7 @@ public class Request
     public class CustomerGeneratedFlowerListRequest
     {
         public Guid? sessionId { get; set; }
+        public Guid? mockupId { get; set; }
         public int pageIndex { get; set; } = 1;
         public int pageSize { get; set; } = 10;
     }

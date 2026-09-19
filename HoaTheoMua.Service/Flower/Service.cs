@@ -80,6 +80,11 @@ public class Service : IService
                 continue;
             }
 
+            // Mockup được snapshot theo từng lần tạo/regenerate, nên filter tại
+            // History thay vì dùng Mockup hiện tại của cả session.
+            if (request.mockupId.HasValue && historyMetadata.Mockup?.Id != request.mockupId.Value)
+                continue;
+
             validItems.Add((history.SessionId.Value, new Response.CustomerGeneratedFlowerResponse
             {
                 HistoryId = history.Id,
@@ -537,6 +542,8 @@ public class Service : IService
         var errors = new List<string>();
         if (request.sessionId == Guid.Empty)
             errors.Add("SessionId không được là GUID rỗng.");
+        if (request.mockupId == Guid.Empty)
+            errors.Add("MockupId không được là GUID rỗng.");
         if (request.pageIndex < 1)
             errors.Add("PageIndex phải lớn hơn hoặc bằng 1.");
         if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))

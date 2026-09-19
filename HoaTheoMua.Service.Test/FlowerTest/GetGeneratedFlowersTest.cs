@@ -66,6 +66,33 @@ public class GetGeneratedFlowersTest
     }
 
     [Fact]
+    public async Task GetCustomerGeneratedFlowers_MockupFilter_ReturnsOnlyMatchingMockup()
+    {
+        await using var db = CreateDb();
+        var userId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var requestedMockupId = Guid.NewGuid();
+        var matchingFlower = Flower("matching", productId, 2, userId);
+        var otherFlower = Flower("other", productId, 1, userId);
+        db.GeneratedFlowers.AddRange(matchingFlower, otherFlower);
+        db.ClientHistories.AddRange(
+            History(matchingFlower, Guid.NewGuid(), productId, requestedMockupId),
+            History(otherFlower, Guid.NewGuid(), productId, Guid.NewGuid()));
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db, userId).GetCustomerGeneratedFlowers(new()
+        {
+            mockupId = requestedMockupId,
+            pageIndex = 1,
+            pageSize = 5
+        });
+
+        var session = Assert.IsType<Response.CustomerFlowerSessionResponse>(Assert.Single(result.Value.Items));
+        Assert.Equal(matchingFlower.Id, Assert.Single(session.Flowers).Id);
+        Assert.Equal(1, result.Value.TotalCount);
+    }
+
+    [Fact]
     public async Task GetAdminGeneratedFlowers_InvalidCamelCasePageIndex_ThrowsValidationError()
     {
         await using var db = CreateDb();
@@ -98,7 +125,8 @@ public class GetGeneratedFlowersTest
         CreatedAt = new DateTimeOffset(2026, 9, sequence, 0, 0, 0, TimeSpan.Zero)
     };
 
-    private static ClientHistory History(GeneratedFlower flower, Guid? sessionId = null, Guid? productId = null) => new()
+    private static ClientHistory History(GeneratedFlower flower, Guid? sessionId = null, Guid? productId = null,
+        Guid? mockupId = null) => new()
     {
         Id = Guid.NewGuid(),
         UserId = flower.UserId,
@@ -108,6 +136,8 @@ public class GetGeneratedFlowersTest
         RootId = productId ?? Guid.NewGuid(),
         OutputId = flower.Id,
         CreatedAt = flower.CreatedAt,
-        Metadata = "{\"operation\":\"create\"}"
+        Metadata = mockupId.HasValue
+            ? $"{{\"operation\":\"create\",\"mockup\":{{\"id\":\"{mockupId.Value}\"}}}}"
+            : "{\"operation\":\"create\"}"
     };
 }
