@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Route("api")]
+[Route("api/v1")]
 public class FlowerController : ControllerBase
 {
     private readonly IService _flowerService;
@@ -17,7 +17,7 @@ public class FlowerController : ControllerBase
         _flowerService = flowerService;
     }
 
-    [HttpGet("v1/generated-flowers")]
+    [HttpGet("generated-flowers")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> GetCustomerGeneratedFlowers(
         [FromQuery] Request.CustomerGeneratedFlowerListRequest request,
@@ -27,7 +27,7 @@ public class FlowerController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("v1/admin/generated-flowers")]
+    [HttpGet("admin/generated-flowers")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetAdminGeneratedFlowers(
         [FromQuery] Request.AdminGeneratedFlowerListRequest request,

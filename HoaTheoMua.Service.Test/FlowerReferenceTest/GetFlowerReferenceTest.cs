@@ -19,9 +19,9 @@ public class GetFlowerReferenceTest
     [InlineData("invalid")]
     public void GetFlowerReferenceValidator_InvalidType_IsInvalid(string type)
     {
-        var result = new GetFlowerReferenceValidator().Validate(new Request.GetFlowerReferenceRequest { Type = type });
+        var result = new GetFlowerReferenceValidator().Validate(new Request.GetFlowerReferenceRequest { type = type });
 
-        Assert.Contains(result.Errors, x => x.PropertyName == nameof(Request.GetFlowerReferenceRequest.Type));
+        Assert.Contains(result.Errors, x => x.PropertyName == nameof(Request.GetFlowerReferenceRequest.type));
     }
 
     [Fact]

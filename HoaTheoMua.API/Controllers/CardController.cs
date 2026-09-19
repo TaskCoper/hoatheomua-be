@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-[Route("api")]
+[Route("api/v1")]
 public class CardController : ControllerBase
 {
     private readonly IService _cardService;
@@ -16,7 +16,7 @@ public class CardController : ControllerBase
         _cardService = cardService;
     }
 
-    [HttpGet("v1/admin/generated-cards")]
+    [HttpGet("admin/generated-cards")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetAdminGeneratedCards(
         [FromQuery] Request.AdminGeneratedCardListRequest request,

@@ -4,11 +4,11 @@ public class Request
 {
     public class GetFlowerReferenceRequest
     {
-        public int PageIndex { get; set; }
-        public int PageSize { get; set; }
-        public bool? IsActive { get; set; }
-        public string? Type { get; set; }
-        public string? Search { get; set; }
+        public int pageIndex { get; set; }
+        public int pageSize { get; set; }
+        public bool? isActive { get; set; }
+        public string type { get; set; }
+        public string? search { get; set; }
     }
 
     public class CreateFlowerReferenceRequest

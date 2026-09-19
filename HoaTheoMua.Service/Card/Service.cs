@@ -31,9 +31,9 @@ public class Service : IService
         ValidateAdminListRequest(request);
 
         CardFormType? formType = null;
-        if (!string.IsNullOrWhiteSpace(request.FormType))
+        if (!string.IsNullOrWhiteSpace(request.formType))
         {
-            if (!TryParseFormType(request.FormType.Trim(), out var parsedFormType))
+            if (!TryParseFormType(request.formType.Trim(), out var parsedFormType))
             {
                 throw new AdminListValidationException("FormType chỉ nhận go_may hoặc calligraphy.");
             }
@@ -41,16 +41,16 @@ public class Service : IService
             formType = parsedFormType;
         }
 
-        var size = string.IsNullOrWhiteSpace(request.Size) ? null : request.Size.Trim();
-        var cardTemplateName = string.IsNullOrWhiteSpace(request.CardTemplateName)
+        var size = string.IsNullOrWhiteSpace(request.size) ? null : request.size.Trim();
+        var cardTemplateName = string.IsNullOrWhiteSpace(request.cardTemplateName)
             ? null
-            : request.CardTemplateName.Trim();
+            : request.cardTemplateName.Trim();
 
         var query = _dbContext.GeneratedCards
             .AsNoTracking()
             .Where(card => card.CardType == GeneratedCardType.Ai);
-        if (request.Id.HasValue)
-            query = query.Where(card => card.Id == request.Id.Value);
+        if (request.id.HasValue)
+            query = query.Where(card => card.Id == request.id.Value);
         if (formType.HasValue)
             query = query.Where(card => card.FormType == formType.Value);
 
@@ -81,14 +81,14 @@ public class Service : IService
             .ToList();
         var totalCount = records.Count;
         var items = records
-            .Skip((request.PageIndex - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((request.pageIndex - 1) * request.pageSize)
+            .Take(request.pageSize)
             .Select(record => ToAdminResponse(record.Card, record.History))
             .ToList();
         return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
             items,
-            request.PageIndex,
-            request.PageSize,
+            request.pageIndex,
+            request.pageSize,
             totalCount);
     }
 
@@ -995,22 +995,22 @@ public class Service : IService
     private static void ValidateAdminListRequest(Request.AdminGeneratedCardListRequest request)
     {
         var errors = new Dictionary<string, string[]>();
-        if (request.Id == Guid.Empty)
+        if (request.id == Guid.Empty)
         {
             errors["id"] = ["Id không được là GUID rỗng."];
         }
 
-        if (request.PageIndex < 1)
+        if (request.pageIndex < 1)
         {
             errors["pageIndex"] = ["PageIndex phải lớn hơn hoặc bằng 1."];
         }
 
-        if (request.PageSize is not (5 or 10 or 20 or 30 or 40 or 50))
+        if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))
         {
             errors["pageSize"] = ["PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50."];
         }
 
-        if (request.FormType is not null && string.IsNullOrWhiteSpace(request.FormType))
+        if (request.formType is not null && string.IsNullOrWhiteSpace(request.formType))
         {
             errors["formType"] = ["FormType chỉ nhận go_may hoặc calligraphy."];
         }
