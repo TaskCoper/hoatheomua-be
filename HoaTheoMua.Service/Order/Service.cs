@@ -1537,7 +1537,8 @@ public class Service : IService
         var userId = isAdmin ? (Guid?)null : _currentUser.GetRequiredUserId();
 
         var orders = await _dbContext.Orders
-            .Include(x => x.OrderDetails)
+            .AsNoTracking()
+            .Include(x => x.OrderDetails.Where(detail => !detail.IsDeleted))
             .Include(x => x.Transactions)
             .FirstOrDefaultAsync(x =>
                 x.IsDeleted == false &&
@@ -1654,10 +1655,7 @@ public class Service : IService
                     Length = x.Length,
                     Width = x.Width,
                     Height = x.Height,
-                    // Admin dùng snapshot này để xem đầy đủ Flower, phụ kiện và Card.
-                    Snapshot = isAdmin
-                        ? DeserializeOrderDetailMetadata(x.Metadata)
-                        : null,
+                    Snapshot = DeserializeOrderDetailMetadata(x.Metadata),
 
                 };
             }).ToList(),
