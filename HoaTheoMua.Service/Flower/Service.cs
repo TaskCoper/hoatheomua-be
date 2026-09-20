@@ -326,6 +326,41 @@ public class Service : IService
         return ToResponse(flower, history.SessionId!.Value);
     }
 
+    public async Task<Response.GeneratedFlowerCompositionResponse> GetGeneratedFlowerComposition(
+        Guid generatedFlowerId)
+    {
+        if (generatedFlowerId == Guid.Empty)
+            throw new BadRequestException("GENERATED_FLOWER_ID_INVALID");
+
+        var userId = _currentUser.GetRequiredUserId();
+        var flower = await _db.GeneratedFlowers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == generatedFlowerId && x.UserId == userId)
+            ?? throw new NotFoundException("GENERATED_FLOWER_NOT_FOUND");
+
+        FlowerMetadata metadata;
+        try
+        {
+            metadata = JsonSerializer.Deserialize<FlowerMetadata>(flower.Metadata, JsonOptions)
+                ?? throw new JsonException();
+        }
+        catch (JsonException)
+        {
+            throw new ConflictException(
+                "GENERATED_FLOWER_METADATA_INVALID",
+                "GeneratedFlower có snapshot cấu tạo không hợp lệ.");
+        }
+
+        return new Response.GeneratedFlowerCompositionResponse
+        {
+            Id = flower.Id,
+            Name = flower.Name,
+            CoverImage = flower.ImageUrl,
+            SubId = metadata.SubId,
+            Materials = metadata.Materials.Select(ToCompositionMaterial).ToList()
+        };
+    }
+
     private async Task<Ai.Response.GeneratedImage> GenerateImage(string? productImage, string bundleImage,
         string mockupImage, string name, string prompt, FlowerMetadata metadata)
     {
@@ -510,6 +545,13 @@ public class Service : IService
     private static MaterialSnapshot ToMaterialSnapshot(ProductEntity product, decimal quantity, bool isCore) => new()
     {
         MatId = product.Id, Quantity = quantity, Name = product.ProductName, IsCore = isCore, CoverImage = product.CoverImage
+    };
+
+    private static Response.GeneratedFlowerMaterialResponse ToCompositionMaterial(MaterialSnapshot material) => new()
+    {
+        Id = material.MatId,
+        Name = material.Name ?? string.Empty,
+        CoverImage = material.CoverImage
     };
 
     private static Response.GeneratedFlowerResponse ToResponse(GeneratedFlower flower, Guid sessionId) => new()
