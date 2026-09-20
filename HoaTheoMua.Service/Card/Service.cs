@@ -327,13 +327,16 @@ public class Service : IService
     
     public async Task<Response.CreateCardResponse> CreateCardAi(Request.CreateCardAiRequest request)
     {
-        var createMode = request.OrderDetailIdSpecified || request.VirtualIdSpecified;
-        var regenerateMode = request.SourceCardIdSpecified;
+        var createMode = request.OrderDetailId.HasValue || request.VirtualId.HasValue;
+        var regenerateMode = request.SourceCardId.HasValue;
         if (createMode == regenerateMode
-            || (regenerateMode && (!request.SourceCardId.HasValue || request.SourceCardId == Guid.Empty))
+            || (regenerateMode && request.SourceCardId == Guid.Empty)
             || (createMode && (!request.OrderDetailId.HasValue || !request.VirtualId.HasValue
                 || request.OrderDetailId == Guid.Empty || request.VirtualId == Guid.Empty)))
-            throw new BadRequestException("VALIDATION_ERROR");
+                    throw new BadRequestException("VALIDATION_ERROR");
+        if (!regenerateMode &&
+            (request.MessageContentSpecified || request.CardTemplateIdSpecified))
+            throw new BadRequestException("Create Card AI không được ghi đè SnapshotCard.");
 
         var userId = _currentUser.GetRequiredUserId();
         if (regenerateMode)
