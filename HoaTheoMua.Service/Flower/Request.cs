@@ -11,7 +11,7 @@ public class Request
 
     public class AdminGeneratedFlowerListRequest
     {
-        public Guid? generatedFlowerId { get; set; }
+        public string? generatedFlowerName { get; set; }
         public Guid? productId { get; set; }
         public int pageIndex { get; set; } = 1;
         public int pageSize { get; set; } = 10;

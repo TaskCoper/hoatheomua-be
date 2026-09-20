@@ -135,8 +135,11 @@ public class Service : IService
     {
         ValidateAdminListRequest(request);
         var query = _db.GeneratedFlowers.AsNoTracking();
-        if (request.generatedFlowerId.HasValue)
-            query = query.Where(flower => flower.Id == request.generatedFlowerId.Value);
+        if (!string.IsNullOrWhiteSpace(request.generatedFlowerName))
+        {
+            var search = request.generatedFlowerName.Trim().ToLower();
+            query = query.Where(flower => flower.Name.ToLower().Contains(search));
+        }
 
         var flowers = await query
             .OrderByDescending(flower => flower.CreatedAt)
@@ -506,11 +509,6 @@ public class Service : IService
     private static void ValidateAdminListRequest(Request.AdminGeneratedFlowerListRequest request)
     {
         var errors = new Dictionary<string, string[]>();
-        if (request.generatedFlowerId == Guid.Empty)
-        {
-            errors["generatedFlowerId"] = ["GeneratedFlowerId không được là GUID rỗng."];
-        }
-
         if (request.productId == Guid.Empty)
         {
             errors["productId"] = ["ProductId không được là GUID rỗng."];
