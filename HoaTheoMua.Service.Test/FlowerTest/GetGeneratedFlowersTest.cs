@@ -88,15 +88,18 @@ public class GetGeneratedFlowersTest
     }
 
     [Fact]
-    public async Task GetAdminGeneratedFlowers_InvalidCamelCasePageIndex_ThrowsValidationError()
+    public async Task GetAdminGeneratedFlowers_InvalidPagination_IsNormalized()
     {
         await using var db = CreateDb();
 
-        await Assert.ThrowsAnyAsync<AppException>(() => CreateService(db).GetAdminGeneratedFlowers(new()
+        var result = await CreateService(db).GetAdminGeneratedFlowers(new()
         {
             pageIndex = 0,
-            pageSize = 5
-        }));
+            pageSize = 101
+        });
+
+        Assert.Equal(1, result.Value.PageIndex);
+        Assert.Equal(100, result.Value.PageSize);
     }
 
     private static AppDbContext CreateDb() => new(new DbContextOptionsBuilder<AppDbContext>()

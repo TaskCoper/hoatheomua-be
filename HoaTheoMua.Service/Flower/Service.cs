@@ -35,6 +35,8 @@ public class Service : IService
         CancellationToken cancellationToken = default)
     {
         ValidateCustomerListRequest(request);
+        var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
+        var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
         var userId = _currentUser.GetRequiredUserId();
 
         var historyQuery = _db.ClientHistories.AsNoTracking()
@@ -119,13 +121,13 @@ public class Service : IService
 
         var totalCount = groups.Count;
         var items = groups
-            .Skip((request.pageIndex - 1) * request.pageSize)
-            .Take(request.pageSize)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
             .ToList();
         return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
             items,
-            request.pageIndex,
-            request.pageSize,
+            pageIndex,
+            pageSize,
             totalCount);
     }
 
@@ -134,6 +136,8 @@ public class Service : IService
         CancellationToken cancellationToken = default)
     {
         ValidateAdminListRequest(request);
+        var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
+        var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
         var query = _db.GeneratedFlowers.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(request.generatedFlowerName))
         {
@@ -153,8 +157,8 @@ public class Service : IService
 
         var totalCount = flowers.Count;
         var pagedFlowers = flowers
-            .Skip((request.pageIndex - 1) * request.pageSize)
-            .Take(request.pageSize)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
             .ToList();
         var flowerIds = pagedFlowers.Select(flower => flower.Id).ToArray();
         var histories = flowerIds.Length == 0
@@ -174,8 +178,8 @@ public class Service : IService
             .ToList();
         return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
             items,
-            request.pageIndex,
-            request.pageSize,
+            pageIndex,
+            pageSize,
             totalCount);
     }
 
@@ -514,16 +518,19 @@ public class Service : IService
             errors["productId"] = ["ProductId không được là GUID rỗng."];
         }
 
+        // Pagination được chuẩn hóa tại GetAdminGeneratedFlowers.
+#if false
         if (request.pageIndex < 1)
         {
             errors["pageIndex"] = ["PageIndex phải lớn hơn hoặc bằng 1."];
         }
 
-        if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))
-        {
-            errors["pageSize"] = ["PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50."];
-        }
+        // if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))
+        // {
+        //     errors["pageSize"] = ["PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50."];
+        // }
 
+#endif
         if (errors.Count > 0)
         {
             throw new QueryValidationException(string.Join(" ", errors.SelectMany(error => error.Value)));
@@ -535,10 +542,13 @@ public class Service : IService
         var errors = new List<string>();
         if (request.sessionId == Guid.Empty)
             errors.Add("SessionId không được là GUID rỗng.");
+        // Pagination được chuẩn hóa tại GetCustomerGeneratedFlowers.
+#if false
         if (request.pageIndex < 1)
             errors.Add("PageIndex phải lớn hơn hoặc bằng 1.");
-        if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))
-            errors.Add("PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50.");
+        // if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))
+        //     errors.Add("PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50.");
+#endif
         if (errors.Count > 0)
             throw new QueryValidationException(string.Join(" ", errors));
     }

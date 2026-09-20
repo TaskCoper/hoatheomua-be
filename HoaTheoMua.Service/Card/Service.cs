@@ -29,6 +29,8 @@ public class Service : IService
         CancellationToken cancellationToken = default)
     {
         ValidateAdminListRequest(request);
+        var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
+        var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
 
         CardFormType? formType = null;
         if (!string.IsNullOrWhiteSpace(request.formType))
@@ -81,14 +83,14 @@ public class Service : IService
             .ToList();
         var totalCount = records.Count;
         var items = records
-            .Skip((request.pageIndex - 1) * request.pageSize)
-            .Take(request.pageSize)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
             .Select(record => ToAdminResponse(record.Card, record.History))
             .ToList();
         return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
             items,
-            request.pageIndex,
-            request.pageSize,
+            pageIndex,
+            pageSize,
             totalCount);
     }
 
@@ -1000,16 +1002,19 @@ public class Service : IService
             errors["id"] = ["Id không được là GUID rỗng."];
         }
 
+        // Pagination được chuẩn hóa tại GetAdminGeneratedCards.
+#if false
         if (request.pageIndex < 1)
         {
             errors["pageIndex"] = ["PageIndex phải lớn hơn hoặc bằng 1."];
         }
 
-        if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))
-        {
-            errors["pageSize"] = ["PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50."];
-        }
+        // if (request.pageSize is not (5 or 10 or 20 or 30 or 40 or 50))
+        // {
+        //     errors["pageSize"] = ["PageSize chỉ nhận 5, 10, 20, 30, 40 hoặc 50."];
+        // }
 
+#endif
         if (request.formType is not null && string.IsNullOrWhiteSpace(request.formType))
         {
             errors["formType"] = ["FormType chỉ nhận go_may hoặc calligraphy."];
