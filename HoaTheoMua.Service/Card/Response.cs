@@ -101,6 +101,12 @@ public class Response
         public string ImageUrl { get; set; } = "";
     }
 
+    public class GeneratedCardImageResponse
+    {
+        public Guid GeneratedCardId { get; set; }
+        public string ImageUrl { get; set; } = "";
+    }
+
     public class CardItemResponse
     {
         public Guid Id { get; set; }

@@ -70,6 +70,14 @@ public class CardController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
+    [HttpGet("generated-cards/{generatedCardId:guid}/image")]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    public async Task<IActionResult> GetGeneratedCardImage(Guid generatedCardId)
+    {
+        var result = await _cardService.GetGeneratedCardImage(generatedCardId);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpPost("generated-cards/by-products")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> GetGeneratedCardsByProductIds(
