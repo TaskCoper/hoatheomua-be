@@ -10,6 +10,7 @@ using Moq;
 using Xunit;
 using Ai = HoaTheoMua.Service.AiService;
 using FlowerService = HoaTheoMua.Service.Flower.Service;
+using ProductEntity = HoaTheoMua.Repository.Entity.Product;
 using ProductService = HoaTheoMua.Service.Product.IService;
 
 namespace HoaTheoMua.Service.Test.FlowerTest;
@@ -58,6 +59,28 @@ public class GetGeneratedFlowersTest
         var item = Assert.IsType<Response.AdminGeneratedFlowerResponse>(Assert.Single(result.Value.Items));
         Assert.Equal(matchingFlower.Id, item.Id);
         Assert.Equal(1, result.Value.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetAdminGeneratedFlowers_AddsMaterialCoverImageToSnapshot()
+    {
+        await using var db = CreateDb();
+        var materialId = Guid.NewGuid();
+        var flower = Flower("material snapshot", Guid.NewGuid(), 1);
+        flower.Metadata = JsonSerializer.Serialize(new
+        {
+            subId = Guid.NewGuid(),
+            materials = new[] { new { name = "Cát tường", matId = materialId, isCore = false, quantity = 1 } }
+        });
+        db.Products.Add(new ProductEntity { Id = materialId, CoverImage = "https://example.test/material.jpg" });
+        db.GeneratedFlowers.Add(flower);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).GetAdminGeneratedFlowers(new() { pageIndex = 1, pageSize = 5 });
+
+        var item = Assert.IsType<Response.AdminGeneratedFlowerResponse>(Assert.Single(result.Value.Items));
+        Assert.Equal("https://example.test/material.jpg",
+            item.Metadata.GetProperty("materials")[0].GetProperty("coverImage").GetString());
     }
 
     [Fact]

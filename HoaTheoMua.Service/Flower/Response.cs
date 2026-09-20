@@ -160,6 +160,8 @@ public class MappingFlower
         public string? Name { get; set; }
         [JsonPropertyName("isCore")] 
         public bool IsCore { get; set; }
+        [JsonPropertyName("coverImage")]
+        public string? CoverImage { get; set; }
     }
 
     public class PromptSnapshot
