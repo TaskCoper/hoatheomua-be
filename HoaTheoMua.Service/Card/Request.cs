@@ -27,46 +27,11 @@ public class Request
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public class CreateCardAiRequest
     {
-        private Guid? _orderDetailId;
-        private Guid? _virtualId;
-        private Guid? _sourceCardId;
-        private Guid? _cardTemplateId;
-        private string? _messageContent;
-
-        public Guid? OrderDetailId
-        {
-            get => _orderDetailId;
-            set { _orderDetailId = value; OrderDetailIdSpecified = true; }
-        }
-
-        public Guid? VirtualId
-        {
-            get => _virtualId;
-            set { _virtualId = value; VirtualIdSpecified = true; }
-        }
-
-        public Guid? SourceCardId
-        {
-            get => _sourceCardId;
-            set { _sourceCardId = value; SourceCardIdSpecified = true; }
-        }
-
-        public Guid? CardTemplateId
-        {
-            get => _cardTemplateId;
-            set { _cardTemplateId = value; CardTemplateIdSpecified = true; }
-        }
-
-        public string? MessageContent
-        {
-            get => _messageContent;
-            set { _messageContent = value; MessageContentSpecified = true; }
-        }
-        [JsonIgnore] public bool OrderDetailIdSpecified { get; private set; }
-        [JsonIgnore] public bool VirtualIdSpecified { get; private set; }
-        [JsonIgnore] public bool SourceCardIdSpecified { get; private set; }
-        [JsonIgnore] public bool CardTemplateIdSpecified { get; private set; }
-        [JsonIgnore] public bool MessageContentSpecified { get; private set; }
+        public Guid? OrderDetailId { get; set; }
+        public Guid? VirtualId { get; set; }
+        public Guid? SourceCardId { get; set; }
+        public Guid? CardTemplateId { get; set; }
+        public string? MessageContent { get; set; }
     }
 
     public class UpdateFinalGeneratedCardId

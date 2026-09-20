@@ -278,12 +278,9 @@ public class Service : IService
     
     public async Task<Response.CreateCardResponse> CreateCardAi(Request.CreateCardAiRequest request)
     {
-        var createMode = request.OrderDetailIdSpecified || request.VirtualIdSpecified;
-        var regenerateMode = request.SourceCardIdSpecified;
-        if (createMode == regenerateMode
-            || (regenerateMode && (!request.SourceCardId.HasValue || request.SourceCardId == Guid.Empty))
-            || (createMode && (!request.OrderDetailId.HasValue || !request.VirtualId.HasValue
-                || request.OrderDetailId == Guid.Empty || request.VirtualId == Guid.Empty)))
+        var regenerateMode = request.SourceCardId.HasValue && request.SourceCardId.Value != Guid.Empty;
+        if (!regenerateMode && (!request.OrderDetailId.HasValue || !request.VirtualId.HasValue
+            || request.OrderDetailId == Guid.Empty || request.VirtualId == Guid.Empty))
             throw new BadRequestException("VALIDATION_ERROR");
 
         var userId = _currentUser.GetRequiredUserId();
@@ -298,9 +295,6 @@ public class Service : IService
             return await CreateFromSourceCardAsync(request, sourceCard);
         }
 
-        if (request.MessageContentSpecified || request.CardTemplateIdSpecified)
-            throw new BadRequestException("Create Card AI không được ghi đè SnapshotCard.");
-
         var orderDetail = await _dbContext.OrderDetails
             .Include(x => x.Order)
             .FirstOrDefaultAsync(x => x.Id == request.OrderDetailId
@@ -312,6 +306,9 @@ public class Service : IService
             throw new ConflictException("ORDER_NOT_PAID", "Order chưa thanh toán.");
 
         var (metadata, snapshotNode, cardSnapshot, generatedFlowerId) = FindAiSnapshot(orderDetail.Metadata, request.VirtualId!.Value);
+        if ((request.CardTemplateId.HasValue && request.CardTemplateId != cardSnapshot.CardTemplate.TemplateId)
+            || (request.MessageContent is not null && !string.Equals(request.MessageContent, cardSnapshot.MessageContent, StringComparison.Ordinal)))
+            throw new ConflictException("CARD_SNAPSHOT_MISMATCH", "Cấu hình thiệp không khớp SnapshotCard của Order.");
         if (!string.Equals(cardSnapshot.Status, "not yet", StringComparison.OrdinalIgnoreCase) || cardSnapshot.IdResult.Count != 0 || cardSnapshot.FinalGeneratedCardId.HasValue)
             throw new ConflictException("CARD_ALREADY_CREATED", "Snapshot Card đã được tạo hoặc không hợp lệ.");
         var (baseId, rootId) = await ResolveLineageAsync(cardSnapshot, userId, generatedFlowerId);
