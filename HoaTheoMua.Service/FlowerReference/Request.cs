@@ -7,7 +7,7 @@ public class Request
         public int pageIndex { get; set; }
         public int pageSize { get; set; }
         public bool? isActive { get; set; }
-        public string type { get; set; }
+        public string? type { get; set; }
         public string? search { get; set; }
     }
 
