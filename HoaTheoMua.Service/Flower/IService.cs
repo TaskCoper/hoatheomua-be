@@ -10,5 +10,5 @@ public interface IService
         CancellationToken cancellationToken = default);
     Task<Response.GeneratedFlowerResponse> CreateAiFlower(Request.CreateFlowerRequest request);
     Task<Response.GeneratedFlowerResponse> RegenerateAiFlower(Guid sourceFlowerId, Request.RegenerateFlowerRequest request);
-    Task<Response.GeneratedFlowerCompositionResponse> GetGeneratedFlowerComposition(Guid generatedFlowerId);
+    Task<Response.GeneratedFlowerCompositionResponse?> GetGeneratedFlowerComposition(Guid generatedFlowerId);
 }

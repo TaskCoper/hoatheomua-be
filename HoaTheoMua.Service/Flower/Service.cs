@@ -327,30 +327,32 @@ public class Service : IService
         return ToResponse(flower, history.SessionId!.Value);
     }
 
-    public async Task<Response.GeneratedFlowerCompositionResponse> GetGeneratedFlowerComposition(
+    public async Task<Response.GeneratedFlowerCompositionResponse?> GetGeneratedFlowerComposition(
         Guid generatedFlowerId)
     {
         if (generatedFlowerId == Guid.Empty)
-            throw new BadRequestException("GENERATED_FLOWER_ID_INVALID");
+            return null;
 
         var userId = _currentUser.GetRequiredUserId();
         var flower = await _db.GeneratedFlowers
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == generatedFlowerId && x.UserId == userId)
-            ?? throw new NotFoundException("GENERATED_FLOWER_NOT_FOUND");
+            .FirstOrDefaultAsync(x => x.Id == generatedFlowerId && x.UserId == userId);
 
-        FlowerMetadata metadata;
+        if (flower == null)
+            return null;
+
+        FlowerMetadata? metadata;
         try
         {
-            metadata = JsonSerializer.Deserialize<FlowerMetadata>(flower.Metadata, JsonOptions)
-                ?? throw new JsonException();
+            metadata = JsonSerializer.Deserialize<FlowerMetadata>(flower.Metadata, JsonOptions);
         }
         catch (JsonException)
         {
-            throw new ConflictException(
-                "GENERATED_FLOWER_METADATA_INVALID",
-                "GeneratedFlower có snapshot cấu tạo không hợp lệ.");
+            return null;
         }
+
+        if (metadata == null || metadata.SubId == Guid.Empty || metadata.Materials == null)
+            return null;
 
         return new Response.GeneratedFlowerCompositionResponse
         {
