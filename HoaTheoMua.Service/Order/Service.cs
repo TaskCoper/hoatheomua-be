@@ -712,6 +712,7 @@ public class Service : IService
                 
                 ParentIsPurchasable =
                     string.IsNullOrWhiteSpace(x.ParentProductId) ||
+                    x.ParentProductId.StartsWith("-") ||
                     _dbContext.Products.Any(parent =>
                         parent.NhanhProductId == x.ParentProductId &&
                         parent.IsActive &&
