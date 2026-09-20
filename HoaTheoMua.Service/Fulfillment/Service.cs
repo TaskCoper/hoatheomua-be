@@ -174,12 +174,88 @@ public class Service : IService
 
         return Plan(dispatched: true, shippingPartyOrderId, shippingTrackingUrl);
     }
-
+    
+    // private async Task<(string OrderId, string? TrackingUrl)> BookAhamoveAsync(
+    //     OrderEntity order, CompanyAddressEntity companyAddress, GroupConfig ahamoveConfigs, long delayTime,
+    //     CancellationToken cancellationToken)
+    // {
+    //     var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest
+    //     {
+    //         OrderTime = delayTime,
+    //         IdleUntil = delayTime,
+    //         Paths =
+    //         [
+    //             new AhaMoveRequest.AhamoveLocationPoint
+    //             {
+    //                 Latitude = companyAddress.Latitude ?? 0,
+    //                 Longitude = companyAddress.Longitude ?? 0,
+    //                 Address = companyAddress.AddressLine + ", " + companyAddress.Ward + ", " + companyAddress.City,
+    //                 ShortAddress = companyAddress.AddressLine + ", " + companyAddress.Ward + ", " + companyAddress.City,
+    //                 FullName = companyAddress.FullName,
+    //                 Phone = companyAddress.PhoneNumber,
+    //                 Remarks = companyAddress.Remarks!,
+    //             },
+    //             new AhaMoveRequest.AhamoveLocationPoint
+    //             {
+    //                 Latitude = order.Latitude,
+    //                 Longitude = order.Longitude,
+    //                 Address = order.Address,
+    //                 ShortAddress = order.ShortAddress,
+    //                 FullName = order.FullName,
+    //                 Phone = order.Phone,
+    //                 Remarks = order.Remarks,
+    //             },
+    //         ],
+    //         ServiceId = "SGN-BIKE",
+    //         Requests = [new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-BAGA" }],
+    //         PaymentMethod = "CASH",
+    //         Remarks = order.Remarks,
+    //         Items = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem
+    //         {
+    //             Id = x.Id.ToString(),
+    //             Name = x.Name,
+    //             Price = (int)x.Price,
+    //             // Ahamove only supports whole items; checkout and NhanhVN retain
+    //             // the original decimal quantity.
+    //             //Num = x.Number
+    //             Num = checked((int)Math.Ceiling(x.Number))
+    //         }).ToList(),
+    //         PackageDetail = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail
+    //         {
+    //             Height = x.Height,
+    //             Weight = x.Weight,
+    //             Length = x.Length,
+    //             Width = x.Width,
+    //             Description = x.Name
+    //         }).ToList(),
+    //     };
+    
     /// <summary>POST /v3/orders - the legacy inline request, moved here unchanged.</summary>
     private async Task<(string OrderId, string? TrackingUrl)> BookAhamoveAsync(
         OrderEntity order, CompanyAddressEntity companyAddress, GroupConfig ahamoveConfigs, long delayTime,
         CancellationToken cancellationToken)
     {
+        // Giữ cùng quy tắc với lúc báo giá: gộp số lượng theo Nhanh ItemId rồi
+        // mới làm tròn cho Ahamove. Nhờ vậy 0.2 + 0.2 thành 1 kiện ở cả hai bước,
+        // thay vì bị làm tròn thành 2 vì chúng nằm ở hai OrderDetails.
+        var ahamoveItems = order.OrderDetails
+            .GroupBy(detail => detail.ItemId)
+            .Select(group =>
+            {
+                var detail = group.First();
+                return new AhaMoveRequest.AhamoveItem
+                {
+                    Id = detail.ItemId.ToString(),
+                    Name = detail.Name,
+                    Price = (int)detail.Price,
+                    Num = checked((int)Math.Ceiling(group.Sum(item => item.Number)))
+                };
+            })
+            .ToList();
+        //edge case: một item 2 mẫu hoa AI trong một order -> 2 orderDetails -> đều tăng 0.2 đơn vị
+        //nếu không group -> 0.2 -> 1 | 0.2 -> 1 => 2 || nếu group -> 0.2*2 = 0.4 -> 1
+        
+        
         var createRequest = new AhaMoveRequest.AhaMoveShippingFeeRequest
         {
             OrderTime = delayTime,
@@ -211,16 +287,17 @@ public class Service : IService
             Requests = [new AhaMoveRequest.ItemsRequest { Id = "SGN-BIKE-BAGA" }],
             PaymentMethod = "CASH",
             Remarks = order.Remarks,
-            Items = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem
-            {
-                Id = x.Id.ToString(),
-                Name = x.Name,
-                Price = (int)x.Price,
-                // Ahamove only supports whole items; checkout and NhanhVN retain
-                // the original decimal quantity.
-                //Num = x.Number
-                Num = checked((int)Math.Ceiling(x.Number))
-            }).ToList(),
+            Items = ahamoveItems,
+            // Items = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem
+            // {
+            //     Id = x.Id.ToString(),
+            //     Name = x.Name,
+            //     Price = (int)x.Price,
+            //     // Ahamove only supports whole items; checkout and NhanhVN retain
+            //     // the original decimal quantity.
+            //     //Num = x.Number
+            //     Num = checked((int)Math.Ceiling(x.Number))
+            // }).ToList(),
             PackageDetail = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail
             {
                 Height = x.Height,
@@ -229,6 +306,40 @@ public class Service : IService
                 Width = x.Width,
                 Description = x.Name
             }).ToList(),
+            // PackageDetail = order.OrderDetails
+            //     .GroupBy(detail => detail.ItemId)
+            //     .Select(group =>
+            //     {
+            //         var detail = group.First();
+            //         return new AhaMoveRequest.PackageDetail
+            //         {
+            //             Height = detail.Height,
+            //             Weight = detail.Weight,
+            //             Length = detail.Length,
+            //             Width = detail.Width,
+            //             Description = detail.Name
+            //         };
+            //     })
+            //     .ToList(),
+            
+            // Items = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem
+            // {
+            //     Id = x.Id.ToString(),
+            //     Name = x.Name,
+            //     Price = (int)x.Price,
+            //     // Ahamove only supports whole items; checkout and NhanhVN retain
+            //     // the original decimal quantity.
+            //     //Num = x.Number
+            //     Num = checked((int)Math.Ceiling(x.Number))
+            // }).ToList(),
+            // PackageDetail = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail
+            // {
+            //     Height = x.Height,
+            //     Weight = x.Weight,
+            //     Length = x.Length,
+            //     Width = x.Width,
+            //     Description = x.Name
+            // }).ToList(),
         };
 
         var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders";
@@ -339,13 +450,30 @@ public class Service : IService
                          && order.InvoiceType == InvoiceType.Business
                          && order.IsExportInvoice == true;
 
-        var productNhanhVnRequest = order.OrderDetails.Select(x => new NhanhVnProduct
-        {
-            Id = x.ItemId,
-            Price = x.Price,
-            Quantity = x.Number,
-            Vat = isVatOrder ? 8 : null,
-        }).ToList();
+        
+        // var productNhanhVnRequest = order.OrderDetails.Select(x => new NhanhVnProduct
+        // {
+        //     Id = x.ItemId,
+        //     Price = x.Price,
+        //     Quantity = x.Number,
+        //     Vat = isVatOrder ? 8 : null,
+        // }).ToList();
+        // NhanhVN chỉ cần tổng số lượng cần xuất kho theo ItemId; các OrderDetails
+        // vẫn giữ riêng để snapshot từng Flower/Card không bị lẫn.
+        var productNhanhVnRequest = order.OrderDetails
+            .GroupBy(x => x.ItemId)
+            .Select(group =>
+            {
+                var detail = group.First();
+                return new NhanhVnProduct
+                {
+                    Id = detail.ItemId,
+                    Price = detail.Price,
+                    Quantity = group.Sum(item => item.Number),
+                    Vat = isVatOrder ? 8 : null,
+                };
+            })
+            .ToList();
 
         // `tags` is the order's own tag list, deliberately NOT plan.TagIds: the NhanhVn status and
         // the delivery-time branch below key off whether the customer picked a delivery slot, while

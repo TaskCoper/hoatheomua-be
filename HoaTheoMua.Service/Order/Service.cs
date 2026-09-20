@@ -248,7 +248,7 @@ public class Service : IService
         // Lấy Product sau Prepare để bao gồm Combo gốc, phần tăng, giấy và ribbon.
         var products = await FetchLocalProducts(preparedOrder.PurchaseItems);
         var quantityByItemId = preparedOrder.PurchaseItems
-            .GroupBy(x => x.ItemId)
+            .GroupBy(x => x.ItemId)//group rồi nên bên ahamove cũng group luôn -> tính phí và tạo đơn đồng giá
             .ToDictionary(x => x.Key, x => x.Sum(item => item.Number));
         var productByItemId = products.ToDictionary(x => x.Id);
 
