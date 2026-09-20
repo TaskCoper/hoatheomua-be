@@ -298,29 +298,29 @@ public class Service : IService
             //     //Num = x.Number
             //     Num = checked((int)Math.Ceiling(x.Number))
             // }).ToList(),
-            PackageDetail = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail
-            {
-                Height = x.Height,
-                Weight = x.Weight,
-                Length = x.Length,
-                Width = x.Width,
-                Description = x.Name
-            }).ToList(),
-            // PackageDetail = order.OrderDetails
-            //     .GroupBy(detail => detail.ItemId)
-            //     .Select(group =>
-            //     {
-            //         var detail = group.First();
-            //         return new AhaMoveRequest.PackageDetail
-            //         {
-            //             Height = detail.Height,
-            //             Weight = detail.Weight,
-            //             Length = detail.Length,
-            //             Width = detail.Width,
-            //             Description = detail.Name
-            //         };
-            //     })
-            //     .ToList(),
+            // PackageDetail = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail
+            // {
+            //     Height = x.Height,
+            //     Weight = x.Weight,
+            //     Length = x.Length,
+            //     Width = x.Width,
+            //     Description = x.Name
+            // }).ToList(),
+            PackageDetail = order.OrderDetails
+                .GroupBy(detail => detail.ItemId)
+                .Select(group =>
+                {
+                    var detail = group.First();
+                    return new AhaMoveRequest.PackageDetail
+                    {
+                        Height = detail.Height,
+                        Weight = detail.Weight,
+                        Length = detail.Length,
+                        Width = detail.Width,
+                        Description = detail.Name
+                    };
+                })
+                .ToList(),
             
             // Items = order.OrderDetails.Select(x => new AhaMoveRequest.AhamoveItem
             // {
