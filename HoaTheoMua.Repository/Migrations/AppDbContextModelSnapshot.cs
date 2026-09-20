@@ -1414,8 +1414,8 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("Number")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("Number")
+                        .HasColumnType("numeric");
 
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
