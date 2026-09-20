@@ -306,10 +306,26 @@ public class Service : IService
             throw new ConflictException("ORDER_NOT_PAID", "Order chưa thanh toán.");
 
         var (metadata, snapshotNode, cardSnapshot, generatedFlowerId) = FindAiSnapshot(orderDetail.Metadata, request.VirtualId!.Value);
+        var regenerateFromRawImage = !string.IsNullOrWhiteSpace(cardSnapshot.RawImage);
+        if (!regenerateFromRawImage && cardSnapshot.IdResult.Count != 0)
+        {
+            var previousCardId = cardSnapshot.IdResult[cardSnapshot.IdResult.Count - 1];
+            var rawImage = await _dbContext.GeneratedCards
+                .Where(x => x.Id == previousCardId && x.UserId == userId && x.CardType == GeneratedCardType.Ai)
+                .Select(x => x.RawImage)
+                .FirstOrDefaultAsync();
+            if (!string.IsNullOrWhiteSpace(rawImage))
+            {
+                cardSnapshot.RawImage = rawImage;
+                snapshotNode["rawImage"] = rawImage;
+                regenerateFromRawImage = true;
+            }
+        }
         if ((request.CardTemplateId.HasValue && request.CardTemplateId != cardSnapshot.CardTemplate.TemplateId)
             || (request.MessageContent is not null && !string.Equals(request.MessageContent, cardSnapshot.MessageContent, StringComparison.Ordinal)))
             throw new ConflictException("CARD_SNAPSHOT_MISMATCH", "Cấu hình thiệp không khớp SnapshotCard của Order.");
-        if (!string.Equals(cardSnapshot.Status, "not yet", StringComparison.OrdinalIgnoreCase) || cardSnapshot.IdResult.Count != 0 || cardSnapshot.FinalGeneratedCardId.HasValue)
+        if (!regenerateFromRawImage &&
+            (!string.Equals(cardSnapshot.Status, "not yet", StringComparison.OrdinalIgnoreCase) || cardSnapshot.IdResult.Count != 0 || cardSnapshot.FinalGeneratedCardId.HasValue))
             throw new ConflictException("CARD_ALREADY_CREATED", "Snapshot Card đã được tạo hoặc không hợp lệ.");
         var (baseId, rootId) = await ResolveLineageAsync(cardSnapshot, userId, generatedFlowerId);
 
@@ -334,14 +350,20 @@ public class Service : IService
                 orderDetail.Id,
                 request.VirtualId.Value,
                 generatedFlowerId,
-                "create")
+                regenerateFromRawImage ? "regenerate" : "create")
         };
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
         _dbContext.GeneratedCards.Add(card);
         _dbContext.ClientHistories.Add(history);
         snapshotNode["status"] = "done";
-        snapshotNode["idResult"] = new JsonArray(card.Id.ToString());
+        if (!regenerateFromRawImage)
+            snapshotNode["rawImage"] = card.RawImage;
+        var generatedCardIds = regenerateFromRawImage
+            ? snapshotNode["idResult"]?.AsArray() ?? new JsonArray()
+            : new JsonArray();
+        generatedCardIds.Add(card.Id.ToString());
+        snapshotNode["idResult"] = generatedCardIds;
         orderDetail.Metadata = metadata.ToJsonString();
         await _dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
