@@ -54,7 +54,7 @@ public class Response
         public Guid ProductId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? CoverImage { get; set; }
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
         public decimal Price { get; set; }
         //public decimal LineTotal { get; set; }
         public ProductSummaryResponse? Parent { get; set; }
@@ -186,7 +186,7 @@ public class Response
         public string? ParentProductName { get; set; }
         
         public int ItemId { get; set; }
-        public int Number { get; set; }
+        public decimal Number { get; set; } //int
         public decimal Price { get; set; }
         public double Weight { get; set; }
         public double Length { get; set; }
@@ -407,7 +407,7 @@ public class Response
         // phần tăng thêm) không cần Metadata nên cũng có một LineId riêng.
         public Guid LineId { get; set; }
         public Guid ProductId { get; set; }
-        public int Number { get; set; }
+        public decimal Number { get; set; } //int
         public int ItemId { get; set; }
         public bool IsSourceItem { get; set; }
     }

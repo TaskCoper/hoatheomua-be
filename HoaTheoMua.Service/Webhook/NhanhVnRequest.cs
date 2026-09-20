@@ -268,7 +268,7 @@ public class Product
     public decimal Price { get; set; }
 
     [JsonPropertyName("quantity")]
-    public int Quantity { get; set; }
+    public decimal Quantity { get; set; } //int
     
     [JsonPropertyName("vat")]
     public int? Vat { get; set; }

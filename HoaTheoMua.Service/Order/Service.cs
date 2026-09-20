@@ -248,7 +248,7 @@ public class Service : IService
         // Lấy Product sau Prepare để bao gồm Combo gốc, phần tăng, giấy và ribbon.
         var products = await FetchLocalProducts(preparedOrder.PurchaseItems);
         var quantityByItemId = preparedOrder.PurchaseItems
-            .GroupBy(x => x.ItemId)
+            .GroupBy(x => x.ItemId)//group rồi nên bên ahamove cũng group luôn -> tính phí và tạo đơn đồng giá
             .ToDictionary(x => x.Key, x => x.Sum(item => item.Number));
         var productByItemId = products.ToDictionary(x => x.Id);
 
@@ -479,18 +479,16 @@ public class Service : IService
 
         void AddExtraPurchaseItem(Guid productId, decimal quantity)
         {
-            if (productId == Guid.Empty || quantity <= 0 ||
-                quantity != decimal.Truncate(quantity) || quantity > int.MaxValue)
+            if (productId == Guid.Empty || quantity <= 0)
                 throw new BadRequestException("ORDER_ITEM_QUANTITY_INVALID");
 
-            var number = (int)quantity;
             if (!extraItemsByProductId.TryGetValue(productId, out var item))
             {
                 extraItemsByProductId[productId] = new Response.PreparedOrderItem
                 {
                     LineId = Guid.NewGuid(),
                     ProductId = productId,
-                    Number = number,
+                    Number = quantity,
                     IsSourceItem = false
                 };
                 return;
@@ -498,7 +496,7 @@ public class Service : IService
 
             try
             {
-                item.Number = checked(item.Number + number);
+                item.Number = checked(item.Number + quantity);
             }
             catch (OverflowException)
             {
@@ -1225,7 +1223,7 @@ public class Service : IService
     private async Task<decimal> EstimateShippingFeeAsync(
         Request.CreateOrderRequest request,
         List<NhanhProductData> products,
-        IReadOnlyDictionary<int, int> quantityByItemId,
+        IReadOnlyDictionary<int, decimal> quantityByItemId, //int
         Repository.Entity.CompanyAddress? companyAddress)
     {
         return request.ShippingGateway switch
@@ -1248,7 +1246,7 @@ public class Service : IService
     private async Task<decimal> EstimateAhamoveShippingFeeAsync(
         Request.CreateOrderRequest request,
         List<NhanhProductData> products,
-        IReadOnlyDictionary<int, int> quantityByItemId,
+        IReadOnlyDictionary<int, decimal> quantityByItemId, //int
         Repository.Entity.CompanyAddress? companyAddress)
     {
         var itemsRequest = products.Select(x => new AhaMoveRequest.AhamoveItem()
@@ -1256,7 +1254,10 @@ public class Service : IService
             Id = x.Id.ToString(),
             Name = x.Name,
             Price = (int)x.Prices.Retail,
-            Num = quantityByItemId[x.Id]
+            // Ahamove only accepts an integer item count. Keep the fractional
+            // quantity in Order/NhanhVN; round up only at this boundary.
+            //Num = quantityByItemId[x.Id]
+            Num = checked((int)Math.Ceiling(quantityByItemId[x.Id])) 
         }).ToList();
 
         var packageDetailRequest = products.Select(x => new AhaMoveRequest.PackageDetail()
@@ -1345,7 +1346,7 @@ public class Service : IService
     private async Task<decimal> EstimateXanhSmShippingFeeAsync(
         Request.CreateOrderRequest request,
         IReadOnlyCollection<NhanhProductData> products,
-        IReadOnlyDictionary<int, int> quantityByItemId,
+        IReadOnlyDictionary<int, decimal> quantityByItemId, //int
         Repository.Entity.CompanyAddress? companyAddress)
     {
         if (_xanhSmService is null)
@@ -1434,7 +1435,8 @@ public class Service : IService
                 request.Phone,
                 request.Remarks,
                 CalculateXanhSmPackageWeightKg(products.Select(product =>
-                    (product.Shipping.Weight, quantityByItemId[product.Id])))),
+                    //(product.Shipping.Weight, quantityByItemId[product.Id]
+                    (product.Shipping.Weight, (decimal)quantityByItemId[product.Id])))),
             orderTime,
             cancellationToken);
 
@@ -1522,10 +1524,11 @@ public class Service : IService
     }
 
     internal static int CalculateXanhSmPackageWeightKg(
-        IEnumerable<(double WeightInGrams, int Quantity)> packages)
+        IEnumerable<(double WeightInGrams, decimal Quantity)> packages) //int
     {
         var totalWeightInGrams = packages.Sum(package =>
-            Math.Max(package.WeightInGrams, 0) * Math.Max(package.Quantity, 0));
+            //Math.Max(package.WeightInGrams, 0) * Math.Max(package.Quantity, 0
+            Math.Max(package.WeightInGrams, 0) * (double)Math.Max(package.Quantity, 0m));
 
         // Nhanh.vn/Ahamove product shipping weight is stored in grams while
         // GreenSM requires an integer total weight in kilograms.

@@ -9,7 +9,7 @@ public class OrderDetails: BaseEntity<Guid>, IAuditableEntity
     public int ItemId { get; set; }
     public Guid ProductId { get; set; }
     public string? Metadata { get; set; }
-    public int Number { get; set; }
+    public decimal Number { get; set; }
     public decimal Price { get; set; }
     public double Height { get; set; }
     public double Weight { get; set; }
