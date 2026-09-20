@@ -75,4 +75,9 @@ public class Request
         public Guid VirtualId { get; set; }
         public Guid GeneratedCardId { get; set; }
     }
+
+    public class GetGeneratedCardsByProductIdsRequest
+    {
+        public required List<Guid> ProductIds { get; set; } = [];
+    }
 }

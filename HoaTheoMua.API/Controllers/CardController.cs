@@ -57,4 +57,13 @@ public class CardController : ControllerBase
         var result = await _cardService.GetCardByOrderDetailId(orderDetailId);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
+
+    [HttpPost("generated-cards/by-products")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> GetGeneratedCardsByProductIds(
+        Request.GetGeneratedCardsByProductIdsRequest request)
+    {
+        var result = await _cardService.GetGeneratedCardsByProductIds(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
 }

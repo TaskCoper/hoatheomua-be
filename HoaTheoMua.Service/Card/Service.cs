@@ -439,6 +439,55 @@ public class Service : IService
         };
     }
 
+    public async Task<List<Response.ProductGeneratedCardsResponse>> GetGeneratedCardsByProductIds(
+        Request.GetGeneratedCardsByProductIdsRequest request)
+    {
+        var productIds = request.ProductIds
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (productIds.Count == 0)
+            throw new BadRequestException("PRODUCT_IDS_REQUIRED");
+
+        var userId = _currentUser.GetRequiredUserId();
+        var cardHistories = await (
+                from history in _dbContext.ClientHistories.AsNoTracking()
+                join card in _dbContext.GeneratedCards.AsNoTracking()
+                    on history.OutputId equals card.Id
+                where history.UserId == userId &&
+                      history.Type == ClientHistoryType.Card &&
+                      productIds.Contains(history.RootId) &&
+                      card.UserId == userId &&
+                      card.CardType == GeneratedCardType.Ai
+                orderby history.CreatedAt descending
+                select new { Card = card, History = history })
+            .ToListAsync();
+
+        return cardHistories
+            .GroupBy(item => item.History.RootId)
+            .Select(group => new Response.ProductGeneratedCardsResponse
+            {
+                ProductId = group.Key,
+                GeneratedCards = group.Select(item => new Response.CardItemResponse
+                {
+                    Id = item.Card.Id,
+                    CardType = "ai",
+                    FormType = item.Card.FormType == CardFormType.GoMay ? "go_may" : "calligraphy",
+                    ImageUrl = item.Card.ImageUrl,
+                    RawImage = item.Card.RawImage,
+                    MessageContent = item.Card.MessageContent,
+                    AttachedImageUrl = item.Card.AttachedImageUrl,
+                    SizeName = item.Card.SizeName,
+                    SizeWidth = item.Card.SizeWidth,
+                    SizeHeight = item.Card.SizeHeight,
+                    TotalPrice = item.Card.TotalPrice,
+                    CreatedAt = item.Card.CreatedAt
+                }).ToList()
+            })
+            .ToList();
+    }
+
     private static List<OrderDetailCardGroup> ParseOrderDetailCardGroups(string? metadataJson)
     {
         if (string.IsNullOrWhiteSpace(metadataJson)) return [];
