@@ -53,4 +53,12 @@ public class FlowerController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
+    [HttpGet("ai-flowers/{generatedFlowerId:guid}/composition")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> GetGeneratedFlowerComposition(Guid generatedFlowerId)
+    {
+        var result = await _flowerService.GetGeneratedFlowerComposition(generatedFlowerId);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
 }

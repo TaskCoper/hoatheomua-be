@@ -74,6 +74,22 @@ public class Response
         public JsonElement Metadata { get; init; }
         public DateTimeOffset CreatedAt { get; init; }
     }
+
+    public class GeneratedFlowerCompositionResponse
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string CoverImage { get; set; } = "";
+        public Guid SubId { get; set; }
+        public List<GeneratedFlowerMaterialResponse> Materials { get; set; } = [];
+    }
+
+    public class GeneratedFlowerMaterialResponse
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? CoverImage { get; set; }
+    }
 }
 
 public class MappingFlower
