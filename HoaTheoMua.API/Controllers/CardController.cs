@@ -54,7 +54,7 @@ public class CardController : ControllerBase
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> GetCardByOrderDetailId(
         Guid orderDetailId,
-        [FromQuery] Guid? virtualId = null)
+        [FromQuery] Guid virtualId)
     {
         var result = await _cardService.GetCardByOrderDetailId(orderDetailId, virtualId);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
