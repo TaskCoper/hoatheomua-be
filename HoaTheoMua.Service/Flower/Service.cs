@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
@@ -171,10 +172,17 @@ public class Service : IService
         var historyByFlower = histories
             .GroupBy(history => (history.OutputId, history.UserId))
             .ToDictionary(group => group.Key, group => group.First());
+        var materialIds = pagedFlowers.SelectMany(flower => GetMaterialIds(flower.Metadata)).Distinct().ToArray();
+        var materialCoverImages = materialIds.Length == 0
+            ? new Dictionary<Guid, string?>()
+            : await _db.Products.AsNoTracking()
+                .Where(product => materialIds.Contains(product.Id))
+                .ToDictionaryAsync(product => product.Id, product => product.CoverImage, cancellationToken);
         var items = pagedFlowers
             .Select(flower => ToAdminResponse(
                 flower,
-                historyByFlower.GetValueOrDefault((flower.Id, flower.UserId))))
+                historyByFlower.GetValueOrDefault((flower.Id, flower.UserId)),
+                EnrichMaterialCoverImages(flower.Metadata, materialCoverImages)))
             .ToList();
         return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
             items,
@@ -501,7 +509,7 @@ public class Service : IService
 
     private static MaterialSnapshot ToMaterialSnapshot(ProductEntity product, decimal quantity, bool isCore) => new()
     {
-        MatId = product.Id, Quantity = quantity, Name = product.ProductName, IsCore = isCore
+        MatId = product.Id, Quantity = quantity, Name = product.ProductName, IsCore = isCore, CoverImage = product.CoverImage
     };
 
     private static Response.GeneratedFlowerResponse ToResponse(GeneratedFlower flower, Guid sessionId) => new()
@@ -555,14 +563,15 @@ public class Service : IService
 
     private static Response.AdminGeneratedFlowerResponse ToAdminResponse(
         GeneratedFlower flower,
-        ClientHistory? history) => new()
+        ClientHistory? history,
+        JsonElement metadata) => new()
     {
         Id = flower.Id,
         Name = flower.Name,
         ImageUrl = flower.ImageUrl,
         UserId = flower.UserId,
         CreatedAt = flower.CreatedAt,
-        Metadata = ParseJson(flower.Metadata),
+        Metadata = metadata,
         ClientHistory = history is null
             ? null
             : new Response.ClientHistoryResponse
@@ -584,6 +593,32 @@ public class Service : IService
     {
         using var document = JsonDocument.Parse(value);
         return document.RootElement.Clone();
+    }
+
+    private static IEnumerable<Guid> GetMaterialIds(string metadata)
+    {
+        using var document = JsonDocument.Parse(metadata);
+        if (!document.RootElement.TryGetProperty("materials", out var materials)
+            || materials.ValueKind != JsonValueKind.Array)
+            yield break;
+
+        foreach (var material in materials.EnumerateArray())
+            if (material.TryGetProperty("matId", out var matId)
+                && Guid.TryParse(matId.GetString(), out var id))
+                yield return id;
+    }
+
+    private static JsonElement EnrichMaterialCoverImages(
+        string metadata,
+        IReadOnlyDictionary<Guid, string?> materialCoverImages)
+    {
+        var root = JsonNode.Parse(metadata)?.AsObject() ?? throw new JsonException();
+        if (root["materials"] is JsonArray materials)
+            foreach (var material in materials.OfType<JsonObject>())
+                if (Guid.TryParse(material["matId"]?.GetValue<string>(), out var matId)
+                    && materialCoverImages.TryGetValue(matId, out var coverImage))
+                    material["coverImage"] = coverImage;
+        return JsonSerializer.SerializeToElement(root, JsonOptions);
     }
 
     private static JsonElement? ParseNullableJson(string? value) =>
