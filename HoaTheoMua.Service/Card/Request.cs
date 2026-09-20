@@ -14,6 +14,12 @@ public class Request
         public int pageSize { get; set; } = 10;
     }
 
+    public class CustomerGeneratedCardListRequest
+    {
+        public int pageIndex { get; set; } = 1;
+        public int pageSize { get; set; } = 10;
+    }
+
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public class CreateCardRequest
     {

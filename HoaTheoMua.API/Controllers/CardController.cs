@@ -26,6 +26,16 @@ public class CardController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("generated-cards")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> GetCustomerGeneratedCards(
+        [FromQuery] Request.CustomerGeneratedCardListRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _cardService.GetCustomerGeneratedCards(request, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("handmade-cards")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> CreateHandMadeCard(Request.CreateCardRequest request)
