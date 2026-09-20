@@ -377,11 +377,11 @@ public class Service : IService
         return "Final generated card updated successfully.";
     }
 
-    public async Task<Response.OrderDetailCardsResponse> GetCardByOrderDetailId(
+    public async Task<Response.OrderDetailCardPreviewResponse> GetCardByOrderDetailId(
         Guid orderDetailId,
-        Guid? virtualId = null)
+        Guid virtualId)
     {
-        if (orderDetailId == Guid.Empty)
+        if (orderDetailId == Guid.Empty || virtualId == Guid.Empty)
             throw new BadRequestException("OrderDetailId không được là GUID rỗng.");
 
         var userId = _currentUser.GetRequiredUserId();
@@ -394,15 +394,10 @@ public class Service : IService
                 && !x.Order.IsDeleted)
             ?? throw new NotFoundException("Không tìm thấy OrderDetail.");
 
-        var groups = ParseOrderDetailCardGroups(orderDetail.Metadata);
-        if (virtualId.HasValue)
-        {
-            groups = groups.Where(group => group.VirtualId == virtualId.Value).ToList();
-            if (groups.Count == 0)
-                throw new NotFoundException("CARD_SESSION_NOT_FOUND");
-        }
-
-        var cardIds = groups.SelectMany(x => x.IdResult).Distinct().ToArray();
+        var group = ParseOrderDetailCardGroups(orderDetail.Metadata)
+            .SingleOrDefault(group => group.VirtualId == virtualId)
+            ?? throw new NotFoundException("CARD_SESSION_NOT_FOUND");
+        var cardIds = group.IdResult.ToArray();
         var cards = cardIds.Length == 0
             ? []
             : await _dbContext.GeneratedCards
@@ -424,25 +419,18 @@ public class Service : IService
         var cardsById = cards.ToDictionary(x => x.Id);
         var historiesByCardId = histories.GroupBy(x => x.OutputId).ToDictionary(x => x.Key, x => x.First());
 
-        return new Response.OrderDetailCardsResponse
+        return new Response.OrderDetailCardPreviewResponse
         {
-            OrderDetailId = orderDetailId,
-            Flowers = groups.Select(group =>
+            // OrderDetailId = orderDetailId,
+            // VirtualId = virtualId,
+            Cards = cardIds.Select(cardId =>
             {
-                var candidates = group.IdResult.Select(cardId =>
-                    ToOrderDetailCardResponse(
-                        cardsById[cardId],
-                        historiesByCardId.GetValueOrDefault(cardId),
-                        cardId == group.FinalGeneratedCardId)).ToList();
-                return new Response.FlowerCardGroupResponse
+                var history = historiesByCardId.GetValueOrDefault(cardId);
+                return new Response.CardPreviewItemResponse
                 {
-                    VirtualId = group.VirtualId,
-                    SourceType = group.GeneratedFlowerId.HasValue ? "generated_flower" : group.SourceType,
-                    ProductId = group.ProductId,
-                    GeneratedFlowerId = group.GeneratedFlowerId,
-                    CardType = group.CardType,
-                    CandidateCards = candidates,
-                    SelectedCard = candidates.FirstOrDefault(x => x.IsSelected)
+                    Id = cardId,
+                    Name = GetCardTemplateName(history, string.Empty),
+                    ImageUrl = cardsById[cardId].ImageUrl
                 };
             }).ToList()
         };
@@ -595,6 +583,25 @@ public class Service : IService
         catch (JsonException)
         {
             throw new ConflictException("CARD_HISTORY_INVALID", "Card History chứa Metadata không hợp lệ.");
+        }
+    }
+
+    private static string GetCardTemplateName(ClientHistory? history, string fallback)
+    {
+        if (history is null) return fallback;
+        try
+        {
+            using var metadata = JsonDocument.Parse(history.Metadata);
+            return metadata.RootElement.TryGetProperty("cardTemplate", out var template)
+                && template.TryGetProperty("name", out var name)
+                && name.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(name.GetString())
+                    ? name.GetString()!
+                    : fallback;
+        }
+        catch (JsonException)
+        {
+            return fallback;
         }
     }
 

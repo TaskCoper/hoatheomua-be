@@ -65,10 +65,11 @@ public class Response
         public decimal TotalPrice { get; set; }
     }
 
-    public class OrderDetailCardsResponse
+    public class OrderDetailCardPreviewResponse
     {
-        public Guid OrderDetailId { get; set; }
-        public List<FlowerCardGroupResponse> Flowers { get; set; } = [];
+        // public Guid OrderDetailId { get; set; }
+        // public Guid VirtualId { get; set; }
+        public List<CardPreviewItemResponse> Cards { get; set; } = [];
     }
 
     public class ProductGeneratedCardsResponse
@@ -77,15 +78,11 @@ public class Response
         public List<CardItemResponse> GeneratedCards { get; set; } = [];
     }
 
-    public class FlowerCardGroupResponse
+    public class CardPreviewItemResponse
     {
-        public Guid VirtualId { get; set; }
-        public string SourceType { get; set; } = "";
-        public Guid? ProductId { get; set; }
-        public Guid? GeneratedFlowerId { get; set; }
-        public string CardType { get; set; } = "";
-        public CardItemResponse? SelectedCard { get; set; }
-        public List<CardItemResponse> CandidateCards { get; set; } = [];
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string ImageUrl { get; set; } = "";
     }
 
     public class CardItemResponse
