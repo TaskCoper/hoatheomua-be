@@ -8,5 +8,9 @@ public interface IService
     public Task<Response.CreateCardResponse> CreateHandMadeCard(Request.CreateCardRequest request);
     public Task<Response.CreateCardResponse> CreateCardAi(Request.CreateCardAiRequest request);
     public Task<string> UpdateFinalGeneratedCardId(Request.UpdateFinalGeneratedCardId request);
-    public Task<Response.OrderDetailCardsResponse> GetCardByOrderDetailId(Guid orderDetailId);
+    public Task<Response.OrderDetailCardsResponse> GetCardByOrderDetailId(
+        Guid orderDetailId,
+        Guid? virtualId = null);
+    public Task<List<Response.ProductGeneratedCardsResponse>> GetGeneratedCardsByProductIds(
+        Request.GetGeneratedCardsByProductIdsRequest request);
 }

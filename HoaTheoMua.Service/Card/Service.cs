@@ -377,7 +377,9 @@ public class Service : IService
         return "Final generated card updated successfully.";
     }
 
-    public async Task<Response.OrderDetailCardsResponse> GetCardByOrderDetailId(Guid orderDetailId)
+    public async Task<Response.OrderDetailCardsResponse> GetCardByOrderDetailId(
+        Guid orderDetailId,
+        Guid? virtualId = null)
     {
         if (orderDetailId == Guid.Empty)
             throw new BadRequestException("OrderDetailId không được là GUID rỗng.");
@@ -393,6 +395,13 @@ public class Service : IService
             ?? throw new NotFoundException("Không tìm thấy OrderDetail.");
 
         var groups = ParseOrderDetailCardGroups(orderDetail.Metadata);
+        if (virtualId.HasValue)
+        {
+            groups = groups.Where(group => group.VirtualId == virtualId.Value).ToList();
+            if (groups.Count == 0)
+                throw new NotFoundException("CARD_SESSION_NOT_FOUND");
+        }
+
         var cardIds = groups.SelectMany(x => x.IdResult).Distinct().ToArray();
         var cards = cardIds.Length == 0
             ? []
@@ -437,6 +446,55 @@ public class Service : IService
                 };
             }).ToList()
         };
+    }
+
+    public async Task<List<Response.ProductGeneratedCardsResponse>> GetGeneratedCardsByProductIds(
+        Request.GetGeneratedCardsByProductIdsRequest request)
+    {
+        var productIds = request.ProductIds
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (productIds.Count == 0)
+            throw new BadRequestException("PRODUCT_IDS_REQUIRED");
+
+        var userId = _currentUser.GetRequiredUserId();
+        var cardHistories = await (
+                from history in _dbContext.ClientHistories.AsNoTracking()
+                join card in _dbContext.GeneratedCards.AsNoTracking()
+                    on history.OutputId equals card.Id
+                where history.UserId == userId &&
+                      history.Type == ClientHistoryType.Card &&
+                      productIds.Contains(history.RootId) &&
+                      card.UserId == userId &&
+                      card.CardType == GeneratedCardType.Ai
+                orderby history.CreatedAt descending
+                select new { Card = card, History = history })
+            .ToListAsync();
+
+        return cardHistories
+            .GroupBy(item => item.History.RootId)
+            .Select(group => new Response.ProductGeneratedCardsResponse
+            {
+                ProductId = group.Key,
+                GeneratedCards = group.Select(item => new Response.CardItemResponse
+                {
+                    Id = item.Card.Id,
+                    CardType = "ai",
+                    FormType = item.Card.FormType == CardFormType.GoMay ? "go_may" : "calligraphy",
+                    ImageUrl = item.Card.ImageUrl,
+                    RawImage = item.Card.RawImage,
+                    MessageContent = item.Card.MessageContent,
+                    AttachedImageUrl = item.Card.AttachedImageUrl,
+                    SizeName = item.Card.SizeName,
+                    SizeWidth = item.Card.SizeWidth,
+                    SizeHeight = item.Card.SizeHeight,
+                    TotalPrice = item.Card.TotalPrice,
+                    CreatedAt = item.Card.CreatedAt
+                }).ToList()
+            })
+            .ToList();
     }
 
     private static List<OrderDetailCardGroup> ParseOrderDetailCardGroups(string? metadataJson)

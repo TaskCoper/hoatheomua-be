@@ -71,6 +71,12 @@ public class Response
         public List<FlowerCardGroupResponse> Flowers { get; set; } = [];
     }
 
+    public class ProductGeneratedCardsResponse
+    {
+        public Guid ProductId { get; set; }
+        public List<CardItemResponse> GeneratedCards { get; set; } = [];
+    }
+
     public class FlowerCardGroupResponse
     {
         public Guid VirtualId { get; set; }
