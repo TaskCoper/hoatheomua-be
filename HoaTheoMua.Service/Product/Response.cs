@@ -209,6 +209,22 @@ public class Response
         public decimal Price { get; set; }
     }
 
+    public class ProductFamilyResponse
+    {
+        public ProductFamilyItem Parent { get; set; } = new();
+        public List<ProductFamilyItem> Children { get; set; } = new();
+    }
+
+    public class ProductFamilyItem
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+        public string? Description { get; set; }
+        public decimal? Price { get; set; }
+        public List<ComboSpecification> Materials { get; set; } = new();
+    }
+
     public class ComboSpecificationResponse 
     {
         public string? SubId { get; set; }

@@ -729,6 +729,99 @@ public class Service : IService
         return response;
     }
 
+    public async Task<Response.ProductFamilyResponse> GetProductFamily(Guid id)
+    {
+        var selectedProduct = await _dbContext.Products
+            .AsNoTracking()
+            .Where(product => product.Id == id && !product.IsDeleted && product.IsActive)
+            .Select(product => new
+            {
+                product.Id,
+                product.NhanhProductId,
+                product.ParentProductId
+            })
+            .FirstOrDefaultAsync();
+
+        if (selectedProduct == null)
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
+
+        var parentNhanhProductId = string.IsNullOrWhiteSpace(selectedProduct.ParentProductId)
+            ? selectedProduct.NhanhProductId
+            : selectedProduct.ParentProductId;
+
+        if (string.IsNullOrWhiteSpace(parentNhanhProductId))
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
+
+        var parent = await _dbContext.Products
+            .AsNoTracking()
+            .Where(product => product.NhanhProductId == parentNhanhProductId &&
+                              !product.IsDeleted && product.IsActive)
+            .Select(product => new Response.ProductFamilyItem
+            {
+                Id = product.Id,
+                ProductName = product.ProductName,
+                CoverImage = product.CoverImage,
+                Description = product.Description,
+                Price = product.Price
+            })
+            .FirstOrDefaultAsync();
+
+        if (parent == null)
+            throw new NotFoundException("PRODUCT_PARENT_NOT_FOUND", "PRODUCT_PARENT_NOT_FOUND");
+
+        parent.Materials = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(specification => specification.SubId == parent.Id &&
+                                    !specification.IsDeleted &&
+                                    !specification.Mat.IsDeleted)
+            .Select(specification => new Response.ComboSpecification
+            {
+                Id = specification.Mat.Id,
+                ProductName = specification.Mat.ProductName,
+                CoverImage = specification.Mat.CoverImage,
+                Quantity = specification.Quantity ?? 0m,
+                Price = specification.Mat.Price ?? 0m
+            })
+            .ToListAsync();
+
+        var children = await _dbContext.Products
+            .AsNoTracking()
+            .Where(product => product.ParentProductId == parentNhanhProductId &&
+                              !product.IsDeleted && product.IsActive)
+            .Select(product => new
+            {
+                Item = new Response.ProductFamilyItem
+                {
+                    Id = product.Id,
+                    ProductName = product.ProductName,
+                    CoverImage = product.CoverImage,
+                    Description = product.Description,
+                    Price = product.Price
+                },
+                product.Factor
+            })
+            .ToListAsync();
+
+        foreach (var child in children)
+        {
+            var factor = child.Factor ?? 1m;
+            child.Item.Materials = parent.Materials.Select(material => new Response.ComboSpecification
+            {
+                Id = material.Id,
+                ProductName = material.ProductName,
+                CoverImage = material.CoverImage,
+                Quantity = material.Quantity * factor,
+                Price = material.Price
+            }).ToList();
+        }
+
+        return new Response.ProductFamilyResponse
+        {
+            Parent = parent,
+            Children = children.Select(child => child.Item).ToList()
+        };
+    }
+
     private static readonly Expression<Func<HoaTheoMua.Repository.Entity.Product, Response.LocalProductDetailResponse>>
         LocalProductDetailSelector = product => new Response.LocalProductDetailResponse
         {
