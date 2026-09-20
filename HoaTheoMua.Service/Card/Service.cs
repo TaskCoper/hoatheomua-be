@@ -94,6 +94,48 @@ public class Service : IService
             totalCount);
     }
 
+    public async Task<HoaTheoMua.Service.Models.BasePaginationResponse> GetCustomerGeneratedCards(
+        Request.CustomerGeneratedCardListRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
+        var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
+        var userId = _currentUser.GetRequiredUserId();
+
+        var query = _dbContext.GeneratedCards
+            .AsNoTracking()
+            .Where(card => card.UserId == userId);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var cards = await query
+            .OrderByDescending(card => card.CreatedAt)
+            .ThenByDescending(card => card.Id)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .Select(card => new Response.CustomerGeneratedCardResponse
+            {
+                Id = card.Id,
+                CardType = card.CardType == GeneratedCardType.Ai ? "ai" : "handmade",
+                FormType = card.FormType == CardFormType.GoMay ? "go_may" : "calligraphy",
+                ImageUrl = card.ImageUrl,
+                RawImage = card.RawImage,
+                MessageContent = card.MessageContent,
+                AttachedImageUrl = card.AttachedImageUrl,
+                SizeName = card.SizeName,
+                SizeWidth = card.SizeWidth,
+                SizeHeight = card.SizeHeight,
+                TotalPrice = card.TotalPrice,
+                CreatedAt = card.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
+            cards,
+            pageIndex,
+            pageSize,
+            totalCount);
+    }
+
     //Handmade not call AI
     public async Task<Response.CreateCardResponse> CreateHandMadeCard(Request.CreateCardRequest request)
     {

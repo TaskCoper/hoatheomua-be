@@ -752,23 +752,31 @@ public class Service : IService
         if (string.IsNullOrWhiteSpace(parentNhanhProductId))
             throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
 
-        var parent = await _dbContext.Products
+        var parentRecord = await _dbContext.Products
             .AsNoTracking()
             .Where(product => product.NhanhProductId == parentNhanhProductId &&
                               !product.IsDeleted && product.IsActive)
-            .Select(product => new Response.ProductFamilyItem
+            .Select(product => new
             {
-                Id = product.Id,
-                ProductName = product.ProductName,
-                CoverImage = product.CoverImage,
-                Description = product.Description,
-                Price = product.Price
+                Item = new Response.ProductFamilyItem
+                {
+                    Id = product.Id,
+                    ProductName = product.ProductName,
+                    CoverImage = product.CoverImage,
+                    Description = product.Description,
+                    Price = product.Price
+                },
+                product.ProductType,
+                product.ParentProductId,
+                product.NhanhProductId,
+                product.Stock
             })
             .FirstOrDefaultAsync();
 
-        if (parent == null)
+        if (parentRecord == null)
             throw new NotFoundException("PRODUCT_PARENT_NOT_FOUND", "PRODUCT_PARENT_NOT_FOUND");
 
+        var parent = parentRecord.Item;
         parent.Materials = await _dbContext.ComboSpecifications
             .AsNoTracking()
             .Where(specification => specification.SubId == parent.Id &&
@@ -798,7 +806,11 @@ public class Service : IService
                     Description = product.Description,
                     Price = product.Price
                 },
-                product.Factor
+                product.Factor,
+                product.ProductType,
+                product.ParentProductId,
+                product.NhanhProductId,
+                product.Stock
             })
             .ToListAsync();
 
@@ -813,6 +825,38 @@ public class Service : IService
                 Quantity = material.Quantity * factor,
                 Price = material.Price
             }).ToList();
+        }
+
+        var productsToCalculate = new List<ProductQtyProjection>
+        {
+            new()
+            {
+                Id = parent.Id,
+                ProductType = parentRecord.ProductType,
+                ParentProductId = parentRecord.ParentProductId,
+                NhanhProductId = parentRecord.NhanhProductId,
+                Stock = parentRecord.Stock
+            }
+        };
+        productsToCalculate.AddRange(children.Select(child => new ProductQtyProjection
+        {
+            Id = child.Item.Id,
+            ProductType = child.ProductType,
+            ParentProductId = child.ParentProductId,
+            NhanhProductId = child.NhanhProductId,
+            Stock = child.Stock
+        }));
+
+        var quantities = await CalculateAvailableQty(productsToCalculate, variantsArePreloaded: true);
+        parent.SellableQuantity = quantities.TryGetValue(parent.Id, out var parentQuantity)
+            ? parentQuantity.SellableQuantity
+            : 0;
+
+        foreach (var child in children)
+        {
+            child.Item.SellableQuantity = quantities.TryGetValue(child.Item.Id, out var childQuantity)
+                ? childQuantity.SellableQuantity
+                : 0;
         }
 
         return new Response.ProductFamilyResponse

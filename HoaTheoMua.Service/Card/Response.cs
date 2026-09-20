@@ -30,6 +30,22 @@ public class Response
         public string? CardTemplateName { get; set; }
     }
 
+    public class CustomerGeneratedCardResponse
+    {
+        public Guid Id { get; set; }
+        public string CardType { get; set; } = string.Empty;
+        public string FormType { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+        public string? RawImage { get; set; }
+        public string MessageContent { get; set; } = string.Empty;
+        public string? AttachedImageUrl { get; set; }
+        public string SizeName { get; set; } = string.Empty;
+        public decimal SizeWidth { get; set; }
+        public decimal SizeHeight { get; set; }
+        public decimal TotalPrice { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+    }
+
     public class ClientHistoryResponse
     {
         public Guid Id { get; set; }

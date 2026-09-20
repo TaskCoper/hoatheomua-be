@@ -222,6 +222,7 @@ public class Response
         public string? CoverImage { get; set; }
         public string? Description { get; set; }
         public decimal? Price { get; set; }
+        public int? SellableQuantity { get; set; }
         public List<ComboSpecification> Materials { get; set; } = new();
     }
 
