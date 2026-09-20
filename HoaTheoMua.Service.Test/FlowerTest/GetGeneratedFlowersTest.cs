@@ -39,6 +39,28 @@ public class GetGeneratedFlowersTest
     }
 
     [Fact]
+    public async Task GetAdminGeneratedFlowers_NameSearch_ReturnsMatchingFlower()
+    {
+        await using var db = CreateDb();
+        var productId = Guid.NewGuid();
+        var matchingFlower = Flower("Coral Pink cho mẹ", productId, 2);
+        db.GeneratedFlowers.AddRange(matchingFlower, Flower("White Lily", productId, 1));
+        db.ClientHistories.Add(History(matchingFlower));
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).GetAdminGeneratedFlowers(new()
+        {
+            generatedFlowerName = "CORAL pink",
+            pageIndex = 1,
+            pageSize = 5
+        });
+
+        var item = Assert.IsType<Response.AdminGeneratedFlowerResponse>(Assert.Single(result.Value.Items));
+        Assert.Equal(matchingFlower.Id, item.Id);
+        Assert.Equal(1, result.Value.TotalCount);
+    }
+
+    [Fact]
     public async Task GetCustomerGeneratedFlowers_CamelCaseSessionFilter_ReturnsOnlyRequestedSession()
     {
         await using var db = CreateDb();
