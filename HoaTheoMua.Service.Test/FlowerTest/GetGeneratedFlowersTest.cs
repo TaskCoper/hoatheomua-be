@@ -72,7 +72,7 @@ public class GetGeneratedFlowersTest
             subId = Guid.NewGuid(),
             materials = new[] { new { name = "Cát tường", matId = materialId, isCore = false, quantity = 1 } }
         });
-        db.Products.Add(new ProductEntity { Id = materialId, CoverImage = "https://example.test/material.jpg" });
+        db.Products.Add(new ProductEntity { Id = materialId, CoverImage = "https://example.test/material.jpg", Unit = "bundle" });
         db.GeneratedFlowers.Add(flower);
         await db.SaveChangesAsync();
 
@@ -81,7 +81,27 @@ public class GetGeneratedFlowersTest
         var item = Assert.IsType<Response.AdminGeneratedFlowerResponse>(Assert.Single(result.Value.Items));
         Assert.Equal("https://example.test/material.jpg",
             item.Metadata.GetProperty("materials")[0].GetProperty("coverImage").GetString());
+        Assert.Equal("bundle", item.Metadata.GetProperty("materials")[0].GetProperty("unit").GetString());
     }
+
+    #if false // Superseded: Unit belongs to each generated material.
+    [Fact]
+    public async Task GetAdminGeneratedFlowers_ReturnsProductUnit()
+    {
+        await using var db = CreateDb();
+        var productId = Guid.NewGuid();
+        var flower = Flower("unit", productId, 1);
+        db.Products.Add(new ProductEntity { Id = productId, Unit = "bÃ³" });
+        db.GeneratedFlowers.Add(flower);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).GetAdminGeneratedFlowers(new() { pageIndex = 1, pageSize = 5 });
+
+        var item = Assert.IsType<Response.AdminGeneratedFlowerResponse>(Assert.Single(result.Value.Items));
+        Assert.Equal("bÃ³", item.Unit);
+    }
+
+    #endif
 
     [Fact]
     public async Task GetCustomerGeneratedFlowers_CamelCaseSessionFilter_ReturnsOnlyRequestedSession()

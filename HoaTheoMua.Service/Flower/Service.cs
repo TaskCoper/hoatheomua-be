@@ -173,16 +173,17 @@ public class Service : IService
             .GroupBy(history => (history.OutputId, history.UserId))
             .ToDictionary(group => group.Key, group => group.First());
         var materialIds = pagedFlowers.SelectMany(flower => GetMaterialIds(flower.Metadata)).Distinct().ToArray();
-        var materialCoverImages = materialIds.Length == 0
-            ? new Dictionary<Guid, string?>()
+        var materialDetails = materialIds.Length == 0
+            ? new Dictionary<Guid, (string? CoverImage, string? Unit)>()
             : await _db.Products.AsNoTracking()
                 .Where(product => materialIds.Contains(product.Id))
-                .ToDictionaryAsync(product => product.Id, product => product.CoverImage, cancellationToken);
+                .Select(product => new { product.Id, product.CoverImage, product.Unit })
+                .ToDictionaryAsync(product => product.Id, product => (product.CoverImage, product.Unit), cancellationToken);
         var items = pagedFlowers
             .Select(flower => ToAdminResponse(
                 flower,
                 historyByFlower.GetValueOrDefault((flower.Id, flower.UserId)),
-                EnrichMaterialCoverImages(flower.Metadata, materialCoverImages)))
+                EnrichMaterialCoverImages(flower.Metadata, materialDetails)))
             .ToList();
         return HoaTheoMua.Service.Models.ApiResponseFactory.BasePagination(
             items,
@@ -652,14 +653,17 @@ public class Service : IService
 
     private static JsonElement EnrichMaterialCoverImages(
         string metadata,
-        IReadOnlyDictionary<Guid, string?> materialCoverImages)
+        IReadOnlyDictionary<Guid, (string? CoverImage, string? Unit)> materialDetails)
     {
         var root = JsonNode.Parse(metadata)?.AsObject() ?? throw new JsonException();
         if (root["materials"] is JsonArray materials)
             foreach (var material in materials.OfType<JsonObject>())
                 if (Guid.TryParse(material["matId"]?.GetValue<string>(), out var matId)
-                    && materialCoverImages.TryGetValue(matId, out var coverImage))
-                    material["coverImage"] = coverImage;
+                    && materialDetails.TryGetValue(matId, out var detail))
+                {
+                    material["coverImage"] = detail.CoverImage;
+                    material["unit"] = detail.Unit;
+                }
         return JsonSerializer.SerializeToElement(root, JsonOptions);
     }
 
