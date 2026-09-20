@@ -708,12 +708,20 @@ public class Service : IService
                 x.Length,
                 x.Width,
                 x.IsActive,
-                x.IsDeleted
+                x.IsDeleted,
+                
+                ParentIsPurchasable =
+                    string.IsNullOrWhiteSpace(x.ParentProductId) ||
+                    _dbContext.Products.Any(parent =>
+                        parent.NhanhProductId == x.ParentProductId &&
+                        parent.IsActive &&
+                        !parent.IsDeleted)
+
             })
             .ToListAsync();
 
         if (productRows.Count != productIds.Count ||
-            productRows.Any(x => !x.IsActive || x.IsDeleted))
+            productRows.Any(x => !x.IsActive || x.IsDeleted || !x.ParentIsPurchasable))
             throw new BadRequestException("ORDER_PRODUCT_UNAVAILABLE");
 
         if (productRows.Any(x => string.IsNullOrWhiteSpace(x.NhanhProductId) ||
