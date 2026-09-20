@@ -11,6 +11,7 @@ public interface IService
     public Task<Response.OrderDetailCardPreviewResponse> GetCardByOrderDetailId(
         Guid orderDetailId,
         Guid virtualId);
+    Task<Response.GeneratedCardImageResponse> GetGeneratedCardImage(Guid generatedCardId);
     public Task<List<Response.ProductGeneratedCardsResponse>> GetGeneratedCardsByProductIds(
         Request.GetGeneratedCardsByProductIdsRequest request);
 }

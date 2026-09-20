@@ -3,6 +3,7 @@ using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,12 +16,18 @@ public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
+    private readonly IHttpContextAccessor _httpContext;
     private readonly Ai.IService _ai;
 
-    public Service(AppDbContext dbContext, ICurrentUserService currentUser, Ai.IService ai)
+    public Service(
+        AppDbContext dbContext,
+        ICurrentUserService currentUser,
+        IHttpContextAccessor httpContext,
+        Ai.IService ai)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
+        _httpContext = httpContext;
         _ai = ai;
     }
 
@@ -433,6 +440,35 @@ public class Service : IService
                     ImageUrl = cardsById[cardId].ImageUrl
                 };
             }).ToList()
+        };
+    }
+
+    public async Task<Response.GeneratedCardImageResponse> GetGeneratedCardImage(Guid generatedCardId)
+    {
+        if (generatedCardId == Guid.Empty)
+            throw new BadRequestException("GENERATED_CARD_ID_INVALID");
+
+        var isAdmin = _httpContext.HttpContext?.User.IsInRole("Admin") == true;
+        var query = _dbContext.GeneratedCards
+            .AsNoTracking()
+            .Where(card => card.Id == generatedCardId);
+
+        if (!isAdmin)
+        {
+            var userId = _currentUser.GetRequiredUserId();
+            query = query.Where(card => card.UserId == userId);
+        }
+
+        var card = await query.FirstOrDefaultAsync()
+            ?? throw new NotFoundException("GENERATED_CARD_NOT_FOUND");
+
+        if (string.IsNullOrWhiteSpace(card.ImageUrl))
+            throw new ConflictException("GENERATED_CARD_IMAGE_UNAVAILABLE", "GeneratedCard chưa có ảnh để tải.");
+
+        return new Response.GeneratedCardImageResponse
+        {
+            GeneratedCardId = card.Id,
+            ImageUrl = card.ImageUrl
         };
     }
 
