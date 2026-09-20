@@ -52,9 +52,11 @@ public class CardController : ControllerBase
 
     [HttpGet("order-details/{orderDetailId:guid}/cards")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
-    public async Task<IActionResult> GetCardByOrderDetailId(Guid orderDetailId)
+    public async Task<IActionResult> GetCardByOrderDetailId(
+        Guid orderDetailId,
+        [FromQuery] Guid? virtualId = null)
     {
-        var result = await _cardService.GetCardByOrderDetailId(orderDetailId);
+        var result = await _cardService.GetCardByOrderDetailId(orderDetailId, virtualId);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 

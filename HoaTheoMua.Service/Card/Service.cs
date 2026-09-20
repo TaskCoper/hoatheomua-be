@@ -377,7 +377,9 @@ public class Service : IService
         return "Final generated card updated successfully.";
     }
 
-    public async Task<Response.OrderDetailCardsResponse> GetCardByOrderDetailId(Guid orderDetailId)
+    public async Task<Response.OrderDetailCardsResponse> GetCardByOrderDetailId(
+        Guid orderDetailId,
+        Guid? virtualId = null)
     {
         if (orderDetailId == Guid.Empty)
             throw new BadRequestException("OrderDetailId không được là GUID rỗng.");
@@ -393,6 +395,13 @@ public class Service : IService
             ?? throw new NotFoundException("Không tìm thấy OrderDetail.");
 
         var groups = ParseOrderDetailCardGroups(orderDetail.Metadata);
+        if (virtualId.HasValue)
+        {
+            groups = groups.Where(group => group.VirtualId == virtualId.Value).ToList();
+            if (groups.Count == 0)
+                throw new NotFoundException("CARD_SESSION_NOT_FOUND");
+        }
+
         var cardIds = groups.SelectMany(x => x.IdResult).Distinct().ToArray();
         var cards = cardIds.Length == 0
             ? []
