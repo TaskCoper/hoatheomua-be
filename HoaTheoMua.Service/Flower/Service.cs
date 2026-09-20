@@ -326,6 +326,17 @@ public class Service : IService
         return ToResponse(flower, history.SessionId!.Value);
     }
 
+    public async Task<Response.DownloadResponse> DownloadImage(Guid generatedFlowerId)
+    {
+        var imageUrl = await _db.GeneratedFlowers
+            .Where(x => x.Id == generatedFlowerId)
+            .Select(x => x.ImageUrl)
+            .FirstOrDefaultAsync()
+            ?? throw new NotFoundException("Generated flower not found.");
+
+        return new Response.DownloadResponse { ImageUrl = imageUrl };
+    }
+
     private async Task<Ai.Response.GeneratedImage> GenerateImage(string? productImage, string bundleImage,
         string mockupImage, string name, string prompt, FlowerMetadata metadata)
     {

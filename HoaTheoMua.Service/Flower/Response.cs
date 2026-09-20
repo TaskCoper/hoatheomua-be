@@ -12,6 +12,11 @@ public class Response
         public List<CustomerGeneratedFlowerResponse> Flowers { get; set; } = [];
     }
 
+    public class DownloadResponse
+    {
+        public string ImageUrl { get; set; } = null!;
+    }
+
     public class CustomerGeneratedFlowerResponse
     {
         public Guid HistoryId { get; set; }

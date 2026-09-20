@@ -27,6 +27,13 @@ public class FlowerController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("generated-flowers/{generatedFlowerId:guid}/image")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> DownloadGeneratedFlowerImage(Guid generatedFlowerId)
+    {
+        var result = await _flowerService.DownloadImage(generatedFlowerId);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
     [HttpGet("admin/generated-flowers")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> GetAdminGeneratedFlowers(
