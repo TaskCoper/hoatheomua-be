@@ -216,7 +216,10 @@ public class Service : IService
                 Id = x.Id.ToString(),
                 Name = x.Name,
                 Price = (int)x.Price,
-                Num = x.Number
+                // Ahamove only supports whole items; checkout and NhanhVN retain
+                // the original decimal quantity.
+                //Num = x.Number
+                Num = checked((int)Math.Ceiling(x.Number))
             }).ToList(),
             PackageDetail = order.OrderDetails.Select(x => new AhaMoveRequest.PackageDetail
             {
