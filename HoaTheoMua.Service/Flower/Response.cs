@@ -84,6 +84,12 @@ public class Response
         public List<GeneratedFlowerMaterialResponse> Materials { get; set; } = [];
     }
 
+    public class GeneratedFlowerImageResponse
+    {
+        public Guid GeneratedFlowerId { get; set; }
+        public string ImageUrl { get; set; } = "";
+    }
+
     public class GeneratedFlowerMaterialResponse
     {
         public Guid Id { get; set; }

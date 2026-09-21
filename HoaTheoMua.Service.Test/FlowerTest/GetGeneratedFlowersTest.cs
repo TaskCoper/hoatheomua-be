@@ -153,7 +153,12 @@ public class GetGeneratedFlowersTest
     {
         var currentUser = new Mock<ICurrentUserService>();
         currentUser.Setup(x => x.GetRequiredUserId()).Returns(userId ?? Guid.NewGuid());
-        return new FlowerService(db, currentUser.Object, Mock.Of<Ai.IService>(), Mock.Of<ProductService>());
+        return new FlowerService(
+            db,
+            currentUser.Object,
+            Mock.Of<Microsoft.AspNetCore.Http.IHttpContextAccessor>(),
+            Mock.Of<Ai.IService>(),
+            Mock.Of<ProductService>());
     }
 
     private static GeneratedFlower Flower(string name, Guid productId, int sequence, Guid? userId = null) => new()

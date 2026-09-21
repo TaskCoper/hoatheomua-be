@@ -61,4 +61,12 @@ public class FlowerController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
+    [HttpGet("generated-flowers/{generatedFlowerId:guid}/image")]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    public async Task<IActionResult> GetGeneratedFlowerImage(Guid generatedFlowerId)
+    {
+        var result = await _flowerService.GetGeneratedFlowerImage(generatedFlowerId);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
 }
