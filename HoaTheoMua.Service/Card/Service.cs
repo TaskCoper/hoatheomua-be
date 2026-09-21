@@ -460,7 +460,7 @@ public class Service : IService
                 && x.Order.UserId == userId
                 && !x.IsDeleted
                 && !x.Order.IsDeleted)
-            ?? throw new NotFoundException("Không tìm thấy OrderDetail.");
+            ?? throw new NotFoundException("Không tìm thấy O/rderDetail.");
 
         var group = ParseOrderDetailCardGroups(orderDetail.Metadata)
             .SingleOrDefault(group => group.VirtualId == virtualId)
@@ -494,11 +494,16 @@ public class Service : IService
             Cards = cardIds.Select(cardId =>
             {
                 var history = historiesByCardId.GetValueOrDefault(cardId);
+                var template = GetCardTemplate(history);
+                var card = cardsById[cardId];
                 return new Response.CardPreviewItemResponse
                 {
                     Id = cardId,
-                    Name = GetCardTemplateName(history, string.Empty),
-                    ImageUrl = cardsById[cardId].ImageUrl
+                    Name = template.Name,
+                    ImageUrl = card.ImageUrl,
+                    FormType = card.FormType == CardFormType.Calligraphy ? "calligraphy" : "go_may",
+                    MessageContent = card.MessageContent,
+                    TemplateId = template.Id
                 };
             }).ToList()
         };
@@ -683,22 +688,29 @@ public class Service : IService
         }
     }
 
-    private static string GetCardTemplateName(ClientHistory? history, string fallback)
+    private static (string Name, Guid Id) GetCardTemplate(ClientHistory? history)
     {
-        if (history is null) return fallback;
+        if (history is null) return (string.Empty, Guid.Empty);
         try
         {
             using var metadata = JsonDocument.Parse(history.Metadata);
-            return metadata.RootElement.TryGetProperty("cardTemplate", out var template)
-                && template.TryGetProperty("name", out var name)
-                && name.ValueKind == JsonValueKind.String
-                && !string.IsNullOrWhiteSpace(name.GetString())
-                    ? name.GetString()!
-                    : fallback;
+            if (!metadata.RootElement.TryGetProperty("cardTemplate", out var template))
+                return (string.Empty, Guid.Empty);
+
+            var name = template.TryGetProperty("name", out var nameNode)
+                && nameNode.ValueKind == JsonValueKind.String
+                    ? nameNode.GetString() ?? string.Empty
+                    : string.Empty;
+            var id = template.TryGetProperty("id", out var idNode)
+                && idNode.ValueKind == JsonValueKind.String
+                && Guid.TryParse(idNode.GetString(), out var templateId)
+                    ? templateId
+                    : Guid.Empty;
+            return (name, id);
         }
         catch (JsonException)
         {
-            return fallback;
+            return (string.Empty, Guid.Empty);
         }
     }
 
