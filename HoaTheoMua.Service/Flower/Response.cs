@@ -81,6 +81,7 @@ public class Response
         public string Name { get; set; } = "";
         public string CoverImage { get; set; } = "";
         public Guid SubId { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
         public List<GeneratedFlowerMaterialResponse> Materials { get; set; } = [];
     }
 
@@ -96,6 +97,14 @@ public class Response
         public string Name { get; set; } = "";
         public string? CoverImage { get; set; }
         public string? Unit { get; set; }
+    }
+
+    public class GetGeneratedFlowersByMockupIdResponse
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = null!;
+        public string ImageUrl { get; set; } = null!;
+        public DateTimeOffset CreatedAt { get; set; }
     }
 }
 
