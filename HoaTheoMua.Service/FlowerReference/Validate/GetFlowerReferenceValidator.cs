@@ -7,7 +7,7 @@ public class GetFlowerReferenceValidator : AbstractValidator<Request.GetFlowerRe
 {
     public GetFlowerReferenceValidator()
     {
-        RuleFor(x => x.Type)
+        RuleFor(x => x.type)
             .Must(value => value is null || (!string.IsNullOrWhiteSpace(value) && IsValidType(value)))
             .WithMessage("Loại FlowerReference không hợp lệ.");
     }

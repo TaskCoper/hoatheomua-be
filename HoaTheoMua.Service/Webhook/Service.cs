@@ -10,6 +10,7 @@ using HoaTheoMua.Service.Fulfillment;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using Npgsql;
 
 namespace HoaTheoMua.Service.Webhook;
@@ -374,6 +375,10 @@ public partial class Service : IService
         _dbContext.Orders.Update(order);
         _dbContext.Transactions.Add(transaction);
 
+        // Handmade không gọi AI. Card được tạo từ snapshot đã chốt ở CreateOrder
+        // và được lưu cùng lần xác nhận thanh toán này.
+        await CreateHandMadeCardsAsync(order);
+
         // Bus outbox: this does not touch RabbitMQ. It stages an OutboxMessage row inside the very
         // same SaveChanges below, so the order can never be marked Paid without the fulfilment
         // message, nor the message sent for an order that failed to commit.
@@ -408,6 +413,10 @@ public partial class Service : IService
         var plan = await _fulfillmentService.DispatchDeliveryAsync(order.Id);
         await _fulfillmentService.CreatePosOrderAsync(order.Id, plan);
 
+        // Các bước fulfillment phía trên có thể tự SaveChanges. Vì vậy chỉ tạo
+        // Handmade sau chúng, ngay trước lần commit cuối của flow legacy.
+        await CreateHandMadeCardsAsync(order);
+
         // Status is flipped LAST, deliberately. Both fulfilment steps SaveChanges on this same
         // scoped DbContext, so assigning "Paid" up front would persist it before NhanhVn had
         // succeeded, and the gateway's next redelivery would short-circuit on the Paid guard and
@@ -421,6 +430,136 @@ public partial class Service : IService
         await _dbContext.SaveChangesAsync();
 
         await _fulfillmentService.RevalidateOrderProductsAsync(order.Id);
+    }
+
+    private async Task CreateHandMadeCardsAsync(Repository.Entity.Order order)
+    {
+        var orderDetails = await _dbContext.OrderDetails
+            .Where(x => x.OrderId == order.Id && !x.IsDeleted)
+            .ToListAsync();
+
+        foreach (var orderDetail in orderDetails)
+        {
+            if (string.IsNullOrWhiteSpace(orderDetail.Metadata))
+                continue;
+
+            Request.OrderDetailMetadata? metadata;
+            try
+            {
+                metadata = JsonConvert.DeserializeObject<Request.OrderDetailMetadata>(orderDetail.Metadata);
+            }
+            catch (JsonException)
+            {
+                // Metadata cũ/không liên quan không được làm thất bại webhook
+                // sau khi Customer đã chuyển tiền.
+                continue;
+            }
+
+            if (metadata?.ProductMetadata == null)
+                continue;
+
+            var metadataChanged = false;
+            foreach (var productMetadata in metadata.ProductMetadata)
+            {
+                if (productMetadata == null)
+                    continue;
+
+                var snapshot = productMetadata.SnapShotCard;
+                if (snapshot == null ||
+                    !string.Equals(snapshot.CardType, "handmade", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                // Webhook retry sẽ thấy cardId đã có và không tạo lại Card/History.
+                if (snapshot.CardId.HasValue)
+                    continue;
+
+                var source = snapshot.Source;
+                var template = snapshot.CardTemplate;
+                if (snapshot.VirtualId == Guid.Empty ||
+                    source == null || source.Id == Guid.Empty ||
+                    template == null || template.TemplateId == Guid.Empty ||
+                    string.IsNullOrWhiteSpace(template.TemplateImageUrl))
+                {
+                    // Snapshot không đủ dữ liệu tối thiểu để tạo Card thì bỏ qua.
+                    // Xác nhận thanh toán vẫn phải được lưu thành công.
+                    continue;
+                }
+
+                var createdAt = DateTimeOffset.UtcNow;
+                var rootId = source.Id;
+                var baseId = productMetadata.GeneratedFlower ?? rootId;
+                var card = new GeneratedCard
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = order.UserId,
+                    CreatedAt = createdAt,
+                    Content = snapshot.MessageContent,
+                    ImageUrl = template.TemplateImageUrl,
+                    RawImage = null,
+                    CardType = GeneratedCardType.Handmade,
+                    FormType = CardFormType.Calligraphy,
+                    MessageContent = snapshot.MessageContent,
+                    AttachedImageUrl = snapshot.AttachedImageUrl,
+
+                    // Contract Handmade không có cardSize. Entity hiện tại vẫn
+                    // bắt buộc các cột Size nên lưu giá trị trung tính.
+                    SizeName = string.Empty,
+                    SizeWidth = 0m,
+                    SizeHeight = 0m,
+                    SizeBasePrice = 0m,
+                    SizeMaxWords = 0,
+                    WordCount = snapshot.WordCount,
+                    WordConfigSnapshot = snapshot.CardConfig == null
+                        ? null
+                        : JsonConvert.SerializeObject(snapshot.CardConfig),
+                    BasePrice = snapshot.BasePrice,
+                    ExtraPrice = snapshot.ExtraPrice,
+                    TotalPrice = snapshot.TotalPrice
+                };
+
+                var history = new ClientHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = order.UserId,
+                    Type = ClientHistoryType.HandmadeCard,
+                    BaseId = baseId,
+                    RootId = rootId,
+                    OutputId = card.Id,
+                    CreatedAt = createdAt,
+                    SystemForm = null,
+                    SessionId = null,
+                    Metadata = JsonConvert.SerializeObject(new
+                    {
+                        operation = "create",
+                        orderDetailId = orderDetail.Id,
+                        virtualId = snapshot.VirtualId,
+                        sourceType = productMetadata.GeneratedFlower.HasValue
+                            ? "generated_flower"
+                            : "product",
+                        originProductId = rootId,
+                        generatedFlowerId = productMetadata.GeneratedFlower,
+                        provenanceStatus = "available",
+                        source,
+                        cardTemplate = new
+                        {
+                            id = template.TemplateId,
+                            name = template.TemplateName,
+                            templateType = "handmade",
+                            imageUrl = template.TemplateImageUrl
+                        },
+                        validatedAt = snapshot.ValidatedAt
+                    })
+                };
+
+                _dbContext.GeneratedCards.Add(card);
+                _dbContext.ClientHistories.Add(history);
+                snapshot.CardId = card.Id;
+                metadataChanged = true;
+            }
+
+            if (metadataChanged)
+                orderDetail.Metadata = JsonConvert.SerializeObject(metadata);
+        }
     }
 
     // Matches the unique index on Transactions (Gateway, RequestId). RequestId carries each

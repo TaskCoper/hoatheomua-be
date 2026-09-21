@@ -92,6 +92,7 @@ public class Response
         public string? UnavailableReason { get; set; }
 
         public List<CategoryProductResponse> Categories { get; set; } = new List<CategoryProductResponse>();
+        public List<ComboSpecification>? Materials { get; set; }
     }
 
     public class PinnedProductResponse
@@ -197,7 +198,33 @@ public class Response
     public List<CategoryProductResponse> Categories { get; set; } = new();
     public Guid? ParentId { get; set; }
     public List<LocalProductDetailResponse> Children { get; set; } = new();
+    public List<ComboSpecification>? Materials { get; set; } 
 }
+    public class ComboSpecification
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+        public decimal Quantity { get; set; }
+        public decimal Price { get; set; }
+    }
+
+    public class ProductFamilyResponse
+    {
+        public ProductFamilyItem Parent { get; set; } = new();
+        public List<ProductFamilyItem> Children { get; set; } = new();
+    }
+
+    public class ProductFamilyItem
+    {
+        public Guid Id { get; set; }
+        public string? ProductName { get; set; }
+        public string? CoverImage { get; set; }
+        public string? Description { get; set; }
+        public decimal? Price { get; set; }
+        public int? SellableQuantity { get; set; }
+        public List<ComboSpecification> Materials { get; set; } = new();
+    }
 
     public class ComboSpecificationResponse 
     {
