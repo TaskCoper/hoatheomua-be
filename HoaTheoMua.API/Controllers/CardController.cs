@@ -61,7 +61,7 @@ public class CardController : ControllerBase
     }
 
     [HttpGet("order-details/{orderDetailId:guid}/cards")]
-    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
     public async Task<IActionResult> GetCardByOrderDetailId(
         Guid orderDetailId,
         [FromQuery] Guid virtualId)

@@ -127,6 +127,7 @@ public class Response
         public string Operation { get; set; } = "create";
         public Guid? RegeneratedFromCardId { get; set; }
         public bool IsSelected { get; set; }
+        public Guid TemplateId { get; set; }
     }
     
     public class WordConfigSnapshot
