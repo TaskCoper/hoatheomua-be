@@ -95,4 +95,5 @@ public partial class Service(HttpClient httpClient, IConfiguration configuration
 
     private static string? OptionalString(JsonElement value, string key) => value.TryGetProperty(key, out var item) ? item.GetString() : null;
     private static BadGatewayException InvalidResponse() => new("AI service returned an invalid response");
+
 }

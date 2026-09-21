@@ -11,6 +11,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
         <PackageReference Include="AutoMapper" Version="16.2.0" />
         <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
         <PackageReference Include="DotNetEnv" Version="3.2.0" />
@@ -32,4 +33,7 @@
         <PackageReference Include="MailKit" Version="4.16.0" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Content Include="../public/logo.png" Link="public/logo.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
 </Project>

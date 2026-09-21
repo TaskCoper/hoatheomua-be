@@ -151,6 +151,26 @@ builder.Services.AddHttpClient<AiService.IService, AiService.Service>("PostGenAi
 builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
 builder.Services.AddScoped<CardTemplateService.IService, CardTemplateService.Service>();
 builder.Services.AddScoped<CardService.IService, CardService.Service>();
+builder.Services.Configure<FlowerService.FlowerImageOptions>(options =>
+{
+    builder.Configuration.GetSection("FlowerImage").Bind(options);
+    options.StorageApiBase = builder.Configuration["TASKCOPER_API_BASE"] ?? options.StorageApiBase;
+    options.StorageEmail = builder.Configuration["TASKCOPER_EMAIL"] ?? options.StorageEmail;
+    options.StoragePassword = builder.Configuration["TASKCOPER_PASSWORD"] ?? options.StoragePassword;
+    options.ObjectPrefix = (builder.Configuration["TASKCOPER_STORAGE_PREFIX"] ?? options.ObjectPrefix).Trim('/');
+});
+builder.Services.AddSingleton<FlowerService.ITaskcoperStorageSession, FlowerService.TaskcoperStorageSession>();
+builder.Services.AddScoped<FlowerService.IFlowerImageBranding, FlowerService.FlowerImageBranding>();
+builder.Services.AddHttpClient(FlowerService.FlowerImageBranding.SourceClient, client =>
+{
+    client.Timeout = Timeout.InfiniteTimeSpan;
+}).ConfigurePrimaryHttpMessageHandler(FlowerService.PublicImageHttpHandler.Create).RemoveAllLoggers();
+builder.Services.AddHttpClient(FlowerService.FlowerImageBranding.StorageClient, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.MaxResponseContentBufferSize = 64 * 1024;
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })
+  .RemoveAllLoggers(); // Presigned URLs carry signatures; never log them.
 builder.Services.AddScoped<FlowerService.IService, FlowerService.Service>();
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
 // registering it with AddScoped would silently hand it the unnamed default HttpClient the way

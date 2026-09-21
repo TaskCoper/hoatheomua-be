@@ -1,0 +1,52 @@
+{
+  "skill": "ai-output-quality-evaluator",
+  "status": "BLOCKED",
+  "rubric_version": "flower-two-stage-v1",
+  "model": {
+    "configured_default": "chatgpt/gpt-5.6",
+    "provider": "existing private Chat Completions proxy",
+    "live_call": false
+  },
+  "fixtures": [
+    "AiFlowerClient.Input: 10 base + 2 additional = 12 rose stems",
+    "FlowerGeneration.Fixture: create/regenerate snapshot persistence"
+  ],
+  "hard_gates": {
+    "mock_contract": "PASS",
+    "material_quantities_payload": "PASS",
+    "second_stage_uses_first_stage_image": "PASS",
+    "provider_errors_and_cancellation": "PASS",
+    "real_visual_fidelity": "NOT_EVALUATED",
+    "real_flower_count": "NOT_EVALUATED",
+    "real_mockup_consistency": "NOT_EVALUATED",
+    "real_absence_of_invented_logo": "NOT_EVALUATED",
+    "guard_in_both_system_messages": "PASS",
+    "required_guard_before_generation": "PASS",
+    "historical_prompt_set_with_guard": "PASS",
+    "deterministic_logo_compositing": "PASS",
+    "storage_login_refresh_contract": "PASS",
+    "live_storage_upload_download": "PASS"
+  },
+  "score": null,
+  "threshold": {
+    "real_visual_acceptance": "All rubric criteria must pass; no invented material or quantity change"
+  },
+  "failures": [],
+  "blockers": [
+    "No live image generation or real Config prompt content evaluated; mock successes do not establish visual quality."
+  ],
+  "evidence": {
+    "targeted_tests": {
+      "passed": 73,
+      "failed": 0,
+      "skipped": 0
+    },
+    "tests": [
+      "HoaTheoMua.Service.Test/FlowerTest/AiFlowerClient.cs",
+      "HoaTheoMua.Service.Test/FlowerTest/FlowerGeneration.cs"
+    ],
+    "database": "PostgreSQL 16 disposable migration up/down/up and constraint checks; application orchestration uses EF InMemory",
+    "report": "hoatheomua-documentation/AI-Flower-Two-Stage.md",
+    "storage_live": "storage-logo-live.json: actual account login, presign, PNG PUT 200 and public download SHA256 match"
+  }
+}

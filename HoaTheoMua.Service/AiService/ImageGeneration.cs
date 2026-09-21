@@ -12,12 +12,6 @@ public partial class Service
 {
     public async Task<Response.GeneratedImage> GenerateImage(Request.ImageInput input, CancellationToken cancellationToken = default)
     {
-        var options = new AiOption();
-        configuration.GetSection(nameof(AiOption)).Bind(options);
-        if (!Uri.TryCreate(options.ChatCompletionsUrl, UriKind.Absolute, out var uri)
-            || uri.Scheme is not ("https" or "http") || !string.IsNullOrEmpty(uri.UserInfo)
-            || string.IsNullOrWhiteSpace(options.Model) || options.TimeoutSeconds is < 1 or > 180)
-            throw new ServerException("AI service configuration is invalid");
         // A shared image must not depend on which platform requested this pair first.
         var parts = new List<Request.ContentPart>();
         if (input.OriginalImageUrl != null)
@@ -32,7 +26,28 @@ public partial class Service
         parts.Add(new("text", $"Tạo một ảnh mới từ ảnh trên, tỷ lệ {input.RatioCode}, kích thước mục tiêu {input.PixelWidth}x{input.PixelHeight} pixel. " +
             "Giữ nguyên sản phẩm và mọi chi tiết nhận diện. Chỉ điều chỉnh bố cục hoặc mở rộng nền; không thay sản phẩm, không thêm chữ hay logo. " +
             "Thực hiện tạo ảnh ngay và trả đúng một ảnh dưới dạng Markdown ![generated image](URL)."));
-        var payload = new Request.ChatCompletion(options.Model, new[] { new Request.Message("user", parts) });
+        return await SendImageAsync(null, parts, cancellationToken);
+    }
+
+    private async Task<Response.GeneratedImage> SendImageAsync(string? systemPrompt,
+        IReadOnlyList<Request.ContentPart> parts, CancellationToken cancellationToken, string? policy = null, string? guardPrompt = null)
+    {
+        var options = new AiOption();
+        configuration.GetSection(nameof(AiOption)).Bind(options);
+        if (!Uri.TryCreate(options.ChatCompletionsUrl, UriKind.Absolute, out var uri)
+            || uri.Scheme is not ("https" or "http") || !string.IsNullOrEmpty(uri.UserInfo)
+            || string.IsNullOrWhiteSpace(options.Model) || options.TimeoutSeconds is < 1 or > 180)
+            throw new ServerException("AI service configuration is invalid");
+        var messages = new List<Request.Message>();
+        if (systemPrompt != null)
+        {
+            var systemParts = new List<Request.ContentPart> { new("text", systemPrompt) };
+            if (guardPrompt != null) systemParts.Add(new("text", guardPrompt));
+            if (policy != null) systemParts.Add(new("text", policy));
+            messages.Add(new("system", systemParts));
+        }
+        messages.Add(new("user", parts));
+        var payload = new Request.ChatCompletion(options.Model, messages);
         using var request = new HttpRequestMessage(HttpMethod.Post, uri) { Content = JsonContent.Create(payload, options: JsonOptions) };
         if (!string.IsNullOrWhiteSpace(options.ApiKey)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
