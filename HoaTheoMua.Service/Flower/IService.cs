@@ -1,3 +1,5 @@
+using HoaTheoMua.Service.Models;
+
 namespace HoaTheoMua.Service.Flower;
 
 public interface IService
@@ -12,4 +14,5 @@ public interface IService
     Task<Response.GeneratedFlowerResponse> RegenerateAiFlower(Guid sourceFlowerId, Request.RegenerateFlowerRequest request);
     Task<Response.GeneratedFlowerCompositionResponse?> GetGeneratedFlowerComposition(Guid generatedFlowerId);
     Task<Response.GeneratedFlowerImageResponse> GetGeneratedFlowerImage(Guid generatedFlowerId);
+    Task<BasePaginationResponse> GetGeneratedFlowersByMockupId(Guid mockupId, int pageSize, int pageIndex);
 }

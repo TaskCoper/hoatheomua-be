@@ -69,4 +69,11 @@ public class FlowerController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
+    [HttpGet("{mockupId:guid}/generated-flowers")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> GetGeneratedFlowersByMockupId(Guid mockupId, int pageSize, int pageIndex)
+    {
+        var result = await _flowerService.GetGeneratedFlowersByMockupId(mockupId, pageSize, pageIndex);
+        return Ok(result);
+    }
 }

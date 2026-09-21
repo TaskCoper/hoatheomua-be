@@ -5,6 +5,7 @@ using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
 using Ai = HoaTheoMua.Service.AiService;
 using ProductEntity = HoaTheoMua.Repository.Entity.Product;
 using ProductService = HoaTheoMua.Service.Product.IService;
@@ -368,7 +369,8 @@ public class Service : IService
             Name = flower.Name,
             CoverImage = flower.ImageUrl,
             SubId = metadata.SubId,
-            Materials = metadata.Materials.Select(ToCompositionMaterial).ToList()
+            Materials = metadata.Materials.Select(ToCompositionMaterial).ToList(),
+            CreatedAt = flower.CreatedAt
         };
     }
 
@@ -401,6 +403,38 @@ public class Service : IService
             GeneratedFlowerId = flower.Id,
             ImageUrl = flower.ImageUrl
         };
+    }
+
+    public async Task<BasePaginationResponse> GetGeneratedFlowersByMockupId(Guid mockupId, int pageSize, int pageIndex)
+    {
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        var histories = await _db.ClientHistories.AsNoTracking()
+            .Where(history => history.Type == ClientHistoryType.Flower)
+            .ToListAsync();
+        var outputIds = histories
+            .Where(history => TryGetMockupId(history.Metadata, out var historyMockupId)
+                && historyMockupId == mockupId)
+            .Select(history => history.OutputId)
+            .Distinct()
+            .ToArray();
+        var query = _db.GeneratedFlowers.AsNoTracking()
+            .Where(flower => outputIds.Contains(flower.Id));
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(flower => flower.CreatedAt)
+            .ThenByDescending(flower => flower.Id)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .Select(flower => new Response.GetGeneratedFlowersByMockupIdResponse
+            {
+                Id = flower.Id,
+                Name = flower.Name,
+                ImageUrl = flower.ImageUrl,
+                CreatedAt = flower.CreatedAt
+            })
+            .ToListAsync();
+        return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
 
     private async Task<Ai.Response.GeneratedImage> GenerateImage(string? productImage, string bundleImage,
@@ -748,6 +782,24 @@ public class Service : IService
                 && subId.ValueKind == JsonValueKind.String
                 && Guid.TryParse(subId.GetString(), out productId)
                 && productId != Guid.Empty;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryGetMockupId(string metadata, out Guid mockupId)
+    {
+        mockupId = Guid.Empty;
+        try
+        {
+            var history = JsonSerializer.Deserialize<HistoryMetadata>(metadata, JsonOptions);
+            if (history?.Mockup?.Id is not { } id || id == Guid.Empty)
+                return false;
+
+            mockupId = id;
+            return true;
         }
         catch (JsonException)
         {
