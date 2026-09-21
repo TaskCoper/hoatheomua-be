@@ -99,6 +99,9 @@ public class Response
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
         public string ImageUrl { get; set; } = "";
+        public string FormType { get; set; } = null!;
+        public string MessageContent { get; set; } = null!;
+        public Guid TemplateId { get; set; }
     }
 
     public class GeneratedCardImageResponse
