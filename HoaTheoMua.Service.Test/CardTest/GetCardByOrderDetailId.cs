@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Security.Claims;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
@@ -15,22 +16,25 @@ namespace HoaTheoMua.Service.Test.CardTest;
 
 public class GetCardByOrderDetailId
 {
-    [Fact]
-    public async Task ReturnsCardPreviewWithFormMessageAndTemplate()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CustomerSeesOwnCardsAndAdminSeesAnyCustomerCards(bool isAdmin)
     {
         await using var db = CreateDbContext();
-        var userId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var requesterId = isAdmin ? Guid.NewGuid() : ownerId;
         var orderId = Guid.NewGuid();
         var orderDetailId = Guid.NewGuid();
         var virtualId = Guid.NewGuid();
         var cardId = Guid.NewGuid();
         var templateId = Guid.NewGuid();
 
-        await db.Orders.AddAsync(Order(orderId, userId, orderDetailId, virtualId, cardId));
+        await db.Orders.AddAsync(Order(orderId, ownerId, orderDetailId, virtualId, cardId));
         await db.GeneratedCards.AddAsync(new GeneratedCard
         {
             Id = cardId,
-            UserId = userId,
+            UserId = ownerId,
             ImageUrl = "https://example.test/card.png",
             Content = "Chúc mừng",
             CardType = GeneratedCardType.Ai,
@@ -42,7 +46,7 @@ public class GetCardByOrderDetailId
         await db.ClientHistories.AddAsync(new ClientHistory
         {
             Id = Guid.NewGuid(),
-            UserId = userId,
+            UserId = ownerId,
             Type = ClientHistoryType.Card,
             OutputId = cardId,
             BaseId = Guid.NewGuid(),
@@ -55,7 +59,7 @@ public class GetCardByOrderDetailId
         });
         await db.SaveChangesAsync();
 
-        var result = await CreateService(db, userId).GetCardByOrderDetailId(orderDetailId, virtualId);
+        var result = await CreateService(db, requesterId, isAdmin).GetCardByOrderDetailId(orderDetailId, virtualId);
 
         var card = Assert.Single(result.Cards);
         Assert.Equal("calligraphy", card.FormType);
@@ -67,11 +71,19 @@ public class GetCardByOrderDetailId
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);
 
-    private static CardService CreateService(AppDbContext db, Guid userId)
+    private static CardService CreateService(AppDbContext db, Guid userId, bool isAdmin)
     {
         var currentUser = new Mock<ICurrentUserService>();
         currentUser.Setup(x => x.GetRequiredUserId()).Returns(userId);
-        return new CardService(db, currentUser.Object, new HttpContextAccessor(), new Mock<Ai.IService>().Object);
+        var identity = new ClaimsIdentity("test");
+        if (isAdmin)
+            identity.AddClaim(new Claim(ClaimTypes.Role, "Admin"));
+
+        return new CardService(
+            db,
+            currentUser.Object,
+            new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) } },
+            new Mock<Ai.IService>().Object);
     }
 
     private static OrderEntity Order(Guid orderId, Guid userId, Guid orderDetailId, Guid virtualId, Guid cardId) => new()
