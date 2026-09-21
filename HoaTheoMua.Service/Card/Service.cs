@@ -452,15 +452,16 @@ public class Service : IService
         if (orderDetailId == Guid.Empty || virtualId == Guid.Empty)
             throw new BadRequestException("OrderDetailId không được là GUID rỗng.");
 
-        var userId = _currentUser.GetRequiredUserId();
+        var isAdmin = _httpContext.HttpContext?.User.IsInRole("Admin") == true;
+        var userId = isAdmin ? (Guid?)null : _currentUser.GetRequiredUserId();
         var orderDetail = await _dbContext.OrderDetails
             .AsNoTracking()
             .Include(x => x.Order)
             .FirstOrDefaultAsync(x => x.Id == orderDetailId
-                && x.Order.UserId == userId
+                && (isAdmin || x.Order.UserId == userId)
                 && !x.IsDeleted
                 && !x.Order.IsDeleted)
-            ?? throw new NotFoundException("Không tìm thấy OrderDetail.");
+            ?? throw new NotFoundException("Không tìm thấy O/rderDetail.");
 
         var group = ParseOrderDetailCardGroups(orderDetail.Metadata)
             .SingleOrDefault(group => group.VirtualId == virtualId)
@@ -470,7 +471,7 @@ public class Service : IService
             ? []
             : await _dbContext.GeneratedCards
                 .AsNoTracking()
-                .Where(x => x.UserId == userId && cardIds.Contains(x.Id))
+                .Where(x => (isAdmin || x.UserId == userId) && cardIds.Contains(x.Id))
                 .ToListAsync();
         if (cards.Count != cardIds.Length)
             throw new ConflictException("ORDER_DETAIL_CARD_REFERENCE_INVALID", "OrderDetail tham chiếu Card không tồn tại hoặc không thuộc user.");
@@ -479,7 +480,7 @@ public class Service : IService
             ? []
             : await _dbContext.ClientHistories
                 .AsNoTracking()
-                .Where(x => x.UserId == userId
+                .Where(x => (isAdmin || x.UserId == userId)
                     && (x.Type == ClientHistoryType.Card || x.Type == ClientHistoryType.HandmadeCard)
                     && cardIds.Contains(x.OutputId))
                 .OrderByDescending(x => x.CreatedAt)
@@ -494,11 +495,16 @@ public class Service : IService
             Cards = cardIds.Select(cardId =>
             {
                 var history = historiesByCardId.GetValueOrDefault(cardId);
+                var template = GetCardTemplate(history);
+                var card = cardsById[cardId];
                 return new Response.CardPreviewItemResponse
                 {
                     Id = cardId,
-                    Name = GetCardTemplateName(history, string.Empty),
-                    ImageUrl = cardsById[cardId].ImageUrl
+                    Name = template.Name,
+                    ImageUrl = card.ImageUrl,
+                    FormType = card.FormType == CardFormType.Calligraphy ? "calligraphy" : "go_may",
+                    MessageContent = card.MessageContent,
+                    TemplateId = template.Id
                 };
             }).ToList()
         };
@@ -576,7 +582,8 @@ public class Service : IService
                     SizeWidth = item.Card.SizeWidth,
                     SizeHeight = item.Card.SizeHeight,
                     TotalPrice = item.Card.TotalPrice,
-                    CreatedAt = item.Card.CreatedAt
+                    CreatedAt = item.Card.CreatedAt,
+                    TemplateId = GetCardTemplate(item.History).Id
                 }).ToList()
             })
             .ToList();
@@ -683,22 +690,29 @@ public class Service : IService
         }
     }
 
-    private static string GetCardTemplateName(ClientHistory? history, string fallback)
+    private static (string Name, Guid Id) GetCardTemplate(ClientHistory? history)
     {
-        if (history is null) return fallback;
+        if (history is null) return (string.Empty, Guid.Empty);
         try
         {
             using var metadata = JsonDocument.Parse(history.Metadata);
-            return metadata.RootElement.TryGetProperty("cardTemplate", out var template)
-                && template.TryGetProperty("name", out var name)
-                && name.ValueKind == JsonValueKind.String
-                && !string.IsNullOrWhiteSpace(name.GetString())
-                    ? name.GetString()!
-                    : fallback;
+            if (!metadata.RootElement.TryGetProperty("cardTemplate", out var template))
+                return (string.Empty, Guid.Empty);
+
+            var name = template.TryGetProperty("name", out var nameNode)
+                && nameNode.ValueKind == JsonValueKind.String
+                    ? nameNode.GetString() ?? string.Empty
+                    : string.Empty;
+            var id = template.TryGetProperty("id", out var idNode)
+                && idNode.ValueKind == JsonValueKind.String
+                && Guid.TryParse(idNode.GetString(), out var templateId)
+                    ? templateId
+                    : Guid.Empty;
+            return (name, id);
         }
         catch (JsonException)
         {
-            return fallback;
+            return (string.Empty, Guid.Empty);
         }
     }
 

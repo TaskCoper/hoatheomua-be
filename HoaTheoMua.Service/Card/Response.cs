@@ -99,6 +99,9 @@ public class Response
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
         public string ImageUrl { get; set; } = "";
+        public string FormType { get; set; } = null!;
+        public string MessageContent { get; set; } = null!;
+        public Guid TemplateId { get; set; }
     }
 
     public class GeneratedCardImageResponse
@@ -124,6 +127,7 @@ public class Response
         public string Operation { get; set; } = "create";
         public Guid? RegeneratedFromCardId { get; set; }
         public bool IsSelected { get; set; }
+        public Guid TemplateId { get; set; }
     }
     
     public class WordConfigSnapshot
