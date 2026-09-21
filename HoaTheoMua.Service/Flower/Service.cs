@@ -461,7 +461,7 @@ public class Service : IService
     private async Task<PromptSnapshot?> LoadPrompt()
     {
         var configs = await _db.Configs.AsNoTracking()
-            .Where(x => x.Key == "imagegen.flower_prompt" && !x.IsDeleted)
+            .Where(x => x.Key == "imagegen.flower_prompt_flowers_apply_mockup" && !x.IsDeleted)
             .ToListAsync();
         if (configs.Count == 0) return null;
         if (configs.Count != 1
