@@ -158,7 +158,8 @@ public class GetGeneratedFlowersTest
             currentUser.Object,
             Mock.Of<Microsoft.AspNetCore.Http.IHttpContextAccessor>(),
             Mock.Of<Ai.IService>(),
-            Mock.Of<ProductService>());
+            Mock.Of<ProductService>(),
+            Mock.Of<HoaTheoMua.Service.Flower.IFlowerImageBranding>());
     }
 
     private static GeneratedFlower Flower(string name, Guid productId, int sequence, Guid? userId = null) => new()

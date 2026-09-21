@@ -55,6 +55,13 @@ jobs:
       JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
       JWT_ACCESS_TOKEN_KEY: ${{ secrets.JWT_ACCESS_TOKEN_KEY }}
 
+      # AI Flower storage (runtime only, GitHub Environment Secrets for dev/prod).
+      TASKCOPER_API_BASE: ${{ secrets.TASKCOPER_API_BASE }}
+      TASKCOPER_EMAIL: ${{ secrets.TASKCOPER_EMAIL }}
+      TASKCOPER_PASSWORD: ${{ secrets.TASKCOPER_PASSWORD }}
+      TASKCOPER_STORAGE_PREFIX: ${{ secrets.TASKCOPER_STORAGE_PREFIX }}
+      FLOWER_IMAGE_PUBLIC_BASE_URL: ${{ secrets.FLOWER_IMAGE_PUBLIC_BASE_URL }}
+
       # PostGen (GitHub Environment Secrets, dev/prod isolated; runtime only).
       POSTGEN_META_ENABLED: ${{ secrets.POSTGEN_META_ENABLED }}
       POSTGEN_META_APP_ID: ${{ secrets.POSTGEN_META_APP_ID }}

@@ -898,6 +898,16 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnName("CreatedAt")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<string>("FlowerWithLogoImageUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("FlowerWithLogoImageUrl");
+
+                    b.Property<string>("FlowerWithMockupImageUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("FlowerWithMockupImageUrl");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
@@ -923,7 +933,10 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("UserId", "CreatedAt")
                         .IsDescending(false, true);
 
-                    b.ToTable("GeneratedFlower", (string)null);
+                    b.ToTable("GeneratedFlower", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_generated_flower_logo_requires_mockup", "\"FlowerWithLogoImageUrl\" IS NULL OR \"FlowerWithMockupImageUrl\" IS NOT NULL");
+                        });
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.GeneratedPost", b =>

@@ -30,6 +30,9 @@ public class Response
         public CustomerFlowerReferenceResponse? Mockup { get; set; }
         public CustomerFlowerReferenceResponse? Ribbon { get; set; }
         public CustomerFlowerReferenceResponse? WrappingPaper { get; set; }
+        public string FlowerImageUrl => ImageUrl;
+        public string? FlowerWithMockupImageUrl { get; set; }
+        public string? FlowerWithLogoImageUrl { get; set; }
         public JsonElement Metadata { get; set; }
     }
 
@@ -47,6 +50,9 @@ public class Response
         public string ImageUrl { get; set; } = null!;
         public Guid UserId { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
+        public string FlowerImageUrl => ImageUrl;
+        public string? FlowerWithMockupImageUrl { get; set; }
+        public string? FlowerWithLogoImageUrl { get; set; }
         public JsonElement Metadata { get; set; }
         public ClientHistoryResponse? ClientHistory { get; set; }
     }
@@ -71,6 +77,9 @@ public class Response
         public Guid SessionId { get; init; } // phải có dòng này
         public string Name { get; init; } = null!;
         public string ImageUrl { get; init; } = null!;
+        public string FlowerImageUrl => ImageUrl;
+        public string? FlowerWithMockupImageUrl { get; set; }
+        public string? FlowerWithLogoImageUrl { get; set; }
         public JsonElement Metadata { get; init; }
         public DateTimeOffset CreatedAt { get; init; }
     }
@@ -87,6 +96,9 @@ public class Response
 
     public class GeneratedFlowerImageResponse
     {
+        public string FlowerImageUrl => ImageUrl;
+        public string? FlowerWithMockupImageUrl { get; set; }
+        public string? FlowerWithLogoImageUrl { get; set; }
         public Guid GeneratedFlowerId { get; set; }
         public string ImageUrl { get; set; } = "";
     }
@@ -101,6 +113,9 @@ public class Response
 
     public class GetGeneratedFlowersByMockupIdResponse
     {
+        public string FlowerImageUrl => ImageUrl;
+        public string? FlowerWithMockupImageUrl { get; set; }
+        public string? FlowerWithLogoImageUrl { get; set; }
         public Guid Id { get; set; }
         public string Name { get; set; } = null!;
         public string ImageUrl { get; set; } = null!;
@@ -112,6 +127,12 @@ public class MappingFlower
 {
     public class FlowerMetadata
     {
+        public string? FlowerImageUrl { get; set; }
+        public string? FlowerWithMockupImageUrl { get; set; }
+        public string? FlowerWithLogoImageUrl { get; set; }
+        public BrandedFlowerImage? Branding { get; set; }
+        public AiService.Response.GeneratedImage? FlowerGeneration { get; set; }
+        public AiService.Response.GeneratedImage? MockupGeneration { get; set; }
         [JsonPropertyName("subId")] 
         public Guid SubId { get; set; }
         [JsonPropertyName("aiCustomize")] 
@@ -150,6 +171,10 @@ public class MappingFlower
 
     public class ProductSnapshot
     {
+        public string? Description { get; set; }
+        public string? Color { get; set; }
+        public string? Size { get; set; }
+        public List<string>? RelatedImageUrls { get; set; }
         [JsonPropertyName("id")] 
         public Guid Id { get; set; }
         [JsonPropertyName("name")] 
@@ -164,6 +189,7 @@ public class MappingFlower
 
     public class ReferenceSnapshot
     {
+        public string? DescriptionPrompt { get; set; }
         [JsonPropertyName("id")] 
         public Guid Id { get; set; }
         [JsonPropertyName("name")] 
@@ -184,6 +210,9 @@ public class MappingFlower
 
     public class MaterialSnapshot
     {
+        public string? Unit { get; set; }
+        public string? Color { get; set; }
+        public string? Description { get; set; }
         [JsonPropertyName("matId")] 
         public Guid MatId { get; set; }
         [JsonPropertyName("quantity")] 
@@ -198,6 +227,11 @@ public class MappingFlower
 
     public class PromptSnapshot
     {
+        public Guid? CreateConfigId { get; set; }
+        public Guid? MockupConfigId { get; set; }
+        public string? MockupContent { get; set; }
+        public Guid? GuardConfigId { get; set; }
+        public string? GuardContent { get; set; }
         [JsonPropertyName("type")] 
         public string Type { get; set; } = "flower";
         [JsonPropertyName("content")] 
