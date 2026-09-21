@@ -10,6 +10,7 @@ using ProductEntity = HoaTheoMua.Repository.Entity.Product;
 using ProductService = HoaTheoMua.Service.Product.IService;
 using ProductServiceImplementation = HoaTheoMua.Service.Product.Service;
 using FlowerReferenceEntity = HoaTheoMua.Repository.Entity.FlowerReference;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using static HoaTheoMua.Service.Flower.MappingFlower;
 
@@ -20,13 +21,20 @@ public class Service : IService
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly AppDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly IHttpContextAccessor _httpContext;
     private readonly Ai.IService _ai;
     private readonly ProductService _products;
 
-    public Service(AppDbContext db, ICurrentUserService currentUser, Ai.IService ai, ProductService products)
+    public Service(
+        AppDbContext db,
+        ICurrentUserService currentUser,
+        IHttpContextAccessor httpContext,
+        Ai.IService ai,
+        ProductService products)
     {
         _db = db;
         _currentUser = currentUser;
+        _httpContext = httpContext;
         _ai = ai;
         _products = products;
     }
@@ -361,6 +369,37 @@ public class Service : IService
             CoverImage = flower.ImageUrl,
             SubId = metadata.SubId,
             Materials = metadata.Materials.Select(ToCompositionMaterial).ToList()
+        };
+    }
+
+    public async Task<Response.GeneratedFlowerImageResponse> GetGeneratedFlowerImage(Guid generatedFlowerId)
+    {
+        if (generatedFlowerId == Guid.Empty)
+            throw new BadRequestException("GENERATED_FLOWER_ID_INVALID");
+
+        var isAdmin = _httpContext.HttpContext?.User.IsInRole("Admin") == true;
+        var query = _db.GeneratedFlowers
+            .AsNoTracking()
+            .Where(flower => flower.Id == generatedFlowerId);
+
+        if (!isAdmin)
+        {
+            var userId = _currentUser.GetRequiredUserId();
+            query = query.Where(flower => flower.UserId == userId);
+        }
+
+        var flower = await query.FirstOrDefaultAsync()
+            ?? throw new NotFoundException("GENERATED_FLOWER_NOT_FOUND");
+
+        if (string.IsNullOrWhiteSpace(flower.ImageUrl))
+            throw new ConflictException(
+                "GENERATED_FLOWER_IMAGE_UNAVAILABLE",
+                "GeneratedFlower chưa có ảnh để tải.");
+
+        return new Response.GeneratedFlowerImageResponse
+        {
+            GeneratedFlowerId = flower.Id,
+            ImageUrl = flower.ImageUrl
         };
     }
 
