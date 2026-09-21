@@ -720,6 +720,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("Description");
 
+                    b.Property<string>("DescriptionPrompt")
+                        .HasColumnType("text");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
