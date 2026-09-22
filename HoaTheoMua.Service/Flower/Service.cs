@@ -389,7 +389,8 @@ public partial class Service : IService
             CoverImage = flower.ImageUrl,
             SubId = metadata.SubId,
             Materials = metadata.Materials.Select(ToCompositionMaterial).ToList(),
-            CreatedAt = flower.CreatedAt
+            CreatedAt = flower.CreatedAt,
+            FlowerWithLogoImageUrl = flower.FlowerWithLogoImageUrl!
         };
     }
 
