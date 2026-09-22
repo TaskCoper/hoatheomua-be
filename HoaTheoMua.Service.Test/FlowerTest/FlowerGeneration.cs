@@ -167,11 +167,12 @@ public class FlowerGeneration
     }
 
     // InMemory proves orchestration and serialized state, not relational transaction semantics.
-    private sealed class Fixture : IDisposable
+    internal sealed class Fixture : IDisposable
     {
-        public AppDbContext Db { get; } = new(new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning)).Options);
+        public DbContextOptions<AppDbContext> Options { get; }
+        public AppDbContext Db { get; }
+        public Mock<ICurrentUserService> Current { get; } = new();
+        public HttpContextAccessor Context { get; } = new() { HttpContext = new DefaultHttpContext() };
         public Mock<Ai.IService> Ai { get; } = new();
         public Mock<Flower.IFlowerImageBranding> Branding { get; } = new();
         public List<Ai.Request.FlowerImageInput> Inputs { get; } = new();
@@ -179,8 +180,12 @@ public class FlowerGeneration
         public Flower.Request.CreateFlowerRequest Request { get; }
         private readonly HttpClient _http = new();
 
-        public Fixture()
+        public Fixture(DbContextOptions<AppDbContext>? options = null)
         {
+            Options = options ?? new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning)).Options;
+            Db = new(Options);
             var product = Product("Bó hồng", "Combo");
             var material = Product("Hồng", "Sản phẩm");
             material.Stock = 100; material.Unit = "cành";
@@ -199,9 +204,9 @@ public class FlowerGeneration
                 Config("imagegen.flower_prompt_flowers_apply_mockup", "mockup exact\n"),
                 Config("imagegen.flower_prompt_guard_rules", "guard exact\n"));
             Db.SaveChanges();
-            var current = new Mock<ICurrentUserService>();
+            var current = Current;
             current.Setup(x => x.GetRequiredUserId()).Returns(Guid.NewGuid());
-            var context = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
+            var context = Context;
             var products = new HoaTheoMua.Service.Product.Service(Db, context, _http,
                 new ConfigurationBuilder().Build(), MapperFactory.Create());
             Ai.Setup(x => x.GenerateFlowerImage(It.IsAny<Ai.Request.FlowerImageInput>(), It.IsAny<CancellationToken>()))

@@ -208,8 +208,21 @@ public partial class Service : IService
 
     public async Task<Response.GeneratedFlowerResponse> CreateAiFlower(Request.CreateFlowerRequest request)
     {
-        var cancellationToken = _httpContext.HttpContext?.RequestAborted ?? default;
-        cancellationToken.ThrowIfCancellationRequested();
+        var ct = _httpContext.HttpContext?.RequestAborted ?? default;
+        var prepared = await PrepareCreate(request, ct);
+        return await ExecuteSynchronous(prepared, ct);
+    }
+
+    public async Task<Response.GeneratedFlowerResponse> RegenerateAiFlower(Guid sourceFlowerId, Request.RegenerateFlowerRequest request)
+    {
+        var ct = _httpContext.HttpContext?.RequestAborted ?? default;
+        var prepared = await PrepareRegenerate(sourceFlowerId, request, ct);
+        return await ExecuteSynchronous(prepared, ct);
+    }
+
+    public async Task<PreparedFlower> PrepareCreate(Request.CreateFlowerRequest request, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
         var userId = _currentUser.GetRequiredUserId();
         ValidateCreateRequest(request);
 
@@ -251,39 +264,13 @@ public partial class Service : IService
         };
 
         _branding.ValidateConfiguration();
-        var flowerId = Guid.NewGuid();
-        var result = await GenerateFlowerImages(ToProductSnapshot(product), bundle, mockup, prompt, metadata);
-        var branded = await _branding.ApplyLogoAsync(result.FlowerWithMockupImageUrl, flowerId, cancellationToken);
-        SetGenerationMetadata(metadata, result, branded);
-
-        var flower = new GeneratedFlower
-        {
-            Id = flowerId,
-            Name = request.Name!.Trim(),
-            ImageUrl = result.FlowerImageUrl,
-            FlowerWithMockupImageUrl = result.FlowerWithMockupImageUrl,
-            FlowerWithLogoImageUrl = branded.ImageUrl,
-            Metadata = JsonSerializer.Serialize(metadata, JsonOptions),
-            UserId = userId,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-        var history = CreateHistory(userId, ToProductSnapshot(product), bundle, mockup, flower,
-            prompt, "create", null, Guid.NewGuid(), logoConfig: branded);
-
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
-        _db.GeneratedFlowers.Add(flower);
-        _db.ClientHistories.Add(history);
-        await _db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-
-        return ToResponse(flower, history.SessionId!.Value);
+        return new(Guid.NewGuid(), userId, request.Name!.Trim(), ToProductSnapshot(product), bundle, mockup,
+            prompt, metadata, "create", null, Guid.NewGuid(), "current", product.Id);
     }
 
-    public async Task<Response.GeneratedFlowerResponse> RegenerateAiFlower(
-        Guid sourceFlowerId, Request.RegenerateFlowerRequest request)
+    public async Task<PreparedFlower> PrepareRegenerate(Guid sourceFlowerId, Request.RegenerateFlowerRequest request, CancellationToken ct)
     {
-        var cancellationToken = _httpContext.HttpContext?.RequestAborted ?? default;
-        cancellationToken.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
         var userId = _currentUser.GetRequiredUserId();
         var source = await _db.GeneratedFlowers.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == sourceFlowerId && x.UserId == userId)
@@ -327,32 +314,40 @@ public partial class Service : IService
             throw new ConflictException("FLOWER_SOURCE_HISTORY_INVALID", "Flower nguồn không có đủ ba prompt hợp lệ (tạo hoa, mockup, guard).");
 
         _branding.ValidateConfiguration();
-        var flowerId = Guid.NewGuid();
-        var image = await GenerateFlowerImages(sourceMetadata.Product, bundle, mockup, prompt, metadata);
-        var branded = await _branding.ApplyLogoAsync(image.FlowerWithMockupImageUrl, flowerId, cancellationToken);
-        SetGenerationMetadata(metadata, image, branded);
+        if (!sourceHistory.SessionId.HasValue)
+            throw new ConflictException("FLOWER_SOURCE_HISTORY_INVALID", "Flower nguồn thiếu session.");
+        return new(Guid.NewGuid(), userId, source.Name, sourceMetadata.Product, bundle, mockup, prompt,
+            metadata, "regenerate", source.Id, sourceHistory.SessionId.Value, promptSource, sourceHistory.BaseId);
+    }
+
+    private async Task<Response.GeneratedFlowerResponse> ExecuteSynchronous(PreparedFlower prepared, CancellationToken ct)
+    {
+        var images = await _ai.GenerateFlowerImage(ToGenerationInput(prepared), ct);
+        var branded = await _branding.ApplyLogoAsync(images.FlowerWithMockupImageUrl, prepared.FlowerId, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        var result = AddPreparedResult(prepared, images, branded);
+        await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return result;
+    }
+
+    public Response.GeneratedFlowerResponse AddPreparedResult(PreparedFlower prepared,
+        Ai.Response.FlowerGeneratedResponse images, BrandedFlowerImage branded)
+    {
+        SetGenerationMetadata(prepared.Metadata, images, branded);
         var flower = new GeneratedFlower
         {
-            Id = flowerId,
-            Name = source.Name,
-            ImageUrl = image.FlowerImageUrl,
-            FlowerWithMockupImageUrl = image.FlowerWithMockupImageUrl,
+            Id = prepared.FlowerId, UserId = prepared.UserId, Name = prepared.Name,
+            ImageUrl = images.FlowerImageUrl, FlowerWithMockupImageUrl = images.FlowerWithMockupImageUrl,
             FlowerWithLogoImageUrl = branded.ImageUrl,
-            Metadata = JsonSerializer.Serialize(metadata, JsonOptions),
-            UserId = userId,
-            CreatedAt = DateTimeOffset.UtcNow
+            Metadata = JsonSerializer.Serialize(prepared.Metadata, JsonOptions), CreatedAt = DateTimeOffset.UtcNow
         };
-        var history = CreateHistory(userId, sourceMetadata.Product, bundle, mockup, flower,
-            prompt, "regenerate", source.Id,
-            sourceHistory.SessionId, promptSource, sourceHistory.BaseId, branded);
-
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        var history = CreateHistory(prepared.UserId, prepared.Product, prepared.Bundle, prepared.Mockup,
+            flower, prepared.Prompt, prepared.Operation, prepared.SourceFlowerId, prepared.SessionId,
+            prepared.PromptSource, prepared.BaseId, branded);
         _db.GeneratedFlowers.Add(flower);
         _db.ClientHistories.Add(history);
-        await _db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-
-        return ToResponse(flower, history.SessionId!.Value);
+        return ToResponse(flower, prepared.SessionId);
     }
 
     public async Task<Response.GeneratedFlowerCompositionResponse?> GetGeneratedFlowerComposition(
@@ -567,7 +562,7 @@ public partial class Service : IService
 
     private static void ValidateCreateRequest(Request.CreateFlowerRequest request)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.Name) || request.ProductId == Guid.Empty
+        if (request is null || string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 250 || request.ProductId == Guid.Empty
             || request.BundleId == Guid.Empty || request.MockupId == Guid.Empty
             || request.RibbonProductId == Guid.Empty || request.WrappingPaperProductId == Guid.Empty
             || request.MaterialTotals is null || request.MaterialTotals.Count == 0)

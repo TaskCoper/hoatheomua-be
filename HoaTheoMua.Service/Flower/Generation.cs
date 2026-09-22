@@ -51,9 +51,9 @@ public partial class Service
     private static ConflictException InvalidFlowerPrompts() => new("SYSTEM_PROMPT_INVALID",
         "Cần ba Config imagegen hợp lệ: flower_prompt_create_flowers, flower_prompt_flowers_apply_mockup và flower_prompt_guard_rules, Value dạng {\"value\":\"prompt\"}.");
 
-    private async Task<Ai.Response.FlowerGeneratedResponse> GenerateFlowerImages(ProductSnapshot product,
-        FlowerReferenceEntity bundle, FlowerReferenceEntity mockup, PromptSnapshot prompts, FlowerMetadata metadata)
+    public static Ai.Request.FlowerImageInput ToGenerationInput(PreparedFlower prepared)
     {
+        var (product, bundle, mockup, prompts, metadata) = (prepared.Product, prepared.Bundle, prepared.Mockup, prepared.Prompt, prepared.Metadata);
         if (metadata.Materials.Count == 0 || metadata.Ribbon == null || metadata.WrappingPaper == null
             || metadata.Materials.Select(x => x.MatId).Distinct().Count() != metadata.Materials.Count
             || metadata.AdditionCustome == null
@@ -68,7 +68,7 @@ public partial class Service
         var input = new Ai.Request.FlowerImageInput(prompts.Content, prompts.MockupContent!, prompts.GuardContent!,
             ToAiProduct(product), materials, ToAiReference(bundle), ToAiProduct(metadata.WrappingPaper),
             ToAiProduct(metadata.Ribbon), ToAiReference(mockup));
-        return await _ai.GenerateFlowerImage(input, _httpContext.HttpContext?.RequestAborted ?? default);
+        return input;
     }
 
     private static Ai.Request.FlowerProduct ToAiProduct(ProductSnapshot product) => new(
