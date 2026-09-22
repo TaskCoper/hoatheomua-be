@@ -18,17 +18,19 @@ public partial class Service : IService
     private readonly ICurrentUserService _currentUser;
     private readonly IHttpContextAccessor _httpContext;
     private readonly Ai.IService _ai;
+    private readonly ICardImageBranding? _branding;
 
     public Service(
         AppDbContext dbContext,
         ICurrentUserService currentUser,
         IHttpContextAccessor httpContext,
-        Ai.IService ai)
+        Ai.IService ai, ICardImageBranding? branding = null)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
         _httpContext = httpContext;
         _ai = ai;
+        _branding = branding;
     }
 
     public async Task<HoaTheoMua.Service.Models.BasePaginationResponse> GetAdminGeneratedCards(

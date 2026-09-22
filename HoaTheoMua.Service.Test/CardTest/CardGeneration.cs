@@ -44,6 +44,8 @@ public class CardGeneration
         Assert.Equal(10, input.Width); Assert.Equal(15, input.Height);
         var card = await f.Db.GeneratedCards.SingleAsync();
         Assert.Equal(done.Result!.Id, card.Id);
+        Assert.Equal("https://example.com/branded/" + card.Id + ".png", card.ImageUrl);
+        Assert.NotEqual(card.ImageUrl, card.RawImage);
         var history = await f.Db.ClientHistories.SingleAsync(x => x.Type == ClientHistoryType.Card);
         Assert.Null(history.SessionId);
         var metadata = JsonNode.Parse(history.Metadata)!;
@@ -155,6 +157,31 @@ public class CardGeneration
     }
 
     [Fact]
+    public async Task BrandingFailurePreservesProviderCheckpointWithoutPublishingCard()
+    {
+        using var f = new Fixture();
+        f.Branding.Setup(x => x.ApplyLogoAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new BadGatewayException("Upload failed"));
+        var job = await f.Jobs.Create(f.Request, "branding-failure", default);
+        await f.Worker.Process(job.JobId, default);
+        Assert.Equal("Failed", (await f.Jobs.Get(job.JobId, default)).Status);
+        Assert.Empty(f.Db.GeneratedCards);
+        var checkpoint = JobJson.Read<Checkpoint>((await f.Db.CardGenerationJobs.SingleAsync()).Checkpoint);
+        Assert.NotNull(checkpoint.Card);
+        Assert.Null(checkpoint.Branding);
+        Assert.Empty((await f.Snapshot())["idResult"]!.AsArray());
+    }
+
+    [Fact]
+    public async Task SynchronousGenerationAlsoBrandsCard()
+    {
+        using var f = new Fixture();
+        var card = await f.Service.CreateCardAi(f.Request);
+        Assert.Equal("https://example.com/branded/" + card.Id + ".png", card.ImageUrl);
+        Assert.NotEqual(card.ImageUrl, card.RawImage);
+    }
+
+    [Fact]
     public async Task RecoveryDoesNotReplayUnknownProviderOutcome()
     {
         using var f = new Fixture(); var job = await f.Jobs.Create(f.Request, "stale", default);
@@ -171,6 +198,7 @@ public class CardGeneration
         public Mock<ICurrentUserService> Current { get; } = new();
         public HttpContextAccessor Context { get; } = new() { HttpContext = new DefaultHttpContext() };
         public Mock<Ai.IService> Ai { get; } = new();
+        public Mock<Card.ICardImageBranding> Branding { get; } = new();
         public List<Ai.Request.CardImageInput> Inputs { get; } = new();
         public Card.Service Service { get; }
         public HoaTheoMua.Service.CardJobs.Service Jobs { get; }
@@ -208,7 +236,10 @@ public class CardGeneration
             Ai.Setup(x => x.GenerateCardImage(It.IsAny<Ai.Request.CardImageInput>(), It.IsAny<CancellationToken>()))
                 .Callback<Ai.Request.CardImageInput, CancellationToken>((input, _) => Inputs.Add(input))
                 .ReturnsAsync(() => new("https://example.com/" + Guid.NewGuid() + ".png", "test-model", "request-id", 10));
-            Service = new(Db, Current.Object, Context, Ai.Object);
+            Branding.Setup(x => x.ApplyLogoAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string url, Guid id, CancellationToken _) => new HoaTheoMua.Service.Flower.BrandedFlowerImage(
+                    "https://example.com/branded/" + id + ".png", "key", "hash", 100, 150, 81, 131, 16, 16));
+            Service = new(Db, Current.Object, Context, Ai.Object, Branding.Object);
             var store = new Store(Db, TimeProvider.System);
             Jobs = new(Db, Service, Current.Object, Mock.Of<IPublishEndpoint>(), store, TimeProvider.System, Options.Create(new CardJobOptions()));
             Worker = new(Db, store, Ai.Object, Service, Mock.Of<IServiceScopeFactory>(), Options.Create(new CardJobOptions()), TimeProvider.System, NullLogger<Worker>.Instance);

@@ -35,6 +35,37 @@ public class FlowerBrandingTests
         Assert.Equal(64, result.LogoSha256.Length);
     }
 
+    [Theory]
+    [InlineData(1000, 1000, 200, 100)]
+    [InlineData(1500, 1000, 200, 100)]
+    [InlineData(1000, 1500, 200, 100)]
+    [InlineData(2000, 500, 100, 200)]
+    [InlineData(500, 2000, 100, 200)]
+    [InlineData(1, 1, 20, 10)]
+    public async Task CardLogoFitsShortEdgeWithoutCroppingOrStretchingCanvas(int width, int height, int logoWidth, int logoHeight)
+    {
+        using var canvas = new Image<Rgba32>(width, height, new Rgba32(0, 0, 255));
+        using var logo = new Image<Rgba32>(logoWidth, logoHeight, new Rgba32(255, 0, 0));
+        var result = await FlowerLogoComposer.ComposeAsync(Png(canvas), Png(logo),
+            new HoaTheoMua.Service.Card.CardImageOptions(), fitShortEdge: true);
+        using var output = Image.Load<Rgba32>(result.Png);
+        Assert.Equal((width, height), (output.Width, output.Height));
+        var edge = Math.Min(width, height);
+        var bound = Math.Max(1, (int)Math.Round(edge * 0.16));
+        Assert.InRange(result.LogoWidth, 1, bound);
+        Assert.InRange(result.LogoHeight, 1, bound);
+        var margin = (int)Math.Round(edge * 0.03);
+        Assert.Equal(margin, width - result.LogoX - result.LogoWidth);
+        Assert.Equal(margin, height - result.LogoY - result.LogoHeight);
+        Assert.InRange(result.LogoX, 0, width - 1);
+        Assert.InRange(result.LogoY, 0, height - 1);
+        if (edge > 1)
+        {
+            Assert.Equal(new Rgba32(0, 0, 255), output[width / 2, height / 2]);
+            Assert.InRange(Math.Abs((double)result.LogoWidth / result.LogoHeight - (double)logoWidth / logoHeight), 0, 0.03);
+        }
+    }
+
     [Fact]
     public async Task RejectsInvalidImagesAndPixelOrUploadLimits()
     {

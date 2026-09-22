@@ -56,7 +56,7 @@ Migration `20260922124238_AddCardGenerationJobs` tạo bảng job, JSON snapshot
 
 Worker dùng transaction ngắn để claim/checkpoint/commit. Không giữ transaction khi chờ AI. Lưu GeneratedCard, ClientHistory, append `idResult`, status snapshot và job Succeeded trong cùng transaction. Khóa và đọc lại OrderDetails trước khi cập nhật JSON, giữ kết quả và lựa chọn final của request khác. Regenerate không khóa theo sourceCardId; hai job hợp lệ cùng nguồn vẫn được chạy.
 
-Heartbeat kiểm tra hủy và lease mỗi 3 giây. Job Running hết lease chuyển Failed thay vì tự gọi AI lại; job Queued bị bỏ sót được dispatch lại. Duplicate delivery không render lại job đã xử lý. Lỗi provider/timeout không tự retry; người dùng có thể chủ động tạo job mới với key mới. Hủy kết nối không bảo đảm provider dừng xử lý hoặc hoàn phí. Ảnh provider có thể tồn tại nếu hủy hoặc commit lỗi; chưa tích hợp xóa/rehost ảnh provider.
+Heartbeat kiểm tra hủy và lease mỗi 3 giây. Job Running hết lease chuyển Failed thay vì tự gọi AI lại; job Queued bị bỏ sót được dispatch lại. Duplicate delivery không render lại job đã xử lý. Lỗi provider/timeout không tự retry; người dùng có thể chủ động tạo job mới với key mới. Hủy kết nối không bảo đảm provider dừng xử lý hoặc hoàn phí. Ảnh provider có thể tồn tại nếu hủy hoặc commit lỗi; chưa tích hợp dọn ảnh mồ côi khi hủy hoặc commit lỗi.
 
 Các state: Queued, Running, Succeeded, Failed, Canceled. Stage: Queued, GeneratingCard, Saving, Completed. Giới hạn mặc định dưới section `CardJobs`: MaxActivePerUser=3, Concurrency=2, BudgetSeconds=240, LeaseSeconds=60, RecoveryIntervalSeconds=15. Timeout mỗi lời gọi theo `AiOption.TimeoutSeconds` như hoa. Recovery và worker chạy trong host API cùng RabbitMQ hiện có.
 
@@ -81,3 +81,13 @@ dotnet test HoaTheoMua.Service.Test/HoaTheoMua.Service.Test.csproj --filter Full
 ```
 
 Test chỉ chấp nhận host localhost/127.0.0.1, tạo/xóa database riêng prefix `card_jobs_`. Có thể đặt `CARD_JOB_TEST_DELAY_SECONDS` để kéo dài provider giả lập. Trước deploy cần config prompt hợp lệ, AiOption, RabbitMQ và migration bảng job. Cơ chế API startup hiện có tự chạy migration.
+
+## Logo thiệp AI
+
+Cả Create, Regenerate và caller đồng bộ đều chèn `public/logo.png` sau khi AI render, dùng chung transport và storage session với Hoa AI. `ImageUrl` là PNG đã gắn logo trên storage; `RawImage` giữ ảnh đầu vào nếu có, nếu không giữ URL render chưa gắn logo. Không ghi ảnh branded vào nền tái sử dụng. Thiệp handmade không đổi.
+
+Logo ở góc dưới phải, giữ tỉ lệ logo và kích thước canvas, không crop ảnh. Mặc định cả chiều rộng và chiều cao logo bị giới hạn trong 16% cạnh ngắn của ảnh thực tế sau AutoOrient; lề bằng 3% cạnh ngắn. Quy tắc áp dụng cho ngang, dọc, vuông và tỉ lệ dài. Prompt yêu cầu chừa vùng vuông 22% cạnh ngắn ở góc dưới phải, không đặt lời chúc/chủ thể quan trọng vào đó; đây là chỉ dẫn cho AI, chưa có nhận diện chữ để bảo đảm vùng trống.
+
+Section `CardImage` kế thừa cấu hình ảnh từ `FlowerImage`, mặc định riêng `ObjectPrefix=general/ai-cards`, `LogoWidthRatio=0.16`; có thể override `LogoPath`, `MarginRatio`, `PublicBaseUrl` và giới hạn dung lượng/timeout. Xác thực storage vẫn dùng session chung từ FlowerImage/TASKCOPER. Nếu tăng kích thước logo hoặc lề cần đồng bộ vùng trống trong prompt.
+
+Job có stage `Branding` giữa `GeneratingCard` và `Saving`. Checkpoint lưu ảnh provider trước download/composite/upload, sau đó lưu thông tin branding (object key, SHA-256 logo, kích thước, tọa độ). History lưu cả generation và branding. Chỉ publish kết quả sau khi chèn/upload thành công; lỗi branding không commit thiệp hoặc tự gọi AI lại. Không cần migration.

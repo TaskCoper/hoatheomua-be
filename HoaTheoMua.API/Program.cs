@@ -161,6 +161,14 @@ builder.Services.Configure<FlowerService.FlowerImageOptions>(options =>
 });
 builder.Services.AddSingleton<FlowerService.ITaskcoperStorageSession, FlowerService.TaskcoperStorageSession>();
 builder.Services.AddScoped<FlowerService.IFlowerImageBranding, FlowerService.FlowerImageBranding>();
+builder.Services.Configure<HoaTheoMua.Service.Card.CardImageOptions>(options =>
+{
+    builder.Configuration.GetSection("FlowerImage").Bind(options);
+    options.ObjectPrefix = "general/ai-cards";
+    options.LogoWidthRatio = 0.16;
+    builder.Configuration.GetSection("CardImage").Bind(options);
+});
+builder.Services.AddScoped<HoaTheoMua.Service.Card.ICardImageBranding, HoaTheoMua.Service.Card.CardImageBranding>();
 builder.Services.AddHttpClient(FlowerService.FlowerImageBranding.SourceClient, client =>
 {
     client.Timeout = Timeout.InfiniteTimeSpan;

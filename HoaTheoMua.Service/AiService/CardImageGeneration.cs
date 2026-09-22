@@ -36,6 +36,7 @@ public partial class Service
             $"Tỷ lệ chiều rộng:chiều cao bắt buộc là {ratio}, ưu tiên hơn tỷ lệ trong template hoặc prompt. " +
             "Tạo thiệp phẳng nhìn chính diện, không mô phỏng thiệp trên bàn hoặc cầm trên tay. " +
             "Không thêm logo, watermark hay chữ ngoài lời chúc. " +
+            "Chừa vùng trống ở góc dưới phải để hệ thống chèn logo: vùng vuông cạnh 22% cạnh ngắn của ảnh, không đặt lời chúc hoặc chủ thể quan trọng vào vùng này. " +
             "Trả đúng một ảnh mới dưới dạng Markdown ![generated image](URL); không trả ảnh tham chiếu làm kết quả.";
         parts.Add(new("text", $"Tạo thiệp hoàn chỉnh có lời chúc, tỷ lệ {ratio}. Trả đúng một ảnh Markdown ![generated image](URL)."));
         var result = await SendImageAsync(input.SystemPrompt, parts, cancellationToken, policy);

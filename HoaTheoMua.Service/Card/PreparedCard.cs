@@ -25,13 +25,20 @@ public partial class Service
     {
         var ct = _httpContext.HttpContext?.RequestAborted ?? default;
         var input = await Prepare(request, ct);
+        ValidateBranding();
         var image = await _ai.GenerateCardImage(input.Input, ct);
+        var branded = await Brand(input, image, ct);
         await using var tx = _dbContext.Database.IsRelational() ? await _dbContext.Database.BeginTransactionAsync(ct) : null;
-        var result = await AddPreparedResult(input, image, ct);
+        var result = await AddPreparedResult(input, image, ct, branded);
         await _dbContext.SaveChangesAsync(ct);
         if (tx != null) await tx.CommitAsync(ct);
         return result;
     }
+
+    public void ValidateBranding() => (_branding ?? throw new ServerException("Card branding is not configured")).ValidateConfiguration();
+
+    public Task<Flower.BrandedFlowerImage> Brand(PreparedCard input, Ai.Response.GeneratedImage output, CancellationToken ct)
+        => (_branding ?? throw new ServerException("Card branding is not configured")).ApplyLogoAsync(output.ImageUrl, input.CardId, ct);
 
     public async Task<PreparedCard> Prepare(Request.CreateCardAiRequest request, CancellationToken ct)
     {
@@ -159,7 +166,7 @@ public partial class Service
 
     // Called inside a short transaction (also includes job success). Lock and reload the current JSON,
     // so another card/selection committed while AI ran is preserved.
-    public async Task<Response.CreateCardResponse> AddPreparedResult(PreparedCard input, Ai.Response.GeneratedImage output, CancellationToken ct)
+    public async Task<Response.CreateCardResponse> AddPreparedResult(PreparedCard input, Ai.Response.GeneratedImage output, CancellationToken ct, Flower.BrandedFlowerImage? branded = null)
     {
         var detail = await LockOrderDetail(input.OrderDetailId, ct);
         if (detail == null || detail.IsDeleted) throw InvalidSource();
@@ -181,9 +188,10 @@ public partial class Service
         // One provider render produces the complete card. RawImage preserves a supplied reusable image,
         // otherwise aliases the output; it is not a promise of a text-free background.
         var card = MapCard(input.Snapshot, input.UserId,
-            new(input.Snapshot.MessageContent, output.ImageUrl, input.Snapshot.RawImage ?? output.ImageUrl));
+            new(input.Snapshot.MessageContent, (branded ?? throw new ServerException("Card logo is missing")).ImageUrl, input.Snapshot.RawImage ?? output.ImageUrl));
         card.Id = input.CardId;
         var historyMetadata = JsonNode.Parse(input.HistoryMetadata)!.AsObject();
+        historyMetadata["branding"] = JsonSerializer.SerializeToNode(branded, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         historyMetadata["generation"] = JsonSerializer.SerializeToNode(output, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         _dbContext.GeneratedCards.Add(card);
         _dbContext.ClientHistories.Add(new ClientHistory

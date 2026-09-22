@@ -50,7 +50,7 @@ public class FlowerImageBranding(IHttpClientFactory clients, IOptions<FlowerImag
                 mockup = await ReadBounded(response.Content, Options.MaxDownloadBytes, budget.Token);
             }
             var logo = await File.ReadAllBytesAsync(LogoPath(), budget.Token);
-            var rendered = await FlowerLogoComposer.ComposeAsync(mockup, logo, Options, budget.Token);
+            var rendered = await ComposeAsync(mockup, logo, Options, budget.Token);
             // A fresh key per attempt avoids overwriting a prior image if a caller retries.
             var key = $"{Options.ObjectPrefix}/{flowerId:N}/{Guid.NewGuid():N}.png";
             var uploadUrl = await storage.PresignPngAsync(key, budget.Token);
@@ -75,6 +75,9 @@ public class FlowerImageBranding(IHttpClientFactory clients, IOptions<FlowerImag
         catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException
             or InvalidOperationException or KeyNotFoundException) { throw StorageError(); }
     }
+
+    protected virtual Task<FlowerLogoComposer.Result> ComposeAsync(byte[] image, byte[] logo, FlowerImageOptions options, CancellationToken ct)
+        => FlowerLogoComposer.ComposeAsync(image, logo, options, ct);
 
     private string LogoPath() => Path.IsPathRooted(Options.LogoPath)
         ? Options.LogoPath : Path.Combine(AppContext.BaseDirectory, Options.LogoPath);

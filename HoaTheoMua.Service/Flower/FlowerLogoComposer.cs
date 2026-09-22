@@ -13,7 +13,7 @@ public static class FlowerLogoComposer
         int LogoX, int LogoY, int LogoWidth, int LogoHeight);
 
     public static async Task<Result> ComposeAsync(byte[] mockup, byte[] logo, FlowerImageOptions options,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, bool fitShortEdge = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!double.IsFinite(options.LogoWidthRatio) || options.LogoWidthRatio is <= 0 or > 0.5
@@ -35,8 +35,9 @@ public static class FlowerLogoComposer
             var margin = (int)Math.Round(Math.Min(image.Width, image.Height) * options.MarginRatio);
             var availableWidth = image.Width - 2 * margin;
             var availableHeight = image.Height - 2 * margin;
-            var width = Math.Max(1, Math.Min(availableWidth, (int)Math.Round(image.Width * options.LogoWidthRatio)));
-            var scale = Math.Min((double)width / mark.Width, (double)availableHeight / mark.Height);
+            var width = Math.Max(1, Math.Min(availableWidth, (int)Math.Round((fitShortEdge ? Math.Min(image.Width, image.Height) : image.Width) * options.LogoWidthRatio)));
+            var heightLimit = fitShortEdge ? Math.Min(availableHeight, width) : availableHeight;
+            var scale = Math.Min((double)width / mark.Width, (double)heightLimit / mark.Height);
             var logoWidth = Math.Clamp((int)Math.Round(mark.Width * scale), 1, availableWidth);
             var logoHeight = Math.Clamp((int)Math.Round(mark.Height * scale), 1, availableHeight);
             mark.Mutate(x => x.Resize(logoWidth, logoHeight));

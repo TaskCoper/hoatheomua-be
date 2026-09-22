@@ -5,7 +5,7 @@ using HoaTheoMua.Service.Card;
 namespace HoaTheoMua.Service.CardJobs;
 
 public record CardGenerationRequested(Guid JobId);
-public record Checkpoint(AiService.Response.GeneratedImage? Card = null);
+public record Checkpoint(AiService.Response.GeneratedImage? Card = null, Flower.BrandedFlowerImage? Branding = null);
 public record JobResponse(Guid JobId, string Type, string Status, string Stage, string DisplayName,
     Guid OrderDetailId, Guid VirtualId, string? BouquetImageUrl, string? TemplateImageUrl, Guid? SourceCardId,
     DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, DateTimeOffset? CompletedAt,

@@ -34,8 +34,11 @@ public sealed class Worker(AppDbContext db, Store store, AiService.IService ai,
         var checkpoint = new Checkpoint();
         try
         {
+            cards.ValidateBranding();
             var image = await ai.GenerateCardImage(input.Input, budget.Token);
             checkpoint = new Checkpoint(image);
+            await SaveCheckpoint(id, lease, "Branding", checkpoint, budget.Token);
+            checkpoint = checkpoint with { Branding = await cards.Brand(input, image, budget.Token) };
             await SaveCheckpoint(id, lease, "Saving", checkpoint, budget.Token);
             await Complete(id, lease, input, checkpoint, budget.Token);
             logger.LogInformation("Card job {JobId} processing finished", id);
@@ -79,7 +82,7 @@ public sealed class Worker(AppDbContext db, Store store, AiService.IService ai,
         if (job.CancelRequestedAt != null) store.Finish(job, "Canceled");
         else
         {
-            var result = await cards.AddPreparedResult(input, checkpoint.Card!, ct);
+            var result = await cards.AddPreparedResult(input, checkpoint.Card!, ct, checkpoint.Branding);
             job.GeneratedCardId = result.Id; job.Result = Write(result); job.Stage = "Completed";
             store.Finish(job, "Succeeded");
         }
