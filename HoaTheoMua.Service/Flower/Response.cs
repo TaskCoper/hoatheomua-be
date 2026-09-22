@@ -91,6 +91,7 @@ public class Response
         public string CoverImage { get; set; } = "";
         public Guid SubId { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
+        public string FlowerWithLogoImageUrl { get; set; } = "";
         public List<GeneratedFlowerMaterialResponse> Materials { get; set; } = [];
     }
 
