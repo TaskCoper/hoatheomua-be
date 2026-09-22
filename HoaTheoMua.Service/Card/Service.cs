@@ -12,7 +12,7 @@ using static HoaTheoMua.Service.Card.MappingCard;
 
 namespace HoaTheoMua.Service.Card;
 
-public class Service : IService
+public partial class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
@@ -325,114 +325,17 @@ public class Service : IService
         }
     }
     
-    public async Task<Response.CreateCardResponse> CreateCardAi(Request.CreateCardAiRequest request)
-    {
-        var regenerateMode = request.SourceCardId.HasValue && request.SourceCardId.Value != Guid.Empty;
-        if (!regenerateMode && (!request.OrderDetailId.HasValue || !request.VirtualId.HasValue
-            || request.OrderDetailId == Guid.Empty || request.VirtualId == Guid.Empty))
-            throw new BadRequestException("VALIDATION_ERROR");
-
-        var userId = _currentUser.GetRequiredUserId();
-        if (regenerateMode)
-        {
-            var sourceCard = await _dbContext.GeneratedCards
-                .FirstOrDefaultAsync(x => x.Id == request.SourceCardId && x.UserId == userId)
-                ?? throw new NotFoundException("Không tìm thấy source Card.");
-            if (sourceCard.CardType != GeneratedCardType.Ai)
-                throw new ConflictException("HandMade Card không thể regenerate AI.");
-
-            return await CreateFromSourceCardAsync(request, sourceCard);
-        }
-
-        var orderDetail = await _dbContext.OrderDetails
-            .Include(x => x.Order)
-            .FirstOrDefaultAsync(x => x.Id == request.OrderDetailId
-                && x.Order.UserId == userId
-                && !x.IsDeleted
-                && !x.Order.IsDeleted)
-            ?? throw new NotFoundException("Không tìm thấy OrderDetail.");
-        if (!string.Equals(orderDetail.Order.Status, "Paid", StringComparison.OrdinalIgnoreCase))
-            throw new ConflictException("ORDER_NOT_PAID", "Order chưa thanh toán.");
-
-        var (metadata, snapshotNode, cardSnapshot, generatedFlowerId) = FindAiSnapshot(orderDetail.Metadata, request.VirtualId!.Value);
-        var regenerateFromRawImage = !string.IsNullOrWhiteSpace(cardSnapshot.RawImage);
-        if (!regenerateFromRawImage && cardSnapshot.IdResult.Count != 0)
-        {
-            var previousCardId = cardSnapshot.IdResult[cardSnapshot.IdResult.Count - 1];
-            var rawImage = await _dbContext.GeneratedCards
-                .Where(x => x.Id == previousCardId && x.UserId == userId && x.CardType == GeneratedCardType.Ai)
-                .Select(x => x.RawImage)
-                .FirstOrDefaultAsync();
-            if (!string.IsNullOrWhiteSpace(rawImage))
-            {
-                cardSnapshot.RawImage = rawImage;
-                snapshotNode["rawImage"] = rawImage;
-                regenerateFromRawImage = true;
-            }
-        }
-        if ((request.CardTemplateId.HasValue && request.CardTemplateId != cardSnapshot.CardTemplate.TemplateId)
-            || (request.MessageContent is not null && !string.Equals(request.MessageContent, cardSnapshot.MessageContent, StringComparison.Ordinal)))
-            throw new ConflictException("CARD_SNAPSHOT_MISMATCH", "Cấu hình thiệp không khớp SnapshotCard của Order.");
-        if (!regenerateFromRawImage &&
-            (!string.Equals(cardSnapshot.Status, "not yet", StringComparison.OrdinalIgnoreCase) || cardSnapshot.IdResult.Count != 0 || cardSnapshot.FinalGeneratedCardId.HasValue))
-            throw new ConflictException("CARD_ALREADY_CREATED", "Snapshot Card đã được tạo hoặc không hợp lệ.");
-        var (baseId, rootId) = await ResolveLineageAsync(cardSnapshot, userId, generatedFlowerId);
-
-        var aiResult = await GenerateAiCard(cardSnapshot);
-
-        var card = MapCard(cardSnapshot, userId, aiResult);
-        var history = new ClientHistory
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Type = ClientHistoryType.Card,
-            BaseId = baseId,
-            RootId = rootId,
-            OutputId = card.Id,
-            CreatedAt = card.CreatedAt,
-            SystemForm = JsonSerializer.Serialize(cardSnapshot.SystemPrompt),
-            SessionId = null,
-            Metadata = BuildHistoryMetadata(
-                cardSnapshot,
-                baseId,
-                rootId,
-                orderDetail.Id,
-                request.VirtualId.Value,
-                generatedFlowerId,
-                regenerateFromRawImage ? "regenerate" : "create")
-        };
-
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
-        _dbContext.GeneratedCards.Add(card);
-        _dbContext.ClientHistories.Add(history);
-        snapshotNode["status"] = "done";
-        if (!regenerateFromRawImage)
-            snapshotNode["rawImage"] = card.RawImage;
-        var generatedCardIds = regenerateFromRawImage
-            ? snapshotNode["idResult"]?.AsArray() ?? new JsonArray()
-            : new JsonArray();
-        generatedCardIds.Add(card.Id.ToString());
-        snapshotNode["idResult"] = generatedCardIds;
-        orderDetail.Metadata = metadata.ToJsonString();
-        await _dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return ToResponse(card);
-    }
-
     public async Task<string> UpdateFinalGeneratedCardId(Request.UpdateFinalGeneratedCardId request)
     {
         if (request.OrderDetailId == Guid.Empty || request.VirtualId == Guid.Empty || request.GeneratedCardId == Guid.Empty)
             throw new BadRequestException("VALIDATION_ERROR");
 
         var userId = _currentUser.GetRequiredUserId();
-        var orderDetail = await _dbContext.OrderDetails
-            .Include(x => x.Order)
-            .FirstOrDefaultAsync(x => x.Id == request.OrderDetailId
-                && x.Order.UserId == userId
-                && !x.IsDeleted
-                && !x.Order.IsDeleted)
-            ?? throw new NotFoundException("Không tìm thấy OrderDetail.");
+        await using var tx = _dbContext.Database.IsRelational() ? await _dbContext.Database.BeginTransactionAsync() : null;
+        var orderDetail = await LockOrderDetail(request.OrderDetailId, default);
+        if (orderDetail == null || orderDetail.IsDeleted || !await _dbContext.Orders.AnyAsync(x =>
+            x.Id == orderDetail.OrderId && x.UserId == userId && !x.IsDeleted))
+            throw new NotFoundException("Không tìm thấy OrderDetail.");
 
         var (metadata, snapshotNode, snapshot, _) = FindAiSnapshot(orderDetail.Metadata, request.VirtualId);
         if (!snapshot.IdResult.Contains(request.GeneratedCardId))
@@ -441,6 +344,7 @@ public class Service : IService
         snapshotNode["finalGeneratedCardId"] = request.GeneratedCardId.ToString();
         orderDetail.Metadata = metadata.ToJsonString();
         await _dbContext.SaveChangesAsync();
+        if (tx != null) await tx.CommitAsync();
 
         return "Final generated card updated successfully.";
     }
@@ -725,30 +629,6 @@ public class Service : IService
         List<Guid> IdResult,
         Guid? FinalGeneratedCardId);
 
-    private async Task<AiResult> GenerateAiCard(CardSnapshot snapshot)
-    {
-        var sourceImage = string.IsNullOrWhiteSpace(snapshot.RawImage) ? snapshot.Source.ImageUrl : snapshot.RawImage;
-        if (string.IsNullOrWhiteSpace(sourceImage))
-            throw new ConflictException("ORDER_DETAIL_CARD_SNAPSHOT_INVALID", "Snapshot Card thiếu ảnh nguồn.");
-
-        
-        var instruction = $"{snapshot.SystemPrompt.Content}\nTemplate: {snapshot.CardTemplate.TemplateImageUrl}\n" +
-                          $"Nội dung thiệp: {snapshot.MessageContent}\nHình thức: {snapshot.FormType}.";
-        
-        /* REAL AI: temporarily disabled for fake.
-        var output = await _ai.GenerateImage(new Ai.Request.ImageInput(
-            sourceImage, "1:1", 1024, 1024, instruction,
-            string.IsNullOrWhiteSpace(snapshot.RawImage) ? snapshot.CardTemplate.TemplateImageUrl : null));
-        if (string.IsNullOrWhiteSpace(output.ImageUrl))
-            throw new ServerException("AI không trả ảnh Card hợp lệ.");
-        return new AiResult(snapshot.MessageContent, output.ImageUrl, snapshot.RawImage ?? output.ImageUrl);
-        */
-        var aiResult = await FakeGenerateCardAsync(snapshot.MessageContent, snapshot.RawImage);
-        if (string.IsNullOrWhiteSpace(aiResult.ImageUrl) || string.IsNullOrWhiteSpace(aiResult.RawImage))
-            throw new ServerException("Fake AI không trả ảnh Card hợp lệ.");
-        return aiResult;
-    }
-
     private static (JsonObject Metadata, JsonObject SnapshotNode, CardSnapshot Snapshot, Guid? GeneratedFlowerId)
         FindAiSnapshot(string? json, Guid virtualId)
     {
@@ -776,217 +656,6 @@ public class Service : IService
             throw new ConflictException("ORDER_DETAIL_CARD_SNAPSHOT_INVALID", "OrderDetail.Metadata không đúng cấu trúc Card.");
         }
     }
-
-    private async Task<Response.CreateCardResponse> CreateFromSourceCardAsync(Request.CreateCardAiRequest request, GeneratedCard sourceCard)
-    {
-        var sourceHistories = await _dbContext.ClientHistories
-            .Where(x =>
-                x.UserId == sourceCard.UserId &&
-                x.Type == ClientHistoryType.Card &&
-                x.OutputId == sourceCard.Id)
-            .ToListAsync();
-        if (sourceHistories.Count != 1)
-            throw new ConflictException("CARD_SOURCE_HISTORY_INVALID", "History nguồn không hợp lệ.");
-        var sourceHistory = sourceHistories[0];
-
-        var sourceMetadata = ParseSourceHistoryMetadata(sourceHistory.Metadata);
-        if (!sourceMetadata.OrderDetailId.HasValue || !sourceMetadata.VirtualId.HasValue)
-            throw new ConflictException("CARD_SOURCE_HISTORY_INVALID", "History nguồn thiếu liên kết Order.");
-        var orderDetail = await _dbContext.OrderDetails.Include(x => x.Order).FirstOrDefaultAsync(x =>
-            x.Id == sourceMetadata.OrderDetailId && !x.IsDeleted && !x.Order.IsDeleted && x.Order.UserId == sourceCard.UserId)
-            ?? throw new ConflictException("CARD_SOURCE_HISTORY_INVALID", "Order liên kết không còn hợp lệ.");
-        var (metadataNode, snapshotNode, snapshot, _) = FindAiSnapshot(orderDetail.Metadata, sourceMetadata.VirtualId.Value);
-        if (!snapshot.IdResult.Contains(sourceCard.Id) || (snapshot.FinalGeneratedCardId.HasValue && !snapshot.IdResult.Contains(snapshot.FinalGeneratedCardId.Value)))
-            throw new ConflictException("CARD_SOURCE_HISTORY_INVALID", "Card nguồn không thuộc kết quả Snapshot.");
-        var sourceTemplateId = sourceMetadata.CardTemplate?.Id ?? Guid.Empty;
-        if (sourceTemplateId == Guid.Empty)
-            throw new ConflictException("History nguồn không có Template hợp lệ.");
-
-        var selectedTemplate = sourceMetadata.CardTemplate;
-        var templateChanged = request.CardTemplateId.HasValue &&
-            request.CardTemplateId.Value != sourceTemplateId;
-
-        if (templateChanged)
-        {
-            var newTemplate = await _dbContext.CardTemplates
-                .FirstOrDefaultAsync(x =>
-                    x.Id == request.CardTemplateId &&
-                    !x.IsDeleted)
-                ?? throw new NotFoundException("Không tìm thấy Template.");
-
-            if (!newTemplate.IsActive)
-                throw new ConflictException("Template không active.");
-
-            if (newTemplate.TemplateType != CardTemplateType.Ai)
-                throw new ConflictException("Template phải là loại AI.");
-
-            if (string.IsNullOrWhiteSpace(newTemplate.ImageUrl))
-                throw new ConflictException("Template thiếu ảnh hợp lệ.");
-
-            selectedTemplate = new SourceHistoryTemplate
-            {
-                Id = newTemplate.Id,
-                Name = newTemplate.Name,
-                TemplateType = "ai",
-                ImageUrl = newTemplate.ImageUrl
-            };
-        }
-
-        var systemPrompt = await LoadSystemPromptCardAsync();
-        var systemPromptSource = "current";
-        if (systemPrompt is null)
-        {
-            systemPrompt = ParseSystemPrompt(sourceHistory.SystemForm);
-            if (systemPrompt is not null)
-                systemPromptSource = "source_card_fallback";
-        }
-
-        if (systemPrompt is null)
-            throw new ConflictException("Không có SystemPrompt dùng được.");
-
-        var messageContent = string.IsNullOrWhiteSpace(request.MessageContent)
-            ? sourceCard.MessageContent
-            : request.MessageContent;
-        var wordCount = messageContent
-            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
-            .Length;
-
-        ValidateRegeneratedWordCount(sourceCard, wordCount);
-
-        var source = sourceMetadata.Source!;
-        var template = selectedTemplate!;
-
-        /* REAL AI: temporarily disabled for fake.
-        var output = await _ai.GenerateImage(new Ai.Request.ImageInput(
-            source.ImageUrl, "1:1", 1024, 1024,
-            $"{systemPrompt.Content}\nTemplate: {template.ImageUrl}\nNội dung thiệp: {messageContent}\nHình thức: {sourceCard.FormType}."));
-        if (string.IsNullOrWhiteSpace(output.ImageUrl))
-            throw new ServerException("AI không trả ảnh Card hợp lệ.");
-        var aiResult = new AiResult(messageContent, output.ImageUrl, output.ImageUrl);
-        */
-        var aiResult = await FakeGenerateCardAsync(messageContent, null);
-
-        if (string.IsNullOrWhiteSpace(aiResult.ImageUrl) ||
-            string.IsNullOrWhiteSpace(aiResult.RawImage))
-            throw new ConflictException("AI không trả đủ ảnh kết quả.");
-
-        var card = new GeneratedCard
-        {
-            Id = Guid.NewGuid(),
-            UserId = sourceCard.UserId,
-            CreatedAt = DateTimeOffset.UtcNow,
-            Content = aiResult.Content,
-            ImageUrl = aiResult.ImageUrl,
-            RawImage = aiResult.RawImage,
-            CardType = GeneratedCardType.Ai,
-            FormType = sourceCard.FormType,
-            MessageContent = messageContent,
-            AttachedImageUrl = sourceCard.AttachedImageUrl,
-            SizeName = sourceCard.SizeName,
-            SizeWidth = sourceCard.SizeWidth,
-            SizeHeight = sourceCard.SizeHeight,
-            SizeBasePrice = sourceCard.SizeBasePrice,
-            SizeMaxWords = sourceCard.SizeMaxWords,
-            WordCount = wordCount,
-            WordConfigSnapshot = sourceCard.WordConfigSnapshot,
-            BasePrice = sourceCard.BasePrice,
-            ExtraPrice = sourceCard.ExtraPrice,
-            TotalPrice = sourceCard.TotalPrice
-        };
-
-        var history = new ClientHistory
-        {
-            Id = Guid.NewGuid(),
-            UserId = sourceCard.UserId,
-            Type = ClientHistoryType.Card,
-            BaseId = sourceHistory.BaseId,
-            RootId = sourceHistory.RootId,
-            OutputId = card.Id,
-            CreatedAt = card.CreatedAt,
-            SystemForm = JsonSerializer.Serialize(new { type = "card", content = systemPrompt.Content }),
-            SessionId = null,
-            Metadata = JsonSerializer.Serialize(new
-            {
-                operation = "regenerate",
-                orderDetailId = sourceMetadata.OrderDetailId,
-                virtualId = sourceMetadata.VirtualId,
-                sourceType = sourceMetadata.SourceType,
-                originProductId = sourceHistory.RootId,
-                generatedFlowerId = sourceMetadata.GeneratedFlowerId,
-                provenanceStatus = "available",
-                source = new
-                {
-                    type = source.Type,
-                    id = source.Id,
-                    imageUrl = source.ImageUrl
-                },
-                cardTemplate = new
-                {
-                    id = template.Id,
-                    name = template.Name,
-                    templateType = template.TemplateType,
-                    imageUrl = template.ImageUrl
-                },
-                regeneratedFromCardId = sourceCard.Id,
-                systemPromptSource,
-                validatedAt = DateTimeOffset.UtcNow
-            })
-        };
-
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
-        _dbContext.GeneratedCards.Add(card);
-        _dbContext.ClientHistories.Add(history);
-        var ids = snapshotNode["idResult"]?.AsArray() ?? throw new ConflictException("CARD_SOURCE_HISTORY_INVALID", "Snapshot Card thiếu idResult.");
-        ids.Add(card.Id.ToString());
-        orderDetail.Metadata = metadataNode.ToJsonString();
-        await _dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return ToResponse(card);
-    }
-
-    private async Task<SnapshotPrompt?> LoadSystemPromptCardAsync()
-    {
-        var configs = await _dbContext.Configs.AsNoTracking()
-            .Where(x => x.Key == "imagegen.card_prompt" && !x.IsDeleted)
-            .ToListAsync();
-        if (configs.Count == 0) return null;
-        if (configs.Count != 1
-            || !string.Equals(configs[0].Group?.Trim(), "imagegen", StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(configs[0].Kind?.Trim(), "setting", StringComparison.OrdinalIgnoreCase))
-            // || !configs[0].IsPublic)
-        {
-            throw new ConflictException(
-                "SYSTEM_PROMPT_INVALID",
-                "System prompt card Config không hợp lệ.");
-        }
-
-        try
-        {
-            using var value = JsonDocument.Parse(configs[0].Value);
-            var root = value.RootElement;
-            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("value", out var content)
-                || content.ValueKind != JsonValueKind.String)
-                throw new JsonException();
-
-            // ValidatePromptDescription(root);
-            var prompt = content.GetString();
-            return string.IsNullOrWhiteSpace(prompt) ? null : new SnapshotPrompt { Type = "card", Content = prompt };
-        }
-        catch (JsonException)
-        {
-            throw new ConflictException("SYSTEM_PROMPT_INVALID", "System prompt card Config không hợp lệ.");
-        }
-    }
-
-    // private static void ValidatePromptDescription(JsonElement root)
-    // {
-    //     if (!root.TryGetProperty("description", out var description) || description.ValueKind != JsonValueKind.String)
-    //         throw new JsonException();
-    //     using var parsed = JsonDocument.Parse(description.GetString()!);
-    //     if (parsed.RootElement.ValueKind != JsonValueKind.Object)
-    //         throw new JsonException();
-    // }
 
     private static void ValidateRegeneratedWordCount(GeneratedCard sourceCard, int wordCount)
     {
@@ -1053,7 +722,9 @@ public class Service : IService
     }
 
     private static bool IsValidSnapshot(CardSnapshot snapshot) =>
-        snapshot.Source.Id != Guid.Empty
+        snapshot.Source != null && snapshot.CardTemplate != null && snapshot.CardSize != null
+        && snapshot.SystemPrompt != null && snapshot.IdResult != null
+        && snapshot.Source.Id != Guid.Empty
         && !string.IsNullOrWhiteSpace(snapshot.Source.ImageUrl)
         && string.Equals(snapshot.Source.Type, "product", StringComparison.OrdinalIgnoreCase)
         && snapshot.CardTemplate.TemplateId != Guid.Empty
@@ -1136,26 +807,19 @@ public class Service : IService
         validatedAt = snapshot.ValidatedAt
     });
 
-    // FAKE AI: fixtures only; no provider, upload, or network call is made here.
-    private static Task<AiResult> FakeGenerateCardAsync(string messageContent, string? historicalRawImage) => Task.FromResult(
-        new AiResult(
-            messageContent,
-            "https://hcm.ss.bfcplatform.vn/taskcoper/general/f73b85-user-nuerbeadximuy2rqgvxkimfr-28e2a49d-afb3-455c-b174-5c74500f1763.png",
-            historicalRawImage ?? "https://pos.nvncdn.com/281991-126981/ps/Daily-34_2026-1.jpg?v=1784046764"));
-
     private sealed record AiResult(string Content, string ImageUrl, string RawImage);
 
     
 
     private static bool TryParseFormType(string value, out CardFormType formType)
     {
-        if (value.Equals("calligraphy", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(value, "calligraphy", StringComparison.OrdinalIgnoreCase))
         {
             formType = CardFormType.Calligraphy;
             return true;
         }
 
-        if (value.Equals("go_may", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(value, "go_may", StringComparison.OrdinalIgnoreCase))
         {
             formType = CardFormType.GoMay;
             return true;

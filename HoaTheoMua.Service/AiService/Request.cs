@@ -4,6 +4,9 @@ namespace HoaTheoMua.Service.AiService;
 
 public class Request
 {
+    public record CardImageInput(string SystemPrompt, string BouquetImageUrl, string TemplateImageUrl,
+        string MessageContent, string FormType, decimal Width, decimal Height,
+        string? AttachedImageUrl = null, string? RawImage = null);
     public record FlowerImageInput(string CreateSystemPrompt, string MockupSystemPrompt, string GuardSystemPrompt,
         FlowerProduct Product, IReadOnlyList<FlowerMaterial> Materials,
         FlowerReference Bundle, FlowerProduct WrappingPaper, FlowerProduct Ribbon,

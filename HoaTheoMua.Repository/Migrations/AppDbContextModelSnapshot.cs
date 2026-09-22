@@ -235,6 +235,133 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("BasePostImage", (string)null);
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardGenerationJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BouquetImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("CancelRequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Checkpoint")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("GeneratedCardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("LastDispatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LeaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrderDetailId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Result")
+                        .HasColumnType("jsonb");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Snapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("SourceCardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TemplateImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VirtualId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneratedCardId");
+
+                    b.HasIndex("OrderDetailId", "VirtualId")
+                        .IsUnique()
+                        .HasFilter("\"Type\" = 'Create' AND \"Status\" IN ('Queued','Running')");
+
+                    b.HasIndex("UserId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "LeaseUntil", "LastDispatchedAt");
+
+                    b.HasIndex("UserId", "CreatedAt", "Id");
+
+                    b.ToTable("CardGenerationJob", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CardJob_Lease", "(\"LeaseId\" IS NULL) = (\"LeaseUntil\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_CardJob_Status", "\"Status\" IN ('Queued','Running','Succeeded','Failed','Canceled')");
+
+                            t.HasCheckConstraint("CK_CardJob_Success", "\"Status\" <> 'Succeeded' OR (\"GeneratedCardId\" IS NOT NULL AND \"Result\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_CardJob_Type", "\"Type\" IN ('Create','Regenerate')");
+                        });
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardTemplate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3275,6 +3402,14 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasForeignKey("BasePostId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardGenerationJob", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.GeneratedCard", null)
+                        .WithMany()
+                        .HasForeignKey("GeneratedCardId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>

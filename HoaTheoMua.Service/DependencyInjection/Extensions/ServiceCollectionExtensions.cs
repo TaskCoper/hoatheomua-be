@@ -55,7 +55,8 @@ public static class ServiceCollectionExtensions
                 // consumer or automatic consumer retry would erase that protection on a crash.
                 // Durable recovery and DB revision/lease checks replace this endpoint's inbox retry.
                 if (name == PostPublishing.PublicationConsumerDefinition.QueueName
-                    || name == FlowerJobs.FlowerGenerationConsumerDefinition.QueueName) return;
+                    || name == FlowerJobs.FlowerGenerationConsumerDefinition.QueueName
+                    || name == CardJobs.CardGenerationConsumerDefinition.QueueName) return;
                 // Bù trừ được saga phát lại tối đa MaxCompensationRounds vòng, nên endpoint này
                 // retry ít hơn: 3 lần gọi/vòng × 3 vòng = tối đa 9 lần gọi API hủy, thay vì 18.
                 var intervals = name == "compensate-fulfillment"

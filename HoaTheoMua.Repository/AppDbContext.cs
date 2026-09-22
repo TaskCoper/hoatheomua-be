@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
 
     public virtual DbSet<GeneratedPost> GeneratedPosts { get; set; }
     public virtual DbSet<FlowerGenerationJob> FlowerGenerationJobs { get; set; }
+    public virtual DbSet<CardGenerationJob> CardGenerationJobs { get; set; }
     public virtual DbSet<GeneratedFlower> GeneratedFlowers { get; set; }
     public virtual DbSet<GeneratedCard> GeneratedCards { get; set; }
     public virtual DbSet<PostHistory> PostHistories { get; set; }

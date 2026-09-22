@@ -183,6 +183,17 @@ builder.Services.AddScoped<HoaTheoMua.Service.FlowerJobs.Store>();
 builder.Services.AddScoped<HoaTheoMua.Service.FlowerJobs.Worker>();
 builder.Services.AddScoped<HoaTheoMua.Service.FlowerJobs.Recovery>();
 builder.Services.AddHostedService<HoaTheoMua.Service.FlowerJobs.RecoveryHostedService>();
+builder.Services.AddOptions<HoaTheoMua.Service.CardJobs.CardJobOptions>()
+    .Bind(builder.Configuration.GetSection("CardJobs"))
+    .Validate(o => o.MaxActivePerUser is >= 1 and <= 10 && o.Concurrency is >= 1 and <= 16
+        && o.BudgetSeconds is >= 30 and <= 1800 && o.LeaseSeconds is >= 30 and <= 300
+        && o.RecoveryIntervalSeconds is >= 5 and <= 60, "Invalid CardJobs options").ValidateOnStart();
+builder.Services.AddScoped<HoaTheoMua.Service.Card.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.CardJobs.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.CardJobs.Store>();
+builder.Services.AddScoped<HoaTheoMua.Service.CardJobs.Worker>();
+builder.Services.AddScoped<HoaTheoMua.Service.CardJobs.Recovery>();
+builder.Services.AddHostedService<HoaTheoMua.Service.CardJobs.RecoveryHostedService>();
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
 // registering it with AddScoped would silently hand it the unnamed default HttpClient the way
 // Webhook.Service and Revalidate.Service currently get theirs.

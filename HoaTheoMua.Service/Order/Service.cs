@@ -646,6 +646,7 @@ public class Service : IService
                 Number = orderItem.Number,
                 Name = flower.Name,
                 GeneratedFlowerId = flowerId,
+                GeneratedFlowerImageUrl = flower.ImageUrl,
                 AiCustomize = true,
                 Materials = flowerMetadata.Materials,
                 AdditionCustome = flowerMetadata.AdditionCustome,
@@ -820,12 +821,9 @@ public class Service : IService
         string? systemPromptContent = null;
         if (hasAiCard)
         {
-            // Key tạm thời; ConfigHelper trả trực tiếp field value của Config.
-            var promptConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "imagegen");
-            systemPromptContent = promptConfigs.GetValue<string>("imagegen.card_prompt");
-
-            if (string.IsNullOrWhiteSpace(systemPromptContent))
-                throw new BadRequestException("CARD_SYSTEM_PROMPT_UNAVAILABLE");
+            var prompt = await Card.CardPromptConfig.LoadAsync(_dbContext)
+                ?? throw new BadRequestException("CARD_SYSTEM_PROMPT_UNAVAILABLE");
+            systemPromptContent = prompt.Content;
         }
 
         var result = new Dictionary<Guid, Request.OrderDetailMetadata>();
@@ -869,7 +867,7 @@ public class Service : IService
             Request.BouquetCardSelection card)
         {
             if (!productById.TryGetValue(bouquet.ProductId, out var sourceProduct) ||
-                string.IsNullOrWhiteSpace(sourceProduct.CoverImage))
+                string.IsNullOrWhiteSpace(bouquet.GeneratedFlowerId.HasValue ? bouquet.GeneratedFlowerImageUrl : sourceProduct.CoverImage))
                 throw new BadRequestException("CARD_SOURCE_PRODUCT_INVALID");
 
             if (card.CardType == GeneratedCardType.Handmade &&
@@ -897,7 +895,8 @@ public class Service : IService
                 {
                     Type = "product",
                     Id = bouquet.ProductId,
-                    ImageUrl = sourceProduct.CoverImage
+                    ImageUrl = bouquet.GeneratedFlowerId.HasValue ? bouquet.GeneratedFlowerImageUrl! : sourceProduct.CoverImage!,
+                    ImageSourceType = bouquet.GeneratedFlowerId.HasValue ? "generated_flower" : "product"
                 },
                 RawImage = rawImage,
                 CardTemplate = new Request.CardTemplateSnapshot
