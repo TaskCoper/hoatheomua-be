@@ -9,6 +9,7 @@ using ConfigEntity = HoaTheoMua.Repository.Entity.Config;
 using NhanhVnServiceImplementation = HoaTheoMua.Service.NhanhVnService.Service;
 using ProductEntity = HoaTheoMua.Repository.Entity.Product;
 using RevalidateService = HoaTheoMua.Service.Revalidate.IService;
+using FulfillmentService = HoaTheoMua.Service.Fulfillment.IService;
 
 namespace HoaTheoMua.Service.Test.NhanhVnServiceTest;
 
@@ -46,7 +47,8 @@ public class ProductLabelWebhookTest
             new HttpClient(),
             dbContext,
             configuration,
-            Mock.Of<RevalidateService>());
+            Mock.Of<RevalidateService>(),
+            Mock.Of<FulfillmentService>());
     }
 
     private static async Task AddProductTagsConfig(AppDbContext dbContext)

@@ -61,6 +61,8 @@ public interface IService
     /// <param name="stuckForMinutes">Only return sagas untouched for at least this long.</param>
     Task<IReadOnlyList<FulfillmentStateView>> GetFulfillmentStatesAsync(
         string? state, int? stuckForMinutes, int limit, CancellationToken cancellationToken = default);
+    
+    Task<string> CancelDeliveryAsync(Repository.Entity.Order order, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Flattened saga row for the ops endpoint.</summary>

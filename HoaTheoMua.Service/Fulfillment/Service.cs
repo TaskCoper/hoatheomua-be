@@ -1036,6 +1036,51 @@ public class Service : IService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<string> CancelDeliveryAsync(OrderEntity order, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(order.ShippingPartyOrderId))
+            return "Order không có đơn giao hàng cần hủy";
+
+        const string reason = "Đơn hàng đã bị xóa";
+
+        switch (order.ShippingGateway)
+        {
+            case ShippingGateway.XanhSm:
+            {
+                var result = await CancelXanhSmDeliveryAsync(
+                    order.ShippingPartyOrderId,
+                    reason, cancellationToken);
+
+                if (!result.Cleared)
+                {
+                    return(
+                        $"Không thể hủy đơn XanhSm: {result.Detail}");
+                }
+
+                return $"Đã hủy đơn XanhSm {order.ShippingPartyOrderId}";
+            }
+
+            case ShippingGateway.Ahamove:
+            {
+                var result = await CancelAhamoveOrderAsync(
+                    order.ShippingPartyOrderId,
+                    reason, cancellationToken);
+
+                if (!result.Cleared)
+                {
+                    return(
+                        $"Không thể hủy đơn Ahamove: {result.Detail}");
+                }
+                
+                return $"Đã hủy đơn Ahamove {order.ShippingPartyOrderId}";
+            }
+            
+            default:
+                return "Đơn hàng không nằm trong Ahamove hoặc XanhSm";
+        }
+        
+    }
+
     private async Task<OrderEntity> LoadOrderAsync(Guid orderId, CancellationToken cancellationToken)
         => await _dbContext.Orders
                .Include(x => x.OrderDetails)
