@@ -113,7 +113,8 @@ public class Response
     public bool? IsPinned { get; set; }  
     public int SourceRowNumber { get; set; }  
     public string? NhanhProductId { get; set; }  
-    public string? ParentProductId { get; set; }  
+    public string? ParentProductId { get; set; }
+    public Guid? ParentProductGuidId { get; set; }
     public string? ParentProductCode { get; set; }  
     public string? ParentProductName { get; set; }  
     public string? Barcode { get; set; }  
