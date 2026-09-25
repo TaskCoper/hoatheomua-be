@@ -640,10 +640,12 @@ public class Service : IService
                 .FirstOrDefaultAsync();
 
             response.ParentId = parentId == Guid.Empty ? null : parentId;
+            response.ParentProductGuidId = response.ParentId;
         }
         else
         {
             response.ParentId = null;
+            response.ParentProductGuidId = null;
         }
 
         // Giai đoạn 3: Lấy các biến thể con của sản phẩm gốc.
@@ -654,6 +656,11 @@ public class Service : IService
                 .Where(p => !p.IsDeleted && p.ParentProductId == response.NhanhProductId)
                 .Select(LocalProductDetailSelector)
                 .ToListAsync();
+
+        foreach (var child in response.Children)
+        {
+            child.ParentProductGuidId = response.Id;
+        }
 
         // Giai đoạn 4: Chuẩn bị sản phẩm chính và biến thể để tính tồn kho khả dụng.
         // Biến thể dùng cùng cấu tạo với Product cha. Quantity của mỗi vật liệu
