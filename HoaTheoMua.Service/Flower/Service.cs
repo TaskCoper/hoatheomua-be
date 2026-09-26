@@ -322,7 +322,7 @@ public partial class Service : IService
 
     private async Task<Response.GeneratedFlowerResponse> ExecuteSynchronous(PreparedFlower prepared, CancellationToken ct)
     {
-        var images = await _ai.GenerateFlowerImage(ToGenerationInput(prepared), ct);
+        var images = await _ai.GenerateFlowerImage(await ToGenerationInputAsync(prepared, ct), ct);
         var branded = await _branding.ApplyLogoAsync(images.FlowerWithMockupImageUrl, prepared.FlowerId, ct);
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
         var result = AddPreparedResult(prepared, images, branded);

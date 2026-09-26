@@ -43,7 +43,7 @@ public sealed class Service(AppDbContext db, Flower.Service flowers, ICurrentUse
             throw new ConflictException("FLOWER_JOB_LIMIT", "Bạn đã có nhiều thiết kế đang xử lý. Vui lòng chờ hoàn thành.");
         var input = await prepare();
         // Validate the complete immutable provider input before acknowledging the job.
-        _ = Flower.Service.ToGenerationInput(input);
+        _ = await flowers.ToGenerationInputAsync(input, ct);
         var now = clock.GetUtcNow();
         var job = new FlowerGenerationJob
         {

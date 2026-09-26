@@ -34,7 +34,7 @@ public sealed class Worker(AppDbContext db, Store store, AiService.IService ai, 
         var checkpoint = new Checkpoint();
         try
         {
-            var providerInput = Flower.Service.ToGenerationInput(input);
+            var providerInput = await flowers.ToGenerationInputAsync(input, budget.Token);
             var flower = await ai.GenerateFlowerOnly(providerInput, budget.Token);
             checkpoint = checkpoint with { Flower = flower };
             await SaveCheckpoint(id, lease, "ApplyingMockup", checkpoint, budget.Token);
