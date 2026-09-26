@@ -51,7 +51,9 @@ public partial class Service
     private static ConflictException InvalidFlowerPrompts() => new("SYSTEM_PROMPT_INVALID",
         "Cần ba Config imagegen hợp lệ: flower_prompt_create_flowers, flower_prompt_flowers_apply_mockup và flower_prompt_guard_rules, Value dạng {\"value\":\"prompt\"}.");
 
-    public static Ai.Request.FlowerImageInput ToGenerationInput(PreparedFlower prepared)
+    public async Task<Ai.Request.FlowerImageInput> ToGenerationInputAsync(
+        PreparedFlower prepared,
+        CancellationToken cancellationToken)
     {
         var (product, bundle, mockup, prompts, metadata) = (prepared.Product, prepared.Bundle, prepared.Mockup, prepared.Prompt, prepared.Metadata);
         if (metadata.Materials.Count == 0 || metadata.Ribbon == null || metadata.WrappingPaper == null
@@ -65,14 +67,42 @@ public partial class Service
         var materials = metadata.Materials.Select(x => new Ai.Request.FlowerMaterial(
             x.MatId, x.Name, x.CoverImage ?? "", x.Quantity, additions.GetValueOrDefault(x.MatId),
             x.Quantity + additions.GetValueOrDefault(x.MatId), x.Unit, x.Color, x.Description)).ToList();
+        var comboImageUrl = await GetComboReferenceImageAsync(
+            product.Id,
+            product.Image.Url,
+            cancellationToken);
+
         var input = new Ai.Request.FlowerImageInput(prompts.Content, prompts.MockupContent!, prompts.GuardContent!,
-            ToAiProduct(product), materials, ToAiReference(bundle), ToAiProduct(metadata.WrappingPaper),
+            ToAiProduct(product, comboImageUrl), materials, ToAiReference(bundle), ToAiProduct(metadata.WrappingPaper),
             ToAiProduct(metadata.Ribbon), ToAiReference(mockup));
         return input;
     }
 
-    private static Ai.Request.FlowerProduct ToAiProduct(ProductSnapshot product) => new(
-        product.Id, product.Name, product.Image.Url ?? "", product.Color ?? ReadLegacyAttribute(product.Attributes, "color"),
+    private async Task<string?> GetComboReferenceImageAsync(
+        Guid productId,
+        string? fallbackImageUrl,
+        CancellationToken cancellationToken)
+    {
+        var parentProductId = await _db.Products
+            .AsNoTracking()
+            .Where(x => x.Id == productId && !x.IsDeleted && x.IsActive)
+            .Select(x => x.ParentProductId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(parentProductId))
+            return fallbackImageUrl;
+
+        var parentImageUrl = await _db.Products
+            .AsNoTracking()
+            .Where(x => x.NhanhProductId == parentProductId && !x.IsDeleted && x.IsActive)
+            .Select(x => x.CoverImage)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return string.IsNullOrWhiteSpace(parentImageUrl) ? fallbackImageUrl : parentImageUrl;
+    }
+
+    private static Ai.Request.FlowerProduct ToAiProduct(ProductSnapshot product, string? imageUrl = null) => new(
+        product.Id, product.Name, imageUrl ?? product.Image.Url ?? "", product.Color ?? ReadLegacyAttribute(product.Attributes, "color"),
         product.Description, product.Size ?? ReadLegacyAttribute(product.Attributes, "size"), product.RelatedImageUrls);
 
     private static string? ReadLegacyAttribute(object? attributes, string key)
