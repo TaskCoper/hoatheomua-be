@@ -89,7 +89,9 @@ public partial class Service
             .Select(x => x.ParentProductId)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(parentProductId))
+        if (string.IsNullOrWhiteSpace(parentProductId) ||
+            !long.TryParse(parentProductId, out var parentNhanhProductId) ||
+            parentNhanhProductId <= 0)
             return fallbackImageUrl;
 
         var parentImageUrl = await _db.Products
