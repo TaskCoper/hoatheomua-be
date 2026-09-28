@@ -47,7 +47,7 @@ public class UpdateCardTemplate
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => CreateService(db).UpdateCardTemplate(Guid.NewGuid(), new Request.UpdateCardTemplateRequest()));
 
-        Assert.Equal("Vui lòng cung cấp ít nhất một thông tin cần cập nhật cho mẫu thiệp.", exception.Message);
+        Assert.Equal("CARD_TEMPLATE_UPDATE_REQUIRED", exception.Message);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class UpdateCardTemplate
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => CreateService(db).UpdateCardTemplate(Guid.NewGuid(), new Request.UpdateCardTemplateRequest { Name = "Tên mới" }));
 
-        Assert.Equal("Không tìm thấy mẫu thiệp cần cập nhật hoặc mẫu thiệp đã bị xóa.", exception.Message);
+        Assert.Equal("TEMPLATE_NOT_FOUND", exception.Message);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class UpdateCardTemplate
             () => CreateService(db).UpdateCardTemplate(id, new Request.UpdateCardTemplateRequest { Name = "Tên mới" }));
         var persisted = await db.CardTemplates.SingleAsync(x => x.Id == id);
 
-        Assert.Equal("Không tìm thấy mẫu thiệp cần cập nhật hoặc mẫu thiệp đã bị xóa.", exception.Message);
+        Assert.Equal("TEMPLATE_NOT_FOUND", exception.Message);
         Assert.Equal("Tên cũ", persisted.Name);
         Assert.Equal(previousUpdatedAt, persisted.UpdatedAt);
     }

@@ -54,7 +54,7 @@ public class CreateFlowerReference
             Type = "flower"
         }));
 
-        Assert.Equal("Tên hình tham khảo đã tồn tại. Vui lòng chọn tên khác.", exception.Message);
+        Assert.Equal("Tên FlowerReference đã tồn tại", exception.Message);
         Assert.Single(db.FlowerReferences);
     }
 
