@@ -31,7 +31,7 @@ public class Service : IService
             if (normalizedTemplateType != "ai" && normalizedTemplateType != "handmade" ||
                 !Enum.TryParse<CardTemplateType>(normalizedTemplateType, ignoreCase: true, out var parsedType))
             {
-                throw new BadRequestException("CARD_TEMPLATE_TYPE_INVALID");
+                throw new BadRequestException("Loại mẫu thiệp không hợp lệ. Vui lòng chọn \"ai\" hoặc \"handmade\".");
             }
 
             parsedTemplateType = parsedType;
@@ -50,7 +50,7 @@ public class Service : IService
         {
             if (!parsedTemplateType.HasValue)
             {
-                throw new BadRequestException("CARD_TEMPLATE_TYPE_REQUIRED");
+                throw new BadRequestException("Vui lòng chọn loại mẫu thiệp trước khi tiếp tục.");
             }
 
             query = query.Where(x => x.IsActive);
@@ -174,13 +174,13 @@ public class Service : IService
 
         if (template is null)
         {
-            throw new NotFoundException("CARD_TEMPLATE_NOT_FOUND");
+            throw new NotFoundException("Không tìm thấy mẫu thiệp hoặc mẫu thiệp đã bị xóa.");
         }
 
         var isAdmin = _httpContext.HttpContext?.User.IsInRole("Admin") == true;
         if (!isAdmin && !template.IsActive)
         {
-            throw new ConflictException("CARD_TEMPLATE_INACTIVE");
+            throw new ConflictException("Mẫu thiệp này hiện đang tạm ngưng hoạt động và chưa thể sử dụng.");
         }
 
         return new Response.CardTemplateResponse
@@ -200,7 +200,7 @@ public class Service : IService
     {
         if (!Enum.TryParse<CardTemplateType>(request.TemplateType, ignoreCase: true, out var templateType))
         {
-            throw new BadRequestException("CARD_TEMPLATE_TYPE_INVALID");
+            throw new BadRequestException("Loại mẫu thiệp không hợp lệ. Vui lòng chọn \"ai\" hoặc \"handmade\".");
         }
 
         var normalizedName = request.Name!.Trim();
@@ -210,7 +210,7 @@ public class Service : IService
 
         if (isNameDuplicated)
         {
-            throw new BadRequestException("CARD_TEMPLATE_NAME_ALREADY_EXISTS");
+            throw new BadRequestException("Tên mẫu thiệp đã tồn tại. Vui lòng chọn tên khác.");
         }
 
         var newCardTemplate = new Repository.Entity.CardTemplate()
@@ -247,14 +247,14 @@ public class Service : IService
     {
         if (request.Name is null && request.Description is null && request.ImageUrl is null && !request.IsActive.HasValue)
         {
-            throw new BadRequestException("CARD_TEMPLATE_UPDATE_REQUIRED");
+            throw new BadRequestException("Vui lòng cung cấp ít nhất một thông tin cần cập nhật cho mẫu thiệp.");
         }
 
         var cardTemplate = await _dbContext.CardTemplates.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
         if (cardTemplate == null)
         {
-            throw new NotFoundException("TEMPLATE_NOT_FOUND");
+            throw new NotFoundException("Không tìm thấy mẫu thiệp cần cập nhật hoặc mẫu thiệp đã bị xóa.");
         }
         
         if (request.Name is not null)
@@ -292,12 +292,12 @@ public class Service : IService
 
         if (cardTemplate == null)
         {
-            throw new NotFoundException("CARD_TEMPLATE_NOT_FOUND");
+            throw new NotFoundException("Không tìm thấy mẫu thiệp hoặc mẫu thiệp đã bị xóa.");
         }
 
         if (cardTemplate.IsDeleted)
         {
-            throw new BadRequestException("CARD_TEMPLATE_ALREADY_DELETED");
+            throw new BadRequestException("Mẫu thiệp này đã được xóa trước đó.");
         }
 
         cardTemplate.IsDeleted = true;
