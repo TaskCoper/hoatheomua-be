@@ -61,7 +61,7 @@ public class GetCardTemplateDetail
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => CreateService(db, isAdmin: false).GetCardTemplateDetail(id));
 
-        Assert.Equal("Không tìm thấy mẫu thiệp hoặc mẫu thiệp đã bị xóa.", exception.Message);
+        Assert.Equal("CARD_TEMPLATE_NOT_FOUND", exception.Message);
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class GetCardTemplateDetail
         var exception = await Assert.ThrowsAsync<ConflictException>(
             () => CreateService(db, isAdmin: false).GetCardTemplateDetail(id));
 
-        Assert.Equal("Mẫu thiệp này hiện đang tạm ngưng hoạt động và chưa thể sử dụng.", exception.Message);
+        Assert.Equal("CARD_TEMPLATE_INACTIVE", exception.Message);
     }
 
     private static AppDbContext CreateDbContext() => new(new DbContextOptionsBuilder<AppDbContext>()
