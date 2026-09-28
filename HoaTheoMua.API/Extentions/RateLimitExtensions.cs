@@ -115,7 +115,7 @@ public static class RateLimitExtensions
 
     private static string GetUserOrIpPartitionKey(HttpContext context)
     {
-        var userName = context.User.Identity?.Name;
+        var userName = context.User.FindFirst("UserId")?.Value ?? context.User.Identity?.Name;
         return !string.IsNullOrWhiteSpace(userName)
             ? $"user:{userName}"
             : GetIpPartitionKey(context);
