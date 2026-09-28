@@ -1,0 +1,157 @@
+{
+  "skill": "api-integration-tester",
+  "status": "BLOCKED",
+  "started_at": "2026-09-14T21:22:00.938794+00:00",
+  "scope": "Read-only live Meta app credential validation and deployed API reachability; no public publishing",
+  "checks": [
+    {
+      "name": "Repository deployment environment validator",
+      "status": "PASS",
+      "evidence": {
+        "exit_code": 0,
+        "output": "PostGen Meta environment validated (credentials redacted).\n"
+      }
+    },
+    {
+      "name": "Active encryption key decodes to 32 bytes",
+      "status": "PASS",
+      "evidence": {
+        "decoded_bytes": 32,
+        "active_key_id": "k1"
+      }
+    },
+    {
+      "name": "Root health",
+      "status": "BLOCKED",
+      "evidence": {
+        "path": "/health",
+        "http_status": 404,
+        "duration_ms": 660
+      }
+    },
+    {
+      "name": "Prefixed health",
+      "status": "BLOCKED",
+      "evidence": {
+        "path": "/ecommerce-api/health",
+        "http_status": 404,
+        "duration_ms": 663
+      }
+    },
+    {
+      "name": "Account API rejects missing Admin authentication",
+      "status": "PASS",
+      "evidence": {
+        "path": "/ecommerce-api/v1/post-gen/platform-accounts",
+        "http_status": 401,
+        "duration_ms": 662,
+        "message_code": "InvalidAccessToken"
+      }
+    },
+    {
+      "name": "Facebook callback rejects missing state",
+      "status": "PASS",
+      "evidence": {
+        "path": "/ecommerce-api/v1/post-gen/platform-accounts/facebook/callback",
+        "http_status": 400,
+        "duration_ms": 661,
+        "message_code": "PLATFORM_OAUTH_STATE_INVALID"
+      }
+    },
+    {
+      "name": "Instagram callback rejects missing state",
+      "status": "PASS",
+      "evidence": {
+        "path": "/ecommerce-api/v1/post-gen/platform-accounts/instagram/callback",
+        "http_status": 400,
+        "duration_ms": 374,
+        "message_code": "PLATFORM_OAUTH_STATE_INVALID"
+      }
+    },
+    {
+      "name": "Swagger route inventory",
+      "status": "BLOCKED",
+      "evidence": {
+        "path": "/swagger/v1/swagger.json",
+        "http_status": 404,
+        "duration_ms": 366
+      }
+    },
+    {
+      "name": "Prefixed Swagger route inventory",
+      "status": "BLOCKED",
+      "evidence": {
+        "path": "/ecommerce-api/swagger/v1/swagger.json",
+        "http_status": 404,
+        "duration_ms": 366
+      }
+    },
+    {
+      "name": "Meta app ID and secret exchange",
+      "status": "PASS",
+      "evidence": {
+        "graph_version": "v26.0",
+        "token_returned": true,
+        "http_status": 200,
+        "duration_ms": 510
+      }
+    },
+    {
+      "name": "Meta app identity matches supplied app ID",
+      "status": "PASS",
+      "evidence": {
+        "app_id_matches": true,
+        "http_status": 200,
+        "duration_ms": 461
+      }
+    },
+    {
+      "name": "Meta token introspection",
+      "status": "PASS",
+      "evidence": {
+        "is_valid": true,
+        "token_type": "APP",
+        "app_id_matches": true,
+        "http_status": 200,
+        "duration_ms": 302
+      }
+    },
+    {
+      "name": "Deployed publication detail route",
+      "status": "BLOCKED",
+      "evidence": {
+        "method": "GET",
+        "path": "/ecommerce-api/v1/post-gen/publications/{id}",
+        "http_status": 404,
+        "interpretation": "Publication route is unavailable through this public URL; verify deployment and ingress before publishing."
+      }
+    },
+    {
+      "name": "Deployed publication preview route",
+      "status": "BLOCKED",
+      "evidence": {
+        "method": "GET",
+        "path": "/ecommerce-api/v1/posts/{id}/platforms/facebook/publication-preview",
+        "http_status": 404,
+        "interpretation": "Publication route is unavailable through this public URL; verify deployment and ingress before publishing."
+      }
+    }
+  ],
+  "failures": [],
+  "redactions": [
+    "App secret, encryption keys, access tokens, cookies and raw provider responses are excluded."
+  ],
+  "pending": [
+    "Publication detail and preview return HTTP 404 through the public API; deployment/ingress needs verification before a real publishing test.",
+    "Authenticated deployed account/publishing checks need a current Admin session.",
+    "Real publishing needs connected Page credentials and a specified test post and target.",
+    "These checks do not prove supplied configuration is installed on the deployed server."
+  ],
+  "completed_at": "2026-09-14T21:22:38.203341+00:00",
+  "notes": [
+    "Health and Swagger URL probes return 404; these do not prove the backend is unhealthy. Account and callback endpoints respond.",
+    "Encryption check validates configuration and decoded key length only; stored account credential decryption was not tested.",
+    "Meta app token is valid; this does not validate Page permissions, login config ownership or public publishing."
+  ],
+  "temporary_credentials_deleted": true
+}

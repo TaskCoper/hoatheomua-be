@@ -23,6 +23,11 @@ public class GlobalExceptionHandlerMiddleware : IMiddleware
         {
             await next(context);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            _logger.LogInformation("Request disconnected: {Path}", context.Request.Path);
+            if (!context.Response.HasStarted) context.Response.StatusCode = 499;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception occurred while processing request {Path}", 
@@ -51,7 +56,9 @@ public class GlobalExceptionHandlerMiddleware : IMiddleware
                 status: appEx.StatusCode,
                 detail: appEx.StatusCode >= 500 ? "An unexpected error occurred." : ex.Message,
                 messageCode: appEx.MessageCode,
-                errors: _environment.IsDevelopment() ? new { detail = ex.Message } : null, 
+                errors: ex is ValidationExceptionErrorV1 validationException
+                    ? validationException.Errors
+                    : _environment.IsDevelopment() ? new { detail = ex.Message } : null,
                 traceId: context.TraceIdentifier
             );
             

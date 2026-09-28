@@ -101,7 +101,8 @@ public class Request
         public List<Guid>? categoryIds { get; set; }
         public ProductType? productType  { get; set; }
         public bool? isPin { get; set; }
-        public bool? IsActive { get; set; }
+        public bool? isActive { get; set; }
+        public List<string>? labels { get; set; }
     }
     
     public class MoveProductRequest
@@ -122,6 +123,10 @@ public class Request
         public Guid? CategoryId { get; set; }
     }
 
+    public class  UpdateProductRequestV2
+    {
+        public string? Description { get; set; } = null;
+    }
     public class UpdateProductRequest
     {
         public int? SourceRowNumber { get; set; }
@@ -201,7 +206,7 @@ public class Request
     {
         public List<Guid> ProductIds { get; set; }
     }
-    
+
     public class GetMaterialsRequest
     {
         public int PageIndex { get; set; } = 1;

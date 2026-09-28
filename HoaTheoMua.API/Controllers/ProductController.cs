@@ -68,6 +68,13 @@ public class ProductController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
+    [HttpGet("/api/v1/products/{id:guid}/family")]
+    public async Task<IActionResult> GetProductFamily(Guid id)
+    {
+        var result = await _productService.GetProductFamily(id);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpGet("/api/v2/products/{id:guid}/detail")]
     [Authorize (Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> GetProductDetailByCustomer(Guid id)
@@ -155,5 +162,19 @@ public class ProductController: ControllerBase
     {
         var result = await _productService.CheckInventoryAvailability(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+    
+    [HttpPut("/api/v1/products/{id:guid}")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] Request.UpdateProductRequestV2 request)
+    {
+        var result = await _productService.UpdateProductV2(id, request);
+        JsonElement jsonData = JsonSerializer.SerializeToElement(new
+        {
+            entity = "product",
+            id = new[] { result }
+        });
+        await _revalidateService.RevalidateApi(jsonData);
+        return Ok(ApiResponseFactory.Base("Update sản phẩm thành công", true, "", HttpContext.TraceIdentifier));
     }
 }

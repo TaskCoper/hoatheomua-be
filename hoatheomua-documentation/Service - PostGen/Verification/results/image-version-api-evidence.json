@@ -1,0 +1,398 @@
+[
+  {
+    "name": "M6RegenerateImage",
+    "method": "POST",
+    "url": "/api/v1/posts/b762bb4e-64ab-4d26-a313-ece35a04ccae/images/regenerate",
+    "request": {
+      "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+      "ratioCode": "Square1x1",
+      "sourceGeneratedPostImageId": "7a795702-e205-41c9-83de-a03537720943",
+      "feedback": "Nền sáng hơn"
+    },
+    "status": 200,
+    "response": {
+      "value": {
+        "generatedPostImageId": "e930fa2b-d25e-4a51-b0e1-77e5ad49ac09",
+        "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+        "ratioCode": "Square1x1",
+        "parentGeneratedPostImageId": "7a795702-e205-41c9-83de-a03537720943",
+        "versionNo": 2,
+        "sourceImageUrl": "https://example.com/generated-10.png",
+        "imageUrl": "https://example.com/generated-12.png",
+        "pixelWidth": 1080,
+        "pixelHeight": 1080,
+        "status": "Succeeded",
+        "errorMessage": null,
+        "feedback": "Nền sáng hơn",
+        "createdAt": "2026-09-14T14:18:57.813141+00:00",
+        "selectedPlatforms": []
+      },
+      "isSuccess": true,
+      "isFailed": false,
+      "error": null,
+      "traceId": "0HNOIDCEC0S5D:00000066",
+      "timestampUtc": "2026-09-14T14:18:57.820482Z"
+    }
+  },
+  {
+    "name": "M6SelectFacebookV2AndReorder",
+    "method": "PUT",
+    "url": "/api/v1/posts/b762bb4e-64ab-4d26-a313-ece35a04ccae/platforms/facebook/images",
+    "request": {
+      "images": [
+        {
+          "sourceBasePostImageId": "69695f0c-eaf7-4815-aba8-0024d0844fbd",
+          "ratioCode": "Square1x1",
+          "selectedGeneratedPostImageId": "1401df81-cb88-4b9b-b5f1-6e5bf113f2a4",
+          "sortOrder": 1
+        },
+        {
+          "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+          "ratioCode": "Square1x1",
+          "selectedGeneratedPostImageId": "e930fa2b-d25e-4a51-b0e1-77e5ad49ac09",
+          "sortOrder": 2
+        }
+      ]
+    },
+    "status": 200,
+    "response": {
+      "value": {
+        "baseImages": [
+          {
+            "id": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+            "imageUrl": "https://example.com/1.jpg",
+            "sortOrder": 1,
+            "width": null,
+            "height": null
+          },
+          {
+            "id": "69695f0c-eaf7-4815-aba8-0024d0844fbd",
+            "imageUrl": "https://example.com/2.jpg",
+            "sortOrder": 2,
+            "width": null,
+            "height": null
+          },
+          {
+            "id": "d3117989-d228-48b5-ade9-c9655180d32e",
+            "imageUrl": "https://example.com/3.jpg",
+            "sortOrder": 3,
+            "width": null,
+            "height": null
+          }
+        ],
+        "platforms": [
+          {
+            "platformPostId": "ee931c01-b417-4d57-a759-6bb5d5066ab4",
+            "platform": "facebook",
+            "status": "Ready",
+            "lastError": null,
+            "content": {
+              "generationId": "5bbb193a-a4e3-49ed-81f3-851b9366d301",
+              "parentGeneratedPostId": null,
+              "versionNo": 1,
+              "source": "Ai",
+              "title": "Bó hoa Cảm Ơn",
+              "content": "Nội dung AI kiểm thử",
+              "hashtag": "#HoaTheoMua",
+              "createdAt": "2026-09-14T14:18:57.782245+00:00"
+            },
+            "images": [
+              {
+                "sourceBasePostImageId": "69695f0c-eaf7-4815-aba8-0024d0844fbd",
+                "ratioCode": "Square1x1",
+                "selectedGeneratedPostImageId": "1401df81-cb88-4b9b-b5f1-6e5bf113f2a4",
+                "imageUrl": "https://example.com/generated-11.png",
+                "pixelWidth": 1080,
+                "pixelHeight": 1080,
+                "sortOrder": 1
+              },
+              {
+                "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+                "ratioCode": "Square1x1",
+                "selectedGeneratedPostImageId": "e930fa2b-d25e-4a51-b0e1-77e5ad49ac09",
+                "imageUrl": "https://example.com/generated-12.png",
+                "pixelWidth": 1080,
+                "pixelHeight": 1080,
+                "sortOrder": 2
+              }
+            ]
+          },
+          {
+            "platformPostId": "eba24383-c794-415b-b620-77b6db9a183d",
+            "platform": "instagram",
+            "status": "Generated",
+            "lastError": null,
+            "content": {
+              "generationId": "e6bc19c4-ae67-4ec4-8734-7dd2f0a19b8e",
+              "parentGeneratedPostId": null,
+              "versionNo": 1,
+              "source": "Ai",
+              "title": "Bó hoa Cảm Ơn",
+              "content": "Nội dung AI kiểm thử",
+              "hashtag": "#HoaTheoMua",
+              "createdAt": "2026-09-14T14:18:57.78258+00:00"
+            },
+            "images": [
+              {
+                "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+                "ratioCode": "Square1x1",
+                "selectedGeneratedPostImageId": "7a795702-e205-41c9-83de-a03537720943",
+                "imageUrl": "https://example.com/generated-10.png",
+                "pixelWidth": 1080,
+                "pixelHeight": 1080,
+                "sortOrder": 1
+              },
+              {
+                "sourceBasePostImageId": "69695f0c-eaf7-4815-aba8-0024d0844fbd",
+                "ratioCode": "Square1x1",
+                "selectedGeneratedPostImageId": "1401df81-cb88-4b9b-b5f1-6e5bf113f2a4",
+                "imageUrl": "https://example.com/generated-11.png",
+                "pixelWidth": 1080,
+                "pixelHeight": 1080,
+                "sortOrder": 2
+              }
+            ]
+          }
+        ],
+        "basePostId": "b762bb4e-64ab-4d26-a313-ece35a04ccae",
+        "title": "Hoa mùa thu",
+        "content": "Nội dung gốc",
+        "hashtag": "#hoa",
+        "createdAt": "2026-09-14T14:18:57.719007+00:00",
+        "updatedAt": null
+      },
+      "isSuccess": true,
+      "isFailed": false,
+      "error": null,
+      "traceId": "0HNOIDCEC0S5D:00000068",
+      "timestampUtc": "2026-09-14T14:18:57.845136Z"
+    }
+  },
+  {
+    "name": "M6ReadHistory",
+    "method": "GET",
+    "url": "/api/v1/posts/b762bb4e-64ab-4d26-a313-ece35a04ccae/images",
+    "request": null,
+    "status": 200,
+    "response": {
+      "value": {
+        "basePostId": "b762bb4e-64ab-4d26-a313-ece35a04ccae",
+        "groups": [
+          {
+            "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+            "originalImageUrl": "https://example.com/1.jpg",
+            "sourceIsDeleted": false,
+            "ratioCode": "Square1x1",
+            "versions": [
+              {
+                "generatedPostImageId": "7a795702-e205-41c9-83de-a03537720943",
+                "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+                "ratioCode": "Square1x1",
+                "parentGeneratedPostImageId": null,
+                "versionNo": 1,
+                "sourceImageUrl": "https://example.com/1.jpg",
+                "imageUrl": "https://example.com/generated-10.png",
+                "pixelWidth": 1080,
+                "pixelHeight": 1080,
+                "status": "Succeeded",
+                "errorMessage": null,
+                "feedback": null,
+                "createdAt": "2026-09-14T14:18:57.784989+00:00",
+                "selectedPlatforms": [
+                  "instagram"
+                ]
+              },
+              {
+                "generatedPostImageId": "e930fa2b-d25e-4a51-b0e1-77e5ad49ac09",
+                "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+                "ratioCode": "Square1x1",
+                "parentGeneratedPostImageId": "7a795702-e205-41c9-83de-a03537720943",
+                "versionNo": 2,
+                "sourceImageUrl": "https://example.com/generated-10.png",
+                "imageUrl": "https://example.com/generated-12.png",
+                "pixelWidth": 1080,
+                "pixelHeight": 1080,
+                "status": "Succeeded",
+                "errorMessage": null,
+                "feedback": "Nền sáng hơn",
+                "createdAt": "2026-09-14T14:18:57.813141+00:00",
+                "selectedPlatforms": [
+                  "facebook"
+                ]
+              }
+            ]
+          },
+          {
+            "sourceBasePostImageId": "69695f0c-eaf7-4815-aba8-0024d0844fbd",
+            "originalImageUrl": "https://example.com/2.jpg",
+            "sourceIsDeleted": false,
+            "ratioCode": "Square1x1",
+            "versions": [
+              {
+                "generatedPostImageId": "1401df81-cb88-4b9b-b5f1-6e5bf113f2a4",
+                "sourceBasePostImageId": "69695f0c-eaf7-4815-aba8-0024d0844fbd",
+                "ratioCode": "Square1x1",
+                "parentGeneratedPostImageId": null,
+                "versionNo": 1,
+                "sourceImageUrl": "https://example.com/2.jpg",
+                "imageUrl": "https://example.com/generated-11.png",
+                "pixelWidth": 1080,
+                "pixelHeight": 1080,
+                "status": "Succeeded",
+                "errorMessage": null,
+                "feedback": null,
+                "createdAt": "2026-09-14T14:18:57.78499+00:00",
+                "selectedPlatforms": [
+                  "facebook",
+                  "instagram"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "isSuccess": true,
+      "isFailed": false,
+      "error": null,
+      "traceId": "0HNOIDCEC0S5D:00000069",
+      "timestampUtc": "2026-09-14T14:18:57.848653Z"
+    }
+  },
+  {
+    "name": "M6FailedRegenerationRetained",
+    "method": "POST",
+    "url": "/api/v1/posts/b762bb4e-64ab-4d26-a313-ece35a04ccae/images/regenerate",
+    "request": {
+      "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+      "ratioCode": "Square1x1",
+      "sourceGeneratedPostImageId": "7a795702-e205-41c9-83de-a03537720943",
+      "feedback": "Nền sáng hơn"
+    },
+    "status": 200,
+    "response": {
+      "value": {
+        "generatedPostImageId": "4990414f-0255-4842-be64-7f3207cb872a",
+        "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+        "ratioCode": "Square1x1",
+        "parentGeneratedPostImageId": "7a795702-e205-41c9-83de-a03537720943",
+        "versionNo": 3,
+        "sourceImageUrl": "https://example.com/generated-10.png",
+        "imageUrl": null,
+        "pixelWidth": 1080,
+        "pixelHeight": 1080,
+        "status": "Failed",
+        "errorMessage": "AI image generation failed",
+        "feedback": "Nền sáng hơn",
+        "createdAt": "2026-09-14T14:18:57.870166+00:00",
+        "selectedPlatforms": []
+      },
+      "isSuccess": true,
+      "isFailed": false,
+      "error": null,
+      "traceId": "0HNOIDCEC0S5D:00000070",
+      "timestampUtc": "2026-09-14T14:18:57.874367Z"
+    }
+  },
+  {
+    "name": "M6ClearFacebookImages",
+    "method": "PUT",
+    "url": "/api/v1/posts/b762bb4e-64ab-4d26-a313-ece35a04ccae/platforms/facebook/images",
+    "request": {
+      "images": []
+    },
+    "status": 200,
+    "response": {
+      "value": {
+        "baseImages": [
+          {
+            "id": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+            "imageUrl": "https://example.com/1.jpg",
+            "sortOrder": 1,
+            "width": null,
+            "height": null
+          },
+          {
+            "id": "69695f0c-eaf7-4815-aba8-0024d0844fbd",
+            "imageUrl": "https://example.com/2.jpg",
+            "sortOrder": 2,
+            "width": null,
+            "height": null
+          },
+          {
+            "id": "d3117989-d228-48b5-ade9-c9655180d32e",
+            "imageUrl": "https://example.com/3.jpg",
+            "sortOrder": 3,
+            "width": null,
+            "height": null
+          }
+        ],
+        "platforms": [
+          {
+            "platformPostId": "ee931c01-b417-4d57-a759-6bb5d5066ab4",
+            "platform": "facebook",
+            "status": "Generated",
+            "lastError": null,
+            "content": {
+              "generationId": "5bbb193a-a4e3-49ed-81f3-851b9366d301",
+              "parentGeneratedPostId": null,
+              "versionNo": 1,
+              "source": "Ai",
+              "title": "Bó hoa Cảm Ơn",
+              "content": "Nội dung AI kiểm thử",
+              "hashtag": "#HoaTheoMua",
+              "createdAt": "2026-09-14T14:18:57.782245+00:00"
+            },
+            "images": []
+          },
+          {
+            "platformPostId": "eba24383-c794-415b-b620-77b6db9a183d",
+            "platform": "instagram",
+            "status": "Ready",
+            "lastError": null,
+            "content": {
+              "generationId": "e6bc19c4-ae67-4ec4-8734-7dd2f0a19b8e",
+              "parentGeneratedPostId": null,
+              "versionNo": 1,
+              "source": "Ai",
+              "title": "Bó hoa Cảm Ơn",
+              "content": "Nội dung AI kiểm thử",
+              "hashtag": "#HoaTheoMua",
+              "createdAt": "2026-09-14T14:18:57.78258+00:00"
+            },
+            "images": [
+              {
+                "sourceBasePostImageId": "69695f0c-eaf7-4815-aba8-0024d0844fbd",
+                "ratioCode": "Square1x1",
+                "selectedGeneratedPostImageId": "1401df81-cb88-4b9b-b5f1-6e5bf113f2a4",
+                "imageUrl": "https://example.com/generated-11.png",
+                "pixelWidth": 1080,
+                "pixelHeight": 1080,
+                "sortOrder": 1
+              },
+              {
+                "sourceBasePostImageId": "7ccf2dc4-45fa-4fc1-b0cb-9610238433df",
+                "ratioCode": "Square1x1",
+                "selectedGeneratedPostImageId": "e930fa2b-d25e-4a51-b0e1-77e5ad49ac09",
+                "imageUrl": "https://example.com/generated-12.png",
+                "pixelWidth": 1080,
+                "pixelHeight": 1080,
+                "sortOrder": 2
+              }
+            ]
+          }
+        ],
+        "basePostId": "b762bb4e-64ab-4d26-a313-ece35a04ccae",
+        "title": "Hoa mùa thu",
+        "content": "Nội dung gốc",
+        "hashtag": "#hoa",
+        "createdAt": "2026-09-14T14:18:57.719007+00:00",
+        "updatedAt": null
+      },
+      "isSuccess": true,
+      "isFailed": false,
+      "error": null,
+      "traceId": "0HNOIDCEC0S5D:00000074",
+      "timestampUtc": "2026-09-14T14:18:57.904871Z"
+    }
+  }
+]

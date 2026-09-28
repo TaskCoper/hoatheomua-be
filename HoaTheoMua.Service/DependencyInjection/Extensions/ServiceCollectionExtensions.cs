@@ -51,6 +51,12 @@ public static class ServiceCollectionExtensions
             // Retry chỉ cho lỗi transient; lỗi nghiệp vụ fault ngay để saga bù trừ sớm.
             cfg.AddConfigureEndpointsCallback((context, name, cfg) =>
             {
+                // Publishing commits intent/checkpoints before HTTP. A transaction around the whole
+                // consumer or automatic consumer retry would erase that protection on a crash.
+                // Durable recovery and DB revision/lease checks replace this endpoint's inbox retry.
+                if (name == PostPublishing.PublicationConsumerDefinition.QueueName
+                    || name == FlowerJobs.FlowerGenerationConsumerDefinition.QueueName
+                    || name == CardJobs.CardGenerationConsumerDefinition.QueueName) return;
                 // Bù trừ được saga phát lại tối đa MaxCompensationRounds vòng, nên endpoint này
                 // retry ít hơn: 3 lần gọi/vòng × 3 vòng = tối đa 9 lần gọi API hủy, thay vì 18.
                 var intervals = name == "compensate-fulfillment"

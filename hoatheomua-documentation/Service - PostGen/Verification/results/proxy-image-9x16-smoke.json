@@ -1,0 +1,101 @@
+{
+  "date": "2026-09-14",
+  "scope": "One real call to AiService.Service.GenerateImage; no controller/database writes",
+  "transport_status": "PASS",
+  "http_status": 200,
+  "method_result": {
+    "status": "PASS",
+    "method": "AiService.Service.GenerateImage",
+    "input": {
+      "SourceImageUrl": "https://pos.nvncdn.com/281991-126981/ps/Daily-34_2026-1.jpg?v=1784046764",
+      "RatioCode": "Story9x16",
+      "PixelWidth": 1080,
+      "PixelHeight": 1920,
+      "Instruction": "Điều chỉnh bố cục hoặc mở rộng nền theo tỷ lệ đích. Giữ nguyên sản phẩm, chữ nhận diện thương hiệu và logo của ảnh gốc."
+    },
+    "timeoutSeconds": 120,
+    "liveProvider": true,
+    "result": {
+      "ImageUrl": "https://hcm.ss.bfcplatform.vn/taskcoper/general/f73b85-user-nuerbeadximuy2rqgvxkimfr-28e2a49d-afb3-455c-b174-5c74500f1763.png",
+      "Model": "chatgpt/gpt-5.6",
+      "RequestId": "chatcmpl-e1d9f5a7a8974679a4477ffc",
+      "DurationMs": 49599
+    }
+  },
+  "request": {
+    "model": "chatgpt/gpt-5.6",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Ảnh sản phẩm gốc cần dựng lại:"
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "https://pos.nvncdn.com/281991-126981/ps/Daily-34_2026-1.jpg?v=1784046764"
+            }
+          },
+          {
+            "type": "text",
+            "text": "Điều chỉnh bố cục hoặc mở rộng nền theo tỷ lệ đích. Giữ nguyên sản phẩm, chữ nhận diện thương hiệu và logo của ảnh gốc."
+          },
+          {
+            "type": "text",
+            "text": "Tạo một ảnh mới từ ảnh trên, tỷ lệ Story9x16, kích thước mục tiêu 1080x1920 pixel. Giữ nguyên sản phẩm và mọi chi tiết nhận diện. Chỉ điều chỉnh bố cục hoặc mở rộng nền; không thay sản phẩm, không thêm chữ hay logo. Thực hiện tạo ảnh ngay và trả đúng một ảnh dưới dạng Markdown ![generated image](URL)."
+          }
+        ]
+      }
+    ]
+  },
+  "provider_response": {
+    "id": "chatcmpl-e1d9f5a7a8974679a4477ffc",
+    "object": "chat.completion",
+    "created": 1789375634,
+    "model": "chatgpt/gpt-5.6",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "![generated image](https://hcm.ss.bfcplatform.vn/taskcoper/general/f73b85-user-nuerbeadximuy2rqgvxkimfr-28e2a49d-afb3-455c-b174-5c74500f1763.png)"
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0
+    }
+  },
+  "image_verification": {
+    "download_succeeded": true,
+    "source_pixels": {
+      "width": 1280,
+      "height": 1691
+    },
+    "requested_pixels": {
+      "width": 1080,
+      "height": 1920
+    },
+    "actual_pixels": {
+      "width": 941,
+      "height": 1672
+    },
+    "exact_requested_pixels": false,
+    "exact_9_16_ratio": false,
+    "relative_aspect_ratio_error_percent": 0.053163,
+    "measurement_tool": "macOS sips",
+    "visual_observation": "Portrait composition extended vertically; flowers, vase, camera and books remain recognizable, but fine image details have been regenerated. Exact product/detail preservation is not established."
+  },
+  "findings": [
+    "GenerateImage accepted the Markdown image and returned URL/model/requestId/duration successfully.",
+    "Real image dimensions differ from requested dimensions. Current production flow stores target dimensions and does not verify or normalize the image file.",
+    "This single download proves immediate URL accessibility, not permanence."
+  ],
+  "calls": 1,
+  "automatic_retries": 0
+}

@@ -21,6 +21,27 @@ public class AppDbContext : DbContext
     public virtual DbSet<JobDescriptions> JobDescriptions { get; set; }
     public virtual DbSet<RecruitmentRequest> RecruitmentRequests { get; set; }
     public virtual DbSet<Address> Addresses { get; set; }
+    public virtual DbSet<SystemPrompt> SystemPrompts { get; set; }
+    public virtual DbSet<CardTemplate> CardTemplates { get; set; }
+    public virtual DbSet<BasePost> BasePosts { get; set; }
+    public virtual DbSet<BasePostImage> BasePostImages { get; set; }
+    public virtual DbSet<PlatformAccount> PlatformAccounts { get; set; }
+    public virtual DbSet<PlatformOAuthSession> PlatformOAuthSessions { get; set; }
+    public virtual DbSet<PostPublication> PostPublications { get; set; }
+    public virtual DbSet<PostPublicationAttempt> PostPublicationAttempts { get; set; }
+    public virtual DbSet<PostPublicationReview> PostPublicationReviews { get; set; }
+    public virtual DbSet<PlatformPost> PlatformPosts { get; set; }
+    public virtual DbSet<GeneratedPostImage> GeneratedPostImages { get; set; }
+    public virtual DbSet<PlatformPostImage> PlatformPostImages { get; set; }
+
+    public virtual DbSet<GeneratedPost> GeneratedPosts { get; set; }
+    public virtual DbSet<FlowerGenerationJob> FlowerGenerationJobs { get; set; }
+    public virtual DbSet<CardGenerationJob> CardGenerationJobs { get; set; }
+    public virtual DbSet<GeneratedFlower> GeneratedFlowers { get; set; }
+    public virtual DbSet<GeneratedCard> GeneratedCards { get; set; }
+    public virtual DbSet<PostHistory> PostHistories { get; set; }
+    public virtual DbSet<FlowerReference> FlowerReferences { get; set; }
+    public virtual DbSet<ClientHistory> ClientHistories { get; set; }
 
     public virtual DbSet<OrderDetails> OrderDetails { get; set; }
     public virtual DbSet<Product> Products { get; set; }
@@ -37,6 +58,11 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // base.OnModelCreating(modelBuilder);
+        modelBuilder.HasPostgresEnum<SystemPromptType>(name: "SystemPromptType");
+        modelBuilder.HasPostgresEnum<PlatformType>(name: "PlatformType");
+        modelBuilder.HasPostgresEnum<CardFormType>(name: "CardFormType");
+        modelBuilder.HasPostgresEnum<ClientHistoryType>(name: "ClientHistoryType");
+        modelBuilder.HasPostgresEnum<FlowerReferenceType>(name: "FlowerReferenceType");
         modelBuilder.ApplyConfigurationsFromAssembly(AssemblyReference.Assembly);
 
         // MassTransit transactional outbox/inbox. All three are required: the webhook publishes

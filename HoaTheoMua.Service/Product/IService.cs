@@ -9,6 +9,7 @@ public interface IService
     Task<BasePaginationResponse> GetLocalProducts(Request.LocalProductQueryRequest request);
     Task<BasePaginationResponse> GetLocalProductsV2(Request.LocalProductQueryRequest request);
     Task<Response.LocalProductDetailResponse> GetLocalProductDetail(Guid id);
+    Task<Response.ProductFamilyResponse> GetProductFamily(Guid id);
     Task<decimal> GetMaxPrice(List<Guid>? categoryIds);
     Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request);
     Task<BaseResponse> PinProduct(Request.PinProductRequest request);
@@ -21,4 +22,5 @@ public interface IService
     Task<string> UpdateLabelProductNhanhVn(List<Request.UpdateLabelProductNhanhVnRequest> requests);
     Task<Response.GetProductDetailByCustomerResponse> GetProductDetailByCustomer(Guid id);
     Task<List<Response.InventoryCheckError>?> CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request);
+    Task<string> UpdateProductV2(Guid id, Request.UpdateProductRequestV2 request);
 }

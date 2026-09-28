@@ -53,7 +53,7 @@ public class Service : IService
     }
 
     private static bool KeepsDecimal(string? unit) =>
-        HasLabel(unit, "bó") || HasLabel(unit, "giỏ") || HasLabel(unit, "chậu");
+        HasLabel(unit, "bó") || HasLabel(unit, "chậu"); //|| HasLabel(unit, "giỏ")
 
     private static decimal CalculateParentQuantity(decimal requestedQuantity, string? productLabel, string? unit) =>
         HasLabel(productLabel, ComponentLabel) && HasLabel(unit, "cành")

@@ -219,10 +219,18 @@ public class Service : IService
             .Distinct()
             .ToList() ?? new List<Guid>();
 
+        var labels = request.labels?
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .Select(label => label.Trim().ToLower().Replace(" ", ""))
+            .Distinct()
+            .ToList() ?? new List<string>();
+
         var query = _dbContext.Products
             .AsNoTracking()
             .Include(p => p.CategoryProductDetails)
             .ThenInclude(cpd => cpd.CategoryProduct)
+            .Include(p => p.SubIds)
+            .ThenInclude(cs => cs.Mat)
             .AsQueryable();
 
         query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty) && x.IsActive);
@@ -253,6 +261,11 @@ public class Service : IService
             query = query.Where(x => x.CategoryProductDetails.Any(cpd =>
                 !cpd.IsDeleted &&
                 categoryIds.Contains(cpd.CategoryProductId)));
+        }
+
+        if (labels.Count > 0)
+        {
+            query = query.Where(BuildProductLabelFilter(labels));
         }
 
         IOrderedQueryable<HoaTheoMua.Repository.Entity.Product> orderedQuery;
@@ -369,6 +382,20 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(mappedItems, pageIndex, pageSize, totalCount);
     }
 
+    private static Expression<Func<HoaTheoMua.Repository.Entity.Product, bool>> BuildProductLabelFilter(
+        IReadOnlyCollection<string> labels)
+    {
+        // Chuẩn hóa nhãn cần tìm: viết thường, bỏ khoảng trắng, bọc dấu phẩy để so khớp nguyên nhãn
+        var normalizedLabels = labels
+            .Select(label => $",{label.ToLower().Replace(" ", "")},")
+            .ToList();
+
+        return product =>
+            product.ProductLabel != null &&
+            normalizedLabels.Any(label =>
+                ("," + product.ProductLabel.ToLower().Replace(" ", "") + ",").Contains(label));
+    }
+
     public async Task<BasePaginationResponse> GetLocalProductsV2(Request.LocalProductQueryRequest request)
     {
         // Giai đoạn 1: Chuẩn hoá dữ liệu đầu vào.
@@ -431,9 +458,9 @@ public class Service : IService
             }
         }
         
-        if (request.IsActive.HasValue)
+        if (request.isActive.HasValue)
         {
-            query = query.Where(x => x.IsActive == request.IsActive.Value);
+            query = query.Where(x => x.IsActive == request.isActive.Value);
         }
         
         if (request.productType.HasValue)
@@ -588,6 +615,19 @@ public class Service : IService
             throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
         }
 
+        response.Materials = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(cs => cs.SubId == id && !cs.IsDeleted && !cs.Mat.IsDeleted)
+            .Select(cs => new Response.ComboSpecification
+            {
+                Id = cs.Mat.Id,
+                ProductName = cs.Mat.ProductName,
+                CoverImage = cs.Mat.CoverImage,
+                Quantity = cs.Quantity ?? 0m,
+                Price = cs.Mat.Price ?? 0m
+            })
+            .ToListAsync();
+
         // Giai đoạn 2: Xác định sản phẩm cha nếu sản phẩm hiện tại là biến thể.
         var isParentProduct = string.IsNullOrWhiteSpace(response.ParentProductId);
 
@@ -600,10 +640,12 @@ public class Service : IService
                 .FirstOrDefaultAsync();
 
             response.ParentId = parentId == Guid.Empty ? null : parentId;
+            response.ParentProductGuidId = response.ParentId;
         }
         else
         {
             response.ParentId = null;
+            response.ParentProductGuidId = null;
         }
 
         // Giai đoạn 3: Lấy các biến thể con của sản phẩm gốc.
@@ -615,7 +657,28 @@ public class Service : IService
                 .Select(LocalProductDetailSelector)
                 .ToListAsync();
 
+        foreach (var child in response.Children)
+        {
+            child.ParentProductGuidId = response.Id;
+        }
+
         // Giai đoạn 4: Chuẩn bị sản phẩm chính và biến thể để tính tồn kho khả dụng.
+        // Biến thể dùng cùng cấu tạo với Product cha. Quantity của mỗi vật liệu
+        // được điều chỉnh theo Factor riêng của biến thể; Materials của cha giữ nguyên.
+        var parentMaterials = response.Materials ?? new List<Response.ComboSpecification>();
+        foreach (var child in response.Children)
+        {
+            var factor = child.Factor ?? 1m;
+            child.Materials = parentMaterials.Select(material => new Response.ComboSpecification
+            {
+                Id = material.Id,
+                ProductName = material.ProductName,
+                CoverImage = material.CoverImage,
+                Quantity = material.Quantity * factor,
+                Price = material.Price
+            }).ToList();
+        }
+
         var productsToCalculate = new List<ProductQtyProjection>
         {
             new()
@@ -673,6 +736,143 @@ public class Service : IService
         return response;
     }
 
+    public async Task<Response.ProductFamilyResponse> GetProductFamily(Guid id)
+    {
+        var selectedProduct = await _dbContext.Products
+            .AsNoTracking()
+            .Where(product => product.Id == id && !product.IsDeleted && product.IsActive)
+            .Select(product => new
+            {
+                product.Id,
+                product.NhanhProductId,
+                product.ParentProductId
+            })
+            .FirstOrDefaultAsync();
+
+        if (selectedProduct == null)
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
+
+        var parentNhanhProductId = string.IsNullOrWhiteSpace(selectedProduct.ParentProductId)
+            ? selectedProduct.NhanhProductId
+            : selectedProduct.ParentProductId;
+
+        if (string.IsNullOrWhiteSpace(parentNhanhProductId))
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
+
+        var parentRecord = await _dbContext.Products
+            .AsNoTracking()
+            .Where(product => product.NhanhProductId == parentNhanhProductId &&
+                              !product.IsDeleted && product.IsActive)
+            .Select(product => new
+            {
+                Item = new Response.ProductFamilyItem
+                {
+                    Id = product.Id,
+                    ProductName = product.ProductName,
+                    CoverImage = product.CoverImage,
+                    Description = product.Description,
+                    Price = product.Price
+                },
+                product.ProductType,
+                product.ParentProductId,
+                product.NhanhProductId,
+                product.Stock
+            })
+            .FirstOrDefaultAsync();
+
+        if (parentRecord == null)
+            throw new NotFoundException("PRODUCT_PARENT_NOT_FOUND", "PRODUCT_PARENT_NOT_FOUND");
+
+        var parent = parentRecord.Item;
+        parent.Materials = await _dbContext.ComboSpecifications
+            .AsNoTracking()
+            .Where(specification => specification.SubId == parent.Id &&
+                                    !specification.IsDeleted &&
+                                    !specification.Mat.IsDeleted)
+            .Select(specification => new Response.ComboSpecification
+            {
+                Id = specification.Mat.Id,
+                ProductName = specification.Mat.ProductName,
+                CoverImage = specification.Mat.CoverImage,
+                Quantity = specification.Quantity ?? 0m,
+                Price = specification.Mat.Price ?? 0m
+            })
+            .ToListAsync();
+
+        var children = await _dbContext.Products
+            .AsNoTracking()
+            .Where(product => product.ParentProductId == parentNhanhProductId &&
+                              !product.IsDeleted && product.IsActive)
+            .Select(product => new
+            {
+                Item = new Response.ProductFamilyItem
+                {
+                    Id = product.Id,
+                    ProductName = product.ProductName,
+                    CoverImage = product.CoverImage,
+                    Description = product.Description,
+                    Price = product.Price
+                },
+                product.Factor,
+                product.ProductType,
+                product.ParentProductId,
+                product.NhanhProductId,
+                product.Stock
+            })
+            .ToListAsync();
+
+        foreach (var child in children)
+        {
+            var factor = child.Factor ?? 1m;
+            child.Item.Materials = parent.Materials.Select(material => new Response.ComboSpecification
+            {
+                Id = material.Id,
+                ProductName = material.ProductName,
+                CoverImage = material.CoverImage,
+                Quantity = material.Quantity * factor,
+                Price = material.Price
+            }).ToList();
+        }
+
+        var productsToCalculate = new List<ProductQtyProjection>
+        {
+            new()
+            {
+                Id = parent.Id,
+                ProductType = parentRecord.ProductType,
+                ParentProductId = parentRecord.ParentProductId,
+                NhanhProductId = parentRecord.NhanhProductId,
+                Stock = parentRecord.Stock
+            }
+        };
+        productsToCalculate.AddRange(children.Select(child => new ProductQtyProjection
+        {
+            Id = child.Item.Id,
+            ProductType = child.ProductType,
+            ParentProductId = child.ParentProductId,
+            NhanhProductId = child.NhanhProductId,
+            Stock = child.Stock
+        }));
+
+        var quantities = await CalculateAvailableQty(productsToCalculate, variantsArePreloaded: true);
+        parent.SellableQuantity = quantities.TryGetValue(parent.Id, out var parentQuantity)
+            ? parentQuantity.SellableQuantity
+            : 0;
+
+        foreach (var child in children)
+        {
+            child.Item.SellableQuantity = quantities.TryGetValue(child.Item.Id, out var childQuantity)
+                ? childQuantity.SellableQuantity
+                : 0;
+        }
+
+        return new Response.ProductFamilyResponse
+        {
+            Parent = parent,
+            Children = children.Select(child => child.Item).ToList()
+        };
+    }
+
     private static readonly Expression<Func<HoaTheoMua.Repository.Entity.Product, Response.LocalProductDetailResponse>>
         LocalProductDetailSelector = product => new Response.LocalProductDetailResponse
         {
@@ -687,6 +887,7 @@ public class Service : IService
             ProductType = product.ProductType,
             ProductCode = product.ProductCode,
             ProductName = product.ProductName,
+            Description = product.Description,
             OtherName = product.OtherName,
             Unit = product.Unit,
             CoverImage = product.CoverImage,
@@ -836,6 +1037,7 @@ public class Service : IService
             ProductType = product.ProductType,
             ProductCode = product.ProductCode,
             ProductName = product.ProductName,
+            Description = product.Description,
             OtherName = product.OtherName,
             Unit = product.Unit,
             CoverImage = product.CoverImage,
@@ -963,6 +1165,17 @@ public class Service : IService
                         : new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>()
                 })
                 .ToList() ?? new List<HoaTheoMua.Service.CategoryProduct.Response.CategoryProductResponse>(),
+            Materials = product.SubIds?
+                .Where(cs => !cs.IsDeleted && cs.Mat != null && !cs.Mat.IsDeleted)
+                .Select(cs => new Response.ComboSpecification
+                {
+                    Id = cs.Mat.Id,
+                    ProductName = cs.Mat.ProductName,
+                    CoverImage = cs.Mat.CoverImage,
+                    Quantity = cs.Quantity ?? 0m,
+                    Price = cs.Mat.Price ?? 0m
+                })
+                .ToList() ?? new List<Response.ComboSpecification>()
         };
     }
 
@@ -1654,7 +1867,10 @@ public class Service : IService
 
         if (product == null)
         {
-            throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
+            // API detail cho customer luôn trả payload thành công. Khi sản phẩm không
+            // tồn tại (hoặc đã bị xóa), trả response mặc định để các field rỗng thay
+            // vì phát sinh lỗi PRODUCT_NOT_FOUND.
+            return new Response.GetProductDetailByCustomerResponse();
         }
 
         // ParentProductId của Nhanh.vn là NhanhProductId của sản phẩm cha,
@@ -1972,6 +2188,31 @@ public class Service : IService
         }
 
         return list.Count > 0 ? list : null;
+    }
+
+    public async Task<string> UpdateProductV2(Guid id, Request.UpdateProductRequestV2 request)
+    {
+        if (request.Description?.Length > 20000)
+        {
+            throw new BadRequestException("Description must not exceed 20000 characters.");
+        }
+
+        var product = await _dbContext.Products
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+
+        if (product == null)
+        {
+            throw new BadRequestException("Product does not exist.");
+        }
+
+        if (request.Description != null)
+        {
+            product.Description = request.Description;
+        }
+        
+        await _dbContext.SaveChangesAsync();
+
+        return product.Id.ToString();
     }
 
     public async Task<string> UpdateLabelProductNhanhVn(List<Request.UpdateLabelProductNhanhVnRequest> requests)

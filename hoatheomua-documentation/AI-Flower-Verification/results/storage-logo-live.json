@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "loginAndPresign": true,
+  "uploadStatus": 200,
+  "publicReadVerified": true,
+  "publicUrl": "https://hcm.ss.bfcplatform.vn/taskcoper/general/ai-flowers/verification/96262f90259940ba8ed4699a25d70c0b.png",
+  "bytes": 25184,
+  "sha256": "5015CAF3B8E3BCE52F347C38C65B915FE061D45F53C85CB28E9DBD2CFD51BF8E"
+}
