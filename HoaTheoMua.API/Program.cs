@@ -75,6 +75,7 @@ builder.Services.ConfigureRateLimiter();
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddSwaggerServices();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
 
 var trustForwardedHeaders = builder.Configuration.GetValue<bool>("ReverseProxy:TrustForwardedHeaders");
 if (trustForwardedHeaders)

@@ -40,7 +40,7 @@ public class DeleteFlowerReference
         var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateService(db).DeleteFlowerReference(Guid.NewGuid()));
 
-        Assert.Equal("Không tìm thấy hình tham khảo cần xóa hoặc hình tham khảo đã bị xóa.", exception.Message);
+        Assert.Equal("Không tìm thấy mẫu cần xóa hoặc mẫu đã bị xóa.", exception.Message);
         Assert.Empty(db.FlowerReferences);
     }
 
@@ -55,7 +55,7 @@ public class DeleteFlowerReference
         var exception = await Assert.ThrowsAsync<NotFoundException>(() => CreateService(db).DeleteFlowerReference(mockup.Id));
         var saved = await db.FlowerReferences.SingleAsync(x => x.Id == mockup.Id);
 
-        Assert.Equal("Không tìm thấy hình tham khảo cần xóa hoặc hình tham khảo đã bị xóa.", exception.Message);
+        Assert.Equal("Không tìm thấy mẫu cần xóa hoặc mẫu đã bị xóa.", exception.Message);
         Assert.True(saved.IsDeleted);
         Assert.True(saved.IsActive);
     }

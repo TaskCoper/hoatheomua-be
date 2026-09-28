@@ -8,6 +8,7 @@ using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace HoaTheoMua.Service.New;
 
@@ -15,11 +16,16 @@ public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
+    private readonly IMemoryCache _cache;
 
-    public Service(AppDbContext dbContext, ICurrentUserService currentUser)
+    public Service(
+        AppDbContext dbContext,
+        ICurrentUserService currentUser,
+        IMemoryCache? cache = null)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
+        _cache = cache ?? new MemoryCache(new MemoryCacheOptions());
     }
 
     public async Task<BasePaginationResponse> GetNewsAsync(int pageIndex, int pageSize, string? keyword, NewsStatus? status)
@@ -84,13 +90,15 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
 
-    public async Task<NewResponse?> GetNewByIdAsync(string key)
+    public async Task<NewResponse?> GetNewByIdAsync(string key, string? clientContext = null)
     {
         var normalizedKey = NormalizeLookupKey(key);
         var query = _dbContext.NewsList
             .AsNoTracking()
             .Include(news => news.CategoryNewsDetail)
-            .Where(news => !news.IsDeleted);
+            .Where(news =>
+                !news.IsDeleted &&
+                news.Status == NewsStatus.Published);
 
         var newsResponse = Guid.TryParse(normalizedKey, out var id)
             ? await query.Where(news => news.Id == id)
@@ -157,6 +165,34 @@ public class Service : IService
         if (newsResponse is null)
         {
             throw new NotFoundException("NEW_NOT_FOUND");
+        }
+
+        if (!string.IsNullOrWhiteSpace(clientContext))
+        {
+            var cacheKey = $"{NewsViewConstants.CachePrefix}:{newsResponse.Id}:{clientContext}";
+
+            if (!_cache.TryGetValue(cacheKey, out _))
+            {
+                var affectedRows = await _dbContext.NewsList
+                    .Where(news =>
+                        news.Id == newsResponse.Id &&
+                        !news.IsDeleted &&
+                        news.Status == NewsStatus.Published)
+                    .ExecuteUpdateAsync(setters =>
+                        setters.SetProperty(
+                            news => news.ViewCount,
+                            news => news.ViewCount + 1));
+
+                if (affectedRows > 0)
+                {
+                    newsResponse.ViewCount++;
+
+                    _cache.Set(
+                        cacheKey,
+                        true,
+                        TimeSpan.FromHours(NewsViewConstants.CacheHours));
+                }
+            }
         }
 
         return newsResponse;
