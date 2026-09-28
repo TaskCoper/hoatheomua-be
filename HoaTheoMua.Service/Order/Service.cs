@@ -1375,6 +1375,26 @@ public class Service : IService
                     (product.Shipping.Weight, quantityByItemId[product.Id])))),
             orderTime);
 
+        return await GetXanhSmBuyerShippingFeeAsync(quote);
+    }
+
+    private async Task<decimal> GetXanhSmBuyerShippingFeeAsync(XanhSmDoorToDoorQuote quote)
+    {
+        // Share Ahamove's existing free-shipping threshold, expressed in meters.
+        var configs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        var freeShippingMeters = configs.GetValue("ahamove.free_ship", 0);
+        var distanceMeters = quote.DistanceUnit?.Trim().ToLowerInvariant() switch
+        {
+            "km" => quote.Distance * 1000,
+            "m" => quote.Distance,
+            _ => null
+        };
+
+        if (freeShippingMeters > 0 && distanceMeters is >= 0 && distanceMeters <= freeShippingMeters)
+        {
+            return 0;
+        }
+
         return quote.TotalFee;
     }
 
@@ -1441,7 +1461,7 @@ public class Service : IService
 
         return new Response.EstimateXanhSmShippingFeeResponse
         {
-            ShippingFee = quote.TotalFee,
+            ShippingFee = await GetXanhSmBuyerShippingFeeAsync(quote),
             Distance = quote.Distance,
             DistanceUnit = quote.DistanceUnit,
             Duration = quote.Duration,

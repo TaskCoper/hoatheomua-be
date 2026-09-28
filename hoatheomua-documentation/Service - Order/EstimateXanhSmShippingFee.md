@@ -58,6 +58,9 @@ Yêu cầu access token của khách hàng.
 
 `shippingFee` chỉ là phí tạm tính. Khi tạo order, backend sẽ estimate lại để lấy `fee_id` mới và lưu phí chính thức vào order.
 
+- Báo phí và tạo order cùng áp dụng cấu hình `ahamove.free_ship` (nhóm `ahamove`, đơn vị mét). Ví dụ `{"value":5000}` miễn phí khi khoảng cách ≤ 5 km, bao gồm đúng 5 km.
+- Backend đổi `distanceUnit = km` sang mét trước khi so sánh; cũng hỗ trợ `m`. Không có cấu hình hoặc giá trị ≤ 0 thì tính phí theo báo giá hãng.
+- Nếu khoảng cách thiếu, âm hoặc đơn vị không được hỗ trợ, giữ phí hãng trả về. Chính sách miễn phí chỉ thay đổi phí người mua trả, không thay đổi báo giá hay phí thanh toán cho hãng vận chuyển.
 - `distance`: khoảng cách giao hàng dự kiến do GreenSM trả về.
 - `distanceUnit`: đơn vị khoảng cách; GreenSM hiện trả `km`.
 - `duration`: thời gian giao hàng dự kiến theo giây.
