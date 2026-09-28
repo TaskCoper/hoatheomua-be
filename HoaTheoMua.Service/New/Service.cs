@@ -159,6 +159,15 @@ public class Service : IService
             throw new NotFoundException("NEW_NOT_FOUND");
         }
 
+        var news = await _dbContext.NewsList.FirstAsync(news => news.Id == newsResponse.Id);
+
+        if (news.Status == NewsStatus.Published)
+        {
+            news.ViewCount++;
+            await _dbContext.SaveChangesAsync();
+            newsResponse.ViewCount = news.ViewCount;
+        }
+
         return newsResponse;
     }
 

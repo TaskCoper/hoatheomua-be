@@ -196,7 +196,7 @@ public class GetNewByIdTest
         Assert.Equal(NewsId, result!.Id);
         Assert.Equal("Công Nghệ Mới", result.Title);
         Assert.Equal("Bài viết về công nghệ mới...", result.Description);
-        Assert.Equal(150, result.ViewCount);
+        Assert.Equal(151, result.ViewCount);
         Assert.Equal("https://example.com/image.png", result.PictureUrl);
         Assert.Equal("cong-nghe-moi", result.slug);
         Assert.Equal("Published", result.Status);
@@ -258,6 +258,18 @@ public class GetNewByIdTest
         Assert.Equal(UserId, result.User.UserId);
         Assert.Equal("admin@example.com", result.User.Email);
         Assert.Equal("Admin User", result.User.UserFullName);
+    }
+
+    [Fact]
+    public async Task GetNewById_Draft_DoesNotIncreaseViewCount()
+    {
+        var news = CreateNews(status: NewsStatus.Draft, viewCount: 150);
+        var service = CreateService(new List<NewsEntity> { news }, out var dbContextMock);
+
+        var result = await service.GetNewByIdAsync(news.slug);
+
+        Assert.Equal(150, result!.ViewCount);
+        dbContextMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // TC03
