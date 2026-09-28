@@ -203,6 +203,16 @@ public class Service : IService
             throw new BadRequestException("CARD_TEMPLATE_TYPE_INVALID");
         }
 
+        var normalizedName = request.Name!.Trim();
+        var isNameDuplicated = await _dbContext.CardTemplates
+            .AsNoTracking()
+            .AnyAsync(x => !x.IsDeleted && x.Name.ToLower() == normalizedName.ToLower());
+
+        if (isNameDuplicated)
+        {
+            throw new BadRequestException("CARD_TEMPLATE_NAME_ALREADY_EXISTS");
+        }
+
         var newCardTemplate = new Repository.Entity.CardTemplate()
         {
             Id = Guid.NewGuid(),
