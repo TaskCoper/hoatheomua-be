@@ -33,7 +33,7 @@ public class AiContentClient
     {
         var handler = new Handler(async (request, ct) =>
         {
-            Assert.Equal("https://proxy.hoatheomua.com/v1/chat/completions", request.RequestUri!.ToString());
+            Assert.Equal("http://chatgpt-proxy-prod:1435/v1/chat/completions", request.RequestUri!.ToString());
             Assert.Equal(HttpMethod.Post, request.Method);
             Assert.Equal(key, request.Headers.Authorization?.Parameter);
             if (key != null) Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
