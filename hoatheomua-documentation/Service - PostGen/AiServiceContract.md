@@ -4,11 +4,11 @@ Cập nhật 2026-09-14 theo contract người dùng cung cấp. Mốc 3 đã hi
 
 ## Endpoint và cấu hình
 
-`POST https://proxy.hoatheomua.com/v1/chat/completions`, `Content-Type: application/json`. Hiện không cần API key.
+`POST http://chatgpt-proxy-prod:1435/v1/chat/completions`, `Content-Type: application/json`. Hiện không cần API key. Từ 2026-09-28, BE gọi qua URL nội bộ; container BE cần chung Docker network với `chatgpt-proxy-prod` để phân giải hostname này.
 
 | Option / biến môi trường | Mặc định | Ý nghĩa |
 | --- | --- | --- |
-| `AiOption__ChatCompletionsUrl` | `https://proxy.hoatheomua.com/v1/chat/completions` | URL đầy đủ |
+| `AiOption__ChatCompletionsUrl` | `http://chatgpt-proxy-prod:1435/v1/chat/completions` | URL đầy đủ |
 | `AiOption__Model` | `chatgpt/gpt-5.6` | Model gửi trong request |
 | `AiOption__ApiKey` | trống | Khi có giá trị, client hỗ trợ gửi `Authorization: Bearer`; cơ chế auth thực tế cần đối chiếu khi proxy bật key |
 | `AiOption__TimeoutSeconds` | `120` | Timeout mỗi lời gọi, giá trị hợp lệ 1–180 giây |
