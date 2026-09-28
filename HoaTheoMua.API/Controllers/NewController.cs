@@ -41,6 +41,13 @@ public class NewController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("highlights")]
+    public async Task<IActionResult> GetNewsHighlights([FromQuery] int featuredCount = 4)
+    {
+        var result = await _newService.GetNewsHighlightsAsync(featuredCount);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpGet("{key}")]
     public async Task<IActionResult> GetNewById(string key)
     {

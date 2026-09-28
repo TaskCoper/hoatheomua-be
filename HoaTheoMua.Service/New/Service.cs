@@ -90,6 +90,85 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
 
+    public async Task<NewsHighlightsResponse> GetNewsHighlightsAsync(int featuredCount = 4)
+    {
+        featuredCount = featuredCount <= 0 ? 4 : Math.Min(featuredCount, 10);
+
+        var now = DateTimeOffset.UtcNow;
+        var startOfWeek = StartOfWeek(now);
+        var endOfWeek = startOfWeek.AddDays(7);
+
+        var publishedNews = _dbContext.NewsList
+            .AsNoTracking()
+            .Include(news => news.CategoryNewsDetail)
+                .ThenInclude(detail => detail.CategoryNews)
+            .Where(news =>
+                !news.IsDeleted &&
+                news.Status == NewsStatus.Published);
+
+        var currentWeekEntities = await publishedNews
+            .Where(news =>
+                news.CreatedAt >= startOfWeek &&
+                news.CreatedAt < endOfWeek)
+            .OrderByDescending(news => news.ViewCount)
+            .ThenByDescending(news => news.CreatedAt)
+            .Take(featuredCount + 1)
+            .ToListAsync();
+
+        var currentWeekNews = currentWeekEntities
+            .Select(ToNewResponse)
+            .ToList();
+
+        NewResponse? weeklyFocus;
+        var featuredNews = new List<NewResponse>();
+
+        if (currentWeekNews.Count > 0)
+        {
+            weeklyFocus = currentWeekNews[0];
+            featuredNews.AddRange(currentWeekNews.Skip(1).Take(featuredCount));
+        }
+        else
+        {
+            var fallbackEntities = await publishedNews
+                .OrderByDescending(news => news.ViewCount)
+                .ThenByDescending(news => news.CreatedAt)
+                .Take(featuredCount + 1)
+                .ToListAsync();
+
+            var fallback = fallbackEntities
+                .Select(ToNewResponse)
+                .ToList();
+
+            weeklyFocus = fallback.FirstOrDefault();
+            featuredNews.AddRange(fallback.Skip(1).Take(featuredCount));
+        }
+
+        var remaining = featuredCount - featuredNews.Count;
+        if (remaining > 0)
+        {
+            var excludedIds = featuredNews.Select(x => x.Id).ToList();
+            if (weeklyFocus is not null)
+            {
+                excludedIds.Add(weeklyFocus.Id);
+            }
+
+            var fallbackFeaturedEntities = await publishedNews
+                .Where(news => !excludedIds.Contains(news.Id))
+                .OrderByDescending(news => news.ViewCount)
+                .ThenByDescending(news => news.CreatedAt)
+                .Take(remaining)
+                .ToListAsync();
+
+            featuredNews.AddRange(fallbackFeaturedEntities.Select(ToNewResponse));
+        }
+
+        return new NewsHighlightsResponse
+        {
+            WeeklyFocus = weeklyFocus,
+            FeaturedNews = featuredNews
+        };
+    }
+
     public async Task<NewResponse?> GetNewByIdAsync(string key, string? clientContext = null)
     {
         var normalizedKey = NormalizeLookupKey(key);
@@ -400,6 +479,39 @@ public class Service : IService
 
         return normalizedKey;
     }
+
+    private static DateTimeOffset StartOfWeek(DateTimeOffset value)
+    {
+        var daysSinceMonday = ((int)value.DayOfWeek + 6) % 7;
+        return new DateTimeOffset(value.Date, value.Offset).AddDays(-daysSinceMonday);
+    }
+
+    private static NewResponse ToNewResponse(News news) => new()
+    {
+        Id = news.Id,
+        Title = news.Title,
+        Description = news.Description,
+        ViewCount = news.ViewCount,
+        PictureUrl = news.CoverImage,
+        slug = news.slug,
+        Status = news.Status == NewsStatus.Published ? "Published" : "Draft",
+        CreatedAt = news.CreatedAt,
+        UpdatedAt = news.UpdatedAt,
+        Categories = news.CategoryNewsDetail
+            .Select(x => new CategoryResponse
+            {
+                CategoryId = x.CategoryNews.Id,
+                CategoryName = x.CategoryNews.Title
+            })
+            .ToList(),
+        User = new UserResponse
+        {
+            UserId = news.UserId,
+            Email = news.AuthorEmail,
+            UserAvatar = news.AuthorAvatar,
+            UserFullName = news.AuthorName
+        }
+    };
 
     private async Task<string> GenerateUniqueSlugAsync(string title)
     {

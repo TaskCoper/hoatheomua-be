@@ -17,6 +17,12 @@ public class NewResponse
     public DateTimeOffset? UpdatedAt { get; set; }
 }
 
+public class NewsHighlightsResponse
+{
+    public NewResponse? WeeklyFocus { get; set; }
+    public List<NewResponse> FeaturedNews { get; set; } = new();
+}
+
 public class CategoryResponse
 {
     public required Guid CategoryId { get; set; }
