@@ -40,7 +40,7 @@ public class ToggleFlowerReferenceStatus
         var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
             CreateService(db).ToggleFlowerReferenceStatus(Guid.NewGuid()));
 
-        Assert.Equal("FlowerReference không hợp lệ hoặc đã bị xóa.", exception.Message);
+        Assert.Equal("Không tìm thấy hình tham khảo hoặc hình tham khảo đã bị xóa.", exception.Message);
         Assert.Empty(db.FlowerReferences);
     }
 
@@ -52,7 +52,9 @@ public class ToggleFlowerReferenceStatus
         await db.FlowerReferences.AddAsync(mockup);
         await db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<NotFoundException>(() => CreateService(db).ToggleFlowerReferenceStatus(mockup.Id));
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => CreateService(db).ToggleFlowerReferenceStatus(mockup.Id));
+
+        Assert.Equal("Không tìm thấy hình tham khảo hoặc hình tham khảo đã bị xóa.", exception.Message);
 
         var saved = await db.FlowerReferences.SingleAsync(x => x.Id == mockup.Id);
         Assert.True(saved.IsActive);

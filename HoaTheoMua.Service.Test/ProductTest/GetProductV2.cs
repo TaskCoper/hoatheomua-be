@@ -91,6 +91,73 @@ namespace HoaTheoMua.Service.Test.ProductTest
         }
         
         [Fact]
+        public async Task GetLocalProductsV2_ParentEnum_ReturnsOnlyParentProducts()
+        {
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PARENT_1", ProductName = "Parent", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_1", ParentProductId = "PARENT_1", ProductName = "Child", IsDeleted = false }
+            };
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+
+            var result = await service.GetLocalProductsV2(
+                new ProductRequest.LocalProductQueryRequest(),
+                ProductHierarchyType.Parent);
+
+            var item = Assert.Single(result.Value.Items.Cast<ProductDetailResponse>());
+            Assert.Equal("Parent", item.ProductName);
+            Assert.Equal(1, result.Value.TotalCount);
+        }
+
+        [Fact]
+        public async Task GetLocalProductsV2_All_ReturnsFilteredParentsAndTheirChildren()
+        {
+            // Arrange
+            var products = new List<ProductEntity>
+            {
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PARENT_1", ProductName = "Rose Parent", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_1", ParentProductId = "PARENT_1", ProductName = "Rose Child S", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_2", ParentProductId = "PARENT_1", ProductName = "Rose Child L", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "PARENT_2", ProductName = "Lily Parent", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "CHILD_3", ParentProductId = "PARENT_2", ProductName = "Lily Child", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "ORPHAN", ParentProductId = "UNKNOWN_PARENT", ProductName = "Orphan Child", IsDeleted = false },
+                new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "DELETED_CHILD", ParentProductId = "PARENT_1", ProductName = "Deleted Child", IsDeleted = true }
+            };
+            var dbContext = CreateMockDbContext(products);
+            var service = CreateService(dbContext);
+            var request = new ProductRequest.LocalProductQueryRequest { search = "rose" };
+
+            // Act
+            var result = await service.GetLocalProductsV2(request, ProductHierarchyType.All);
+            var items = result.Value.Items.Cast<ProductDetailResponse>().ToList();
+
+            // Assert
+            Assert.Equal(3, result.Value.TotalCount);
+            Assert.Contains(items, x => x.ProductName == "Rose Parent");
+            Assert.Contains(items, x => x.ProductName == "Rose Child S");
+            Assert.Contains(items, x => x.ProductName == "Rose Child L");
+            Assert.DoesNotContain(items, x => x.ProductName == "Lily Parent");
+            Assert.DoesNotContain(items, x => x.ProductName == "Lily Child");
+            Assert.DoesNotContain(items, x => x.ProductName == "Orphan Child");
+            Assert.DoesNotContain(items, x => x.ProductName == "Deleted Child");
+        }
+
+        [Fact]
+        public async Task GetLocalProductsV2_InvalidHierarchy_ThrowsBadRequest()
+        {
+            await using var dbContext = CreateMockDbContext(new List<ProductEntity>());
+            var service = CreateService(dbContext);
+
+            var exception = await Assert.ThrowsAsync<HoaTheoMua.Service.Exceptions.BadRequestException>(() =>
+                service.GetLocalProductsV2(
+                    new ProductRequest.LocalProductQueryRequest(),
+                    (ProductHierarchyType)999));
+
+            Assert.Equal("Phạm vi sản phẩm không hợp lệ. Vui lòng chọn \"Parent\" hoặc \"All\".", exception.Message);
+        }
+
+        [Fact]
         public async Task GetLocalProductsV2_SearchKeyword_ReturnsMatchingProducts()
         {
             // Arrange

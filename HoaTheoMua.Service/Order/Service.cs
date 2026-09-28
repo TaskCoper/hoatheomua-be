@@ -207,8 +207,8 @@ public class Service : IService
     {
         var userId = _currentUser.GetRequiredUserId();
 
-        // Email-verification is now asserted by the token, not a Users-table lookup.
-        if (!_currentUser.IsVerified)
+        // Email-verified sessions and scoped phone-storefront sessions can place orders.
+        if (!(_currentUser.IsVerified || _currentUser.CanUseStorefront))
         {
             throw new UnauthorizedException("User is not verified");
         }
@@ -1716,7 +1716,7 @@ public class Service : IService
     {
         var userId = _currentUser.GetRequiredUserId();
 
-        if (!_currentUser.IsVerified)
+        if (!(_currentUser.IsVerified || _currentUser.CanUseStorefront))
         {
             throw new UnauthorizedException("User is not verified");
         }
@@ -1874,7 +1874,7 @@ public class Service : IService
         //nếu người dùng đó đặt hàng thì mới cho người dùng đó hủy đơn hàng
         var userId = _currentUser.GetRequiredUserId();
 
-        if (!_currentUser.IsVerified)
+        if (!(_currentUser.IsVerified || _currentUser.CanUseStorefront))
         {
             throw new UnauthorizedException("User is not verified");
         }

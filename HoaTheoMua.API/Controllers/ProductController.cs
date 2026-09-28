@@ -1,5 +1,6 @@
 using System.Text.Json;
 using HoaTheoMua.Extentions;
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Product;
 using Microsoft.AspNetCore.Authorization;
@@ -48,9 +49,11 @@ public class ProductController: ControllerBase
     }
 
     [HttpGet("/api/v2/products")]
-    public async Task<IActionResult> GetLocalProductsV2([FromQuery] Request.LocalProductQueryRequest request)
+    public async Task<IActionResult> GetLocalProductsV2(
+        [FromQuery] Request.LocalProductQueryRequest request,
+        [FromQuery] ProductHierarchyType? productHierarchy = null)
     {
-        var result = await _productService.GetLocalProductsV2(request);
+        var result = await _productService.GetLocalProductsV2(request, productHierarchy);
         return Ok(result);
     }
 

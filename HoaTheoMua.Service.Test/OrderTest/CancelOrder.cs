@@ -69,7 +69,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return mockDbContext;
         }
 
-        private static OrderServiceImpl CreateService(AppDbContext dbContext)
+        private static OrderServiceImpl CreateService(AppDbContext dbContext, bool verified = true, bool phone = false)
         {
             var mockConfig = new Mock<IConfiguration>();
             var mockConfigSection = new Mock<IConfigurationSection>();
@@ -84,21 +84,25 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var currentUserMock = new Mock<ICurrentUserService>();
             currentUserMock.Setup(x => x.GetRequiredUserId()).Returns(TestUserId);
-            currentUserMock.Setup(x => x.IsVerified).Returns(true);
+            currentUserMock.Setup(x => x.IsVerified).Returns(verified);
+            currentUserMock.Setup(x => x.CanUseStorefront).Returns(phone);
             var productService = new Mock<ProductService>().Object;
 
             return new OrderServiceImpl(dbContext, currentUserMock.Object, new Microsoft.AspNetCore.Http.HttpContextAccessor(), httpClient, productService, mockConfig.Object, new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
         }
 
         // HAPPY CASE: Đơn đang Pending => hủy thành công, status đổi thành Cancelled
-        [Fact]
-        public async Task CancelOrder_PendingOrder_CancelsSuccessfully()
+        // BR-43: storefront phone sessions retain owner-scoped cancellation.
+        [Theory]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public async Task CancelOrder_PendingOrder_CancelsSuccessfully(bool verified, bool phone)
         {
             // Arrange
             var orderId = Guid.NewGuid();
             var order = CreateOrderEntity(orderId, status: "Pending");
             var dbContextMock = CreateMockDbContext(new List<OrderEntity> { order });
-            var service = CreateService(dbContextMock.Object);
+            var service = CreateService(dbContextMock.Object, verified, phone);
 
             // Act
             var result = await service.CancelOrder(orderId);
