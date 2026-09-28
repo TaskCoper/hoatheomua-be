@@ -38,7 +38,7 @@ public class CreateCardTemplate
     }
 
     [Fact]
-    public async Task CreateCardTemplate_DuplicateName_CreatesBothTemplates()
+    public async Task CreateCardTemplate_DuplicateName_ThrowsBadRequest()
     {
         await using var db = CreateDbContext();
         var service = CreateService(db);
@@ -50,9 +50,10 @@ public class CreateCardTemplate
         };
 
         await service.CreateCardTemplate(request);
-        await service.CreateCardTemplate(request);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => service.CreateCardTemplate(request));
 
-        Assert.Equal(2, await db.CardTemplates.CountAsync());
+        Assert.Equal("CARD_TEMPLATE_NAME_ALREADY_EXISTS", exception.Message);
+        Assert.Equal(1, await db.CardTemplates.CountAsync());
     }
 
     [Theory]
