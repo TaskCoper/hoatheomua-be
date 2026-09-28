@@ -430,7 +430,7 @@ public class Service: IService
             UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
         };
             
-            product.ParentProductId = item.ParentId is > 0 ? item.ParentId.ToString() : null;
+            product.ParentProductId = item.ParentId?.ToString();
             product.ProductCode = NormalizeText(item.Code);
             product.Barcode = NormalizeText(item.Barcode);
             product.ProductName = NormalizeText(item.Name);
@@ -859,12 +859,18 @@ public class Service: IService
     
         if (product == null)
         {
-            return $"Sản phẩm với id: {nhanhProductId} không tồn tại trong hệ thống";
+            product = new Repository.Entity.Product()
+            {
+                Id = Guid.NewGuid(),
+                NhanhProductId = item.Id.ToString(),
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            await _appDbContext.Products.AddAsync(product);
         }
 
         
         product.UpdatedAt = DateTimeOffset.UtcNow;
-        product.ParentProductId = item.ParentId > 0 ? item.ParentId.ToString() : null;
+        product.ParentProductId = item.ParentId?.ToString();
         product.ProductCode = NormalizeText(item.Code);
         product.Barcode = NormalizeText(item.Barcode);
         product.ProductName = NormalizeText(item.Name);
