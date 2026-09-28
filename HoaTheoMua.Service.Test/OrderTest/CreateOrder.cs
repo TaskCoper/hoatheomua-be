@@ -190,7 +190,13 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 configs.Add(new ConfigEntity
                 {
                     Key = "ahamove.free_ship",
-                    Value = "{\"value\": " + freeShipDistance.Value + "}",
+                    Value = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        group = "ahamove",
+                        label = "Miễn phí ship (km)",
+                        value = freeShipDistance.Value,
+                        description = "tính theo km"
+                    }),
                     Group = "ahamove",
                     IsDeleted = false
                 });
@@ -531,30 +537,35 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
         public static IEnumerable<object?[]> XanhSmShippingFeeCases()
         {
+            yield return [7d, 0.08d, "km", 0m];
+            yield return [7d, 7d, "km", 0m];
+            yield return [7d, 7.001d, "km", 33000m];
+            yield return [2.5d, 2.5d, "km", 0m];
+            yield return [2.5d, 2.501d, "km", 33000m];
             yield return [null, 4d, "km", 33000m];
-            yield return [0, 4d, "km", 33000m];
-            yield return [-1, 4d, "km", 33000m];
-            yield return [5000, 4d, "km", 0m];
-            yield return [5000, 5d, "km", 0m];
-            yield return [5000, 5.001d, "km", 33000m];
-            yield return [5000, 5.33d, "km", 33000m];
-            yield return [5000, 5000d, "m", 0m];
-            yield return [5000, 5001d, "m", 33000m];
-            yield return [5000, 4d, " KM ", 0m];
-            yield return [3000, 4d, "km", 33000m];
-            yield return [5000, 0d, "km", 0m];
-            yield return [5000, null, "km", 33000m];
-            yield return [5000, 4d, null, 33000m];
-            yield return [5000, 4d, "mi", 33000m];
-            yield return [5000, -1d, "km", 33000m];
-            yield return [5000, double.NaN, "km", 33000m];
-            yield return [5000, double.PositiveInfinity, "km", 33000m];
+            yield return [0d, 4d, "km", 33000m];
+            yield return [-1d, 4d, "km", 33000m];
+            yield return [5d, 4d, "km", 0m];
+            yield return [5d, 5d, "km", 0m];
+            yield return [5d, 5.001d, "km", 33000m];
+            yield return [5d, 5.33d, "km", 33000m];
+            yield return [5d, 5000d, "m", 0m];
+            yield return [5d, 5001d, "m", 33000m];
+            yield return [5d, 4d, " KM ", 0m];
+            yield return [3d, 4d, "km", 33000m];
+            yield return [5d, 0d, "km", 0m];
+            yield return [5d, null, "km", 33000m];
+            yield return [5d, 4d, null, 33000m];
+            yield return [5d, 4d, "mi", 33000m];
+            yield return [5d, -1d, "km", 33000m];
+            yield return [5d, double.NaN, "km", 33000m];
+            yield return [5d, double.PositiveInfinity, "km", 33000m];
         }
 
         [Theory]
         [MemberData(nameof(XanhSmShippingFeeCases))]
         public async Task CreateOrder_XanhSm_UsesDoorToDoorQuote(
-            int? freeShipDistance, double? distance, string? distanceUnit, decimal expectedShippingFee)
+            double? freeShipDistance, double? distance, string? distanceUnit, decimal expectedShippingFee)
         {
             var orders = new List<OrderEntity>();
             var companyAddress = CreateCompanyAddress();
@@ -667,7 +678,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
         [Theory]
         [MemberData(nameof(XanhSmShippingFeeCases))]
         public async Task EstimateXanhSmShippingFee_ValidRequest_ReturnsBuyerShippingFee(
-            int? freeShipDistance, double? distance, string? distanceUnit, decimal expectedShippingFee)
+            double? freeShipDistance, double? distance, string? distanceUnit, decimal expectedShippingFee)
         {
             var companyAddress = CreateCompanyAddress();
             var product = CreateStockProduct(101, "Test Product", 10m, TestProductId);

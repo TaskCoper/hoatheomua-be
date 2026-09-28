@@ -1380,17 +1380,17 @@ public class Service : IService
 
     private async Task<decimal> GetXanhSmBuyerShippingFeeAsync(XanhSmDoorToDoorQuote quote)
     {
-        // Share Ahamove's existing free-shipping threshold, expressed in meters.
+        // ahamove.free_ship is configured in kilometers (the admin setting's unit).
         var configs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
-        var freeShippingMeters = configs.GetValue("ahamove.free_ship", 0);
-        var distanceMeters = quote.DistanceUnit?.Trim().ToLowerInvariant() switch
+        var freeShippingKm = configs.GetValue("ahamove.free_ship", 0d);
+        var distanceKm = quote.DistanceUnit?.Trim().ToLowerInvariant() switch
         {
-            "km" => quote.Distance * 1000,
-            "m" => quote.Distance,
+            "km" => quote.Distance,
+            "m" => quote.Distance / 1000,
             _ => null
         };
 
-        if (freeShippingMeters > 0 && distanceMeters is >= 0 && distanceMeters <= freeShippingMeters)
+        if (freeShippingKm > 0 && distanceKm is >= 0 && distanceKm <= freeShippingKm)
         {
             return 0;
         }
