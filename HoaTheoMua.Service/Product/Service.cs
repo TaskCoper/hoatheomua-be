@@ -2262,6 +2262,35 @@ public class Service : IService
         return product.Id.ToString();
     }
 
+    public async Task<List<Response.ProductByCategoryResponse>> GetProductsByCategories(List<Guid>? categoryIds)
+    {
+        var ids = categoryIds?
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList() ?? new List<Guid>();
+
+        if (ids.Count == 0)
+        {
+            return new List<Response.ProductByCategoryResponse>();
+        }
+
+        // Chỉ lấy sản phẩm cha (trang sản phẩm trên web là trang của cha), chưa xoá, đang bán
+        return await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsActive
+                                     && (x.ParentProductId == null || x.ParentProductId == string.Empty)
+                                     && x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && ids.Contains(cpd.CategoryProductId)))
+            .OrderBy(x => x.ProductName)
+            .Select(x => new Response.ProductByCategoryResponse
+            {
+                Id = x.Id,
+                Name = x.ProductName,
+                NhanhCreatedAt = x.NhanhCreatedAt,
+                NhanhUpdatedAt = x.NhanhUpdatedAt
+            })
+            .ToListAsync();
+    }
+
     public async Task<string> UpdateLabelProductNhanhVn(List<Request.UpdateLabelProductNhanhVnRequest> requests)
     {
         if (requests == null || requests.Count == 0)
