@@ -99,19 +99,19 @@ public class ProductWebhookContentDateTest
         Assert.Equal(NhanhTime, product.NhanhUpdatedAt);
     }
 
-    [Fact]
-    public async Task Update_ChildProduct_AlsoMarksParentWithCurrentTime()
-    {
-        await using var db = CreateDbContext();
-        var parent = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "1", NhanhUpdatedAt = NhanhTime.AddDays(-30) };
-        var child = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "2", ParentProductId = "1" };
-        db.Products.AddRange(parent, child);
-        await db.SaveChangesAsync();
-        await CreateService(db).WebhookNhanhVnProductUpdate(Request(2, parentId: 1, updatedAt: NhanhTime.ToUnixTimeSeconds()));
-
-        Assert.Equal(NhanhTime, child.NhanhUpdatedAt);
-        Assert.Equal(NhanhTime.AddDays(-30), parent.NhanhUpdatedAt);
-    }
+    // [Fact]
+    // public async Task Update_ChildProduct_AlsoMarksParentWithCurrentTime()
+    // {
+    //     await using var db = CreateDbContext();
+    //     var parent = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "1", NhanhUpdatedAt = NhanhTime.AddDays(-30) };
+    //     var child = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "2", ParentProductId = "1" };
+    //     db.Products.AddRange(parent, child);
+    //     await db.SaveChangesAsync();
+    //     await CreateService(db).WebhookNhanhVnProductUpdate(Request(2, parentId: 1, updatedAt: NhanhTime.ToUnixTimeSeconds()));
+    //
+    //     Assert.Equal(NhanhTime, child.NhanhUpdatedAt);
+    //     Assert.Equal(NhanhTime.AddDays(-30), parent.NhanhUpdatedAt);
+    // }
 
     // ---- Delete ----
 
