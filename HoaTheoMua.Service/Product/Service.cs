@@ -2255,6 +2255,22 @@ public class Service : IService
         if (request.Description != null)
         {
             product.Description = request.Description;
+            
+            product.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+            
+            long.TryParse(product.ParentProductId, out var parentId);
+
+            
+            if (!string.IsNullOrWhiteSpace(product.ParentProductId) && parentId > 0)
+            {
+                var parent = await _dbContext.Products
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
+
+                if (parent != null)
+                {
+                    parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                }
+            }
         }
         
         await _dbContext.SaveChangesAsync();
