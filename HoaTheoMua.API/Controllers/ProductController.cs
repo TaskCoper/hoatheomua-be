@@ -64,6 +64,13 @@ public class ProductController: ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
+    [HttpGet("/api/v1/products/by-categories")]
+    public async Task<IActionResult> GetProductsByCategories([FromQuery] List<Guid>? categoryIds)
+    {
+        var result = await _productService.GetProductsByCategories(categoryIds);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpGet("/api/v1/products/{id:guid}")]
     public async Task<IActionResult> GetLocalProductDetail(Guid id)
     {

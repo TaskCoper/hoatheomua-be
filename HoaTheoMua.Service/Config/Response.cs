@@ -15,6 +15,8 @@ public class Response
         public required JsonElement Value { get; set; }
         public string? Kind { get; set; }
         public  Guid UserId { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
     }
 
     public class ResponseDeleteConfig

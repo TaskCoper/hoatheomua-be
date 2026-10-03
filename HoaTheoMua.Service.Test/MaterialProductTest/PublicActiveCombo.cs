@@ -35,6 +35,40 @@ public class PublicActiveCombo
     }
 
     [Fact]
+    public async Task PublicActiveCombo_InactiveChild_MarksContentDateOfChildAndParent()
+    {
+        await using var db = CreateDbContext();
+        var oldDate = DateTimeOffset.UtcNow.AddDays(-30);
+        var parent = Product(ComboId, "COMBO-1", true);
+        parent.NhanhUpdatedAt = oldDate;
+        var childId = Guid.NewGuid();
+        var child = Product(childId, "CHILD-1", false, "COMBO-1");
+        db.Products.AddRange(parent, child);
+        await db.SaveChangesAsync();
+        var before = DateTimeOffset.UtcNow;
+
+        await CreateService(db).PublicActiveCombo(childId);
+
+        Assert.True(child.NhanhUpdatedAt >= before);
+        Assert.True(parent.NhanhUpdatedAt >= before);
+    }
+
+    [Fact]
+    public async Task PublicActiveCombo_AlreadyActive_DoesNotMarkContentDate()
+    {
+        await using var db = CreateDbContext();
+        var oldDate = DateTimeOffset.UtcNow.AddDays(-30);
+        var combo = Product(ComboId, "COMBO-1", true);
+        combo.NhanhUpdatedAt = oldDate;
+        db.Products.Add(combo);
+        await db.SaveChangesAsync();
+
+        await CreateService(db).PublicActiveCombo(ComboId);
+
+        Assert.Equal(oldDate, combo.NhanhUpdatedAt);
+    }
+
+    [Fact]
     public async Task PublicActiveCombo_AlreadyActive_IsIdempotent()
     {
         await using var db = CreateDbContext();

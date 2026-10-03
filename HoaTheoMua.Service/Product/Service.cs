@@ -1517,6 +1517,35 @@ public class Service : IService
         return maxPrice ?? 0;
     }
 
+    public async Task<List<Response.ProductByCategoryResponse>> GetProductsByCategories(List<Guid>? categoryIds)
+    {
+        var ids = categoryIds?
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList() ?? new List<Guid>();
+
+        if (ids.Count == 0)
+        {
+            return new List<Response.ProductByCategoryResponse>();
+        }
+
+        // Chỉ lấy sản phẩm cha (trang sản phẩm trên web là trang của cha), chưa xoá, đang bán
+        return await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsActive
+                        && (x.ParentProductId == null || x.ParentProductId == string.Empty)
+                        && x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && ids.Contains(cpd.CategoryProductId)))
+            .OrderBy(x => x.ProductName)
+            .Select(x => new Response.ProductByCategoryResponse
+            {
+                Id = x.Id,
+                Name = x.ProductName,
+                NhanhCreatedAt = x.NhanhCreatedAt,
+                NhanhUpdatedAt = x.NhanhUpdatedAt
+            })
+            .ToListAsync();
+    }
+
     public async Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request)
     {
         if (request == null)
@@ -1743,8 +1772,16 @@ public class Service : IService
             throw new BadRequestException("Product does not exist.");
         }
 
+        var visibleBefore = Common.ProductContentDate.Snapshot(product);
+
         _mapper.Map(request, product);
         product.UpdatedAt = DateTimeOffset.UtcNow;
+
+        // Chỉ tính là "sửa nội dung" khi field khách nhìn thấy bị đổi (tồn kho, giá nhập... không tính)
+        if (visibleBefore != Common.ProductContentDate.Snapshot(product))
+        {
+            await Common.ProductContentDate.MarkWithParentAsync(_dbContext, product, DateTimeOffset.UtcNow);
+        }
 
         _dbContext.Products.Update(product);
         await _dbContext.SaveChangesAsync();
@@ -2255,8 +2292,9 @@ public class Service : IService
         if (request.Description != null)
         {
             product.Description = request.Description;
+            await Common.ProductContentDate.MarkWithParentAsync(_dbContext, product, DateTimeOffset.UtcNow);
         }
-        
+
         await _dbContext.SaveChangesAsync();
 
         return product.Id.ToString();
@@ -2318,8 +2356,16 @@ public class Service : IService
         var updatedAt = DateTimeOffset.UtcNow;
         foreach (var product in products)
         {
-            product.ProductLabel = string.Join(", ", labelsByProductId[product.Id]);
+            var newLabel = string.Join(", ", labelsByProductId[product.Id]);
+            var labelChanged = product.ProductLabel != newLabel;
+
+            product.ProductLabel = newLabel;
             product.UpdatedAt = updatedAt;
+
+            if (labelChanged)
+            {
+                await Common.ProductContentDate.MarkWithParentAsync(_dbContext, product, updatedAt);
+            }
         }
 
         await _dbContext.SaveChangesAsync();

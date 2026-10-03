@@ -87,6 +87,36 @@ namespace HoaTheoMua.Service.Test.ConfigTest
             dbContextMock.Verify(x => x.SaveChangesAsync(default), Times.Once);
         }
 
+        // Sitemap lastmod: sửa config thì UpdatedAt phải được gán
+        [Fact]
+        public async Task UpdateConfig_ValidRequest_SetsUpdatedAt()
+        {
+            // Arrange
+            var configId = Guid.NewGuid();
+            var configs = new List<ConfigEntity>
+            {
+                CreateConfigEntity(configId, "web.title", "web", nameof(KindConfig.Content))
+            };
+            var service = CreateService(CreateMockDbContext(configs).Object);
+            var request = new UpdateConfigRequest
+            {
+                Key = "web.title",
+                Group = "web",
+                Kind = nameof(KindConfig.Content),
+                Value = JsonDocument.Parse("{\"group\": \"web\"}").RootElement,
+                IsPublic = true
+            };
+            Assert.Null(configs[0].UpdatedAt);
+            var before = DateTimeOffset.UtcNow;
+
+            // Act
+            await service.UpdateConfig(configId, request);
+
+            // Assert
+            Assert.NotNull(configs[0].UpdatedAt);
+            Assert.True(configs[0].UpdatedAt >= before);
+        }
+
         // EDGE CASE 1
         [Fact]
         public async Task UpdateConfig_GroupMismatchWithValueGroup_ThrowsConflictException()

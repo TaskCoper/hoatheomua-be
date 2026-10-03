@@ -542,6 +542,9 @@ public class Service: IService
                 product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
             }
 
+        await HoaTheoMua.Service.Common.ProductContentDate.MarkWithParentAsync(
+            _appDbContext, product, NhanhUpdatedAtOrNow(item.UpdatedAt));
+
         await _appDbContext.Products.AddAsync(product);
         await _appDbContext.SaveChangesAsync();
 
@@ -977,10 +980,8 @@ public class Service: IService
             product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
         }
         
-        if (item.UpdatedAt is > 0)
-        {
-            product.NhanhUpdatedAt = DateTimeOffset.FromUnixTimeSeconds(item.UpdatedAt.Value);
-        }
+        await HoaTheoMua.Service.Common.ProductContentDate.MarkWithParentAsync(
+            _appDbContext, product, NhanhUpdatedAtOrNow(item.UpdatedAt));
         await _appDbContext.SaveChangesAsync();
     
         return product.Id.ToString();
@@ -1003,6 +1004,10 @@ public class Service: IService
         {
             p.IsDeleted = true;
             p.UpdatedAt = DateTimeOffset.UtcNow;
+
+            // Sản phẩm con bị xoá thì trang của cha đổi theo
+            await HoaTheoMua.Service.Common.ProductContentDate.MarkParentAsync(
+                _appDbContext, p, DateTimeOffset.UtcNow);
         }
 
         await _appDbContext.SaveChangesAsync();
@@ -1205,6 +1210,12 @@ public class Service: IService
                     UpdatedAt = detail.UpdatedAt
                 }).ToList()
         };
+
+    // Ngày sửa Nhanh gửi (unix giây); Nhanh không gửi thì lấy giờ hiện tại.
+    private static DateTimeOffset NhanhUpdatedAtOrNow(long? nhanhUpdatedAt)
+        => nhanhUpdatedAt is > 0
+            ? DateTimeOffset.FromUnixTimeSeconds(nhanhUpdatedAt.Value)
+            : DateTimeOffset.UtcNow;
 
     private static string? NormalizeText(string? text)
     {

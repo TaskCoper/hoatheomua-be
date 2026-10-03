@@ -95,6 +95,14 @@ public class Response
         public List<ComboSpecification>? Materials { get; set; }
     }
 
+    public class ProductByCategoryResponse
+    {
+        public Guid Id { get; set; }
+        public string? Name { get; set; }
+        public DateTimeOffset? NhanhCreatedAt { get; set; }
+        public DateTimeOffset? NhanhUpdatedAt { get; set; }
+    }
+
     public class PinnedProductResponse
     {
         public Guid ProductId { get; set; }

@@ -799,6 +799,9 @@ public class Service : IService
 
             product.IsActive = true;
             product.UpdatedAt = DateTimeOffset.UtcNow;
+            // Trang sản phẩm xuất hiện trở lại -> tính là nội dung đổi
+            await HoaTheoMua.Service.Common.ProductContentDate.MarkWithParentAsync(
+                _dbContext, product, DateTimeOffset.UtcNow);
 
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();

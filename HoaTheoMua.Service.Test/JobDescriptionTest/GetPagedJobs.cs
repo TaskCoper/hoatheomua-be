@@ -196,6 +196,34 @@ public class GetPagedJobsTest
         return Convert.ToSingle(value);
     }
 
+    // Sitemap lastmod: item danh sách phải có CreatedAt, UpdatedAt (UpdatedAt rơi về CreatedAt nếu chưa sửa)
+    [Fact]
+    public async Task GetPagedJobs_ItemsContainCreatedAtAndUpdatedAt()
+    {
+        // Arrange
+        var created = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var updated = new DateTimeOffset(2026, 9, 28, 0, 0, 0, TimeSpan.Zero);
+        var jobs = new List<JobDescriptionEntity>
+        {
+            CreateJob(slug: "edited-job", createdAt: created.AddDays(10), updatedAt: updated),
+            CreateJob(slug: "never-edited-job", createdAt: created, updatedAt: null)
+        };
+        var service = CreateService(CreateMockDbContext(jobs));
+
+        // Act
+        var result = await service.GetPagedJobsAsync(
+            page: 1, pageSize: 10, title: null, location: null,
+            employmentType: null, salaryMin: null, salaryMax: null, status: null);
+
+        // Assert
+        var items = GetItems(result);
+        var edited = items.Single(x => (string?)GetPropertyOrFieldValue(x, "Slug") == "edited-job");
+        Assert.Equal(created.AddDays(10), (DateTimeOffset)GetPropertyOrFieldValue(edited, "CreatedAt")!);
+        Assert.Equal(updated, (DateTimeOffset)GetPropertyOrFieldValue(edited, "UpdatedAt")!);
+        var never = items.Single(x => (string?)GetPropertyOrFieldValue(x, "Slug") == "never-edited-job");
+        Assert.Equal(created, (DateTimeOffset)GetPropertyOrFieldValue(never, "UpdatedAt")!);
+    }
+
     // TC01: Lấy danh sách thành công không filter
     [Fact]
     public async Task GetPagedJobs_Success()

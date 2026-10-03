@@ -73,6 +73,33 @@ namespace HoaTheoMua.Service.Test.ConfigTest
             Assert.Equal("web.title", result[0].Key);
         }
 
+        // Sitemap lastmod: response phải có CreatedAt, UpdatedAt
+        [Fact]
+        public async Task GetConfigIsPublic_ReturnsCreatedAtAndUpdatedAt()
+        {
+            // Arrange
+            var created = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            var updated = new DateTimeOffset(2026, 9, 28, 0, 0, 0, TimeSpan.Zero);
+            var edited = CreateConfigEntity("web.edited", "web", nameof(KindConfig.Content));
+            edited.CreatedAt = created;
+            edited.UpdatedAt = updated;
+            var neverEdited = CreateConfigEntity("web.never", "web", nameof(KindConfig.Content));
+            neverEdited.CreatedAt = created;
+            var service = CreateService(CreateMockDbContext(new List<ConfigEntity> { edited, neverEdited }).Object);
+
+            // Act
+            var result = await service.GetConfigIsPublic("web", null);
+
+            // Assert
+            Assert.NotNull(result);
+            var editedResult = result.Single(x => x.Key == "web.edited");
+            Assert.Equal(created, editedResult.CreatedAt);
+            Assert.Equal(updated, editedResult.UpdatedAt);
+            var neverResult = result.Single(x => x.Key == "web.never");
+            Assert.Equal(created, neverResult.CreatedAt);
+            Assert.Null(neverResult.UpdatedAt);
+        }
+
         // EDGE CASE 1
         [Fact]
         public async Task GetConfigIsPublic_NoMatch_ReturnsNull()
