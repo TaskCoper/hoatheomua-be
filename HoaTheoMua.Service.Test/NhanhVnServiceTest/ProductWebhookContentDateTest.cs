@@ -107,12 +107,10 @@ public class ProductWebhookContentDateTest
         var child = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "2", ParentProductId = "1" };
         db.Products.AddRange(parent, child);
         await db.SaveChangesAsync();
-        var before = DateTimeOffset.UtcNow;
-
         await CreateService(db).WebhookNhanhVnProductUpdate(Request(2, parentId: 1, updatedAt: NhanhTime.ToUnixTimeSeconds()));
 
         Assert.Equal(NhanhTime, child.NhanhUpdatedAt);
-        Assert.True(parent.NhanhUpdatedAt >= before);
+        Assert.Equal(NhanhTime.AddDays(-30), parent.NhanhUpdatedAt);
     }
 
     // ---- Delete ----

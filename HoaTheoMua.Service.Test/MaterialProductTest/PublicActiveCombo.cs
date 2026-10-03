@@ -39,10 +39,10 @@ public class PublicActiveCombo
     {
         await using var db = CreateDbContext();
         var oldDate = DateTimeOffset.UtcNow.AddDays(-30);
-        var parent = Product(ComboId, "COMBO-1", true);
+        var parent = Product(ComboId, "1", true);
         parent.NhanhUpdatedAt = oldDate;
         var childId = Guid.NewGuid();
-        var child = Product(childId, "CHILD-1", false, "COMBO-1");
+        var child = Product(childId, "2", false, "1");
         db.Products.AddRange(parent, child);
         await db.SaveChangesAsync();
         var before = DateTimeOffset.UtcNow;

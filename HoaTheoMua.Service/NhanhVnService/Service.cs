@@ -880,6 +880,7 @@ public class Service: IService
 
         
         product.UpdatedAt = DateTimeOffset.UtcNow;
+        var oldParentProductId = product.ParentProductId;
         product.ParentProductId = item.ParentId > 0 ? item.ParentId.ToString() : null;
         product.ProductCode = NormalizeText(item.Code);
         product.Barcode = NormalizeText(item.Barcode);
@@ -998,15 +999,34 @@ public class Service: IService
             product.NhanhUpdatedAt = DateTimeOffset.FromUnixTimeSeconds(item.UpdatedAt.Value);
         }
         
-        if (item.ParentId is > 0)
+        // Con thay đổi quan hệ cha:
+        // - Thêm cha: cập nhật con và cha mới.
+        // - Đổi cha: cập nhật con, cha cũ và cha mới.
+        // - Gỡ cha: cập nhật con và cha cũ.
+        // - Không đổi cha: chỉ cập nhật con.
+        if (product.ParentProductId != oldParentProductId)
         {
-            var parent = await _appDbContext.Products
-                .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == item.ParentId.ToString());
+             if (product.ParentProductId != null)
+             {
+                 var newParent = await _appDbContext.Products
+                     .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
 
-            if (parent != null)
-            {
-                parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
-            }
+                 if (newParent != null)
+                 {
+                     newParent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                 }
+             }
+
+             if (oldParentProductId != null)
+             {
+                 var oldParent = await _appDbContext.Products
+                     .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == oldParentProductId);
+
+                 if (oldParent != null)
+                 {
+                     oldParent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                 }
+             }
         }
         
         await _appDbContext.SaveChangesAsync();
@@ -1034,7 +1054,9 @@ public class Service: IService
             
             p.NhanhUpdatedAt = DateTimeOffset.UtcNow;
 
-            if (!string.IsNullOrWhiteSpace(p.ParentProductId))
+            if (!string.IsNullOrWhiteSpace(p.ParentProductId)
+                && int.TryParse(p.ParentProductId, out var parentId)
+                && parentId > 0)
             {
                 var parent = await _appDbContext.Products
                     .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == p.ParentProductId);

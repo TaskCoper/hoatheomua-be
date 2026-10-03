@@ -802,7 +802,9 @@ public class Service : IService
             
             product.NhanhUpdatedAt = DateTimeOffset.UtcNow;
             
-            if (!string.IsNullOrWhiteSpace(product.ParentProductId))
+            if (!string.IsNullOrWhiteSpace(product.ParentProductId)
+                && int.TryParse(product.ParentProductId, out var parentId)
+                && parentId > 0)
             {
                 var parent = await _dbContext.Products
                     .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
