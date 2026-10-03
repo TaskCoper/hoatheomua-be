@@ -2359,10 +2359,7 @@ public class Service : IService
         var updatedAt = DateTimeOffset.UtcNow;
         foreach (var product in products)
         {
-            var newLabel = string.Join(", ", labelsByProductId[product.Id]);
-            var labelChanged = product.ProductLabel != newLabel;
-
-            product.ProductLabel = newLabel;
+            product.ProductLabel = string.Join(", ", labelsByProductId[product.Id]);
             product.UpdatedAt = updatedAt;
         }
 

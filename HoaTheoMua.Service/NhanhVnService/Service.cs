@@ -547,10 +547,10 @@ public class Service: IService
                 product.NhanhUpdatedAt = DateTimeOffset.FromUnixTimeSeconds(item.UpdatedAt.Value);
             }
             
-            if (!string.IsNullOrWhiteSpace(product.ParentProductId))
+            if (item.ParentId is > 0)
             {
                 var parent = await _appDbContext.Products
-                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == item.ParentId.ToString());
 
                 if (parent != null)
                 {
@@ -998,10 +998,10 @@ public class Service: IService
             product.NhanhUpdatedAt = DateTimeOffset.FromUnixTimeSeconds(item.UpdatedAt.Value);
         }
         
-        if (!string.IsNullOrWhiteSpace(product.ParentProductId))
+        if (item.ParentId is > 0)
         {
             var parent = await _appDbContext.Products
-                .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
+                .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == item.ParentId.ToString());
 
             if (parent != null)
             {
