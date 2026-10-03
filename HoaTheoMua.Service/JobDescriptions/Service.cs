@@ -124,7 +124,7 @@ public class Service : IService
                 Openings = job.openings,
                 Status = job.status == StatusJobDescriptions.Open ? "open" : "closed",
                 CreatedAt = job.CreatedAt,
-                UpdatedAt = job.UpdatedAt ?? job.CreatedAt
+                UpdatedAt = job.UpdatedAt
             })
             .ToListAsync();
 

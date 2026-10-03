@@ -45,29 +45,30 @@ public class ProductWebhookContentDateTest
     }
 
     [Fact]
-    public async Task Add_NhanhDoesNotSendUpdatedAt_UsesCurrentTime()
+    public async Task Add_NhanhDoesNotSendUpdatedAt_LeavesDateNull()
     {
         await using var db = CreateDbContext();
-        var before = DateTimeOffset.UtcNow;
 
         await CreateService(db).WebhookNhanhVnProductAdd(Request(100));
 
         var product = await db.Products.SingleAsync(x => x.NhanhProductId == "100");
-        Assert.NotNull(product.NhanhUpdatedAt);
-        Assert.True(product.NhanhUpdatedAt >= before);
+        Assert.Null(product.NhanhUpdatedAt);
     }
 
     [Fact]
-    public async Task Add_ChildProduct_AlsoMarksParent()
+    public async Task Add_ChildProduct_AlsoMarksParentWithCurrentTime()
     {
         await using var db = CreateDbContext();
         var parent = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "1", NhanhUpdatedAt = NhanhTime.AddDays(-30) };
         db.Products.Add(parent);
         await db.SaveChangesAsync();
+        var before = DateTimeOffset.UtcNow;
 
         await CreateService(db).WebhookNhanhVnProductAdd(Request(2, parentId: 1, updatedAt: NhanhTime.ToUnixTimeSeconds()));
 
-        Assert.Equal(NhanhTime, parent.NhanhUpdatedAt);
+        var child = await db.Products.SingleAsync(x => x.NhanhProductId == "2");
+        Assert.Equal(NhanhTime, child.NhanhUpdatedAt);
+        Assert.True(parent.NhanhUpdatedAt >= before);
     }
 
     // ---- Update ----
@@ -86,47 +87,32 @@ public class ProductWebhookContentDateTest
     }
 
     [Fact]
-    public async Task Update_NhanhDoesNotSendUpdatedAt_StillWritesCurrentTime()
-    {
-        await using var db = CreateDbContext();
-        var product = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "100" };
-        db.Products.Add(product);
-        await db.SaveChangesAsync();
-        var before = DateTimeOffset.UtcNow;
-
-        await CreateService(db).WebhookNhanhVnProductUpdate(Request(100));
-
-        Assert.NotNull(product.NhanhUpdatedAt);
-        Assert.True(product.NhanhUpdatedAt >= before);
-    }
-
-    [Fact]
-    public async Task Update_OlderDateFromNhanh_DoesNotMoveDateBackwards()
+    public async Task Update_NhanhDoesNotSendUpdatedAt_KeepsExistingDate()
     {
         await using var db = CreateDbContext();
         var product = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "100", NhanhUpdatedAt = NhanhTime };
         db.Products.Add(product);
         await db.SaveChangesAsync();
 
-        await CreateService(db).WebhookNhanhVnProductUpdate(
-            Request(100, updatedAt: NhanhTime.AddDays(-3).ToUnixTimeSeconds()));
+        await CreateService(db).WebhookNhanhVnProductUpdate(Request(100));
 
         Assert.Equal(NhanhTime, product.NhanhUpdatedAt);
     }
 
     [Fact]
-    public async Task Update_ChildProduct_AlsoMarksParent()
+    public async Task Update_ChildProduct_AlsoMarksParentWithCurrentTime()
     {
         await using var db = CreateDbContext();
         var parent = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "1", NhanhUpdatedAt = NhanhTime.AddDays(-30) };
         var child = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "2", ParentProductId = "1" };
         db.Products.AddRange(parent, child);
         await db.SaveChangesAsync();
+        var before = DateTimeOffset.UtcNow;
 
         await CreateService(db).WebhookNhanhVnProductUpdate(Request(2, parentId: 1, updatedAt: NhanhTime.ToUnixTimeSeconds()));
 
         Assert.Equal(NhanhTime, child.NhanhUpdatedAt);
-        Assert.Equal(NhanhTime, parent.NhanhUpdatedAt);
+        Assert.True(parent.NhanhUpdatedAt >= before);
     }
 
     // ---- Delete ----
@@ -150,18 +136,20 @@ public class ProductWebhookContentDateTest
     }
 
     [Fact]
-    public async Task Delete_ParentProduct_DoesNotWriteDate()
+    public async Task Delete_ParentProduct_DoesNotTouchOtherProducts()
     {
         await using var db = CreateDbContext();
         var parent = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "1", NhanhUpdatedAt = NhanhTime };
-        db.Products.Add(parent);
+        var other = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "9", NhanhUpdatedAt = NhanhTime };
+        db.Products.AddRange(parent, other);
         await db.SaveChangesAsync();
 
         await CreateService(db).WebhookNhanhVnProductDelete(
             new NhanhProductDeleteWebhookRequest { Data = new List<string> { "1" } });
 
         Assert.True(parent.IsDeleted);
-        Assert.Equal(NhanhTime, parent.NhanhUpdatedAt);
+        Assert.False(other.IsDeleted);
+        Assert.Equal(NhanhTime, other.NhanhUpdatedAt);
     }
 
     // ---- Inventory ----

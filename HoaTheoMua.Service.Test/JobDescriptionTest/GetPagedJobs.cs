@@ -196,7 +196,7 @@ public class GetPagedJobsTest
         return Convert.ToSingle(value);
     }
 
-    // Sitemap lastmod: item danh sách phải có CreatedAt, UpdatedAt (UpdatedAt rơi về CreatedAt nếu chưa sửa)
+    // Sitemap lastmod: item danh sách phải có CreatedAt, UpdatedAt (UpdatedAt là null nếu chưa sửa lần nào)
     [Fact]
     public async Task GetPagedJobs_ItemsContainCreatedAtAndUpdatedAt()
     {
@@ -221,7 +221,8 @@ public class GetPagedJobsTest
         Assert.Equal(created.AddDays(10), (DateTimeOffset)GetPropertyOrFieldValue(edited, "CreatedAt")!);
         Assert.Equal(updated, (DateTimeOffset)GetPropertyOrFieldValue(edited, "UpdatedAt")!);
         var never = items.Single(x => (string?)GetPropertyOrFieldValue(x, "Slug") == "never-edited-job");
-        Assert.Equal(created, (DateTimeOffset)GetPropertyOrFieldValue(never, "UpdatedAt")!);
+        Assert.Equal(created, (DateTimeOffset)GetPropertyOrFieldValue(never, "CreatedAt")!);
+        Assert.Null(GetPropertyOrFieldValue(never, "UpdatedAt"));
     }
 
     // TC01: Lấy danh sách thành công không filter

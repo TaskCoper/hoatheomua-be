@@ -1771,17 +1771,9 @@ public class Service : IService
         {
             throw new BadRequestException("Product does not exist.");
         }
-
-        var visibleBefore = Common.ProductContentDate.Snapshot(product);
-
+        
         _mapper.Map(request, product);
         product.UpdatedAt = DateTimeOffset.UtcNow;
-
-        // Chỉ tính là "sửa nội dung" khi field khách nhìn thấy bị đổi (tồn kho, giá nhập... không tính)
-        if (visibleBefore != Common.ProductContentDate.Snapshot(product))
-        {
-            await Common.ProductContentDate.MarkWithParentAsync(_dbContext, product, DateTimeOffset.UtcNow);
-        }
 
         _dbContext.Products.Update(product);
         await _dbContext.SaveChangesAsync();
@@ -2292,7 +2284,18 @@ public class Service : IService
         if (request.Description != null)
         {
             product.Description = request.Description;
-            await Common.ProductContentDate.MarkWithParentAsync(_dbContext, product, DateTimeOffset.UtcNow);
+            product.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+            
+            if (!string.IsNullOrWhiteSpace(product.ParentProductId))
+            {
+                var parent = await _dbContext.Products
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
+
+                if (parent != null)
+                {
+                    parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                }
+            }
         }
 
         await _dbContext.SaveChangesAsync();
@@ -2361,11 +2364,6 @@ public class Service : IService
 
             product.ProductLabel = newLabel;
             product.UpdatedAt = updatedAt;
-
-            if (labelChanged)
-            {
-                await Common.ProductContentDate.MarkWithParentAsync(_dbContext, product, updatedAt);
-            }
         }
 
         await _dbContext.SaveChangesAsync();

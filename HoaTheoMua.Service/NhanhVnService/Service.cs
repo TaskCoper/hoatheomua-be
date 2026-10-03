@@ -541,9 +541,22 @@ public class Service: IService
             {
                 product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
             }
+            
+            if (item.UpdatedAt is > 0)
+            {
+                product.NhanhUpdatedAt = DateTimeOffset.FromUnixTimeSeconds(item.UpdatedAt.Value);
+            }
+            
+            if (!string.IsNullOrWhiteSpace(product.ParentProductId))
+            {
+                var parent = await _appDbContext.Products
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
 
-        await HoaTheoMua.Service.Common.ProductContentDate.MarkWithParentAsync(
-            _appDbContext, product, NhanhUpdatedAtOrNow(item.UpdatedAt));
+                if (parent != null)
+                {
+                    parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                }
+            }
 
         await _appDbContext.Products.AddAsync(product);
         await _appDbContext.SaveChangesAsync();
@@ -980,8 +993,22 @@ public class Service: IService
             product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
         }
         
-        await HoaTheoMua.Service.Common.ProductContentDate.MarkWithParentAsync(
-            _appDbContext, product, NhanhUpdatedAtOrNow(item.UpdatedAt));
+        if (item.UpdatedAt is > 0)
+        {
+            product.NhanhUpdatedAt = DateTimeOffset.FromUnixTimeSeconds(item.UpdatedAt.Value);
+        }
+        
+        if (!string.IsNullOrWhiteSpace(product.ParentProductId))
+        {
+            var parent = await _appDbContext.Products
+                .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
+
+            if (parent != null)
+            {
+                parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+        
         await _appDbContext.SaveChangesAsync();
     
         return product.Id.ToString();
@@ -1004,10 +1031,19 @@ public class Service: IService
         {
             p.IsDeleted = true;
             p.UpdatedAt = DateTimeOffset.UtcNow;
+            
+            p.NhanhUpdatedAt = DateTimeOffset.UtcNow;
 
-            // Sản phẩm con bị xoá thì trang của cha đổi theo
-            await HoaTheoMua.Service.Common.ProductContentDate.MarkParentAsync(
-                _appDbContext, p, DateTimeOffset.UtcNow);
+            if (!string.IsNullOrWhiteSpace(p.ParentProductId))
+            {
+                var parent = await _appDbContext.Products
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == p.ParentProductId);
+
+                if (parent != null)
+                {
+                    parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                }
+            }
         }
 
         await _appDbContext.SaveChangesAsync();
@@ -1210,12 +1246,6 @@ public class Service: IService
                     UpdatedAt = detail.UpdatedAt
                 }).ToList()
         };
-
-    // Ngày sửa Nhanh gửi (unix giây); Nhanh không gửi thì lấy giờ hiện tại.
-    private static DateTimeOffset NhanhUpdatedAtOrNow(long? nhanhUpdatedAt)
-        => nhanhUpdatedAt is > 0
-            ? DateTimeOffset.FromUnixTimeSeconds(nhanhUpdatedAt.Value)
-            : DateTimeOffset.UtcNow;
 
     private static string? NormalizeText(string? text)
     {

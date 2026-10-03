@@ -12,7 +12,7 @@ using ProductService = HoaTheoMua.Service.Product.Service;
 
 namespace HoaTheoMua.Service.Test.ProductTest;
 
-// Admin sửa sản phẩm ở web mình: chỉ đổi ngày nội dung (NhanhUpdatedAt) khi khách thấy trang khác đi.
+// Admin sửa mô tả sản phẩm ở web mình thì ngày nội dung (NhanhUpdatedAt) của sản phẩm và sản phẩm cha đổi.
 public class UpdateProductContentDateTest
 {
     private static readonly DateTimeOffset OldDate = new(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
@@ -50,44 +50,7 @@ public class UpdateProductContentDateTest
     // ---- UpdateProduct (PATCH) ----
 
     [Fact]
-    public async Task UpdateProduct_VisibleFieldChanged_MarksDateOfProductAndParent()
-    {
-        await using var db = CreateDbContext();
-        var (parent, child) = await SeedParentAndChild(db);
-        var before = DateTimeOffset.UtcNow;
-
-        await CreateService(db).UpdateProduct(child.Id, new Request.UpdateProductRequest { Price = 120m });
-
-        Assert.True(child.NhanhUpdatedAt >= before);
-        Assert.True(parent.NhanhUpdatedAt >= before);
-    }
-
-    [Fact]
-    public async Task UpdateProduct_OnlyStockChanged_DoesNotMarkDate()
-    {
-        await using var db = CreateDbContext();
-        var (parent, child) = await SeedParentAndChild(db);
-
-        await CreateService(db).UpdateProduct(child.Id, new Request.UpdateProductRequest { Stock = 99, ImportPrice = 5m });
-
-        Assert.Equal(99m, child.Stock);
-        Assert.Equal(OldDate, child.NhanhUpdatedAt);
-        Assert.Equal(OldDate, parent.NhanhUpdatedAt);
-    }
-
-    [Fact]
-    public async Task UpdateProduct_SameValueSentAgain_DoesNotMarkDate()
-    {
-        await using var db = CreateDbContext();
-        var (_, child) = await SeedParentAndChild(db);
-
-        await CreateService(db).UpdateProduct(child.Id, new Request.UpdateProductRequest { Price = 100m, ProductName = "Bó hoa M" });
-
-        Assert.Equal(OldDate, child.NhanhUpdatedAt);
-    }
-
-    [Fact]
-    public async Task UpdateProduct_StillWritesUpdatedAtForAudit()
+    public async Task UpdateProduct_WritesUpdatedAtForAudit()
     {
         await using var db = CreateDbContext();
         var (_, child) = await SeedParentAndChild(db);
@@ -113,49 +76,25 @@ public class UpdateProductContentDateTest
     }
 
     [Fact]
-    public async Task UpdateProductV2_DescriptionNull_DoesNotMarkDate()
+    public async Task UpdateProductV2_ParentProduct_OnlyMarksItself()
     {
         await using var db = CreateDbContext();
-        var (_, child) = await SeedParentAndChild(db);
+        var (parent, child) = await SeedParentAndChild(db);
+        var before = DateTimeOffset.UtcNow;
 
-        await CreateService(db).UpdateProductV2(child.Id, new Request.UpdateProductRequestV2 { Description = null });
+        await CreateService(db).UpdateProductV2(parent.Id, new Request.UpdateProductRequestV2 { Description = "Mô tả mới" });
 
+        Assert.True(parent.NhanhUpdatedAt >= before);
         Assert.Equal(OldDate, child.NhanhUpdatedAt);
     }
 
-    // ---- UpdateLabelProductNhanhVn ----
-
     [Fact]
-    public async Task UpdateLabel_LabelChanged_MarksDateOfProductAndParent()
+    public async Task UpdateProductV2_DescriptionNull_DoesNotMarkDate()
     {
         await using var db = CreateDbContext();
         var (parent, child) = await SeedParentAndChild(db);
-        child.ProductLabel = "CŨ";
-        await db.SaveChangesAsync();
-        var before = DateTimeOffset.UtcNow;
 
-        await CreateService(db).UpdateLabelProductNhanhVn(new List<Request.UpdateLabelProductNhanhVnRequest>
-        {
-            new() { Label = "MỚI", ProductIds = new List<string> { child.Id.ToString() } }
-        });
-
-        Assert.Equal("MỚI", child.ProductLabel);
-        Assert.True(child.NhanhUpdatedAt >= before);
-        Assert.True(parent.NhanhUpdatedAt >= before);
-    }
-
-    [Fact]
-    public async Task UpdateLabel_SameLabel_DoesNotMarkDate()
-    {
-        await using var db = CreateDbContext();
-        var (parent, child) = await SeedParentAndChild(db);
-        child.ProductLabel = "GIỮ NGUYÊN";
-        await db.SaveChangesAsync();
-
-        await CreateService(db).UpdateLabelProductNhanhVn(new List<Request.UpdateLabelProductNhanhVnRequest>
-        {
-            new() { Label = "GIỮ NGUYÊN", ProductIds = new List<string> { child.Id.ToString() } }
-        });
+        await CreateService(db).UpdateProductV2(child.Id, new Request.UpdateProductRequestV2 { Description = null });
 
         Assert.Equal(OldDate, child.NhanhUpdatedAt);
         Assert.Equal(OldDate, parent.NhanhUpdatedAt);

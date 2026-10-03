@@ -799,9 +799,19 @@ public class Service : IService
 
             product.IsActive = true;
             product.UpdatedAt = DateTimeOffset.UtcNow;
-            // Trang sản phẩm xuất hiện trở lại -> tính là nội dung đổi
-            await HoaTheoMua.Service.Common.ProductContentDate.MarkWithParentAsync(
-                _dbContext, product, DateTimeOffset.UtcNow);
+            
+            product.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+            
+            if (!string.IsNullOrWhiteSpace(product.ParentProductId))
+            {
+                var parent = await _dbContext.Products
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
+
+                if (parent != null)
+                {
+                    parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                }
+            }
 
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
