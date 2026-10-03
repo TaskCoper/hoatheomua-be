@@ -24,4 +24,5 @@ public interface IService
     Task<Response.GetProductDetailByCustomerResponse> GetProductDetailByCustomer(Guid id);
     Task<List<Response.InventoryCheckError>?> CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request);
     Task<string> UpdateProductV2(Guid id, Request.UpdateProductRequestV2 request);
+    Task<List<Response.ProductByCategoryResponse>> GetProductsByCategories(List<Guid>? categoryIds);
 }
