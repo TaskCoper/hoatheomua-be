@@ -113,7 +113,8 @@ public class Response
     public bool? IsPinned { get; set; }  
     public int SourceRowNumber { get; set; }  
     public string? NhanhProductId { get; set; }  
-    public string? ParentProductId { get; set; }  
+    public string? ParentProductId { get; set; }
+    public Guid? ParentProductGuidId { get; set; }
     public string? ParentProductCode { get; set; }  
     public string? ParentProductName { get; set; }  
     public string? Barcode { get; set; }  
@@ -308,5 +309,13 @@ public class Response
     {
         public Guid ProductId { get; set; }
         public string? ProductName { get; set; }
+    }
+    
+    public class ProductByCategoryResponse
+    {
+        public Guid Id { get; set; }
+        public string? Name { get; set; }
+        public DateTimeOffset? NhanhCreatedAt { get; set; }
+        public DateTimeOffset? NhanhUpdatedAt { get; set; }
     }
 }

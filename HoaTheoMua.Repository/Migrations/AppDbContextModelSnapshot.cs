@@ -235,6 +235,133 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("BasePostImage", (string)null);
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardGenerationJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BouquetImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("CancelRequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Checkpoint")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("GeneratedCardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("LastDispatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LeaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrderDetailId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Result")
+                        .HasColumnType("jsonb");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Snapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("SourceCardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TemplateImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VirtualId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneratedCardId");
+
+                    b.HasIndex("OrderDetailId", "VirtualId")
+                        .IsUnique()
+                        .HasFilter("\"Type\" = 'Create' AND \"Status\" IN ('Queued','Running')");
+
+                    b.HasIndex("UserId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "LeaseUntil", "LastDispatchedAt");
+
+                    b.HasIndex("UserId", "CreatedAt", "Id");
+
+                    b.ToTable("CardGenerationJob", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CardJob_Lease", "(\"LeaseId\" IS NULL) = (\"LeaseUntil\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_CardJob_Status", "\"Status\" IN ('Queued','Running','Succeeded','Failed','Canceled')");
+
+                            t.HasCheckConstraint("CK_CardJob_Success", "\"Status\" <> 'Succeeded' OR (\"GeneratedCardId\" IS NOT NULL AND \"Result\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_CardJob_Type", "\"Type\" IN ('Create','Regenerate')");
+                        });
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardTemplate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -702,6 +829,126 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("Configs");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.FlowerGenerationJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("CancelRequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Checkpoint")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("GeneratedFlowerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("LastDispatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LeaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MockupImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProductImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Result")
+                        .HasColumnType("jsonb");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Snapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("SourceFlowerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneratedFlowerId");
+
+                    b.HasIndex("UserId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "LeaseUntil", "LastDispatchedAt");
+
+                    b.HasIndex("UserId", "CreatedAt", "Id");
+
+                    b.ToTable("FlowerGenerationJob", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FlowerJob_Lease", "(\"LeaseId\" IS NULL) = (\"LeaseUntil\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_FlowerJob_Status", "\"Status\" IN ('Queued','Running','Succeeded','Failed','Canceled')");
+
+                            t.HasCheckConstraint("CK_FlowerJob_Success", "\"Status\" <> 'Succeeded' OR (\"GeneratedFlowerId\" IS NOT NULL AND \"Result\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_FlowerJob_Type", "\"Type\" IN ('Create','Regenerate')");
+                        });
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.FlowerReference", b =>
                 {
                     b.Property<Guid>("Id")
@@ -719,6 +966,9 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("Description");
+
+                    b.Property<string>("DescriptionPrompt")
+                        .HasColumnType("text");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
@@ -895,6 +1145,16 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnName("CreatedAt")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<string>("FlowerWithLogoImageUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("FlowerWithLogoImageUrl");
+
+                    b.Property<string>("FlowerWithMockupImageUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("FlowerWithMockupImageUrl");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
@@ -920,7 +1180,10 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("UserId", "CreatedAt")
                         .IsDescending(false, true);
 
-                    b.ToTable("GeneratedFlower", (string)null);
+                    b.ToTable("GeneratedFlower", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_generated_flower_logo_requires_mockup", "\"FlowerWithLogoImageUrl\" IS NULL OR \"FlowerWithMockupImageUrl\" IS NOT NULL");
+                        });
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.GeneratedPost", b =>
@@ -3141,6 +3404,14 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.CardGenerationJob", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.GeneratedCard", null)
+                        .WithMany()
+                        .HasForeignKey("GeneratedCardId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.CategoryNews", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.CategoryNews", "ParentCategoryNews")
@@ -3216,6 +3487,14 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("Mat");
 
                     b.Navigation("Sub");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.FlowerGenerationJob", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.GeneratedFlower", null)
+                        .WithMany()
+                        .HasForeignKey("GeneratedFlowerId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.GeneratedPost", b =>

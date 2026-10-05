@@ -358,6 +358,7 @@ public class Response
         public string Name { get; set; } = string.Empty;
         public Guid? GeneratedFlowerId { get; set; }
         public bool AiCustomize { get; set; }
+        public string? GeneratedFlowerImageUrl { get; set; }
         public List<ResolvedMaterial> Materials { get; set; } = new();
         public List<ResolvedMaterial> AdditionCustome { get; set; } = new();
         public ResolvedAccessory? Ribbon { get; set; }

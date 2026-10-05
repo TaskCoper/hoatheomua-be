@@ -59,11 +59,17 @@ public class GeneratedFlowerConfiguration : IEntityTypeConfiguration<GeneratedFl
 {
     public void Configure(EntityTypeBuilder<GeneratedFlower> builder)
     {
-        builder.ToTable("GeneratedFlower");
+        builder.ToTable("GeneratedFlower", table => table.HasCheckConstraint(
+            "CK_generated_flower_logo_requires_mockup",
+            "\"FlowerWithLogoImageUrl\" IS NULL OR \"FlowerWithMockupImageUrl\" IS NOT NULL"));
         builder.HasKey(generatedFlower => generatedFlower.Id);
         builder.Property(generatedFlower => generatedFlower.Id).HasColumnName("Id");
         builder.Property(generatedFlower => generatedFlower.Name).HasColumnName("Name").IsRequired();
         builder.Property(generatedFlower => generatedFlower.ImageUrl).HasColumnName("ImageUrl").HasMaxLength(2048).IsRequired();
+        builder.Property(generatedFlower => generatedFlower.FlowerWithMockupImageUrl)
+            .HasColumnName("FlowerWithMockupImageUrl").HasMaxLength(2048);
+        builder.Property(generatedFlower => generatedFlower.FlowerWithLogoImageUrl)
+            .HasColumnName("FlowerWithLogoImageUrl").HasMaxLength(2048);
         builder.Property(generatedFlower => generatedFlower.Metadata).HasColumnName("Metadata").HasColumnType("jsonb").IsRequired();
         builder.Property(generatedFlower => generatedFlower.UserId).HasColumnName("UserId");
         builder.Property(generatedFlower => generatedFlower.CreatedAt).HasColumnName("CreatedAt").HasDefaultValueSql("now()");

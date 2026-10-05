@@ -71,3 +71,32 @@ Việc chỉnh file không tạo GitHub Secrets hoặc tự triển khai. Sau kh
 ### PostGen scheduling — mốc 14
 
 Ba biến tùy chọn: `POSTGEN_SCHEDULE_MIN_LEAD_SECONDS=60`, `POSTGEN_SCHEDULE_MAX_DAYS=30`, `POSTGEN_SCHEDULE_LATENESS_SECONDS=900`; đã ánh xạ trong compose/workflow. Ngưỡng trễ tính đến lần worker bắt đầu xử lý, không phải cam kết thời điểm Meta hiển thị bài. Không đổi secrets/môi trường đang chạy. [Contract lịch đăng](../hoatheomua-documentation/Service%20-%20PostGen/Scheduling.md).
+
+
+## AI Flower — tài khoản storage
+
+Luồng biến môi trường: **GitHub Environment Secrets → deploy-application.yaml → Compose → process API**.
+
+Trong GitHub repository, mở **Settings → Environments → dev hoặc prod → Environment secrets**, thêm:
+
+| Secret | Bắt buộc | Giá trị |
+| --- | --- | --- |
+| `TASKCOPER_EMAIL` | Có để tạo/regenerate hoa | Email tài khoản storage |
+| `TASKCOPER_PASSWORD` | Có để tạo/regenerate hoa | Mật khẩu tài khoản storage |
+| `TASKCOPER_API_BASE` | Không | Mặc định `https://hoatheomua-taskcoper-api.bentran1vn.com` |
+| `TASKCOPER_STORAGE_PREFIX` | Không | Mặc định `general/ai-flowers` |
+| `FLOWER_IMAGE_PUBLIC_BASE_URL` | Không | CDN/bucket base nếu khác URL object do presign trả |
+
+Deploy workflow lấy secrets của environment đã chọn; `compose.yaml` truyền vào cả API dev/prod thông qua `x-api-env`. `docker-compose.yml` truyền cùng các biến khi chạy local và các overlay dev/prod kế thừa. Không truyền password bằng build argument hoặc bake vào image; workflow build không cần tài khoản storage.
+
+Chạy Docker local: điền các key trên vào file `.docker/.env.dev` (hoặc `.docker/.env`) từ `.env.sample`, sau đó truyền file rõ ràng:
+
+```bash
+docker compose --env-file .docker/.env.dev -f .docker/docker-compose.yml -f .docker/compose.dev.yml up -d --build
+```
+
+File dotenv được **Compose** đọc và đưa vào environment container; API không tự đọc file `.env`. Với giá trị chứa `$`/`#`, dùng dấu nháy đơn trong dotenv để giữ nguyên mật khẩu. `.dockerignore` loại cả `.env` và `.env.*` khỏi build context.
+
+Nếu dùng script `sync-env-secrets.sh` hiện có, các key mới trong file env sẽ được đồng bộ vì script đã đọc mọi KEY=VALUE. Chỉnh các file cấu hình không tự tạo secret trên GitHub. Sau khi đặt secrets, deploy lại để container nhận giá trị mới.
+
+Thiếu tài khoản thì riêng create/regenerate AI Flower báo lỗi cấu hình trước khi gọi AI. Logo được đóng gói từ `public/logo.png` theo csproj; không cần mount thêm trong Compose. Migration `AddGeneratedFlowerImageStages` phải được áp dụng theo quy trình triển khai database hiện có. Xem [luồng ba ảnh và logo](../hoatheomua-documentation/AI-Flower-Two-Stage.md).

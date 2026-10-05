@@ -1,3 +1,4 @@
+using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Models;
 
 namespace HoaTheoMua.Service.Product;
@@ -7,7 +8,7 @@ public interface IService
     Task<NhanhVnProductListResponse.NhanhVnProductResponse> GetListProducts(Request.ProductListRequest request);
     Task<NhanhVnProductDetailsResponse.NhanhVnProductDetailResponse> GetProductDetails(Request.ProductDetailRequest request);
     Task<BasePaginationResponse> GetLocalProducts(Request.LocalProductQueryRequest request);
-    Task<BasePaginationResponse> GetLocalProductsV2(Request.LocalProductQueryRequest request);
+    Task<BasePaginationResponse> GetLocalProductsV2(Request.LocalProductQueryRequest request, ProductHierarchyType? productHierarchy = null);
     Task<Response.LocalProductDetailResponse> GetLocalProductDetail(Guid id);
     Task<Response.ProductFamilyResponse> GetProductFamily(Guid id);
     Task<decimal> GetMaxPrice(List<Guid>? categoryIds);
@@ -23,4 +24,5 @@ public interface IService
     Task<Response.GetProductDetailByCustomerResponse> GetProductDetailByCustomer(Guid id);
     Task<List<Response.InventoryCheckError>?> CheckInventoryAvailability(Request.CheckInventoryAvailabilityRequest request);
     Task<string> UpdateProductV2(Guid id, Request.UpdateProductRequestV2 request);
+    Task<List<Response.ProductByCategoryResponse>> GetProductsByCategories(List<Guid>? categoryIds);
 }

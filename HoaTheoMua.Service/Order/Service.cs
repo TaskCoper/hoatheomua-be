@@ -207,8 +207,8 @@ public class Service : IService
     {
         var userId = _currentUser.GetRequiredUserId();
 
-        // Email-verification is now asserted by the token, not a Users-table lookup.
-        if (!_currentUser.IsVerified)
+        // Email-verified sessions and scoped phone-storefront sessions can place orders.
+        if (!(_currentUser.IsVerified || _currentUser.CanUseStorefront))
         {
             throw new UnauthorizedException("User is not verified");
         }
@@ -646,6 +646,7 @@ public class Service : IService
                 Number = orderItem.Number,
                 Name = flower.Name,
                 GeneratedFlowerId = flowerId,
+                GeneratedFlowerImageUrl = flower.ImageUrl,
                 AiCustomize = true,
                 Materials = flowerMetadata.Materials,
                 AdditionCustome = flowerMetadata.AdditionCustome,
@@ -820,12 +821,9 @@ public class Service : IService
         string? systemPromptContent = null;
         if (hasAiCard)
         {
-            // Key tạm thời; ConfigHelper trả trực tiếp field value của Config.
-            var promptConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "imagegen");
-            systemPromptContent = promptConfigs.GetValue<string>("imagegen.card_prompt");
-
-            if (string.IsNullOrWhiteSpace(systemPromptContent))
-                throw new BadRequestException("CARD_SYSTEM_PROMPT_UNAVAILABLE");
+            var prompt = await Card.CardPromptConfig.LoadAsync(_dbContext)
+                ?? throw new BadRequestException("CARD_SYSTEM_PROMPT_UNAVAILABLE");
+            systemPromptContent = prompt.Content;
         }
 
         var result = new Dictionary<Guid, Request.OrderDetailMetadata>();
@@ -869,7 +867,7 @@ public class Service : IService
             Request.BouquetCardSelection card)
         {
             if (!productById.TryGetValue(bouquet.ProductId, out var sourceProduct) ||
-                string.IsNullOrWhiteSpace(sourceProduct.CoverImage))
+                string.IsNullOrWhiteSpace(bouquet.GeneratedFlowerId.HasValue ? bouquet.GeneratedFlowerImageUrl : sourceProduct.CoverImage))
                 throw new BadRequestException("CARD_SOURCE_PRODUCT_INVALID");
 
             if (card.CardType == GeneratedCardType.Handmade &&
@@ -897,7 +895,8 @@ public class Service : IService
                 {
                     Type = "product",
                     Id = bouquet.ProductId,
-                    ImageUrl = sourceProduct.CoverImage
+                    ImageUrl = bouquet.GeneratedFlowerId.HasValue ? bouquet.GeneratedFlowerImageUrl! : sourceProduct.CoverImage!,
+                    ImageSourceType = bouquet.GeneratedFlowerId.HasValue ? "generated_flower" : "product"
                 },
                 RawImage = rawImage,
                 CardTemplate = new Request.CardTemplateSnapshot
@@ -1376,6 +1375,26 @@ public class Service : IService
                     (product.Shipping.Weight, quantityByItemId[product.Id])))),
             orderTime);
 
+        return await GetXanhSmBuyerShippingFeeAsync(quote);
+    }
+
+    private async Task<decimal> GetXanhSmBuyerShippingFeeAsync(XanhSmDoorToDoorQuote quote)
+    {
+        // ahamove.free_ship is configured in kilometers (the admin setting's unit).
+        var configs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
+        var freeShippingKm = configs.GetValue("ahamove.free_ship", 0d);
+        var distanceKm = quote.DistanceUnit?.Trim().ToLowerInvariant() switch
+        {
+            "km" => quote.Distance,
+            "m" => quote.Distance / 1000,
+            _ => null
+        };
+
+        if (freeShippingKm > 0 && distanceKm is >= 0 && distanceKm <= freeShippingKm)
+        {
+            return 0;
+        }
+
         return quote.TotalFee;
     }
 
@@ -1442,7 +1461,7 @@ public class Service : IService
 
         return new Response.EstimateXanhSmShippingFeeResponse
         {
-            ShippingFee = quote.TotalFee,
+            ShippingFee = await GetXanhSmBuyerShippingFeeAsync(quote),
             Distance = quote.Distance,
             DistanceUnit = quote.DistanceUnit,
             Duration = quote.Duration,
@@ -1697,7 +1716,7 @@ public class Service : IService
     {
         var userId = _currentUser.GetRequiredUserId();
 
-        if (!_currentUser.IsVerified)
+        if (!(_currentUser.IsVerified || _currentUser.CanUseStorefront))
         {
             throw new UnauthorizedException("User is not verified");
         }
@@ -1855,7 +1874,7 @@ public class Service : IService
         //nếu người dùng đó đặt hàng thì mới cho người dùng đó hủy đơn hàng
         var userId = _currentUser.GetRequiredUserId();
 
-        if (!_currentUser.IsVerified)
+        if (!(_currentUser.IsVerified || _currentUser.CanUseStorefront))
         {
             throw new UnauthorizedException("User is not verified");
         }

@@ -429,8 +429,8 @@ public class Service: IService
             CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
             UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
         };
-            
-            product.ParentProductId = item.ParentId is > 0 ? item.ParentId.ToString() : null;
+
+            product.ParentProductId = item.ParentId?.ToString();
             product.ProductCode = NormalizeText(item.Code);
             product.Barcode = NormalizeText(item.Barcode);
             product.ProductName = NormalizeText(item.Name);
@@ -541,6 +541,23 @@ public class Service: IService
             {
                 product.NhanhCreatedAt = DateTimeOffset.FromUnixTimeSeconds(item.CreatedAt.Value);
             }
+            
+            if (item.UpdatedAt is > 0)
+            {
+                product.NhanhUpdatedAt = DateTimeOffset.FromUnixTimeSeconds(item.UpdatedAt.Value);
+            }
+            
+            if (item.ParentId is > 0)
+            {
+                var parent = await _appDbContext.Products
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == item.ParentId.ToString());
+
+                if (parent != null)
+                {
+                    parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                }
+            }
+            
 
         await _appDbContext.Products.AddAsync(product);
         await _appDbContext.SaveChangesAsync();
@@ -859,12 +876,18 @@ public class Service: IService
     
         if (product == null)
         {
-            return $"Sản phẩm với id: {nhanhProductId} không tồn tại trong hệ thống";
+            product = new Repository.Entity.Product()
+            {
+                Id = Guid.NewGuid(),
+                NhanhProductId = item.Id.ToString(),
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            await _appDbContext.Products.AddAsync(product);
         }
 
         
         product.UpdatedAt = DateTimeOffset.UtcNow;
-        product.ParentProductId = item.ParentId > 0 ? item.ParentId.ToString() : null;
+        product.ParentProductId = item.ParentId?.ToString();
         product.ProductCode = NormalizeText(item.Code);
         product.Barcode = NormalizeText(item.Barcode);
         product.ProductName = NormalizeText(item.Name);
@@ -981,6 +1004,18 @@ public class Service: IService
         {
             product.NhanhUpdatedAt = DateTimeOffset.FromUnixTimeSeconds(item.UpdatedAt.Value);
         }
+        
+        if (item.ParentId is > 0)
+        {
+            var parent = await _appDbContext.Products
+                .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == item.ParentId.ToString());
+
+            if (parent != null)
+            {
+                parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+        
         await _appDbContext.SaveChangesAsync();
     
         return product.Id.ToString();
@@ -999,10 +1034,33 @@ public class Service: IService
             .Where(x => !x.IsDeleted && deletedIds.Contains(x.NhanhProductId!))
             .ToListAsync();
         
+        var parentIds = productsToDelete
+            .Select(x => x.ParentProductId)
+            .Where(x => !string.IsNullOrWhiteSpace(x) && !x.StartsWith("-"))
+            .Distinct()
+            .ToList();
+        
+        var parents = new List<Repository.Entity.Product>();
+        
+        if (parentIds.Count > 0)
+        {
+            parents = await _appDbContext.Products
+                .Where(x =>
+                    !x.IsDeleted &&
+                    parentIds.Contains(x.NhanhProductId!))
+                .ToListAsync();
+        }
+        
         foreach (var p in productsToDelete)
         {
             p.IsDeleted = true;
             p.UpdatedAt = DateTimeOffset.UtcNow;
+            p.NhanhUpdatedAt =  DateTimeOffset.UtcNow;
+        }
+        
+        foreach (var parent in parents)
+        {
+            parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
         }
 
         await _appDbContext.SaveChangesAsync();

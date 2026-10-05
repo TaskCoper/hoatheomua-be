@@ -396,8 +396,14 @@ public class Service : IService
                 ("," + product.ProductLabel.ToLower().Replace(" ", "") + ",").Contains(label));
     }
 
-    public async Task<BasePaginationResponse> GetLocalProductsV2(Request.LocalProductQueryRequest request)
+    public async Task<BasePaginationResponse> GetLocalProductsV2(
+        Request.LocalProductQueryRequest request,
+        ProductHierarchyType? productHierarchy = null)
     {
+        if (productHierarchy.HasValue && !Enum.IsDefined(productHierarchy.Value))
+        {
+            throw new BadRequestException("Phạm vi sản phẩm không hợp lệ. Vui lòng chọn \"Parent\" hoặc \"All\".");
+        }
         // Giai đoạn 1: Chuẩn hoá dữ liệu đầu vào.
         var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
         var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
@@ -509,6 +515,47 @@ public class Service : IService
                         ));
                     break;
             }
+        }
+
+        if (productHierarchy == ProductHierarchyType.All)
+        {
+            var matchedParents = await query
+                .Select(parent => new
+                {
+                    parent.Id,
+                    parent.NhanhProductId
+                })
+                .ToListAsync();
+
+            var parentIds = matchedParents
+                .Select(parent => parent.Id)
+                .ToList();
+
+            var parentNhanhProductIds = matchedParents
+                .Where(parent => !string.IsNullOrWhiteSpace(parent.NhanhProductId))
+                .Select(parent => parent.NhanhProductId!)
+                .Distinct()
+                .ToList();
+
+            var childIds = parentNhanhProductIds.Count == 0
+                ? new List<Guid>()
+                : await _dbContext.Products
+                    .AsNoTracking()
+                    .Where(child =>
+                        !child.IsDeleted &&
+                        child.ParentProductId != null &&
+                        parentNhanhProductIds.Contains(child.ParentProductId))
+                    .Select(child => child.Id)
+                    .ToListAsync();
+
+            var productIds = parentIds
+                .Concat(childIds)
+                .Distinct()
+                .ToList();
+
+            query = _dbContext.Products
+                .AsNoTracking()
+                .Where(product => productIds.Contains(product.Id));
         }
 
         // Giai đoạn 4: Thiết lập thứ tự cơ sở trước khi tính tồn kho khả dụng.
@@ -640,10 +687,12 @@ public class Service : IService
                 .FirstOrDefaultAsync();
 
             response.ParentId = parentId == Guid.Empty ? null : parentId;
+            response.ParentProductGuidId = response.ParentId;
         }
         else
         {
             response.ParentId = null;
+            response.ParentProductGuidId = null;
         }
 
         // Giai đoạn 3: Lấy các biến thể con của sản phẩm gốc.
@@ -654,6 +703,11 @@ public class Service : IService
                 .Where(p => !p.IsDeleted && p.ParentProductId == response.NhanhProductId)
                 .Select(LocalProductDetailSelector)
                 .ToListAsync();
+
+        foreach (var child in response.Children)
+        {
+            child.ParentProductGuidId = response.Id;
+        }
 
         // Giai đoạn 4: Chuẩn bị sản phẩm chính và biến thể để tính tồn kho khả dụng.
         // Biến thể dùng cùng cấu tạo với Product cha. Quantity của mỗi vật liệu
@@ -2201,11 +2255,56 @@ public class Service : IService
         if (request.Description != null)
         {
             product.Description = request.Description;
+            
+            product.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+            
+            long.TryParse(product.ParentProductId, out var parentId);
+
+            
+            if (!string.IsNullOrWhiteSpace(product.ParentProductId) && parentId > 0)
+            {
+                var parent = await _dbContext.Products
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
+
+                if (parent != null)
+                {
+                    parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                }
+            }
         }
         
         await _dbContext.SaveChangesAsync();
 
         return product.Id.ToString();
+    }
+
+    public async Task<List<Response.ProductByCategoryResponse>> GetProductsByCategories(List<Guid>? categoryIds)
+    {
+        var ids = categoryIds?
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList() ?? new List<Guid>();
+
+        if (ids.Count == 0)
+        {
+            return new List<Response.ProductByCategoryResponse>();
+        }
+
+        // Chỉ lấy sản phẩm cha (trang sản phẩm trên web là trang của cha), chưa xoá, đang bán
+        return await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsActive
+                                     && (x.ParentProductId == null || x.ParentProductId == string.Empty)
+                                     && x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && ids.Contains(cpd.CategoryProductId)))
+            .OrderBy(x => x.ProductName)
+            .Select(x => new Response.ProductByCategoryResponse
+            {
+                Id = x.Id,
+                Name = x.ProductName,
+                NhanhCreatedAt = x.NhanhCreatedAt,
+                NhanhUpdatedAt = x.NhanhUpdatedAt
+            })
+            .ToListAsync();
     }
 
     public async Task<string> UpdateLabelProductNhanhVn(List<Request.UpdateLabelProductNhanhVnRequest> requests)

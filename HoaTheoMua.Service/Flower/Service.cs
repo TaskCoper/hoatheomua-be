@@ -5,30 +5,42 @@ using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Models;
 using Ai = HoaTheoMua.Service.AiService;
 using ProductEntity = HoaTheoMua.Repository.Entity.Product;
 using ProductService = HoaTheoMua.Service.Product.IService;
 using ProductServiceImplementation = HoaTheoMua.Service.Product.Service;
 using FlowerReferenceEntity = HoaTheoMua.Repository.Entity.FlowerReference;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using static HoaTheoMua.Service.Flower.MappingFlower;
 
 namespace HoaTheoMua.Service.Flower;
 
-public class Service : IService
+public partial class Service : IService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly AppDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly IHttpContextAccessor _httpContext;
     private readonly Ai.IService _ai;
     private readonly ProductService _products;
+    private readonly IFlowerImageBranding _branding;
 
-    public Service(AppDbContext db, ICurrentUserService currentUser, Ai.IService ai, ProductService products)
+    public Service(
+        AppDbContext db,
+        ICurrentUserService currentUser,
+        IHttpContextAccessor httpContext,
+        Ai.IService ai,
+        ProductService products,
+        IFlowerImageBranding branding)
     {
         _db = db;
         _currentUser = currentUser;
+        _httpContext = httpContext;
         _ai = ai;
         _products = products;
+        _branding = branding;
     }
 
     public async Task<HoaTheoMua.Service.Models.BasePaginationResponse> GetCustomerGeneratedFlowers(
@@ -93,6 +105,8 @@ public class Service : IService
                 Id = flower.Id,
                 Name = flower.Name,
                 ImageUrl = flower.ImageUrl,
+                FlowerWithMockupImageUrl = flower.FlowerWithMockupImageUrl,
+                FlowerWithLogoImageUrl = flower.FlowerWithLogoImageUrl,
                 UserId = flower.UserId,
                 CreatedAt = flower.CreatedAt,
                 Product = ToCustomerReference(historyMetadata.Product),
@@ -194,6 +208,21 @@ public class Service : IService
 
     public async Task<Response.GeneratedFlowerResponse> CreateAiFlower(Request.CreateFlowerRequest request)
     {
+        var ct = _httpContext.HttpContext?.RequestAborted ?? default;
+        var prepared = await PrepareCreate(request, ct);
+        return await ExecuteSynchronous(prepared, ct);
+    }
+
+    public async Task<Response.GeneratedFlowerResponse> RegenerateAiFlower(Guid sourceFlowerId, Request.RegenerateFlowerRequest request)
+    {
+        var ct = _httpContext.HttpContext?.RequestAborted ?? default;
+        var prepared = await PrepareRegenerate(sourceFlowerId, request, ct);
+        return await ExecuteSynchronous(prepared, ct);
+    }
+
+    public async Task<PreparedFlower> PrepareCreate(Request.CreateFlowerRequest request, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
         var userId = _currentUser.GetRequiredUserId();
         ValidateCreateRequest(request);
 
@@ -221,7 +250,7 @@ public class Service : IService
         var wrappingPaper = await LoadAccessory(request.WrappingPaperProductId, "GIẤY", "WRAPPING_PAPER");
         var bundle = await LoadReference(request.BundleId, FlowerReferenceType.Bundle, "BUNDLE");
         var mockup = await LoadReference(request.MockupId, FlowerReferenceType.Flower, "MOCKUP");
-        var prompt = await LoadPrompt()
+        var prompt = await LoadFlowerPrompts()
             ?? throw new ConflictException("SYSTEM_PROMPT_INVALID", "Không có System prompt flower hợp lệ.");
 
         var metadata = new FlowerMetadata
@@ -234,33 +263,14 @@ public class Service : IService
             AdditionCustome = materialTotals.Additions
         };
 
-        var image = await GenerateImage(product.CoverImage, bundle.ImageUrl, mockup.ImageUrl,
-            request.Name!.Trim(), prompt.Content, metadata);
-
-        var flower = new GeneratedFlower
-        {
-            Id = Guid.NewGuid(),
-            Name = request.Name.Trim(),
-            ImageUrl = image.ImageUrl,
-            Metadata = JsonSerializer.Serialize(metadata, JsonOptions),
-            UserId = userId,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-        var history = CreateHistory(userId, ToProductSnapshot(product), bundle, mockup, flower,
-            new PromptSnapshot { Type = "flower", Content = prompt.Content }, "create", null, Guid.NewGuid());
-
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-        _db.GeneratedFlowers.Add(flower);
-        _db.ClientHistories.Add(history);
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return ToResponse(flower, history.SessionId!.Value);
+        _branding.ValidateConfiguration();
+        return new(Guid.NewGuid(), userId, request.Name!.Trim(), ToProductSnapshot(product), bundle, mockup,
+            prompt, metadata, "create", null, Guid.NewGuid(), "current", product.Id);
     }
 
-    public async Task<Response.GeneratedFlowerResponse> RegenerateAiFlower(
-        Guid sourceFlowerId, Request.RegenerateFlowerRequest request)
+    public async Task<PreparedFlower> PrepareRegenerate(Guid sourceFlowerId, Request.RegenerateFlowerRequest request, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var userId = _currentUser.GetRequiredUserId();
         var source = await _db.GeneratedFlowers.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == sourceFlowerId && x.UserId == userId)
@@ -292,39 +302,52 @@ public class Service : IService
         var bundle = await ResolveReference(request.BundleId, sourceMetadata.Bundle, FlowerReferenceType.Bundle, "BUNDLE");
         var mockup = await ResolveReference(request.MockupId, sourceMetadata.Mockup, FlowerReferenceType.Flower, "MOCKUP");
 
-        var prompt = await LoadPrompt();
-        var promptContent = prompt?.Content;
+        var prompt = await LoadFlowerPrompts();
         var promptSource = "current";
-        if (string.IsNullOrWhiteSpace(promptContent))
+        if (prompt == null)
         {
-            promptContent = ParseSourcePrompt(sourceHistory.SystemForm)?.Content;
+            prompt = ParseSourcePrompt(sourceHistory.SystemForm);
             promptSource = "source_flower_fallback";
         }
-        if (string.IsNullOrWhiteSpace(promptContent))
-            throw new ConflictException("FLOWER_SOURCE_HISTORY_INVALID", "Flower nguồn không có Prompt hợp lệ.");
+        if (prompt == null || string.IsNullOrWhiteSpace(prompt.Content) || string.IsNullOrWhiteSpace(prompt.MockupContent)
+            || string.IsNullOrWhiteSpace(prompt.GuardContent))
+            throw new ConflictException("FLOWER_SOURCE_HISTORY_INVALID", "Flower nguồn không có đủ ba prompt hợp lệ (tạo hoa, mockup, guard).");
 
-        var image = await GenerateImage(sourceMetadata.Product.Image.Url, bundle.ImageUrl, mockup.ImageUrl,
-            source.Name, promptContent, metadata);
+        _branding.ValidateConfiguration();
+        if (!sourceHistory.SessionId.HasValue)
+            throw new ConflictException("FLOWER_SOURCE_HISTORY_INVALID", "Flower nguồn thiếu session.");
+        return new(Guid.NewGuid(), userId, source.Name, sourceMetadata.Product, bundle, mockup, prompt,
+            metadata, "regenerate", source.Id, sourceHistory.SessionId.Value, promptSource, sourceHistory.BaseId);
+    }
+
+    private async Task<Response.GeneratedFlowerResponse> ExecuteSynchronous(PreparedFlower prepared, CancellationToken ct)
+    {
+        var images = await _ai.GenerateFlowerImage(await ToGenerationInputAsync(prepared, ct), ct);
+        var branded = await _branding.ApplyLogoAsync(images.FlowerWithMockupImageUrl, prepared.FlowerId, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        var result = AddPreparedResult(prepared, images, branded);
+        await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return result;
+    }
+
+    public Response.GeneratedFlowerResponse AddPreparedResult(PreparedFlower prepared,
+        Ai.Response.FlowerGeneratedResponse images, BrandedFlowerImage branded)
+    {
+        SetGenerationMetadata(prepared.Metadata, images, branded);
         var flower = new GeneratedFlower
         {
-            Id = Guid.NewGuid(),
-            Name = source.Name,
-            ImageUrl = image.ImageUrl,
-            Metadata = JsonSerializer.Serialize(metadata, JsonOptions),
-            UserId = userId,
-            CreatedAt = DateTimeOffset.UtcNow
+            Id = prepared.FlowerId, UserId = prepared.UserId, Name = prepared.Name,
+            ImageUrl = images.FlowerImageUrl, FlowerWithMockupImageUrl = images.FlowerWithMockupImageUrl,
+            FlowerWithLogoImageUrl = branded.ImageUrl,
+            Metadata = JsonSerializer.Serialize(prepared.Metadata, JsonOptions), CreatedAt = DateTimeOffset.UtcNow
         };
-        var history = CreateHistory(userId, sourceMetadata.Product, bundle, mockup, flower,
-            new PromptSnapshot { Type = "flower", Content = promptContent }, "regenerate", source.Id,
-            sourceHistory.SessionId, promptSource, sourceHistory.BaseId);
-
-        await using var transaction = await _db.Database.BeginTransactionAsync();
+        var history = CreateHistory(prepared.UserId, prepared.Product, prepared.Bundle, prepared.Mockup,
+            flower, prepared.Prompt, prepared.Operation, prepared.SourceFlowerId, prepared.SessionId,
+            prepared.PromptSource, prepared.BaseId, branded);
         _db.GeneratedFlowers.Add(flower);
         _db.ClientHistories.Add(history);
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return ToResponse(flower, history.SessionId!.Value);
+        return ToResponse(flower, prepared.SessionId);
     }
 
     public async Task<Response.GeneratedFlowerCompositionResponse?> GetGeneratedFlowerComposition(
@@ -360,31 +383,78 @@ public class Service : IService
             Name = flower.Name,
             CoverImage = flower.ImageUrl,
             SubId = metadata.SubId,
-            Materials = metadata.Materials.Select(ToCompositionMaterial).ToList()
+            Materials = metadata.Materials.Select(ToCompositionMaterial).ToList(),
+            CreatedAt = flower.CreatedAt,
+            FlowerWithLogoImageUrl = flower.FlowerWithLogoImageUrl!
         };
     }
 
-    private async Task<Ai.Response.GeneratedImage> GenerateImage(string? productImage, string bundleImage,
-        string mockupImage, string name, string prompt, FlowerMetadata metadata)
+    public async Task<Response.GeneratedFlowerImageResponse> GetGeneratedFlowerImage(Guid generatedFlowerId)
     {
-        if (string.IsNullOrWhiteSpace(productImage))
-            throw new ConflictException("PRODUCT_IMAGE_INVALID", "Product không có ảnh hợp lệ.");
+        if (generatedFlowerId == Guid.Empty)
+            throw new BadRequestException("GENERATED_FLOWER_ID_INVALID");
 
-        var instruction = $"{prompt}\nTên bó: {name}\nMockup image: {mockupImage}\n" +
-                          $"Flower data: {JsonSerializer.Serialize(metadata, JsonOptions)}\n" +
-                          "Tạo ảnh bó hoa hoàn chỉnh, không thêm chữ hoặc logo.";
-        /* REAL AI: temporarily disabled for fake.
-        return await _ai.GenerateImage(new Ai.Request.ImageInput(
-            productImage, "1:1", 1024, 1024, instruction, bundleImage));
-        */
-        return await FakeGenerateFlowerAsync();
+        var isAdmin = _httpContext.HttpContext?.User.IsInRole("Admin") == true;
+        var query = _db.GeneratedFlowers
+            .AsNoTracking()
+            .Where(flower => flower.Id == generatedFlowerId);
+
+        if (!isAdmin)
+        {
+            var userId = _currentUser.GetRequiredUserId();
+            query = query.Where(flower => flower.UserId == userId);
+        }
+
+        var flower = await query.FirstOrDefaultAsync()
+            ?? throw new NotFoundException("GENERATED_FLOWER_NOT_FOUND");
+
+        if (string.IsNullOrWhiteSpace(flower.ImageUrl))
+            throw new ConflictException(
+                "GENERATED_FLOWER_IMAGE_UNAVAILABLE",
+                "GeneratedFlower chưa có ảnh để tải.");
+
+        return new Response.GeneratedFlowerImageResponse
+        {
+            GeneratedFlowerId = flower.Id,
+            ImageUrl = flower.ImageUrl,
+            FlowerWithMockupImageUrl = flower.FlowerWithMockupImageUrl,
+            FlowerWithLogoImageUrl = flower.FlowerWithLogoImageUrl
+        };
     }
 
-    // FAKE AI: fixture only; no provider, upload, or network call is made here.
-    private static Task<Ai.Response.GeneratedImage> FakeGenerateFlowerAsync() => Task.FromResult(
-        new Ai.Response.GeneratedImage(
-            "https://pos.nvncdn.com/281991-126981/ps/Tu-cau-bo-1-bong_-2026.png?v=1777817025",
-            "FAKE", "fake-flower", 0));
+    public async Task<BasePaginationResponse> GetGeneratedFlowersByMockupId(Guid mockupId, int pageSize, int pageIndex)
+    {
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        var histories = await _db.ClientHistories.AsNoTracking()
+            .Where(history => history.Type == ClientHistoryType.Flower)
+            .ToListAsync();
+        var outputIds = histories
+            .Where(history => TryGetMockupId(history.Metadata, out var historyMockupId)
+                && historyMockupId == mockupId)
+            .Select(history => history.OutputId)
+            .Distinct()
+            .ToArray();
+        var query = _db.GeneratedFlowers.AsNoTracking()
+            .Where(flower => outputIds.Contains(flower.Id));
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(flower => flower.CreatedAt)
+            .ThenByDescending(flower => flower.Id)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .Select(flower => new Response.GetGeneratedFlowersByMockupIdResponse
+            {
+                Id = flower.Id,
+                Name = flower.Name,
+                ImageUrl = flower.ImageUrl,
+                FlowerWithMockupImageUrl = flower.FlowerWithMockupImageUrl,
+                FlowerWithLogoImageUrl = flower.FlowerWithLogoImageUrl,
+                CreatedAt = flower.CreatedAt
+            })
+            .ToListAsync();
+        return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+    }
 
     private async Task<ProductEntity> LoadAccessory(Guid id, string label, string code)
     {
@@ -413,54 +483,16 @@ public class Service : IService
         if (!id.HasValue || id.Value == snapshot.Id)
             return new FlowerReferenceEntity
             {
-                Id = snapshot.Id, Name = snapshot.Name ?? "", Description = snapshot.Description,
-                ImageUrl = snapshot.Image.Url ?? "", Type = type, IsActive = true
+                Id = snapshot.Id,
+                Name = snapshot.Name ?? "",
+                Description = snapshot.Description,
+                DescriptionPrompt = snapshot.DescriptionPrompt,
+                ImageUrl = snapshot.Image.Url ?? "",
+                Type = type,
+                IsActive = true
             };
         return await LoadReference(id.Value, type, code);
     }
-
-    private async Task<PromptSnapshot?> LoadPrompt()
-    {
-        var configs = await _db.Configs.AsNoTracking()
-            .Where(x => x.Key == "imagegen.flower_prompt" && !x.IsDeleted)
-            .ToListAsync();
-        if (configs.Count == 0) return null;
-        if (configs.Count != 1
-            || !string.Equals(configs[0].Group?.Trim(), "imagegen", StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(configs[0].Kind?.Trim(), "setting", StringComparison.OrdinalIgnoreCase))
-            //|| !configs[0].IsPublic)
-        {
-            throw new ConflictException(
-                "SYSTEM_PROMPT_INVALID",
-                "System prompt flower Config không hợp lệ.");
-        }
-
-        try
-        {
-            using var value = JsonDocument.Parse(configs[0].Value);
-            var root = value.RootElement;
-            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("value", out var content)
-                || content.ValueKind != JsonValueKind.String)
-                throw new JsonException();
-
-            // ValidatePromptDescription(root);
-            var prompt = content.GetString();
-            return string.IsNullOrWhiteSpace(prompt) ? null : new PromptSnapshot { Content = prompt };
-        }
-        catch (JsonException)
-        {
-            throw new ConflictException("SYSTEM_PROMPT_INVALID", "System prompt flower Config không hợp lệ.");
-        }
-    }
-
-    // private static void ValidatePromptDescription(JsonElement root)
-    // {
-    //     if (!root.TryGetProperty("description", out var description) || description.ValueKind != JsonValueKind.String)
-    //         throw new JsonException();
-    //     using var parsed = JsonDocument.Parse(description.GetString()!);
-    //     if (parsed.RootElement.ValueKind != JsonValueKind.Object)
-    //         throw new JsonException();
-    // }
 
     private static PromptSnapshot? ParseSourcePrompt(string? value)
     {
@@ -482,20 +514,30 @@ public class Service : IService
 
     private ClientHistory CreateHistory(Guid userId, ProductSnapshot product, FlowerReferenceEntity bundle,
         FlowerReferenceEntity mockup, GeneratedFlower flower, PromptSnapshot prompt, string operation,
-        Guid? regeneratedFromFlowerId, Guid? sessionId, string promptSource = "current", Guid? baseId = null) => new()
-    {
-        Id = Guid.NewGuid(), UserId = userId, Type = ClientHistoryType.Flower,
-        BaseId = baseId ?? product.Id, RootId = baseId ?? product.Id, OutputId = flower.Id,
-        SessionId = sessionId,
-        CreatedAt = flower.CreatedAt, SystemForm = JsonSerializer.Serialize(prompt, JsonOptions),
-        Metadata = JsonSerializer.Serialize(new HistoryMetadata
+        Guid? regeneratedFromFlowerId, Guid? sessionId, string promptSource = "current", Guid? baseId = null, BrandedFlowerImage? logoConfig = null) => new()
         {
-            SchemaVersion = 3, Operation = operation, Product = product,
-            Bundle = ToReferenceSnapshot(bundle), Mockup = ToReferenceSnapshot(mockup),
-            LogoConfig = new { }, RegeneratedFromFlowerId = regeneratedFromFlowerId,
-            SystemPromptSource = promptSource, ValidatedAt = flower.CreatedAt
-        }, JsonOptions)
-    };
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Type = ClientHistoryType.Flower,
+            BaseId = baseId ?? product.Id,
+            RootId = baseId ?? product.Id,
+            OutputId = flower.Id,
+            SessionId = sessionId,
+            CreatedAt = flower.CreatedAt,
+            SystemForm = JsonSerializer.Serialize(prompt, JsonOptions),
+            Metadata = JsonSerializer.Serialize(new HistoryMetadata
+            {
+                SchemaVersion = 5,
+                Operation = operation,
+                Product = product,
+                Bundle = ToReferenceSnapshot(bundle),
+                Mockup = ToReferenceSnapshot(mockup),
+                LogoConfig = logoConfig,
+                RegeneratedFromFlowerId = regeneratedFromFlowerId,
+                SystemPromptSource = promptSource,
+                ValidatedAt = flower.CreatedAt
+            }, JsonOptions)
+        };
 
     private static (List<MaterialSnapshot> Materials, List<MaterialSnapshot> Additions) ValidateMaterials(
         List<Request.MaterialTotalRequest> requested, List<ComboSpecification> specs)
@@ -520,7 +562,7 @@ public class Service : IService
 
     private static void ValidateCreateRequest(Request.CreateFlowerRequest request)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.Name) || request.ProductId == Guid.Empty
+        if (request is null || string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 250 || request.ProductId == Guid.Empty
             || request.BundleId == Guid.Empty || request.MockupId == Guid.Empty
             || request.RibbonProductId == Guid.Empty || request.WrappingPaperProductId == Guid.Empty
             || request.MaterialTotals is null || request.MaterialTotals.Count == 0)
@@ -532,22 +574,37 @@ public class Service : IService
 
     private static ProductSnapshot ToProductSnapshot(ProductEntity product) => new()
     {
-        Id = product.Id, Name = product.ProductName,
+        Id = product.Id,
+        Name = product.ProductName,
         Attributes = new { product.ProductCode, product.ProductType, product.Size, product.Color },
+        Description = product.Description,
+        Color = product.Color,
+        Size = product.Size,
+        RelatedImageUrls = product.OtherImages?.ToList(),
         Image = new ImageSnapshot { Url = product.CoverImage },
         ObservedStatus = new { product.IsActive, product.IsDeleted }
     };
 
     private static ReferenceSnapshot ToReferenceSnapshot(FlowerReferenceEntity reference) => new()
     {
-        Id = reference.Id, Name = reference.Name, Description = reference.Description,
+        Id = reference.Id,
+        Name = reference.Name,
+        Description = reference.Description,
+        DescriptionPrompt = reference.DescriptionPrompt,
         Image = new ImageSnapshot { Url = reference.ImageUrl },
         ObservedStatus = new { reference.IsActive, reference.IsDeleted }
     };
 
     private static MaterialSnapshot ToMaterialSnapshot(ProductEntity product, decimal quantity, bool isCore) => new()
     {
-        MatId = product.Id, Quantity = quantity, Name = product.ProductName, IsCore = isCore, CoverImage = product.CoverImage
+        MatId = product.Id,
+        Quantity = quantity,
+        Name = product.ProductName,
+        IsCore = isCore,
+        CoverImage = product.CoverImage,
+        Unit = product.Unit,
+        Color = product.Color,
+        Description = product.Description
     };
 
     private static Response.GeneratedFlowerMaterialResponse ToCompositionMaterial(MaterialSnapshot material) => new()
@@ -559,8 +616,14 @@ public class Service : IService
 
     private static Response.GeneratedFlowerResponse ToResponse(GeneratedFlower flower, Guid sessionId) => new()
     {
-        Id = flower.Id, SessionId = sessionId, Name = flower.Name, ImageUrl = flower.ImageUrl,
-        Metadata = JsonDocument.Parse(flower.Metadata).RootElement.Clone(), CreatedAt = flower.CreatedAt
+        Id = flower.Id,
+        SessionId = sessionId,
+        Name = flower.Name,
+        ImageUrl = flower.ImageUrl,
+        FlowerWithMockupImageUrl = flower.FlowerWithMockupImageUrl,
+        FlowerWithLogoImageUrl = flower.FlowerWithLogoImageUrl,
+        Metadata = JsonDocument.Parse(flower.Metadata).RootElement.Clone(),
+        CreatedAt = flower.CreatedAt
     };
 
     private static void ValidateAdminListRequest(Request.AdminGeneratedFlowerListRequest request)
@@ -610,14 +673,16 @@ public class Service : IService
         GeneratedFlower flower,
         ClientHistory? history,
         JsonElement metadata) => new()
-    {
-        Id = flower.Id,
-        Name = flower.Name,
-        ImageUrl = flower.ImageUrl,
-        UserId = flower.UserId,
-        CreatedAt = flower.CreatedAt,
-        Metadata = metadata,
-        ClientHistory = history is null
+        {
+            Id = flower.Id,
+            Name = flower.Name,
+            ImageUrl = flower.ImageUrl,
+            FlowerWithMockupImageUrl = flower.FlowerWithMockupImageUrl,
+            FlowerWithLogoImageUrl = flower.FlowerWithLogoImageUrl,
+            UserId = flower.UserId,
+            CreatedAt = flower.CreatedAt,
+            Metadata = metadata,
+            ClientHistory = history is null
             ? null
             : new Response.ClientHistoryResponse
             {
@@ -632,7 +697,7 @@ public class Service : IService
                 OutputId = history.OutputId,
                 SesionId = history.SessionId
             }
-    };
+        };
 
     private static JsonElement ParseJson(string value)
     {
@@ -709,6 +774,24 @@ public class Service : IService
                 && subId.ValueKind == JsonValueKind.String
                 && Guid.TryParse(subId.GetString(), out productId)
                 && productId != Guid.Empty;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryGetMockupId(string metadata, out Guid mockupId)
+    {
+        mockupId = Guid.Empty;
+        try
+        {
+            var history = JsonSerializer.Deserialize<HistoryMetadata>(metadata, JsonOptions);
+            if (history?.Mockup?.Id is not { } id || id == Guid.Empty)
+                return false;
+
+            mockupId = id;
+            return true;
         }
         catch (JsonException)
         {

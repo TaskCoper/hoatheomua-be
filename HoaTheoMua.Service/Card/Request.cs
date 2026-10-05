@@ -33,11 +33,22 @@ public class Request
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public class CreateCardAiRequest
     {
-        public Guid? OrderDetailId { get; set; }
-        public Guid? VirtualId { get; set; }
+        private Guid? _orderDetailId, _virtualId, _cardTemplateId;
+        private string? _messageContent;
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Guid? OrderDetailId { get => _orderDetailId; set { _orderDetailId = value; HasOrderDetailId = true; } }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Guid? VirtualId { get => _virtualId; set { _virtualId = value; HasVirtualId = true; } }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Guid? SourceCardId { get; set; }
-        public Guid? CardTemplateId { get; set; }
-        public string? MessageContent { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Guid? CardTemplateId { get => _cardTemplateId; set { _cardTemplateId = value; HasCardTemplateId = true; } }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? MessageContent { get => _messageContent; set { _messageContent = value; HasMessageContent = true; } }
+        [JsonIgnore] public bool HasOrderDetailId { get; private set; }
+        [JsonIgnore] public bool HasVirtualId { get; private set; }
+        [JsonIgnore] public bool HasCardTemplateId { get; private set; }
+        [JsonIgnore] public bool HasMessageContent { get; private set; }
     }
 
     public class UpdateFinalGeneratedCardId

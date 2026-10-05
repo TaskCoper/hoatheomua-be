@@ -145,6 +145,7 @@ public class MappingCard
 {
     public sealed class CardSnapshot
     {
+        public int Quantity { get; set; } = 1;
         public Guid VirtualId { get; set; }
         public string CardType { get; set; } = "";
         public SnapshotSource Source { get; set; } = new();
@@ -168,6 +169,7 @@ public class MappingCard
 
     public sealed class SnapshotSource
     {
+        public string? ImageSourceType { get; set; }
         public string Type { get; set; } = "";
         public Guid Id { get; set; }
         public string ImageUrl { get; set; } = "";
@@ -210,6 +212,7 @@ public class MappingCard
 
     public sealed class SourceHistorySource
     {
+        public string? ImageSourceType { get; set; }
         public string Type { get; set; } = "";
         public Guid Id { get; set; }
         public string ImageUrl { get; set; } = "";

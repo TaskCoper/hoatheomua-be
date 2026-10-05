@@ -92,11 +92,12 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
         }
 
-        private static ICurrentUserService CreateMockCurrentUserService(Guid userId, bool isVerified = true)
+        private static ICurrentUserService CreateMockCurrentUserService(Guid userId, bool isVerified = true, bool phone = false)
         {
             var mock = new Mock<ICurrentUserService>();
             mock.Setup(x => x.GetRequiredUserId()).Returns(userId);
             mock.Setup(x => x.IsVerified).Returns(isVerified);
+            mock.Setup(x => x.CanUseStorefront).Returns(phone);
             return mock.Object;
         }
 
@@ -119,14 +120,17 @@ namespace HoaTheoMua.Service.Test.OrderTest
         // ---------------------------------------------------------------------
         // TEST CASE 01: Lấy trạng thái order thành công
         // ---------------------------------------------------------------------
-        [Fact]
-        public async Task GetStatusOrder_ValidRequest_ReturnsOrderStatus()
+        // BR-43: both legacy verified email and unverified phone storefront sessions succeed.
+        [Theory]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public async Task GetStatusOrder_ValidRequest_ReturnsOrderStatus(bool verified, bool phone)
         {
             // Arrange
             var orderId = Guid.NewGuid();
             var order = CreateOrder(id: orderId, userId: TestUserId, status: "Paid");
             var dbContext = CreateMockDbContext(new List<OrderEntity> { order }).Object;
-            var currentUser = CreateMockCurrentUserService(TestUserId);
+            var currentUser = CreateMockCurrentUserService(TestUserId, verified, phone);
             var service = CreateService(dbContext, currentUser);
 
             // Act

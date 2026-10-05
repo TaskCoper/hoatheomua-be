@@ -53,7 +53,7 @@ public class Service : IService
     }
 
     private static bool KeepsDecimal(string? unit) =>
-        HasLabel(unit, "bó") || HasLabel(unit, "giỏ") || HasLabel(unit, "chậu");
+        HasLabel(unit, "bó") || HasLabel(unit, "chậu"); //|| HasLabel(unit, "giỏ")
 
     private static decimal CalculateParentQuantity(decimal requestedQuantity, string? productLabel, string? unit) =>
         HasLabel(productLabel, ComponentLabel) && HasLabel(unit, "cành")
@@ -799,7 +799,23 @@ public class Service : IService
 
             product.IsActive = true;
             product.UpdatedAt = DateTimeOffset.UtcNow;
+            
+            product.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+            
+            long.TryParse(product.ParentProductId, out var parentId);
 
+            if (!string.IsNullOrWhiteSpace(product.ParentProductId) && parentId > 0)
+            {
+                var parent = await _dbContext.Products
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
+
+                if (parent != null)
+                {
+                    parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                }
+            }
+            
+            
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
 

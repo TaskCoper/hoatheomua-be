@@ -190,7 +190,13 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 configs.Add(new ConfigEntity
                 {
                     Key = "ahamove.free_ship",
-                    Value = "{\"value\": " + freeShipDistance.Value + "}",
+                    Value = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        group = "ahamove",
+                        label = "Miễn phí ship (km)",
+                        value = freeShipDistance.Value,
+                        description = "tính theo km"
+                    }),
                     Group = "ahamove",
                     IsDeleted = false
                 });
@@ -276,11 +282,12 @@ namespace HoaTheoMua.Service.Test.OrderTest
             return mock.Object;
         }
 
-        private static ICurrentUserService CreateMockCurrentUserService(Guid userId, bool isVerified = true)
+        private static ICurrentUserService CreateMockCurrentUserService(Guid userId, bool isVerified = true, bool phone = false)
         {
             var mock = new Mock<ICurrentUserService>();
             mock.Setup(x => x.GetRequiredUserId()).Returns(userId);
             mock.Setup(x => x.IsVerified).Returns(isVerified);
+            mock.Setup(x => x.CanUseStorefront).Returns(phone);
             return mock.Object;
         }
 
@@ -467,14 +474,17 @@ namespace HoaTheoMua.Service.Test.OrderTest
         // ---------------------------------------------------------------------
         // TEST CASE 01: Tạo order thành công
         // ---------------------------------------------------------------------
-        [Fact]
-        public async Task CreateOrder_ValidRequest_CreatesOrderSuccessfully()
+        // BR-43: both legacy verified email and unverified phone storefront sessions succeed.
+        [Theory]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public async Task CreateOrder_ValidRequest_CreatesOrderSuccessfully(bool verified, bool phone)
         {
             // Arrange
             var orders = new List<OrderEntity>();
             var details = new List<OrderDetailEntity>();
             var dbContextMock = CreateMockDbContext(orders: orders, companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() }, capturedOrderDetails: details);
-            var currentUser = CreateMockCurrentUserService(TestUserId);
+            var currentUser = CreateMockCurrentUserService(TestUserId, verified, phone);
             var productService = CreateMockProductService();
 
             var handler = new Mock<HttpMessageHandler>();
@@ -525,8 +535,37 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(101, details[0].ItemId);
         }
 
-        [Fact]
-        public async Task CreateOrder_XanhSm_UsesDoorToDoorQuote()
+        public static IEnumerable<object?[]> XanhSmShippingFeeCases()
+        {
+            yield return [7d, 0.08d, "km", 0m];
+            yield return [7d, 7d, "km", 0m];
+            yield return [7d, 7.001d, "km", 33000m];
+            yield return [2.5d, 2.5d, "km", 0m];
+            yield return [2.5d, 2.501d, "km", 33000m];
+            yield return [null, 4d, "km", 33000m];
+            yield return [0d, 4d, "km", 33000m];
+            yield return [-1d, 4d, "km", 33000m];
+            yield return [5d, 4d, "km", 0m];
+            yield return [5d, 5d, "km", 0m];
+            yield return [5d, 5.001d, "km", 33000m];
+            yield return [5d, 5.33d, "km", 33000m];
+            yield return [5d, 5000d, "m", 0m];
+            yield return [5d, 5001d, "m", 33000m];
+            yield return [5d, 4d, " KM ", 0m];
+            yield return [3d, 4d, "km", 33000m];
+            yield return [5d, 0d, "km", 0m];
+            yield return [5d, null, "km", 33000m];
+            yield return [5d, 4d, null, 33000m];
+            yield return [5d, 4d, "mi", 33000m];
+            yield return [5d, -1d, "km", 33000m];
+            yield return [5d, double.NaN, "km", 33000m];
+            yield return [5d, double.PositiveInfinity, "km", 33000m];
+        }
+
+        [Theory]
+        [MemberData(nameof(XanhSmShippingFeeCases))]
+        public async Task CreateOrder_XanhSm_UsesDoorToDoorQuote(
+            double? freeShipDistance, double? distance, string? distanceUnit, decimal expectedShippingFee)
         {
             var orders = new List<OrderEntity>();
             var companyAddress = CreateCompanyAddress();
@@ -535,6 +574,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var dbContextMock = CreateMockDbContext(
                 orders: orders,
                 companyAddresses: [companyAddress],
+                freeShipDistance: freeShipDistance,
                 products: [product]);
             var currentUser = CreateMockCurrentUserService(TestUserId);
             var productService = CreateMockProductService();
@@ -581,6 +621,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                     ServiceType = "EXPRESS-ONDEMAND",
                     FeeId = "fee-xanhsm",
                     TotalFee = 33000,
+                    Distance = distance,
+                    DistanceUnit = distanceUnit,
                     ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds()
                 });
 
@@ -616,8 +658,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             var order = Assert.Single(orders);
             Assert.Equal(ShippingGateway.XanhSm, order.ShippingGateway);
-            Assert.Equal(33000m, order.ShippingFee);
-            Assert.Equal(83000m, order.TotalFee);
+            Assert.Equal(expectedShippingFee, order.ShippingFee);
+            Assert.Equal(50000m + expectedShippingFee, order.TotalFee);
             xanhSmService.Verify(service => service.EstimateDoorToDoorAsync(
                 It.Is<IReadOnlyCollection<HoaTheoMua.Service.XanhSm.XanhSmDeliveryPointRequest>>(points =>
                     points.Count == 2 &&
@@ -633,14 +675,17 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 It.IsAny<CancellationToken>()), Times.Once);
         }
 
-        [Fact]
-        public async Task EstimateXanhSmShippingFee_ValidRequest_ReturnsBuyerShippingFee()
+        [Theory]
+        [MemberData(nameof(XanhSmShippingFeeCases))]
+        public async Task EstimateXanhSmShippingFee_ValidRequest_ReturnsBuyerShippingFee(
+            double? freeShipDistance, double? distance, string? distanceUnit, decimal expectedShippingFee)
         {
             var companyAddress = CreateCompanyAddress();
             var product = CreateStockProduct(101, "Test Product", 10m, TestProductId);
             product.Weight = 2500m;
             var dbContextMock = CreateMockDbContext(
                 companyAddresses: [companyAddress],
+                freeShipDistance: freeShipDistance,
                 products: [product]);
             var xanhSmService = new Mock<HoaTheoMua.Service.XanhSm.IService>();
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
@@ -657,8 +702,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
                     FeeId = "fee-estimate-buyer",
                     TotalFee = 33000,
                     ExpiresAt = expiresAt,
-                    Distance = 5.33,
-                    DistanceUnit = "km",
+                    Distance = distance,
+                    DistanceUnit = distanceUnit,
                     Duration = 702
                 });
             var service = CreateService(
@@ -682,10 +727,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
                     Items = [new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 2 }]
                 });
 
-            Assert.Equal(33000m, result.ShippingFee);
+            Assert.Equal(expectedShippingFee, result.ShippingFee);
             Assert.Equal("VND", result.CurrencyCode);
-            Assert.Equal(5.33, result.Distance);
-            Assert.Equal("km", result.DistanceUnit);
+            Assert.Equal(distance, result.Distance);
+            Assert.Equal(distanceUnit, result.DistanceUnit);
             Assert.Equal(702, result.Duration);
             Assert.InRange(result.OrderTime, beforeEstimate + 5400,
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 5400);

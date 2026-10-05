@@ -505,7 +505,9 @@ public class Service : IService
                 Description = order.Remarks,
                 PrivateDescription = plan.PrivateDescription,
                 // 56 = "đã xác nhận" for instant orders; 54 when the shop still has to act on it.
-                Status = (order.OrderTime == 0 && tags.Count == 0) ? 56 : 54,
+                //Status = (order.OrderTime == 0 && tags.Count == 0) ? 56 : 54,
+                //Anh Bình confirm với chị Đào là đơn hàng luôn đã xác nhận hết vào ngày 30/9/26 lúc 16h10p
+                Status = 56,
                 TagIds = plan.TagIds,
                 TechnicalStaffId = 0,
                 PromotionId = ""

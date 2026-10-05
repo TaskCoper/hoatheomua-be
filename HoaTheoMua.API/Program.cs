@@ -151,7 +151,57 @@ builder.Services.AddHttpClient<AiService.IService, AiService.Service>("PostGenAi
 builder.Services.AddScoped<SystemPromptService.IService, SystemPromptService.Service>();
 builder.Services.AddScoped<CardTemplateService.IService, CardTemplateService.Service>();
 builder.Services.AddScoped<CardService.IService, CardService.Service>();
-builder.Services.AddScoped<FlowerService.IService, FlowerService.Service>();
+builder.Services.Configure<FlowerService.FlowerImageOptions>(options =>
+{
+    builder.Configuration.GetSection("FlowerImage").Bind(options);
+    options.StorageApiBase = builder.Configuration["TASKCOPER_API_BASE"] ?? options.StorageApiBase;
+    options.StorageEmail = builder.Configuration["TASKCOPER_EMAIL"] ?? options.StorageEmail;
+    options.StoragePassword = builder.Configuration["TASKCOPER_PASSWORD"] ?? options.StoragePassword;
+    options.ObjectPrefix = (builder.Configuration["TASKCOPER_STORAGE_PREFIX"] ?? options.ObjectPrefix).Trim('/');
+});
+builder.Services.AddSingleton<FlowerService.ITaskcoperStorageSession, FlowerService.TaskcoperStorageSession>();
+builder.Services.AddScoped<FlowerService.IFlowerImageBranding, FlowerService.FlowerImageBranding>();
+builder.Services.Configure<HoaTheoMua.Service.Card.CardImageOptions>(options =>
+{
+    builder.Configuration.GetSection("FlowerImage").Bind(options);
+    options.ObjectPrefix = "general/ai-cards";
+    options.LogoWidthRatio = 0.16;
+    builder.Configuration.GetSection("CardImage").Bind(options);
+});
+builder.Services.AddScoped<HoaTheoMua.Service.Card.ICardImageBranding, HoaTheoMua.Service.Card.CardImageBranding>();
+builder.Services.AddHttpClient(FlowerService.FlowerImageBranding.SourceClient, client =>
+{
+    client.Timeout = Timeout.InfiniteTimeSpan;
+}).ConfigurePrimaryHttpMessageHandler(FlowerService.PublicImageHttpHandler.Create).RemoveAllLoggers();
+builder.Services.AddHttpClient(FlowerService.FlowerImageBranding.StorageClient, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.MaxResponseContentBufferSize = 64 * 1024;
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })
+  .RemoveAllLoggers(); // Presigned URLs carry signatures; never log them.
+builder.Services.AddScoped<FlowerService.Service>();
+builder.Services.AddScoped<FlowerService.IService>(sp => sp.GetRequiredService<FlowerService.Service>());
+builder.Services.AddOptions<HoaTheoMua.Service.FlowerJobs.FlowerJobOptions>()
+    .Bind(builder.Configuration.GetSection("FlowerJobs"))
+    .Validate(o => o.MaxActivePerUser is >= 1 and <= 10 && o.Concurrency is >= 1 and <= 16
+        && o.BudgetSeconds is >= 30 and <= 1800 && o.LeaseSeconds is >= 30 and <= 300
+        && o.RecoveryIntervalSeconds is >= 5 and <= 60, "Invalid FlowerJobs options").ValidateOnStart();
+builder.Services.AddScoped<HoaTheoMua.Service.FlowerJobs.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.FlowerJobs.Store>();
+builder.Services.AddScoped<HoaTheoMua.Service.FlowerJobs.Worker>();
+builder.Services.AddScoped<HoaTheoMua.Service.FlowerJobs.Recovery>();
+builder.Services.AddHostedService<HoaTheoMua.Service.FlowerJobs.RecoveryHostedService>();
+builder.Services.AddOptions<HoaTheoMua.Service.CardJobs.CardJobOptions>()
+    .Bind(builder.Configuration.GetSection("CardJobs"))
+    .Validate(o => o.MaxActivePerUser is >= 1 and <= 10 && o.Concurrency is >= 1 and <= 16
+        && o.BudgetSeconds is >= 30 and <= 1800 && o.LeaseSeconds is >= 30 and <= 300
+        && o.RecoveryIntervalSeconds is >= 5 and <= 60, "Invalid CardJobs options").ValidateOnStart();
+builder.Services.AddScoped<HoaTheoMua.Service.Card.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.CardJobs.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.CardJobs.Store>();
+builder.Services.AddScoped<HoaTheoMua.Service.CardJobs.Worker>();
+builder.Services.AddScoped<HoaTheoMua.Service.CardJobs.Recovery>();
+builder.Services.AddHostedService<HoaTheoMua.Service.CardJobs.RecoveryHostedService>();
 // Typed HttpClient, not AddScoped: this service makes outbound calls to Ahamove/XanhSm and NhanhVn, and
 // registering it with AddScoped would silently hand it the unnamed default HttpClient the way
 // Webhook.Service and Revalidate.Service currently get theirs.

@@ -42,7 +42,7 @@ public class DeleteCardTemplate
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => CreateService(db).DeleteCardTemplate(Guid.NewGuid()));
 
-        Assert.Equal("CARD_TEMPLATE_NOT_FOUND", exception.Message);
+        Assert.Equal("Không tìm thấy mẫu thiệp hoặc mẫu thiệp đã bị xóa.", exception.Message);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class DeleteCardTemplate
             () => CreateService(db).DeleteCardTemplate(id));
         var persisted = await db.CardTemplates.SingleAsync(x => x.Id == id);
 
-        Assert.Equal("CARD_TEMPLATE_ALREADY_DELETED", exception.Message);
+        Assert.Equal("Mẫu thiệp này đã được xóa trước đó.", exception.Message);
         Assert.True(persisted.IsDeleted);
         Assert.Equal(previousUpdatedAt, persisted.UpdatedAt);
     }

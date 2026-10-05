@@ -231,6 +231,8 @@ public class Request
     
     public class CardSourceSnapshot
     {
+        [JsonProperty("imageSourceType")]
+        public string? ImageSourceType { get; set; }
         [JsonProperty("type")]
         public string Type { get; set; } = "product";
         [JsonProperty("id")]

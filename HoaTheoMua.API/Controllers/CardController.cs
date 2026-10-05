@@ -44,14 +44,6 @@ public class CardController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
-    [HttpPost("ai-cards")]
-    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
-    public async Task<IActionResult> CreateCardAi(Request.CreateCardAiRequest request)
-    {
-        var result = await _cardService.CreateCardAi(request);
-        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
-    }
-
     [HttpPut("final-generated-card")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     public async Task<IActionResult> UpdateFinalGeneratedCardId(Request.UpdateFinalGeneratedCardId request)

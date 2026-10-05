@@ -82,6 +82,13 @@ services:
       # Security Configuration
       SecurityOption__Pepper: ${SECURITY_PEPPER}
 
+      # AI Flower storage (runtime login -> presign -> PNG upload).
+      TASKCOPER_API_BASE: ${TASKCOPER_API_BASE:-https://hoatheomua-taskcoper-api.bentran1vn.com}
+      TASKCOPER_EMAIL: ${TASKCOPER_EMAIL:-}
+      TASKCOPER_PASSWORD: ${TASKCOPER_PASSWORD:-}
+      TASKCOPER_STORAGE_PREFIX: ${TASKCOPER_STORAGE_PREFIX:-general/ai-flowers}
+      FlowerImage__PublicBaseUrl: ${FLOWER_IMAGE_PUBLIC_BASE_URL:-}
+
       # PostGen accounts (runtime only; Meta opt-in, Zalo deferred).
       PlatformAccountOptions__Meta__Enabled: ${POSTGEN_META_ENABLED:-false}
       PlatformAccountOptions__Meta__AppId: ${POSTGEN_META_APP_ID:-}

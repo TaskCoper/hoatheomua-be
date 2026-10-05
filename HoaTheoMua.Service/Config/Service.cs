@@ -176,6 +176,8 @@ public class Service : IService
                     ? MaskJsonOrString(x.Value)
                     : StringToJson(x.Value),
                 UserId = x.UserId,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt,
             })
             .ToListAsync();
 
@@ -200,6 +202,8 @@ public class Service : IService
                     ? MaskJsonOrString(x.Value)
                     : StringToJson(x.Value),
                 UserId = x.UserId,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt,
             })
             .FirstOrDefaultAsync();
 
@@ -265,6 +269,8 @@ public class Service : IService
             IsPublic = result.IsPublic,
             Value = StringToJson(result.Value),
             UserId = result.UserId,
+            CreatedAt = result.CreatedAt,
+            UpdatedAt = result.UpdatedAt,
         };
         return query;
 
@@ -317,6 +323,7 @@ public class Service : IService
         query.Key = request.Key;
         query.Group = request.Group;
         query.Value = request.Value.GetRawText();
+        query.UpdatedAt = DateTimeOffset.UtcNow;
         // if (request.IsPublic.HasValue)
         // {
         //     query.IsPublic = request.IsPublic.GetValueOrDefault();
@@ -381,6 +388,8 @@ public class Service : IService
                 ? MaskJsonOrString(x.Value)
                 : StringToJson(x.Value),
             UserId = x.UserId,
+            CreatedAt = x.CreatedAt,
+            UpdatedAt = x.UpdatedAt,
         }).ToListAsync();
 
         return result.Count == 0 ? null :  result;

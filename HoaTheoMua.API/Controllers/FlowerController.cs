@@ -61,4 +61,19 @@ public class FlowerController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
+    [HttpGet("generated-flowers/{generatedFlowerId:guid}/image")]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    public async Task<IActionResult> GetGeneratedFlowerImage(Guid generatedFlowerId)
+    {
+        var result = await _flowerService.GetGeneratedFlowerImage(generatedFlowerId);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
+    [HttpGet("{mockupId:guid}/generated-flowers")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> GetGeneratedFlowersByMockupId(Guid mockupId, int pageSize, int pageIndex)
+    {
+        var result = await _flowerService.GetGeneratedFlowersByMockupId(mockupId, pageSize, pageIndex);
+        return Ok(result);
+    }
 }
