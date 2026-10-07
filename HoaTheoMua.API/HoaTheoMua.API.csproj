@@ -29,7 +29,7 @@
     </ItemGroup>
     
     <ItemGroup>
-      <Folder Include="Docs\Voucher\" />
+      <_ContentIncludedByDefault Remove="Docs\Slot\nhanhvn.order_tags.json" />
     </ItemGroup>
 
 </Project>
