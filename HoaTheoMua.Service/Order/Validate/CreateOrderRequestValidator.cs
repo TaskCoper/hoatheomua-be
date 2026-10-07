@@ -30,8 +30,11 @@ public class CreateOrderRequestValidator : AbstractValidator<Request.CreateOrder
                 .WithMessage("NUMBER_MUST_BE_GREATER_THAN_OR_EQUAL_TO_1");
         });
 
-        // RuleFor(x => x.TagIds)
-        //     .NotEmpty().WithMessage("TAG_IDS_REQUIRED");
+        RuleFor(x => x.TagIds)
+            .NotEmpty()
+            .WithMessage("TAG_IDS_REQUIRED")
+            .Must(tagIds => tagIds.Count == 1)
+            .WithMessage("TAG_IDS_MUST_CONTAIN_EXACTLY_ONE_ITEM");
 
         RuleFor(x => x.TaxCode).MaximumLength(20).WithMessage("TAX_CODE_LENGTH_INVALID");
         RuleFor(x => x.IdentityNumber).MaximumLength(20).WithMessage("IDENTITY_NUMBER_LENGTH_INVALID");

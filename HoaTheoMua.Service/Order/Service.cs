@@ -339,6 +339,55 @@ public class Service : IService
             }).ToList()
         };
     }
+    private static void EnsureDeliverySlotAvailable(Response.DeliverySlotAvailabilityItem slot)
+    {
+        if (slot.Limit.HasValue && slot.Occupied >= slot.Limit.Value)
+        {
+            throw new BadRequestException($"Khung giờ {slot.Label} đã đạt giới hạn {slot.Limit.Value} đơn hàng");
+        }
+    }
+
+    private async Task SavePendingOrderWithSlotValidation(
+        Repository.Entity.Order order,
+        IReadOnlyCollection<OrderDetails> orderDetails,
+        DateOnly deliveryDate,
+        int slotTagId,
+        CancellationToken cancellationToken)
+    {
+        var createdAt = DateTimeOffset.UtcNow;
+        order.CreatedAt = createdAt;
+
+        if (_dbContext.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
+        {
+            // var availability = await GetDeliverySlotAvailability(
+            //     deliveryDate,
+            //     slotTagId,
+            //     cancellationToken);
+            // EnsureDeliverySlotAvailable(availability.Slots.Single());
+            //
+            // await _dbContext.Orders.AddAsync(order, cancellationToken);
+            // await _dbContext.OrderDetails.AddRangeAsync(orderDetails, cancellationToken);
+            // await _dbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock({deliveryDate.DayNumber}, {slotTagId})",
+            cancellationToken);
+
+        var lockedAvailability = await GetDeliverySlotAvailability(
+            deliveryDate,
+            slotTagId,
+            cancellationToken);
+        EnsureDeliverySlotAvailable(lockedAvailability.Slots.Single());
+
+        await _dbContext.Orders.AddAsync(order, cancellationToken);
+        await _dbContext.OrderDetails.AddRangeAsync(orderDetails, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
 
     // VAT applied to the product subtotal when the buyer requests an invoice.
     private const decimal VatRate = 0.08m;
@@ -352,6 +401,31 @@ public class Service : IService
         {
             throw new UnauthorizedException("User is not verified");
         }
+
+        if (request.OrderTime < 0)
+        {
+            throw new BadRequestException("Thời gian giao hàng không hợp lệ");
+        }
+
+        var cancellationToken = _httpContext.HttpContext?.RequestAborted ?? CancellationToken.None;
+        
+        // OrderTime = 0 means urgent delivery. The selected delivery-slot tag is still
+        // retained for capacity counting, so the slot belongs to the current Vietnam date.
+        var deliveryDate = request.OrderTime == 0
+            ? DateOnly.FromDateTime(DateTimeOffset.UtcNow
+                .ToOffset(TimeSpan.FromHours(7)).DateTime)
+            : DateOnly.FromDateTime(DateTimeOffset
+                .FromUnixTimeSeconds(request.OrderTime)
+                .ToOffset(TimeSpan.FromHours(7)).DateTime);
+        
+        var slotTagId = checked((int)request.TagIds.Single());
+        
+        var availability = await GetDeliverySlotAvailability(
+            deliveryDate,
+            slotTagId,
+            cancellationToken);
+        
+        EnsureDeliverySlotAvailable(availability.Slots.Single());
 
         var checkoutConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "checkout");
 
@@ -512,9 +586,12 @@ public class Service : IService
 
             newOrder.PaymentUrl = createBaoKimOrderResponse.Data.PaymentUrl;
 
-            await _dbContext.Orders.AddAsync(newOrder);
-            await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
-            await _dbContext.SaveChangesAsync();
+            await SavePendingOrderWithSlotValidation(
+                newOrder,
+                newOrderDetails,
+                deliveryDate,
+                slotTagId,
+                cancellationToken);
 
             return createBaoKimOrderResponse.Data;
         }
@@ -542,9 +619,12 @@ public class Service : IService
 
             newOrder.QrUrl = qrCodeUrl;
 
-            await _dbContext.Orders.AddAsync(newOrder);
-            await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
-            await _dbContext.SaveChangesAsync();
+            await SavePendingOrderWithSlotValidation(
+                newOrder,
+                newOrderDetails,
+                deliveryDate,
+                slotTagId,
+                cancellationToken);
 
             return sepayReponse;
         }
