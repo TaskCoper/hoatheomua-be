@@ -38,6 +38,7 @@ using FlowerReferenceService = HoaTheoMua.Service.FlowerReference;
 using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 using CardService = HoaTheoMua.Service.Card;
 using FlowerService = HoaTheoMua.Service.Flower;
+using VoucherProgramService = HoaTheoMua.Service.VoucherProgram;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -113,6 +114,7 @@ builder.Services.AddHttpClient<XanhSmService.IService, XanhSmService.Service>("X
 builder.Services.AddHttpClient<BaoKimService.IService, BaoKimService.Service>("BaoKimService");
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
+builder.Services.AddScoped<VoucherProgramService.IService, VoucherProgramService.Service>();
 builder.Services.AddScoped<AddressService.IService, AddressService.Service>();
 builder.Services.AddScoped<NhanhVnService.IService, NhanhVnService.Service>();
 builder.Services.AddScoped<ProductImportService.IService, ProductImportService.Service>();
