@@ -284,4 +284,28 @@ public class Request
         [JsonProperty("content")]
         public string Content { get; set; } = string.Empty;
     }
+    
+    public class VoucherSnapshot
+    {
+        [JsonPropertyName("voucherId")]
+        public Guid VoucherId { get; init; }
+
+        [JsonPropertyName("code")]
+        public string Code { get; init; } = string.Empty;
+
+        [JsonPropertyName("discountType")]
+        public string DiscountType { get; init; } = string.Empty;   // "cash" | "percent"
+
+        [JsonPropertyName("discountValue")]
+        public decimal DiscountValue { get; init; }
+
+        [JsonPropertyName("maxDiscountAmount")]
+        public decimal? MaxDiscountAmount { get; init; }
+
+        [JsonPropertyName("discountAmount")]
+        public decimal DiscountAmount { get; init; }
+
+        [JsonPropertyName("programId")]
+        public Guid? ProgramId { get; init; }
+    }
 }
