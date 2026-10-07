@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HoaTheoMua.Controllers;
 
 [ApiController]
-// [Authorize(Policy = JwtExtensions.AdminPolicy)]
+[Authorize(Policy = JwtExtensions.AdminPolicy)]
 public class VoucherProgramController : ControllerBase
 {
     private readonly IService _voucherProgramService;
