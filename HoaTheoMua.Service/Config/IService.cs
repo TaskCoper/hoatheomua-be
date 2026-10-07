@@ -20,5 +20,6 @@ public interface IService
     Task<Response.ConfigResponse> CreateConfig(Request.CreateConfigRequest request);
     Task<Response.ResponseDeleteConfig> DeleteConfig(Guid id);
     Task<Response.ConfigItem> GetNhanhVnOrderTag();
+    Task<Response.UpdateDeliverySlotLimitsResponse> UpdateDeliverySlotLimits(Request.UpdateDeliverySlotLimitsRequest request);
     Task<int?> GetNhanhVnOrderSources();
 }
