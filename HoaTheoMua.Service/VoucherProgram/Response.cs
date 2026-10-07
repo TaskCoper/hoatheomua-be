@@ -24,4 +24,24 @@ public class Response
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
     }
+
+    public class VoucherProgramDetailResponse : VoucherProgramResponse
+    {
+        public List<ProgramVoucherItem> Vouchers { get; set; } = new();
+    }
+    
+    public class ProgramVoucherItem
+    {
+        public Guid Id { get; set; }
+        public required string Code { get; set; }
+        public string? Description { get; set; }
+        public bool IsActive { get; set; }
+        public required string DiscountType { get; set; }     // cash | percent
+        public decimal DiscountValue { get; set; }
+        public decimal? MaxDiscountAmount { get; set; }
+        public int MaxUsageCount { get; set; }
+        public int UsedCount { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
+    }
 }

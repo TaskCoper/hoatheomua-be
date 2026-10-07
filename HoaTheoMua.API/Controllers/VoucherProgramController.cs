@@ -55,4 +55,16 @@ public class VoucherProgramController : ControllerBase
         var result = await _voucherProgramService.GetVoucherPrograms(request, cancellationToken);
         return Ok(result);
     }
+
+    [HttpGet("/api/v1/admin/voucher-programs/with-vouchers")]
+    public async Task<IActionResult> GetVoucherProgramsWithVouchers(
+        [FromQuery] int pageIndex = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? keyword = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _voucherProgramService.GetVoucherProgramsWithVouchers(
+            pageIndex, pageSize, keyword, cancellationToken);
+        return Ok(result);
+    }
 }

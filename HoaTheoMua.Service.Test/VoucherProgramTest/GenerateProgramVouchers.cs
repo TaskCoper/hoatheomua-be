@@ -60,7 +60,7 @@ public class GenerateProgramVouchers
         await using var db = Database();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
+        db.Vouchers.Add(VoucherProgramTestData.Voucher(null, "TAKEN", deleted: true));
         await db.SaveChangesAsync();
         var generator = new SequenceGenerator("TAKEN", "NEWAA", "NEWAA", "NEWBB", "NEWCC");
         var service = new FeatureService(db, generator);
@@ -80,7 +80,7 @@ public class GenerateProgramVouchers
         await using var db = Database();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
+        db.Vouchers.Add(VoucherProgramTestData.Voucher(null, "TAKEN", deleted: true));
         await db.SaveChangesAsync();
         var generator = new SequenceGenerator("NEWAA", "TAKEN");
 
@@ -98,7 +98,7 @@ public class GenerateProgramVouchers
         await using var db = Database();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.AddRange(Enumerable.Range(0, 9999).Select(i => Voucher(program.Id, $"OLD{i}", deleted: i == 0)));
+        db.Vouchers.AddRange(Enumerable.Range(0, 9999).Select(i => VoucherProgramTestData.Voucher(program.Id, $"OLD{i}", deleted: i == 0)));
         await db.SaveChangesAsync();
         var service = new FeatureService(db);
 

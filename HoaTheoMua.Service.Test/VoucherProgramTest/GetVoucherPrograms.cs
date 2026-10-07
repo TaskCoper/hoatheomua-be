@@ -145,7 +145,7 @@ public class GetVoucherPrograms
         Assert.Empty(result.Value.Items);
         Assert.Equal(0, result.Value.TotalCount);
         Assert.Equal(1, result.Value.PageIndex);
-        Assert.Equal(20, result.Value.PageSize);
+        Assert.Equal(10, result.Value.PageSize);
         Assert.True(result.IsSuccess);
     }
 
@@ -177,7 +177,7 @@ public class GetVoucherPrograms
         CreatedAt = DateTimeOffset.Parse("2026-10-01T00:00:00Z").AddMinutes(sequence)
     };
 
-    private static Voucher Voucher(Guid programId, string code, int usedCount, bool deleted = false) => new()
+    private static Repository.Entity.Voucher Voucher(Guid programId, string code, int usedCount, bool deleted = false) => new()
     {
         Id = Guid.NewGuid(), ProgramId = programId, Code = code,
         UsedCount = usedCount, MaxUsageCount = 100, IsDeleted = deleted,

@@ -18,7 +18,7 @@ internal static class VoucherProgramTestData
         MinOrderAmount = 200000, MaxOrderAmount = 2000000, CreatedAt = DateTimeOffset.UtcNow
     };
 
-    public static Voucher Voucher(Guid? programId, string code, bool active = false, bool deleted = false) => new()
+    public static Repository.Entity.Voucher Voucher(Guid? programId, string code, bool active = false, bool deleted = false) => new()
     {
         Id = Guid.NewGuid(), ProgramId = programId, Code = code, IsActive = active, IsDeleted = deleted,
         DiscountType = VoucherDiscountType.Cash, DiscountValue = 10000,

@@ -19,7 +19,7 @@ public class VoucherProgramPostgres
         await using var db = fixture.Context();
         var program = Program(true);
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
+        db.Vouchers.Add(VoucherProgramTestData.Voucher(null, "TAKEN", deleted: true));
         await db.SaveChangesAsync();
 
         var failing = new FeatureService(db, new SequenceGenerator("NEWAA", "TAKEN"));
