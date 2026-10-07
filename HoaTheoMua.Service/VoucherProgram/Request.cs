@@ -36,10 +36,10 @@ public class Request
 
     public class GetVoucherProgramsRequest
     {
-        public int PageIndex { get; set; } = 1;
-        public int PageSize { get; set; } = 20;
-        public string? Keyword { get; set; }
-        public bool? IsActive { get; set; }
-        public bool? IsDelete { get; set; }
+        public int pageIndex { get; set; } = 1;
+        public int pageSize { get; set; } = 20;
+        public string? keyword { get; set; }
+        public bool? isActive { get; set; }
+        public bool? isDelete { get; set; }
     }
 }

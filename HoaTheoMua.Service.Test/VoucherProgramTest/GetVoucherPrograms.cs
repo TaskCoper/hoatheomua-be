@@ -25,7 +25,7 @@ public class GetVoucherPrograms
         await db.SaveChangesAsync();
 
         var result = await new VoucherProgramService(db).GetVoucherPrograms(
-            new Request.GetVoucherProgramsRequest { Keyword = "  sAlE 20/10  ", IsActive = true, IsDelete = isDelete });
+            new Request.GetVoucherProgramsRequest { keyword = "  sAlE 20/10  ", isActive = true, isDelete = isDelete });
 
         var items = result.Value.Items.Cast<Response.VoucherProgramResponse>().ToArray();
         var expectedNames = isDelete switch
@@ -97,14 +97,14 @@ public class GetVoucherPrograms
         await db.SaveChangesAsync();
 
         var service = new VoucherProgramService(db);
-        var firstPage = await service.GetVoucherPrograms(new Request.GetVoucherProgramsRequest { PageSize = 1 });
+        var firstPage = await service.GetVoucherPrograms(new Request.GetVoucherProgramsRequest { pageSize = 1 });
         var firstItem = Assert.Single(firstPage.Value.Items.Cast<Response.VoucherProgramResponse>());
         Assert.Equal(newest.Id, firstItem.Id);
         Assert.True(firstItem.IsDeleted);
         Assert.True(firstPage.Value.HasNextPage);
 
         var secondPage = await service.GetVoucherPrograms(
-            new Request.GetVoucherProgramsRequest { PageIndex = 2, PageSize = 1 });
+            new Request.GetVoucherProgramsRequest { pageIndex = 2, pageSize = 1 });
         var item = Assert.Single(secondPage.Value.Items.Cast<Response.VoucherProgramResponse>());
         Assert.Equal(middle.Id, item.Id);
         Assert.Equal(3, item.VoucherCount);
@@ -126,7 +126,7 @@ public class GetVoucherPrograms
         await db.SaveChangesAsync();
 
         var result = await new VoucherProgramService(db).GetVoucherPrograms(
-            new Request.GetVoucherProgramsRequest { IsActive = false });
+            new Request.GetVoucherProgramsRequest { isActive = false });
 
         var item = Assert.Single(result.Value.Items.Cast<Response.VoucherProgramResponse>());
         Assert.Equal("Draft", item.Name);
@@ -140,7 +140,7 @@ public class GetVoucherPrograms
     {
         await using var db = CreateDbContext();
         var result = await new VoucherProgramService(db).GetVoucherPrograms(
-            new Request.GetVoucherProgramsRequest { PageIndex = 0, PageSize = 0, Keyword = "  " });
+            new Request.GetVoucherProgramsRequest { pageIndex = 0, pageSize = 0, keyword = "  " });
 
         Assert.Empty(result.Value.Items);
         Assert.Equal(0, result.Value.TotalCount);
@@ -157,7 +157,7 @@ public class GetVoucherPrograms
         await db.SaveChangesAsync();
 
         var result = await new VoucherProgramService(db).GetVoucherPrograms(
-            new Request.GetVoucherProgramsRequest { PageIndex = int.MaxValue, PageSize = 20 });
+            new Request.GetVoucherProgramsRequest { pageIndex = int.MaxValue, pageSize = 20 });
 
         Assert.Empty(result.Value.Items);
         Assert.Equal(1, result.Value.TotalCount);

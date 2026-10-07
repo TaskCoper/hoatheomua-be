@@ -62,21 +62,21 @@ public class Service : IService
     public async Task<BasePaginationResponse> GetVoucherPrograms(
         Request.GetVoucherProgramsRequest request, CancellationToken cancellationToken = default)
     {
-        var pageIndex = Math.Max(1, request.PageIndex);
-        var pageSize = request.PageSize > 0 ? request.PageSize : 20;
+        var pageIndex = Math.Max(1, request.pageIndex);
+        var pageSize = request.pageSize > 0 ? request.pageSize : 20;
         var query = _dbContext.VoucherPrograms.AsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(request.Keyword))
+        if (!string.IsNullOrWhiteSpace(request.keyword))
         {
-            var keyword = request.Keyword.Trim().ToLowerInvariant();
+            var keyword = request.keyword.Trim().ToLowerInvariant();
             query = query.Where(x => x.Name.ToLower().Contains(keyword));
         }
 
-        if (request.IsActive.HasValue)
-            query = query.Where(x => x.IsActive == request.IsActive.Value);
+        if (request.isActive.HasValue)
+            query = query.Where(x => x.IsActive == request.isActive.Value);
 
-        if (request.IsDelete.HasValue)
-            query = query.Where(x => x.IsDeleted == request.IsDelete.Value);
+        if (request.isDelete.HasValue)
+            query = query.Where(x => x.IsDeleted == request.isDelete.Value);
 
         var totalCount = await query.CountAsync(cancellationToken);
         var offset = (int)Math.Min((long)(pageIndex - 1) * pageSize, int.MaxValue);
