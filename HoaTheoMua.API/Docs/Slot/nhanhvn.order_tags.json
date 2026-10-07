@@ -1,0 +1,117 @@
+{
+  "group": "nhanhvn",
+  "label": "Giờ giao hàng",
+  "value": [
+    273,
+    270,
+    246,
+    238,
+    237,
+    236,
+    234,
+    229
+  ],
+  "slotLimits": {
+    "273": null,
+    "270": null,
+    "246": null,
+    "238": null,
+    "237": null,
+    "236": null,
+    "234": null,
+    "229": null
+  },
+  "options": [
+    {
+      "label": "GIÀU",
+      "value": 293
+    },
+    {
+      "label": "Shipper Bảo",
+      "value": 292
+    },
+    {
+      "label": "Shipper Huy",
+      "value": 291
+    },
+    {
+      "label": "Shipper Hưng",
+      "value": 290
+    },
+    {
+      "label": "Ship Aha",
+      "value": 287
+    },
+    {
+      "label": "Ngọc Trân",
+      "value": 274
+    },
+    {
+      "label": "18h - 20h",
+      "value": 273
+    },
+    {
+      "label": "Purchasing",
+      "value": 272
+    },
+    {
+      "label": "6h - 7h",
+      "value": 270
+    },
+    {
+      "label": "ĐIỆN HOA",
+      "value": 262
+    },
+    {
+      "label": "Mỹ Linh",
+      "value": 259
+    },
+    {
+      "label": "Ngọc Hưởng",
+      "value": 257
+    },
+    {
+      "label": "Trà My",
+      "value": 254
+    },
+    {
+      "label": "VAT",
+      "value": 253
+    },
+    {
+      "label": "upsale",
+      "value": 250
+    },
+    {
+      "label": "DOANH NGHIỆP",
+      "value": 248
+    },
+    {
+      "label": "7h - 8h",
+      "value": 246
+    },
+    {
+      "label": "17h - 19h",
+      "value": 238
+    },
+    {
+      "label": "15h - 17h",
+      "value": 237
+    },
+    {
+      "label": "13h - 15h",
+      "value": 236
+    },
+    {
+      "label": "10h - 12h",
+      "value": 234
+    },
+    {
+      "label": "8h -10h",
+      "value": 229
+    }
+  ],
+  "required": true,
+  "inputType": "multiSelect",
+  "validations": []
+}

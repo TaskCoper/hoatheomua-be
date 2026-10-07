@@ -27,5 +27,9 @@
     <ItemGroup>
       <ProjectReference Include="..\HoaTheoMua.Service\HoaTheoMua.Service.csproj" />
     </ItemGroup>
+    
+    <ItemGroup>
+      <Folder Include="Docs\Voucher\" />
+    </ItemGroup>
 
 </Project>
