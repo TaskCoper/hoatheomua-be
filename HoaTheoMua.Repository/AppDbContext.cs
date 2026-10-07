@@ -52,6 +52,8 @@ public class AppDbContext : DbContext
     public virtual DbSet<ComboSpecification> ComboSpecifications { get; set; }
     public virtual DbSet<CategoryProduct> CategoryProducts { get; set; }
     public virtual DbSet<CategoryProductDetail> CategoryProductDetails { get; set; }
+    public virtual DbSet<Voucher> Vouchers { get; set; }
+    public virtual DbSet<VoucherProgram> VoucherPrograms { get; set; }
 
     /// <summary>Persisted progress of the order-fulfilment saga, keyed by Order.Id.</summary>
     public virtual DbSet<OrderFulfillmentState> OrderFulfillmentStates { get; set; }
