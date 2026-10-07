@@ -20,5 +20,16 @@ public class Request
         public required string Kind { get; set; }
         public required JsonElement Value { get; set; }
     }
+
+    public class UpdateDeliverySlotLimitsRequest
+    {
+        public required List<DeliverySlotLimitInput> Slots { get; set; }
+    }
+
+    public class DeliverySlotLimitInput
+    {
+        public int TagId { get; set; }
+        public int Limit { get; set; }
+    }
     
 }
