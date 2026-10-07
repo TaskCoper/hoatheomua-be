@@ -66,6 +66,8 @@ public class VoucherProgramApi
             var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
             using var client = new HttpClient { BaseAddress = new Uri(address) };
             const string route = "/api/v1/admin/voucher-programs";
+            var unknownRoute = route + "/" + Guid.NewGuid();
+            var batchRequest = VoucherProgramTestData.GenerateRequest(3);
             var request = new VoucherProgramFeature.Request.CreateVoucherProgramRequest
             {
                 Name = "20/10",
@@ -78,12 +80,14 @@ public class VoucherProgramApi
             using var anonymousGet = await client.GetAsync(route);
             Assert.Equal(HttpStatusCode.Unauthorized, anonymousPost.StatusCode);
             Assert.Equal(HttpStatusCode.Unauthorized, anonymousGet.StatusCode);
+            await AssertMutationAuthorization(client, unknownRoute, batchRequest, HttpStatusCode.Unauthorized);
 
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token("Customer", key));
             using var customerPost = await client.PostAsJsonAsync(route, request);
             using var customerGet = await client.GetAsync(route);
             Assert.Equal(HttpStatusCode.Forbidden, customerPost.StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, customerGet.StatusCode);
+            await AssertMutationAuthorization(client, unknownRoute, batchRequest, HttpStatusCode.Forbidden);
 
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token("Admin", key));
             request.EndAt = request.StartAt;
@@ -115,6 +119,57 @@ public class VoucherProgramApi
             Assert.Equal(1, page.GetProperty("totalCount").GetInt32());
             Assert.Equal(1, page.GetProperty("pageIndex").GetInt32());
             Assert.Equal(20, page.GetProperty("pageSize").GetInt32());
+
+            var programRoute = route + "/" + program.GetProperty("id").GetGuid();
+            using var emptyUpdate = await client.PutAsJsonAsync(programRoute, new { });
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, emptyUpdate.StatusCode);
+            using var invalidUpdate = await client.PutAsJsonAsync(programRoute, new
+            {
+                endAt = request.StartAt, isActive = true
+            });
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, invalidUpdate.StatusCode);
+            using var updateError = JsonDocument.Parse(await invalidUpdate.Content.ReadAsStringAsync());
+            Assert.Equal("endAt", Assert.Single(updateError.RootElement.GetProperty("errors").EnumerateArray())
+                .GetProperty("field").GetString());
+            batchRequest.Quantity = 1001;
+            using var invalidBatch = await client.PostAsJsonAsync(programRoute + "/vouchers", batchRequest);
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, invalidBatch.StatusCode);
+            batchRequest.Quantity = 3;
+            using var missingBatch = await client.PostAsJsonAsync(unknownRoute + "/vouchers", batchRequest);
+            Assert.Equal(HttpStatusCode.NotFound, missingBatch.StatusCode);
+
+            using var batch = await client.PostAsJsonAsync(programRoute + "/vouchers", batchRequest);
+            Assert.Equal(HttpStatusCode.OK, batch.StatusCode);
+            using var generated = JsonDocument.Parse(await batch.Content.ReadAsStringAsync());
+            var batchValue = generated.RootElement.GetProperty("value");
+            Assert.Equal(program.GetProperty("id").GetGuid(), batchValue.GetProperty("programId").GetGuid());
+            Assert.Equal(3, batchValue.GetProperty("createdCount").GetInt32());
+            Assert.Equal(3, batchValue.GetProperty("codes").GetArrayLength());
+            Assert.True(generated.RootElement.GetProperty("isSuccess").GetBoolean());
+            Assert.NotEmpty(generated.RootElement.GetProperty("traceId").GetString()!);
+
+            using var activate = await client.PutAsJsonAsync(programRoute, new { name = "20/10 cập nhật", isActive = true });
+            Assert.Equal(HttpStatusCode.OK, activate.StatusCode);
+            using var activated = JsonDocument.Parse(await activate.Content.ReadAsStringAsync());
+            Assert.True(activated.RootElement.GetProperty("value").GetProperty("isActive").GetBoolean());
+            Assert.Equal("20/10 cập nhật", activated.RootElement.GetProperty("value").GetProperty("name").GetString());
+            using var activeList = await client.GetAsync(route + "?isActive=true");
+            using var activePage = JsonDocument.Parse(await activeList.Content.ReadAsStringAsync());
+            Assert.Equal(3, Assert.Single(activePage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray())
+                .GetProperty("voucherCount").GetInt32());
+
+            using var deactivate = await client.PutAsJsonAsync(programRoute, new { isActive = false });
+            Assert.Equal(HttpStatusCode.OK, deactivate.StatusCode);
+            using var deactivated = JsonDocument.Parse(await deactivate.Content.ReadAsStringAsync());
+            Assert.False(deactivated.RootElement.GetProperty("value").GetProperty("isActive").GetBoolean());
+            using var delete = await client.DeleteAsync(programRoute);
+            Assert.Equal(HttpStatusCode.OK, delete.StatusCode);
+            using var deleted = JsonDocument.Parse(await delete.Content.ReadAsStringAsync());
+            Assert.Equal("Program deleted", deleted.RootElement.GetProperty("value").GetString());
+            await AssertMutationAuthorization(client, programRoute, batchRequest, HttpStatusCode.NotFound);
+            using var finalList = await client.GetAsync(route);
+            using var finalPage = JsonDocument.Parse(await finalList.Content.ReadAsStringAsync());
+            Assert.Empty(finalPage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
         }
         finally
         {
@@ -125,4 +180,15 @@ public class VoucherProgramApi
     private static string Token(string role, SecurityKey key) => new JwtSecurityTokenHandler().WriteToken(
         new JwtSecurityToken(claims: [new Claim("role", role)], expires: DateTime.UtcNow.AddMinutes(5),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)));
+
+    private static async Task AssertMutationAuthorization(HttpClient client, string route,
+        VoucherProgramFeature.Request.GenerateProgramVouchersRequest request, HttpStatusCode expected)
+    {
+        using var active = await client.PutAsJsonAsync(route, new { isActive = true });
+        using var delete = await client.DeleteAsync(route);
+        using var batch = await client.PostAsJsonAsync(route + "/vouchers", request);
+        Assert.Equal(expected, active.StatusCode);
+        Assert.Equal(expected, delete.StatusCode);
+        Assert.Equal(expected, batch.StatusCode);
+    }
 }

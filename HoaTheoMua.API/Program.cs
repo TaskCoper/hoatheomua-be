@@ -115,6 +115,7 @@ builder.Services.AddHttpClient<BaoKimService.IService, BaoKimService.Service>("B
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
 builder.Services.AddScoped<VoucherProgramService.IService, VoucherProgramService.Service>();
+builder.Services.AddSingleton<VoucherProgramService.IVoucherCodeGenerator, VoucherProgramService.VoucherCodeGenerator>();
 builder.Services.AddScoped<AddressService.IService, AddressService.Service>();
 builder.Services.AddScoped<NhanhVnService.IService, NhanhVnService.Service>();
 builder.Services.AddScoped<ProductImportService.IService, ProductImportService.Service>();

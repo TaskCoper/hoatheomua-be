@@ -2,6 +2,13 @@ namespace HoaTheoMua.Service.VoucherProgram;
 
 public class Response
 {
+    public class GenerateProgramVouchersResponse
+    {
+        public Guid ProgramId { get; set; }
+        public int CreatedCount { get; set; }
+        public List<string> Codes { get; set; } = new();
+    }
+
     public class VoucherProgramResponse
     {
         public Guid Id { get; set; }
