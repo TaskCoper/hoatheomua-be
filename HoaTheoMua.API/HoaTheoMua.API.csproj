@@ -27,9 +27,4 @@
     <ItemGroup>
       <ProjectReference Include="..\HoaTheoMua.Service\HoaTheoMua.Service.csproj" />
     </ItemGroup>
-    
-    <ItemGroup>
-      <_ContentIncludedByDefault Remove="Docs\Slot\nhanhvn.order_tags.json" />
-    </ItemGroup>
-
 </Project>
