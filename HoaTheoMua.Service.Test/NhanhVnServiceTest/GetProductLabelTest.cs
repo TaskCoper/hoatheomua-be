@@ -14,6 +14,7 @@ using ConfigEntity = HoaTheoMua.Repository.Entity.Config;
 using CompanyAddressEntity = HoaTheoMua.Repository.Entity.CompanyAddress;
 using NhanhVnServiceImplementation = HoaTheoMua.Service.NhanhVnService.Service;
 using RevalidateService = HoaTheoMua.Service.Revalidate.IService;
+using FulfillmentService = HoaTheoMua.Service.Fulfillment.IService;
 
 namespace HoaTheoMua.Service.Test.NhanhVnServiceTest
 {
@@ -71,7 +72,8 @@ namespace HoaTheoMua.Service.Test.NhanhVnServiceTest
                 CreateHttpClient(response),
                 CreateMockDbContext(),
                 CreateMockConfiguration(),
-                Mock.Of<RevalidateService>());
+                Mock.Of<RevalidateService>(),
+                Mock.Of<FulfillmentService>());
         }
 
         private ProductLabelRequest CreateRequest()
@@ -223,7 +225,8 @@ namespace HoaTheoMua.Service.Test.NhanhVnServiceTest
                 new HttpClient(mockHandler.Object),
                 CreateMockDbContext(),
                 CreateMockConfiguration(),
-                Mock.Of<RevalidateService>());
+                Mock.Of<RevalidateService>(),
+                Mock.Of<FulfillmentService>());
 
             // Act
             await service.GetProductLabel(CreateRequest());

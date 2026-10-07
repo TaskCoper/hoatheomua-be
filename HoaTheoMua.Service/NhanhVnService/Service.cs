@@ -20,15 +20,18 @@ public class Service: IService
     private readonly AppDbContext _appDbContext;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly Revalidate.IService _revalidateService;
+    private readonly Fulfillment.IService _fulfillmentService;
 
     public Service(HttpClient httpClient, AppDbContext appDbContext, 
-        IConfiguration configuration, Revalidate.IService revalidateService)
+        IConfiguration configuration, Revalidate.IService revalidateService,
+        Fulfillment.IService fulfillmentService)
     {
         _httpClient = httpClient;
         _appDbContext = appDbContext;
         _nhanhVnOption = new NhanhVnOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         _revalidateService = revalidateService;
+        _fulfillmentService =  fulfillmentService;
     }
     //
     public async Task<ProductLabelResponse> GetProductLabel(ProductLabelRequest request)  
@@ -852,8 +855,34 @@ public class Service: IService
                 detail.UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime();
             }
         }
-    
-        if (orders.Count > 0)
+        
+        var orderLocals = await _appDbContext.Orders
+            .Where(x => !x.IsDeleted && validNhanhOrderIds.Contains(x.NhanhOrderId.ToString()))
+            .Include(x => x.OrderDetails)
+            .ToListAsync();
+
+        foreach (var orderLocal in orderLocals)
+        {
+            try
+            {
+                await _fulfillmentService.CancelDeliveryAsync(orderLocal);
+            }
+            catch (Exception ex)
+            {
+                continue;
+            }
+            
+            orderLocal.IsDeleted = true;
+            orderLocal.UpdatedAt = DateTimeOffset.UtcNow;
+
+            foreach (var detail in orderLocal.OrderDetails.Where(x => !x.IsDeleted))
+            {
+                detail.IsDeleted = true;
+                detail.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        if (orderLocals.Count > 0 || orders.Count > 0)
         {
             await _appDbContext.SaveChangesAsync();
         }
