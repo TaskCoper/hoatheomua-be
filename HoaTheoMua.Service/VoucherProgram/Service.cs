@@ -379,19 +379,12 @@ public class Service : IService
 
     private async Task<VoucherProgramEntity> GetProgramForUpdate(Guid id, CancellationToken cancellationToken)
     {
-        if (_dbContext.Database.IsRelational())
-        {
-            var locked = await _dbContext.VoucherPrograms
-                .Where(x => x.Id == id)
-                .ExecuteUpdateAsync(s => s.SetProperty(x => x.UpdatedAt, x => x.UpdatedAt), cancellationToken);
+        var query = _dbContext.Database.IsRelational()
+            ? _dbContext.VoucherPrograms.FromSqlInterpolated(
+                $"SELECT * FROM \"VoucherPrograms\" WHERE \"Id\" = {id} FOR UPDATE")
+            : _dbContext.VoucherPrograms.Where(x => x.Id == id);
 
-            if (locked == 0)
-                throw new NotFoundException("Voucher program does not exist.");
-        }
-
-        // Đọc sau khi đã giữ khóa để thấy dữ liệu mới nhất
-        var program = await _dbContext.VoucherPrograms
-                          .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var program = await query.SingleOrDefaultAsync(cancellationToken)
                       ?? throw new NotFoundException("Voucher program does not exist.");
         if (program.IsDeleted)
             throw new NotFoundException("Voucher program has been deleted.");
