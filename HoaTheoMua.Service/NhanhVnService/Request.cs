@@ -564,6 +564,9 @@ public class NhanhOrderUpdateWebhookRequest
 
 public class NhanhOrderAddDataDto
 {
+    [JsonPropertyName("labelIds")]
+    public List<long>? LabelIds { get; set; }
+
     [JsonPropertyName("info")]
     public NhanhOrderInfoDto? Info { get; set; }
 

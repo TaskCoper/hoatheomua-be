@@ -26,6 +26,15 @@ public class OrderController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("/api/v1/orders/delivery-slots/availability")]
+    [Authorize(Policy = JwtExtensions.CustomerOrAdminPolicy)]
+    public async Task<IActionResult> GetDeliverySlotAvailability([FromQuery] DateOnly date, [FromQuery] int? tagId = null)
+    {
+        var result = await _orderService.GetDeliverySlotAvailability(date, tagId, HttpContext.RequestAborted);
+
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpPost("/api/v1/orders")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     [EnableRateLimiting(RateLimitExtensions.OrderWritePolicy)]

@@ -47,6 +47,14 @@ public class OrderNhanhVnConfiguration : IEntityTypeConfiguration<OrderNhanhVn>
 
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("now()");
+        
+        builder.HasIndex(x => x.ThoiGianDonHang)
+            .HasFilter("""
+                       "IsDeleted" = false
+                       AND ("TrangThaiDonHang" IS NULL
+                            OR "TrangThaiDonHang" NOT IN ('63', 'Khách hủy'))
+                       """);
+
 
     }
 }

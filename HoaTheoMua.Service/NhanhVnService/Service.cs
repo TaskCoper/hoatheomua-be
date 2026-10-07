@@ -644,6 +644,7 @@ public class Service: IService
             GhiChuCuaKhach = info.Description,
             GhiChuNoiBo = info.PrivateDescription,
             TrangThaiDonHang = info.Status?.ToString(),
+            LabelIds = item.LabelIds?.Distinct().ToList(),
     
             NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : null,
             NgayGuiHangVanChuyen = !string.IsNullOrEmpty(carrier?.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate) ? sendDate.ToUniversalTime() : null,
@@ -814,6 +815,10 @@ public class Service: IService
         order.GhiChuCuaKhach = info.Description ?? order.GhiChuCuaKhach;
         order.GhiChuNoiBo = info.PrivateDescription ?? order.GhiChuNoiBo;
         order.TrangThaiDonHang = info.Status?.ToString() ?? order.TrangThaiDonHang;
+        if (item.LabelIds != null)
+        {
+            order.LabelIds = item.LabelIds.Distinct().ToList();
+        }
         order.NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value).ToUniversalTime() : order.NgayXacNhan;
     
         order.NguonDonHang = item.Channel?.SaleChannel?.ToString() ?? order.NguonDonHang;

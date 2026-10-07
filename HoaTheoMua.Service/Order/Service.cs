@@ -200,6 +200,146 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
 
+    public async Task<Dictionary<long, int>> CalculateSlotOccupied(DateOnly date, IReadOnlyCollection<long> tagIds,
+        CancellationToken cancellationToken = default)
+    {
+        var occupiedByTagId = tagIds
+            .Distinct()
+            .ToDictionary(tagId => tagId, _ => 0);
+
+        if (occupiedByTagId.Count == 0)
+        {
+            return occupiedByTagId;
+        }
+
+        var vietnamOffset = TimeSpan.FromHours(7);
+        var startUtc = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), vietnamOffset)
+            .ToUniversalTime();
+        var endUtc = startUtc.AddDays(1);
+
+        var nhanhOrderLabelIds = await _dbContext.OrderNhanhVns
+            .AsNoTracking()
+            .Where(order =>
+                !order.IsDeleted &&
+                order.ThoiGianDonHang >= startUtc &&
+                order.ThoiGianDonHang < endUtc &&
+                order.TrangThaiDonHang != "63" &&
+                order.TrangThaiDonHang != "Khách hủy")
+            .Select(order => order.LabelIds)
+            .ToListAsync(cancellationToken);
+
+        var pendingOrderTagIds = await _dbContext.Orders
+            .AsNoTracking()
+            .Where(order =>
+                !order.IsDeleted &&
+                order.Status == "Pending" &&
+                order.CreatedAt >= startUtc &&
+                order.CreatedAt < endUtc)
+            .Select(order => order.TagIds)
+            .ToListAsync(cancellationToken);
+
+        CountOccupied(nhanhOrderLabelIds, occupiedByTagId);
+        CountOccupied(pendingOrderTagIds, occupiedByTagId);
+
+        return occupiedByTagId;
+    }
+
+    private static void CountOccupied(IEnumerable<List<long>?> orderTagIds, IDictionary<long, int> occupiedByTagId)
+    {
+        foreach (var tagIds in orderTagIds)
+        {
+            if (tagIds == null)
+            {
+                continue;
+            }
+
+            foreach (var tagId in tagIds.Distinct())
+            {
+                if (occupiedByTagId.TryGetValue(tagId, out var occupied))
+                {
+                    occupiedByTagId[tagId] = occupied + 1;
+                }
+            }
+        }
+    }
+
+    public async Task<Response.DeliverySlotAvailabilityResponse> GetDeliverySlotAvailability(DateOnly date, int? tagId,
+        CancellationToken cancellationToken = default)
+    {
+        if (date == default)
+        {
+            throw new BadRequestException("Ngày kiểm tra không hợp lệ");
+        }
+
+        var entity = await _dbContext.Configs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(config =>
+                    !config.IsDeleted &&
+                    config.Key == "nhanhvn.order_tags" &&
+                    config.Group == "nhanhvn" &&
+                    config.Kind == "setting",
+                cancellationToken);
+
+        if (entity == null)
+        {
+            throw new BadRequestException("Không tìm thấy cấu hình của nhãn");
+        }
+
+        HoaTheoMua.Service.Config.Response.ConfigItem? config;
+        try
+        {
+            config = System.Text.Json.JsonSerializer.Deserialize<
+                HoaTheoMua.Service.Config.Response.ConfigItem>(entity.Value);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            throw new BadRequestException("Không thể convert json");
+        }
+
+        if (config?.Value == null || config.Options == null)
+        {
+            throw new BadRequestException("Không thể convert json");
+        }
+
+        var configuredTagIds = config.Value.Distinct().ToList();
+        if (tagId.HasValue && !configuredTagIds.Contains(tagId.Value))
+        {
+            throw new BadRequestException($"TagId {tagId.Value} không phải là tag giao hàng theo khung giờ");
+        }
+
+        var selectedTagIds = tagId.HasValue
+            ? new List<int> { tagId.Value }
+            : configuredTagIds;
+
+        var optionsByTagId = config.Options
+            .Where(option => option.Value.HasValue)
+            .GroupBy(option => option.Value!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        var missingOptionTagIds = selectedTagIds
+            .Where(id => !optionsByTagId.ContainsKey(id))
+            .ToList();
+        if (missingOptionTagIds.Count > 0)
+        {
+            throw new BadRequestException($"TagId {missingOptionTagIds[0]} không tồn tại trong mục options");
+        }
+
+        var occupiedByTagId = await CalculateSlotOccupied(date, selectedTagIds.Select(id => (long)id).ToList(),
+            cancellationToken);
+
+        return new Response.DeliverySlotAvailabilityResponse
+        {
+            Date = date,
+            Slots = selectedTagIds.Select(id => new Response.DeliverySlotAvailabilityItem
+            {
+                TagId = id,
+                Label = optionsByTagId[id].Label ?? string.Empty,
+                Limit = config.SlotLimits?.TryGetValue(id, out var limit) == true ? limit : null,
+                Occupied = occupiedByTagId[id]
+            }).ToList()
+        };
+    }
+
     // VAT applied to the product subtotal when the buyer requests an invoice.
     private const decimal VatRate = 0.08m;
 

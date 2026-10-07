@@ -229,6 +229,9 @@ public class OrderNhanhVn : BaseEntity<Guid>, IAuditableEntity
     //Excel: Nhãn
     public string? Nhan { get; set; }
 
+    // ID nhãn nhận từ webhook Nhanh.vn, dùng để truy vấn giới hạn slot
+    public List<long>? LabelIds { get; set; }
+
     //Excel: Ngày hẹn thanh toán
     public DateTimeOffset? NgayHenThanhToan { get; set; }
 
