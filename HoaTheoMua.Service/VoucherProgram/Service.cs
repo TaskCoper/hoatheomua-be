@@ -30,10 +30,10 @@ public class Service : IService
             Id = Guid.NewGuid(),
             Name = request.Name.Trim(),
             IsActive = false,
-            StartAt = request.StartAt.ToUniversalTime(),
-            EndAt = request.EndAt.ToUniversalTime(),
+            StartAt = VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime(),
+            EndAt = VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime(),
             MinOrderAmount = request.MinOrderAmount,
-            MaxOrderAmount = request.MaxOrderAmount,
+            MaxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = null,
             IsDeleted = false
@@ -47,6 +47,7 @@ public class Service : IService
             Id = program.Id,
             Name = program.Name,
             IsActive = program.IsActive,
+            IsDeleted = program.IsDeleted,
             StartAt = program.StartAt,
             EndAt = program.EndAt,
             MinOrderAmount = program.MinOrderAmount,
@@ -63,7 +64,7 @@ public class Service : IService
     {
         var pageIndex = Math.Max(1, request.PageIndex);
         var pageSize = request.PageSize > 0 ? request.PageSize : 20;
-        var query = _dbContext.VoucherPrograms.AsNoTracking().Where(x => !x.IsDeleted);
+        var query = _dbContext.VoucherPrograms.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.Keyword))
         {
@@ -74,6 +75,9 @@ public class Service : IService
         if (request.IsActive.HasValue)
             query = query.Where(x => x.IsActive == request.IsActive.Value);
 
+        if (request.IsDelete.HasValue)
+            query = query.Where(x => x.IsDeleted == request.IsDelete.Value);
+
         var totalCount = await query.CountAsync(cancellationToken);
         var offset = (int)Math.Min((long)(pageIndex - 1) * pageSize, int.MaxValue);
         var items = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
@@ -83,6 +87,7 @@ public class Service : IService
                 Id = x.Id,
                 Name = x.Name,
                 IsActive = x.IsActive,
+                IsDeleted = x.IsDeleted,
                 StartAt = x.StartAt,
                 EndAt = x.EndAt,
                 MinOrderAmount = x.MinOrderAmount,
@@ -105,15 +110,35 @@ public class Service : IService
         await using var transaction = _dbContext.Database.IsRelational()
             ? await _dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
         var program = await GetProgramForUpdate(id, cancellationToken);
-        var startAt = request.StartAt?.ToUniversalTime() ?? program.StartAt;
-        var endAt = request.EndAt?.ToUniversalTime() ?? program.EndAt;
+        var startAt = request.StartAt == null ? program.StartAt
+            : VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime();
+        var endAt = request.EndAt == null ? program.EndAt
+            : VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime();
         var minOrderAmount = request.MinOrderAmount ?? program.MinOrderAmount;
-        var maxOrderAmount = request.MaxOrderAmount ?? program.MaxOrderAmount;
+        var maxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount ?? program.MaxOrderAmount;
         var errors = new List<ValidationError>();
         if (endAt <= startAt)
-            errors.Add(new ValidationError { Field = "endAt", Message = "End time must be later than start time" });
+        {
+            errors.Add(request.StartAt != null && request.EndAt == null
+                ? new ValidationError { Field = "startAt", Message = "Start time must be earlier than the current end time" }
+                : new ValidationError
+                {
+                    Field = "endAt",
+                    Message = request.StartAt != null ? "End time must be later than start time"
+                        : "End time must be later than the current start time"
+                });
+        }
         if (minOrderAmount.HasValue && maxOrderAmount.HasValue && maxOrderAmount < minOrderAmount)
-            errors.Add(new ValidationError { Field = "maxOrderAmount", Message = "Max order amount cannot be less than min order amount" });
+        {
+            errors.Add(request.MinOrderAmount.HasValue && !request.MaxOrderAmount.HasValue
+                ? new ValidationError { Field = "minOrderAmount", Message = "Min order amount cannot exceed the current max order amount" }
+                : new ValidationError
+                {
+                    Field = "maxOrderAmount",
+                    Message = request.MinOrderAmount.HasValue ? "Max order amount cannot be less than min order amount"
+                        : "Max order amount cannot be less than the current min order amount"
+                });
+        }
         if (errors.Count > 0)
             throw new ValidationExceptionErrorV1(errors);
 
@@ -151,7 +176,7 @@ public class Service : IService
         var result = await _dbContext.VoucherPrograms.AsNoTracking().Where(x => x.Id == id)
             .Select(x => new Response.VoucherProgramResponse
             {
-                Id = x.Id, Name = x.Name, IsActive = x.IsActive,
+                Id = x.Id, Name = x.Name, IsActive = x.IsActive, IsDeleted = x.IsDeleted,
                 StartAt = x.StartAt, EndAt = x.EndAt,
                 MinOrderAmount = x.MinOrderAmount, MaxOrderAmount = x.MaxOrderAmount,
                 VoucherCount = x.Vouchers.Count(v => !v.IsDeleted),
@@ -274,11 +299,15 @@ public class Service : IService
     {
         var query = _dbContext.Database.IsRelational()
             ? _dbContext.VoucherPrograms.FromSqlInterpolated(
-                $"SELECT * FROM \"VoucherPrograms\" WHERE \"Id\" = {id} AND NOT \"IsDeleted\" FOR UPDATE")
-            : _dbContext.VoucherPrograms.Where(x => x.Id == id && !x.IsDeleted);
+                $"SELECT * FROM \"VoucherPrograms\" WHERE \"Id\" = {id} FOR UPDATE")
+            : _dbContext.VoucherPrograms.Where(x => x.Id == id);
 
-        return await query.SingleOrDefaultAsync(cancellationToken)
-               ?? throw new NotFoundException("Voucher program not found.");
+        var program = await query.SingleOrDefaultAsync(cancellationToken)
+                      ?? throw new NotFoundException("Voucher program does not exist.");
+        if (program.IsDeleted)
+            throw new NotFoundException("Voucher program has been deleted.");
+
+        return program;
     }
 
     private async Task<List<string>> InsertVoucherBatch(Guid programId, Request.GenerateProgramVouchersRequest request,

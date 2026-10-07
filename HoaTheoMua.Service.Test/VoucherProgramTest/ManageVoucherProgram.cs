@@ -1,5 +1,6 @@
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.VoucherProgram;
+using HoaTheoMua.Service.VoucherProgram.Validate;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using FeatureService = HoaTheoMua.Service.VoucherProgram.Service;
@@ -9,6 +10,34 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 
 public class ManageVoucherProgram
 {
+    [Theory]
+    [InlineData(0, 0, null)]
+    [InlineData(200000, 0, null)]
+    [InlineData(3000000, 0, null)]
+    [InlineData(null, 0, null)]
+    [InlineData(null, null, 2000000)]
+    [InlineData(null, 1000000, 1000000)]
+    public async Task Update_ZeroMaxRemovesUpperLimit_WhileNullKeepsExistingLimit(int? min, int? max, int? expectedMax)
+    {
+        await using var db = Database();
+        var program = Program();
+        db.VoucherPrograms.Add(program);
+        await db.SaveChangesAsync();
+        var request = new Request.UpdateVoucherProgramRequest
+        {
+            Name = program.Name, MinOrderAmount = min, MaxOrderAmount = max
+        };
+        Assert.True(new UpdateVoucherProgramRequestValidator().Validate(request).IsValid);
+
+        var result = await new FeatureService(db).UpdateVoucherProgram(program.Id, request);
+
+        db.ChangeTracker.Clear();
+        var saved = await db.VoucherPrograms.SingleAsync();
+        Assert.Equal((decimal?)expectedMax, saved.MaxOrderAmount);
+        Assert.Equal(saved.MaxOrderAmount, result.MaxOrderAmount);
+        Assert.Equal((decimal?)min ?? 200000m, saved.MinOrderAmount);
+    }
+
     [Fact]
     public async Task Update_ChangesOnlySuppliedFields_NormalizesUtc_AndPreservesVoucherStatesWhenActiveIsOmitted()
     {
@@ -24,7 +53,7 @@ public class ManageVoucherProgram
 
         var result = await new FeatureService(db).UpdateVoucherProgram(program.Id, new()
         {
-            Name = "  Tên mới  ", StartAt = start, MinOrderAmount = 0
+            Name = "  Tên mới  ", StartAt = start.ToString("O"), MinOrderAmount = 0
         });
 
         db.ChangeTracker.Clear();
@@ -47,11 +76,11 @@ public class ManageVoucherProgram
     }
 
     [Theory]
-    [InlineData("startAt", "endAt")]
-    [InlineData("endAt", "endAt")]
-    [InlineData("minOrderAmount", "maxOrderAmount")]
-    [InlineData("maxOrderAmount", "maxOrderAmount")]
-    public async Task Update_ValidatesMergedValuesBeforeChangingProgramOrVouchers(string changedField, string errorField)
+    [InlineData("startAt", "startAt", "Start time must be earlier than the current end time")]
+    [InlineData("endAt", "endAt", "End time must be later than the current start time")]
+    [InlineData("minOrderAmount", "minOrderAmount", "Min order amount cannot exceed the current max order amount")]
+    [InlineData("maxOrderAmount", "maxOrderAmount", "Max order amount cannot be less than the current min order amount")]
+    public async Task Update_ValidatesMergedValuesBeforeChangingProgramOrVouchers(string changedField, string errorField, string message)
     {
         await using var db = Database();
         var program = Program();
@@ -61,8 +90,8 @@ public class ManageVoucherProgram
         var request = new Request.UpdateVoucherProgramRequest { IsActive = true, Name = "Must not be saved" };
         switch (changedField)
         {
-            case "startAt": request.StartAt = program.EndAt; break;
-            case "endAt": request.EndAt = program.StartAt; break;
+            case "startAt": request.StartAt = program.EndAt.ToString("O"); break;
+            case "endAt": request.EndAt = program.StartAt.ToString("O"); break;
             case "minOrderAmount": request.MinOrderAmount = 2000001; break;
             case "maxOrderAmount": request.MaxOrderAmount = 199999; break;
         }
@@ -70,7 +99,9 @@ public class ManageVoucherProgram
         var error = await Assert.ThrowsAsync<ValidationExceptionErrorV1>(() => new FeatureService(db)
             .UpdateVoucherProgram(program.Id, request));
 
-        Assert.Equal(errorField, Assert.Single(error.Errors).Field);
+        var validationError = Assert.Single(error.Errors);
+        Assert.Equal(errorField, validationError.Field);
+        Assert.Equal(message, validationError.Message);
         db.ChangeTracker.Clear();
         var saved = await db.VoucherPrograms.SingleAsync();
         Assert.Equal("20/10", saved.Name);
@@ -164,7 +195,7 @@ public class ManageVoucherProgram
         var delete = await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteVoucherProgram(program.Id));
         var generate = await Assert.ThrowsAsync<NotFoundException>(() => service.GenerateProgramVouchers(program.Id, GenerateRequest()));
 
-        Assert.Equal("Voucher program not found.", active.Message);
+        Assert.Equal(deleted ? "Voucher program has been deleted." : "Voucher program does not exist.", active.Message);
         Assert.Equal(active.Message, delete.Message);
         Assert.Equal(active.Message, generate.Message);
         Assert.Empty(await db.Vouchers.ToListAsync());

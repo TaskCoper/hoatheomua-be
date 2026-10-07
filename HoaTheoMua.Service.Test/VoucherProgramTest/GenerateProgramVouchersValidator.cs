@@ -7,6 +7,36 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 
 public class GenerateProgramVouchersValidator
 {
+    [Fact]
+    public void Update_ReportsNegativeMinAndMaxAsSeparateFieldErrors()
+    {
+        var request = new Request.UpdateVoucherProgramRequest { MinOrderAmount = -1, MaxOrderAmount = -2 };
+
+        var result = new UpdateVoucherProgramRequestValidator().Validate(request);
+
+        Assert.Equal(2, result.Errors.Count);
+        Assert.Contains(result.Errors, error => error.PropertyName == "MinOrderAmount"
+            && error.ErrorMessage == "Min order amount must not be negative");
+        Assert.Contains(result.Errors, error => error.PropertyName == "MaxOrderAmount"
+            && error.ErrorMessage == "Max order amount must not be negative");
+    }
+
+    [Fact]
+    public void Generate_ReportsInvalidPrefixAndSuffixAsSeparateFieldErrors()
+    {
+        var request = GenerateRequest();
+        request.CodePrefix = "htm";
+        request.CodeSuffix = "-26";
+
+        var result = new GenerateProgramVouchersRequestValidator().Validate(request);
+
+        Assert.Equal(2, result.Errors.Count);
+        Assert.Contains(result.Errors, error => error.PropertyName == "CodePrefix"
+            && error.ErrorMessage == "Code prefix must contain only uppercase letters or digits");
+        Assert.Contains(result.Errors, error => error.PropertyName == "CodeSuffix"
+            && error.ErrorMessage == "Code suffix must contain only uppercase letters or digits");
+    }
+
     [Theory]
     [InlineData(5, 1, "cash")]
     [InlineData(10, 1000, "percent")]
@@ -25,17 +55,18 @@ public class GenerateProgramVouchersValidator
     }
 
     [Theory]
-    [InlineData("CodeLength", "4", "Code length must be between 5 and 10")]
-    [InlineData("CodeLength", "11", "Code length must be between 5 and 10")]
-    [InlineData("CodeLength", "0", "Code length must be between 5 and 10")]
-    [InlineData("CodePrefix", "htm", "Code prefix or suffix is invalid")]
-    [InlineData("CodePrefix", "HTM\n", "Code prefix or suffix is invalid")]
-    [InlineData("CodeSuffix", "-26", "Code prefix or suffix is invalid")]
-    [InlineData("CodeSuffix", "AAAAAAAAAAAAAAAAAAAA", "Code is too long", "CodeLength")]
-    [InlineData("Quantity", "0", "Quantity must be between 1 and 1000")]
-    [InlineData("Quantity", "1001", "Quantity must be between 1 and 1000")]
+    [InlineData("CodeLength", "4", "Code length must be at least 5")]
+    [InlineData("CodeLength", "11", "Code length must not exceed 10")]
+    [InlineData("CodeLength", "0", "Code length must be at least 5")]
+    [InlineData("CodePrefix", "htm", "Code prefix must contain only uppercase letters or digits")]
+    [InlineData("CodePrefix", "HTM\n", "Code prefix must contain only uppercase letters or digits")]
+    [InlineData("CodeSuffix", "-26", "Code suffix must contain only uppercase letters or digits")]
+    [InlineData("CodeSuffix", "AAAAAAAAAAAAAAAAAAAA", "Voucher code must not exceed 20 characters including prefix and suffix", "CodeLength")]
+    [InlineData("Quantity", "0", "Quantity must be at least 1")]
+    [InlineData("Quantity", "1001", "Quantity must not exceed 1000")]
     [InlineData("MaxUsageCount", "0", "Max usage count must be greater than 0")]
     [InlineData("DiscountType", "PERCENT", "Discount type must be cash or percent")]
+    [InlineData("DiscountType", "", "Discount type is required")]
     [InlineData("DiscountValue", "0", "Discount value must be greater than 0")]
     [InlineData("DiscountValue", "101", "Discount percent must not exceed 100")]
     [InlineData("MaxDiscountAmount", "0", "Max discount amount must be greater than 0")]
@@ -74,6 +105,6 @@ public class GenerateProgramVouchersValidator
 
         Assert.Equal(valid, result.IsValid);
         if (!valid)
-            Assert.Equal("Nothing to update", Assert.Single(result.Errors).ErrorMessage);
+            Assert.Equal("At least one voucher program field must be provided for update", Assert.Single(result.Errors).ErrorMessage);
     }
 }

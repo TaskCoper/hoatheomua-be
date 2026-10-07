@@ -13,8 +13,8 @@ public class CreateVoucherProgramValidator
     [InlineData("end", "EndAt", "End time is required")]
     [InlineData("equalDates", "EndAt", "End time must be later than start time")]
     [InlineData("reversedDates", "EndAt", "End time must be later than start time")]
-    [InlineData("min", "MinOrderAmount", "Order amount must not be negative")]
-    [InlineData("max", "MaxOrderAmount", "Order amount must not be negative")]
+    [InlineData("min", "MinOrderAmount", "Min order amount must not be negative")]
+    [InlineData("max", "MaxOrderAmount", "Max order amount must not be negative")]
     [InlineData("range", "MaxOrderAmount", "Max order amount cannot be less than min order amount")]
     public void RejectsInvalidFieldsWithPlanMessages(string scenario, string field, string message)
     {
@@ -23,10 +23,10 @@ public class CreateVoucherProgramValidator
         {
             case "name": request.Name = "   "; break;
             case "longName": request.Name = new string('A', 201); break;
-            case "start": request.StartAt = default; break;
-            case "end": request.EndAt = default; break;
+            case "start": request.StartAt = ""; break;
+            case "end": request.EndAt = ""; break;
             case "equalDates": request.EndAt = request.StartAt; break;
-            case "reversedDates": request.EndAt = request.StartAt.AddSeconds(-1); break;
+            case "reversedDates": request.EndAt = "2026-10-14T23:59:59+07:00"; break;
             case "min": request.MinOrderAmount = -1; break;
             case "max": request.MaxOrderAmount = -1; break;
             case "range": request.MinOrderAmount = 200000; request.MaxOrderAmount = 199999; break;
@@ -43,6 +43,7 @@ public class CreateVoucherProgramValidator
     [InlineData(0, null)]
     [InlineData(null, 0)]
     [InlineData(0, 0)]
+    [InlineData(200000, 0)]
     [InlineData(200000, 200000)]
     public void AllowsOptionalAndInclusiveOrderAmountBounds(int? min, int? max)
     {
@@ -56,15 +57,15 @@ public class CreateVoucherProgramValidator
     public void ComparesInstantsAcrossDifferentOffsets()
     {
         var request = ValidRequest();
-        request.StartAt = DateTimeOffset.Parse("2026-10-15T10:00:00+07:00");
-        request.EndAt = DateTimeOffset.Parse("2026-10-15T04:00:00+00:00");
+        request.StartAt = "2026-10-15T10:00:00+07:00";
+        request.EndAt = "2026-10-15T04:00:00+00:00";
         Assert.True(new CreateVoucherProgramRequestValidator().Validate(request).IsValid);
     }
 
     private static Request.CreateVoucherProgramRequest ValidRequest() => new()
     {
         Name = "20/10",
-        StartAt = DateTimeOffset.Parse("2026-10-15T00:00:00+07:00"),
-        EndAt = DateTimeOffset.Parse("2026-10-31T23:59:59+07:00")
+        StartAt = "2026-10-15T00:00:00+07:00",
+        EndAt = "2026-10-31T23:59:59+07:00"
     };
 }

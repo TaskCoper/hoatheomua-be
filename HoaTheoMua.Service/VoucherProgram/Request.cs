@@ -5,8 +5,8 @@ public class Request
     public class UpdateVoucherProgramRequest
     {
         public string? Name { get; set; }
-        public DateTimeOffset? StartAt { get; set; }
-        public DateTimeOffset? EndAt { get; set; }
+        public string? StartAt { get; set; }
+        public string? EndAt { get; set; }
         public decimal? MinOrderAmount { get; set; }
         public decimal? MaxOrderAmount { get; set; }
         public bool? IsActive { get; set; }
@@ -28,8 +28,8 @@ public class Request
     public class CreateVoucherProgramRequest
     {
         public required string Name { get; set; }
-        public DateTimeOffset StartAt { get; set; }
-        public DateTimeOffset EndAt { get; set; }
+        public required string StartAt { get; set; }
+        public required string EndAt { get; set; }
         public decimal? MinOrderAmount { get; set; }
         public decimal? MaxOrderAmount { get; set; }
     }
@@ -40,5 +40,6 @@ public class Request
         public int PageSize { get; set; } = 20;
         public string? Keyword { get; set; }
         public bool? IsActive { get; set; }
+        public bool? IsDelete { get; set; }
     }
 }

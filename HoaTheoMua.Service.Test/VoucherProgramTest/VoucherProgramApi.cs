@@ -28,39 +28,57 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 
 public class VoucherProgramApi
 {
+    [Theory]
+    [InlineData("endAt", "31/10/2026 23:59:59", "End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00")]
+    [InlineData("endAt", "2026-10-31T23:59:59", "End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00")]
+    [InlineData("startAt", "not-a-date", "Start time must be a valid ISO 8601 date-time, for example 2026-10-15T00:00:00+07:00")]
+    public async Task InvalidDateTime_ReturnsFluentValidationError_WithoutSavingProgram(string field, string value, string message)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
+        await using var app = await StartApplication(key);
+        using var client = CreateAdminClient(app, key);
+        var payload = field == "startAt"
+            ? new { name = "20/10", startAt = value, endAt = "2026-10-31T23:59:59+07:00" }
+            : new { name = "20/10", startAt = "2026-10-15T00:00:00+07:00", endAt = value };
+
+        using var response = await client.PostAsJsonAsync("/api/v1/admin/voucher-programs", payload);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("VALIDATION_ERROR", json.RootElement.GetProperty("messageCode").GetString());
+        var error = Assert.Single(json.RootElement.GetProperty("errors").EnumerateArray());
+        Assert.Equal(field, error.GetProperty("field").GetString());
+        Assert.Equal(message, error.GetProperty("message").GetString());
+        Assert.NotEmpty(json.RootElement.GetProperty("traceId").GetString()!);
+        using var scope = app.Services.CreateScope();
+        Assert.Empty(await scope.ServiceProvider.GetRequiredService<AppDbContext>().VoucherPrograms.ToListAsync());
+    }
+
+    [Fact]
+    public async Task IsoDateTimeRequest_WithOffset_CreatesProgramAndReturnsUtc()
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
+        await using var app = await StartApplication(key);
+        using var client = CreateAdminClient(app, key);
+        using var body = new StringContent("""
+            {"name":"20/10","startAt":"2026-10-15T00:00:00+07:00","endAt":"2026-10-31T23:59:59+07:00","minOrderAmount":0,"maxOrderAmount":0}
+            """, Encoding.UTF8, "application/json");
+
+        using var response = await client.PostAsync("/api/v1/admin/voucher-programs", body);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var value = json.RootElement.GetProperty("value");
+        Assert.Equal(DateTimeOffset.Parse("2026-10-31T16:59:59Z"), value.GetProperty("endAt").GetDateTimeOffset());
+        Assert.Equal(TimeSpan.Zero, value.GetProperty("endAt").GetDateTimeOffset().Offset);
+        Assert.Equal(JsonValueKind.Null, value.GetProperty("maxOrderAmount").ValueKind);
+    }
+
     [Fact]
     public async Task AdminEndpoints_EnforceAuthorization_ValidateRequests_AndReturnPlanEnvelopes()
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
-        builder.Logging.ClearProviders();
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
-        var databaseName = Guid.NewGuid().ToString();
-        builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
-        builder.Services.AddScoped<VoucherProgramFeature.IService, VoucherProgramFeature.Service>();
-        builder.Services.AddValidatorsFromAssembly(typeof(VoucherProgramFeature.Service).Assembly);
-        builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();
-        builder.Services.AddControllers(options => options.Filters.Add<ValidationActionFilter>())
-            .AddApplicationPart(typeof(VoucherProgramController).Assembly)
-            .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
-        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
-        {
-            options.MapInboundClaims = false;
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = false, ValidateAudience = false,
-                ValidateLifetime = true, ValidateIssuerSigningKey = true,
-                IssuerSigningKey = key, RoleClaimType = "role"
-            };
-        });
-        builder.Services.AddAuthorization(options => options.AddPolicy(JwtExtensions.AdminPolicy, policy => policy.RequireRole("Admin")));
-
-        await using var app = builder.Build();
-        app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
-        app.UseAuthentication();
-        app.UseAuthorization();
-        app.MapControllers();
-        await app.StartAsync();
+        await using var app = await StartApplication(key);
         try
         {
             var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
@@ -71,8 +89,8 @@ public class VoucherProgramApi
             var request = new VoucherProgramFeature.Request.CreateVoucherProgramRequest
             {
                 Name = "20/10",
-                StartAt = DateTimeOffset.Parse("2026-10-15T00:00:00+07:00"),
-                EndAt = DateTimeOffset.Parse("2026-10-31T23:59:59+07:00"),
+                StartAt = "2026-10-15T00:00:00+07:00",
+                EndAt = "2026-10-31T23:59:59+07:00",
                 MinOrderAmount = 200000
             };
 
@@ -99,7 +117,7 @@ public class VoucherProgramApi
             Assert.Equal("endAt", validationError.GetProperty("field").GetString());
             Assert.Equal("End time must be later than start time", validationError.GetProperty("message").GetString());
 
-            request.EndAt = DateTimeOffset.Parse("2026-10-31T23:59:59+07:00");
+            request.EndAt = "2026-10-31T23:59:59+07:00";
             using var post = await client.PostAsJsonAsync(route, request);
             Assert.Equal(HttpStatusCode.OK, post.StatusCode);
             using var created = JsonDocument.Parse(await post.Content.ReadAsStringAsync());
@@ -169,12 +187,56 @@ public class VoucherProgramApi
             await AssertMutationAuthorization(client, programRoute, batchRequest, HttpStatusCode.NotFound);
             using var finalList = await client.GetAsync(route);
             using var finalPage = JsonDocument.Parse(await finalList.Content.ReadAsStringAsync());
-            Assert.Empty(finalPage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
+            var deletedItem = Assert.Single(finalPage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
+            Assert.Equal(program.GetProperty("id").GetGuid(), deletedItem.GetProperty("id").GetGuid());
+            Assert.True(deletedItem.GetProperty("isDeleted").GetBoolean());
         }
         finally
         {
             await app.StopAsync();
         }
+    }
+
+    private static async Task<WebApplication> StartApplication(SecurityKey key)
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
+        builder.Logging.ClearProviders();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        var databaseName = Guid.NewGuid().ToString();
+        builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
+        builder.Services.AddScoped<VoucherProgramFeature.IService, VoucherProgramFeature.Service>();
+        builder.Services.AddValidatorsFromAssembly(typeof(VoucherProgramFeature.Service).Assembly);
+        builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();
+        builder.Services.AddControllers(options => options.Filters.Add<ValidationActionFilter>())
+            .AddApplicationPart(typeof(VoucherProgramController).Assembly)
+            .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+        {
+            options.MapInboundClaims = false;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = false, ValidateAudience = false,
+                ValidateLifetime = true, ValidateIssuerSigningKey = true,
+                IssuerSigningKey = key, RoleClaimType = "role"
+            };
+        });
+        builder.Services.AddAuthorization(options => options.AddPolicy(JwtExtensions.AdminPolicy, policy => policy.RequireRole("Admin")));
+
+        var app = builder.Build();
+        app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapControllers();
+        await app.StartAsync();
+        return app;
+    }
+
+    private static HttpClient CreateAdminClient(WebApplication app, SecurityKey key)
+    {
+        var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+        var client = new HttpClient { BaseAddress = new Uri(address) };
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token("Admin", key));
+        return client;
     }
 
     private static string Token(string role, SecurityKey key) => new JwtSecurityTokenHandler().WriteToken(

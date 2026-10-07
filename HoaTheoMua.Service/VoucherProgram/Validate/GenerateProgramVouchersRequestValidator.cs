@@ -7,20 +7,22 @@ public class GenerateProgramVouchersRequestValidator : AbstractValidator<Request
     public GenerateProgramVouchersRequestValidator()
     {
         RuleFor(x => x.CodeLength).InclusiveBetween(5, 10)
-            .WithMessage("Code length must be between 5 and 10");
+            .WithMessage(x => x.CodeLength < 5 ? "Code length must be at least 5" : "Code length must not exceed 10");
         RuleFor(x => x.CodePrefix).Matches(@"\A[A-Z0-9]*\z")
-            .WithMessage("Code prefix or suffix is invalid");
+            .WithMessage("Code prefix must contain only uppercase letters or digits");
         RuleFor(x => x.CodeSuffix).Matches(@"\A[A-Z0-9]*\z")
-            .WithMessage("Code prefix or suffix is invalid");
+            .WithMessage("Code suffix must contain only uppercase letters or digits");
         RuleFor(x => x.CodeLength)
             .Must((request, length) => (long)(request.CodePrefix?.Length ?? 0) + length
                                       + (request.CodeSuffix?.Length ?? 0) <= 20)
-            .WithMessage("Code is too long");
+            .WithMessage("Voucher code must not exceed 20 characters including prefix and suffix");
         RuleFor(x => x.Quantity).InclusiveBetween(1, 1000)
-            .WithMessage("Quantity must be between 1 and 1000");
+            .WithMessage(x => x.Quantity < 1 ? "Quantity must be at least 1" : "Quantity must not exceed 1000");
         RuleFor(x => x.MaxUsageCount).GreaterThan(0)
             .WithMessage("Max usage count must be greater than 0");
-        RuleFor(x => x.DiscountType).Must(type => type is "cash" or "percent")
+        RuleFor(x => x.DiscountType).Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("Discount type is required")
+            .Must(type => type is "cash" or "percent")
             .WithMessage("Discount type must be cash or percent");
         RuleFor(x => x.DiscountValue).GreaterThan(0)
             .WithMessage("Discount value must be greater than 0");

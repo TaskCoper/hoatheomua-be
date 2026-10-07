@@ -11,6 +11,8 @@ public class CreateVoucherProgram
     [Theory]
     [InlineData(null, null)]
     [InlineData(200000, 800000)]
+    [InlineData(0, 0)]
+    [InlineData(200000, 0)]
     public async Task CreatesInactiveProgramWithoutVouchers_AndConvertsScheduleToUtc(int? min, int? max)
     {
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
@@ -18,8 +20,8 @@ public class CreateVoucherProgram
         var request = new Request.CreateVoucherProgramRequest
         {
             Name = "  20/10  ",
-            StartAt = DateTimeOffset.Parse("2026-10-15T00:00:00+07:00"),
-            EndAt = DateTimeOffset.Parse("2026-10-31T23:59:59+07:00"),
+            StartAt = "2026-10-15T00:00:00+07:00",
+            EndAt = "2026-10-31T23:59:59+07:00",
             MinOrderAmount = min,
             MaxOrderAmount = max
         };
@@ -47,7 +49,7 @@ public class CreateVoucherProgram
         Assert.Equal(saved.StartAt, result.StartAt);
         Assert.Equal(saved.EndAt, result.EndAt);
         Assert.Equal(request.MinOrderAmount, saved.MinOrderAmount);
-        Assert.Equal(request.MaxOrderAmount, saved.MaxOrderAmount);
+        Assert.Equal(request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount, saved.MaxOrderAmount);
         Assert.Equal(saved.MinOrderAmount, result.MinOrderAmount);
         Assert.Equal(saved.MaxOrderAmount, result.MaxOrderAmount);
         Assert.Equal(0, result.VoucherCount);

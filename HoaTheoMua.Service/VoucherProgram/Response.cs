@@ -14,6 +14,7 @@ public class Response
         public Guid Id { get; set; }
         public required string Name { get; set; }
         public bool IsActive { get; set; }
+        public bool IsDeleted { get; set; }
         public DateTimeOffset StartAt { get; set; }
         public DateTimeOffset EndAt { get; set; }
         public decimal? MinOrderAmount { get; set; }
