@@ -106,7 +106,7 @@ public class Service : IService
 
         var ahamoveConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
 
-        // Both couriers allow 90 minutes for flower preparation.
+        var isUrgent = await IsUrgentOrderAsync(order, tags);
         var allowInstantDelivery = !isAhamove || ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
 
         // Unix seconds the courier will collect the parcel. Computed once here and carried in the
@@ -116,7 +116,7 @@ public class Service : IService
             ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
             : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + XanhSm.XanhSmConstants.PreparationTimeSeconds;
         //var shouldDispatch = order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery;
-        var shouldDispatch = order.OrderTime == 0 && allowInstantDelivery;
+        var shouldDispatch = isUrgent && allowInstantDelivery;
         if (shouldDispatch)
         {
             tagIds = tagIds.Append(FastTagId).ToList();
@@ -133,8 +133,7 @@ public class Service : IService
             PrivateDescription = privateDescription
         };
 
-        // Scheduled order, tagged order, or instant delivery switched off in Config: no courier is
-        // booked, and correspondingly there is nothing to compensate later.
+        // Non-urgent orders and urgent delivery disabled in Config do not book a courier.
         if (!shouldDispatch)
         {
             return Plan(dispatched: false, null, null);
@@ -543,9 +542,13 @@ public class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m,
+                //nếu gấp thì lấy ngày delay | nếu ko gấp thì lấy createdAt
                 DeliveryDate = order.OrderTime > 0
                     ? vnDt.ToString("yyyy-MM-dd")
-                    : ConvertInstantDateDelivery(plan.DelayTimeUnix),
+                    : plan.Dispatched
+                        ? ConvertInstantDateDelivery(plan.DelayTimeUnix)
+                        : order.CreatedAt.ToOffset(TimeSpan.FromHours(7))
+                            .ToString("yyyy-MM-dd"),
                 // OrderTime > 0: chuyển OrderTime sang ngày yyyy-MM-dd.
                 //OrderTime = 0:  thời gian hiện tại cộng delay => có thể qua ngày mới 
                 DeliveryHour = "",
@@ -1128,6 +1131,21 @@ public class Service : IService
         }
 
         return $"{time:D2}:00:00";
+    }
+
+    private async Task<bool> IsUrgentOrderAsync(OrderEntity order, IReadOnlyCollection<long> tagIds)
+    {
+        if (order.OrderTime != 0)
+        {
+            return false;
+        }
+
+        var orderTagConfig = await _configService.GetNhanhVnOrderTag();
+        var selectedSlot = orderTagConfig.Options?
+            .FirstOrDefault(option =>
+                option.Value.HasValue && tagIds.Contains(option.Value.Value));
+
+        return DeliverySlotTimeHelper.IsWithinSlot(selectedSlot?.Label, order.CreatedAt);
     }
 
     // Instant orders carry no tag, so ConvertTimeDeliveryAsync always returns empty for them. The

@@ -1518,7 +1518,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
     }
 
     [Fact]
-    public async Task CreateOrder_UrgentOrderOutsideSelectedSlot_ThrowsBadRequest()
+    public async Task CreateOrder_OrderTimeZeroOutsideSelectedSlot_PassesSlotValidation()
     {
         var currentHour = VietnamNow().Hour;
         var label = SlotLabel((currentHour + 3) % 24, (currentHour + 4) % 24);
@@ -1527,7 +1527,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => service.CreateOrder(CreateRequest([SlotTagId])));
 
-        Assert.Contains(label, exception.Message);
+        Assert.Equal("ORDER_ITEMS_INVALID", exception.Message);
     }
 
     [Fact]
