@@ -83,7 +83,7 @@ public class Service : IService
 
         if (items.Count > 0)
         {
-            // Aggregate both counters together, restricted to programs on this page.
+            // Gộp thống kê tổng số mã và số mã đã sử dụng, chỉ tính các chương trình trong trang này.
             var programIds = items.Select(x => x.Id).ToArray();
             var counts = await _dbContext.Vouchers.AsNoTracking()
                 .Where(x => x.ProgramId.HasValue && programIds.Contains(x.ProgramId.Value) && !x.IsDeleted)
@@ -167,7 +167,7 @@ public class Service : IService
         program.MaxOrderAmount = maxOrderAmount;
         program.UpdatedAt = now;
         await _dbContext.SaveChangesAsync(cancellationToken);
-        // The program is already loaded and updated. Read only the voucher statistics in one scan.
+        // Chương trình đã được tải và cập nhật; chỉ truy vấn thêm hai thống kê voucher trong cùng một lần.
         var counts = await _dbContext.Vouchers.AsNoTracking()
             .Where(x => x.ProgramId == id && !x.IsDeleted)
             .GroupBy(x => x.ProgramId)
@@ -205,53 +205,77 @@ public class Service : IService
         Guid id, Request.GenerateProgramVouchersRequest request, CancellationToken cancellationToken = default)
     {
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        // All three mutations lock the same row, serializing generation, activation and deletion.
+        // Khóa dòng chương trình trong transaction để các thao tác sinh mã, cập nhật và xóa
+        // trên cùng chương trình chờ nhau, tránh cùng đếm hạn mức rồi tạo vượt số lượng.
         await GetProgramForUpdate(id, cancellationToken);
+        // Tính cả voucher đã xóa mềm: mỗi chương trình được phát hành tối đa 10.000 mã.
         var count = await _dbContext.Vouchers.CountAsync(x => x.ProgramId == id, cancellationToken);
         if ((long)count + request.Quantity > 10000)
             throw new ConflictException("Voucher program cannot exceed 10000 vouchers.");
 
+        // Các mã đã chọn được giữ qua nhiều vòng; có trong danh sách chưa có nghĩa là đã lưu DB.
         var codes = new List<string>(request.Quantity);
+        // Ghi nhớ mã đã tồn tại trong DB hoặc đã chọn, để không chọn lại ở vòng sau.
         var excludedCodes = new HashSet<string>(StringComparer.Ordinal);
+        // Cả lô dùng chung thời điểm tạo, kể cả khi phải thử lưu lại.
         var now = DateTimeOffset.UtcNow;
+        // Chỉ thành true sau khi SaveChangesAsync thành công; transaction chưa commit ở thời điểm đó.
         var saved = false;
         var discountType = request.DiscountType == "cash" ? VoucherDiscountType.Cash : VoucherDiscountType.Percent;
 
+        // Tối đa 5 vòng (round từ 0 đến 4), bao gồm cả sinh bù và thử lại sau lỗi trùng mã.
+        // Không bắt buộc chạy đủ 5 vòng: lưu thành công thì thoát bằng break ở phía dưới.
         for (var round = 0; round < 5; round++)
         {
+            // Dừng nếu request bị hủy; các thao tác DB bên dưới cũng nhận cancellationToken.
             cancellationToken.ThrowIfCancellationRequested();
+            // Chỉ sinh bù số mã còn thiếu, giữ lại các mã đã chọn từ vòng trước.
             var missing = request.Quantity - codes.Count;
+            // Thử sinh dư khoảng 10%, làm tròn lên để dự phòng trùng.
+            // Ví dụ: thiếu 3 mã thì thử sinh 4 lần; thiếu 1 mã thì thử sinh 2 lần.
             var candidateCount = (int)Math.Ceiling(missing * 1.1);
+            // HashSet giữ các mã ứng viên không trùng nhau trong riêng vòng hiện tại.
             var candidates = new HashSet<string>(candidateCount, StringComparer.Ordinal);
+            // Vòng trong chạy candidateCount lần nếu không có lỗi/hủy; mã bị bỏ qua vẫn tính một lần sinh.
             for (var i = 0; i < candidateCount; i++)
             {
+                // Mã có dạng: tiền tố + chuỗi ngẫu nhiên dài CodeLength + hậu tố.
                 var code = _codeGenerator.Generate(request.CodePrefix, request.CodeLength, request.CodeSuffix);
+                // Contains chỉ kiểm tra, không thêm mã vào excludedCodes.
+                // Nếu chưa bị loại, Add ở dòng sau thêm vào candidates; mã trùng trong HashSet không được thêm lại.
                 if (!excludedCodes.Contains(code))
                     candidates.Add(code);
             }
 
             if (candidates.Count > 0)
             {
-                // Soft-deleted and standalone vouchers also reserve their codes permanently.
+                // Kiểm tra cả nhóm mã bằng một truy vấn, không truy vấn riêng từng mã.
+                // Không lọc chương trình hay trạng thái xóa: mã ở chương trình khác, mã độc lập
+                // và mã đã xóa mềm đều đã được giữ chỗ, không được cấp lại.
                 var candidateCodes = candidates.ToArray();
                 var existingCodes = await _dbContext.Vouchers.AsNoTracking()
                     .Where(x => candidateCodes.Contains(x.Code))
                     .Select(x => x.Code)
                     .ToListAsync(cancellationToken);
+                // Đưa các mã đã tồn tại trong DB vào tập loại trừ trước khi chọn mã.
                 excludedCodes.UnionWith(existingCodes);
                 foreach (var code in candidates)
                 {
-                    // Reuse the exclusion set instead of allocating another set and selected array.
+                    // Add vừa thêm vừa trả kết quả: true nếu mã chưa có, false nếu đã có.
+                    // Chỉ mã mới được đưa vào codes; đồng thời ghi nhớ để vòng sau không chọn lại.
                     if (excludedCodes.Add(code))
                         codes.Add(code);
+                    // Đủ số lượng thì dừng chọn; break này chỉ thoát foreach, chưa thoát vòng round.
                     if (codes.Count == request.Quantity)
                         break;
                 }
             }
 
-            // Stage the complete quantity before writing; usually only one SaveChanges is needed.
+            // Chưa đủ mã thì sang vòng round tiếp theo, chưa tạo hay lưu voucher nào.
             if (codes.Count != request.Quantity)
                 continue;
+            // Đủ mã mới tạo toàn bộ lô entity, dùng chung cấu hình giảm giá trong request.
+            // Voucher mới luôn riêng tư, chưa kích hoạt và chưa được sử dụng.
             var vouchers = codes.Select(code => new Voucher
             {
                 Id = Guid.NewGuid(), ProgramId = id, Code = code,
@@ -266,45 +290,57 @@ public class Service : IService
 
             try
             {
+                // AddRange đăng ký các entity cần thêm; SaveChangesAsync mới gửi lệnh lưu xuống DB.
                 _dbContext.Vouchers.AddRange(vouchers);
-                // EF creates and rolls back its own savepoint inside the existing PostgreSQL transaction.
+                // Trong transaction PostgreSQL hiện tại, EF tạo savepoint trước khi lưu.
+                // Nếu lưu lỗi, EF hoàn tác về savepoint để không giữ lại một phần lô vừa thử lưu.
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 saved = true;
             }
+            // Chỉ bắt lỗi trùng mã tại unique index IX_Vouchers_Code; lỗi khác được ném ra ngoài.
             catch (DbUpdateException exception) when (exception.InnerException is PostgresException
             {
                 SqlState: PostgresErrorCodes.UniqueViolation,
                 ConstraintName: "IX_Vouchers_Code"
             })
             {
-                // Replace conflicting codes below, then retry in the next round.
+                // Giữ saved = false. Phía dưới sẽ tìm mã bị trùng, loại khỏi codes và thử ở vòng sau.
             }
             finally
             {
-                // Detach only this batch, including on unexpected errors or cancellation.
+                // Luôn bỏ theo dõi các entity của lô này, dù lưu thành công, lỗi hay bị hủy.
+                // Tránh entity lưu thất bại còn ở trạng thái Added và bị lưu lại trong lần sau.
+                // Detached chỉ bỏ theo dõi trong DbContext, không xóa dữ liệu khỏi DB.
                 foreach (var voucher in vouchers)
                     _dbContext.Entry(voucher).State = EntityState.Detached;
             }
 
+            // Lưu thành công thì thoát vòng round ngay; sau đó mới commit transaction.
             if (saved)
                 break;
 
-            // A concurrent request claimed a code after the existence check. Keep the other codes
-            // and generate replacements in the next round; EF rolled back the failed savepoint.
+            // Chỉ đến đây khi lưu bị trùng mã: request khác có thể đã chiếm mã sau bước kiểm tra.
+            // Khóa chương trình không ngăn request của chương trình khác chọn cùng mã.
+            // Truy vấn lại để biết mã nào đã tồn tại; giữ các mã còn lại trong bộ nhớ để sinh bù.
             var attemptedCodes = codes.ToArray();
             var conflicts = (await _dbContext.Vouchers.AsNoTracking()
                 .Where(x => attemptedCodes.Contains(x.Code))
                 .Select(x => x.Code)
                 .ToListAsync(cancellationToken))
                 .ToHashSet(StringComparer.Ordinal);
+            // Ví dụ codes = [A, B, C], B bị trùng thì còn [A, C]; vòng sau chỉ cần chọn thêm 1 mã.
+            // A và C chưa được lưu bởi request này vì lần lưu lỗi đã được hoàn tác.
             codes.RemoveAll(conflicts.Contains);
         }
 
+        // Hết 5 vòng vẫn chưa lưu được thì báo lỗi. Transaction chưa commit được rollback khi dispose.
         if (!saved)
             throw new ServerException("Unable to generate enough unique voucher codes after 5 rounds.");
 
+        // Xác nhận toàn bộ lô và giải phóng khóa chương trình trước khi trả kết quả thành công.
         await transaction.CommitAsync(cancellationToken);
 
+        // Thành công luôn trả đúng Quantity mã, không trả về một lô thiếu số lượng.
         return new Response.GenerateProgramVouchersResponse
         {
             ProgramId = id, CreatedCount = codes.Count, Codes = codes
@@ -315,8 +351,8 @@ public class Service : IService
     {
         var query = _dbContext.VoucherPrograms.Where(x => x.Id == id);
 
-        // All callers hold a transaction. A no-op update acquires a row write lock
-        // until commit, serializing mutations without changing the business timestamp.
+        // Các hàm gọi đều đã mở transaction. Gán UpdatedAt bằng chính nó vẫn thực hiện UPDATE
+        // để giữ khóa dòng đến khi transaction kết thúc, nhưng không đổi giá trị thời gian nghiệp vụ.
         var affected = await query.ExecuteUpdateAsync(setters => setters
             .SetProperty(x => x.UpdatedAt, x => x.UpdatedAt), cancellationToken);
         if (affected == 0)
