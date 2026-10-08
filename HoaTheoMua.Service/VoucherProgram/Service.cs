@@ -322,23 +322,11 @@ public class Service : IService
         if (affected == 0)
             throw new NotFoundException("Voucher program does not exist.");
 
-        // Read the locked database row even if this context already tracked an older version.
-        var program = await query.AsNoTracking().SingleOrDefaultAsync(cancellationToken)
+        var program = await query.SingleOrDefaultAsync(cancellationToken)
                       ?? throw new NotFoundException("Voucher program does not exist.");
         if (program.IsDeleted)
             throw new NotFoundException("Voucher program has been deleted.");
 
-        var tracked = _dbContext.VoucherPrograms.Local.FirstOrDefault(x => x.Id == id);
-        if (tracked != null)
-        {
-            var entry = _dbContext.Entry(tracked);
-            entry.CurrentValues.SetValues(program);
-            entry.OriginalValues.SetValues(program);
-            entry.State = EntityState.Unchanged;
-            return tracked;
-        }
-
-        _dbContext.VoucherPrograms.Attach(program);
         return program;
     }
 
