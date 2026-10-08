@@ -398,7 +398,7 @@ public class Service : IService
         int slotTagId,
         CancellationToken cancellationToken)
     {
-        if (_dbContext.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
+        if (_dbContext.Database?.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
         {
             // var availability = await GetDeliverySlotAvailability(
             //     slotDate,
