@@ -16,6 +16,9 @@ public class OrderNhanhVn : BaseEntity<Guid>, IAuditableEntity
     //Excel: Thời gian
     public DateTimeOffset? ThoiGianDonHang { get; set; }
 
+    // Ngày giao dự kiến nhận từ carrier.deliveryDate của webhook Nhanh.vn
+    public DateOnly? DeliveryDate { get; set; }
+
     //Excel: Người tạo đơn
     public string? NguoiTaoDon { get; set; }
 
@@ -230,7 +233,7 @@ public class OrderNhanhVn : BaseEntity<Guid>, IAuditableEntity
     public string? Nhan { get; set; }
 
     // ID nhãn nhận từ webhook Nhanh.vn, dùng để truy vấn giới hạn slot
-    public List<long>? LabelIds { get; set; }
+    public List<long>? TagIds { get; set; }
 
     //Excel: Ngày hẹn thanh toán
     public DateTimeOffset? NgayHenThanhToan { get; set; }

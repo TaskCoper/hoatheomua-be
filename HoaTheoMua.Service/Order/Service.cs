@@ -1,5 +1,6 @@
 
 using System.Net.Http.Json;
+using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
@@ -219,15 +220,14 @@ public class Service : IService
         var startUnix = startUtc.ToUnixTimeSeconds();
         var endUnix = endUtc.ToUnixTimeSeconds();
 
-        var nhanhOrderLabelIds = await _dbContext.OrderNhanhVns
+        var nhanhOrderTagIds = await _dbContext.OrderNhanhVns
             .AsNoTracking()
             .Where(order =>
                 !order.IsDeleted &&
-                order.ThoiGianDonHang >= startUtc &&
-                order.ThoiGianDonHang < endUtc &&
+                order.DeliveryDate == date &&
                 order.TrangThaiDonHang != "63" &&
                 order.TrangThaiDonHang != "Khách hủy")
-            .Select(order => order.LabelIds)
+            .Select(order => order.TagIds)
             .ToListAsync(cancellationToken);
 
         var pendingOrderTagIds = await _dbContext.Orders
@@ -244,7 +244,7 @@ public class Service : IService
             .Select(order => order.TagIds)
             .ToListAsync(cancellationToken);
 
-        CountOccupied(nhanhOrderLabelIds, occupiedByTagId);
+        CountOccupied(nhanhOrderTagIds, occupiedByTagId);
         CountOccupied(pendingOrderTagIds, occupiedByTagId);
 
         return occupiedByTagId;
@@ -353,6 +353,44 @@ public class Service : IService
         }
     }
 
+    private static void EnsureUrgentOrderMatchesCurrentSlot(
+        long orderTime,
+        Response.DeliverySlotAvailabilityItem slot,
+        DateTimeOffset createdAt)
+    {
+        if (orderTime != 0)
+        {
+            return;
+        }
+
+        var hourMatches = Regex.Matches(
+            slot.Label,
+            @"(?<!\d)(?<hour>[01]?\d|2[0-3])\s*h",
+            RegexOptions.IgnoreCase);
+
+        if (hourMatches.Count < 2 ||
+            !int.TryParse(hourMatches[0].Groups["hour"].Value, out var startHour) ||
+            !int.TryParse(hourMatches[1].Groups["hour"].Value, out var endHour) ||
+            startHour == endHour)
+        {
+            throw new BadRequestException($"Không thể xác định khung giờ từ tag {slot.Label}");
+        }
+
+        var currentVietnamTime = TimeOnly.FromDateTime(
+            createdAt.ToOffset(TimeSpan.FromHours(7)).DateTime);
+        var startTime = new TimeOnly(startHour, 0);
+        var endTime = new TimeOnly(endHour, 0);
+        var isInSlot = startTime < endTime
+            ? currentVietnamTime >= startTime && currentVietnamTime < endTime
+            : currentVietnamTime >= startTime || currentVietnamTime < endTime;
+
+        if (!isInSlot)
+        {
+            throw new BadRequestException(
+                $"Đơn giao gấp chỉ được tạo khi thời gian hiện tại nằm trong khung giờ {slot.Label}");
+        }
+    }
+
     private async Task SavePendingOrderWithSlotValidation(
         Repository.Entity.Order order,
         IReadOnlyCollection<OrderDetails> orderDetails,
@@ -430,8 +468,9 @@ public class Service : IService
             slotDate,
             slotTagId,
             cancellationToken);
-        
-        EnsureDeliverySlotAvailable(availability.Slots.Single());
+        var selectedSlot = availability.Slots.Single();
+        EnsureUrgentOrderMatchesCurrentSlot(request.OrderTime, selectedSlot, createdAt);
+        EnsureDeliverySlotAvailable(selectedSlot);
 
         var checkoutConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "checkout");
 

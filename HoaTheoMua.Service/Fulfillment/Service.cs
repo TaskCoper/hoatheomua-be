@@ -115,8 +115,8 @@ public class Service : IService
         var delayTime = isAhamove
             ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
             : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + XanhSm.XanhSmConstants.PreparationTimeSeconds;
-
-        var shouldDispatch = order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery;
+        //var shouldDispatch = order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery;
+        var shouldDispatch = order.OrderTime == 0 && allowInstantDelivery;
         if (shouldDispatch)
         {
             tagIds = tagIds.Append(FastTagId).ToList();
