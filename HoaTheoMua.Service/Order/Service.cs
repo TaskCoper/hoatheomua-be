@@ -406,9 +406,9 @@ public class Service : IService
             //     cancellationToken);
             // EnsureDeliverySlotAvailable(availability.Slots.Single());
             //
-            // await _dbContext.Orders.AddAsync(order, cancellationToken);
-            // await _dbContext.OrderDetails.AddRangeAsync(orderDetails, cancellationToken);
-            // await _dbContext.SaveChangesAsync(cancellationToken);
+            await _dbContext.Orders.AddAsync(order, cancellationToken);
+            await _dbContext.OrderDetails.AddRangeAsync(orderDetails, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
             return;
         }
 

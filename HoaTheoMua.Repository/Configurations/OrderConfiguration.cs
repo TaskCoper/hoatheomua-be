@@ -52,6 +52,9 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(x => new { x.Status, x.CreatedAt })
             .HasFilter("\"IsDeleted\" = false");
 
+        builder.HasIndex(x => new { x.Status, x.OrderTime })
+            .HasFilter("\"IsDeleted\" = false");
+
         builder.HasMany(o => o.Transactions)
             .WithOne(t => t.Order)
             .HasForeignKey(t => t.OrderId)

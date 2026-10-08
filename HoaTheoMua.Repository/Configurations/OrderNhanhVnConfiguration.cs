@@ -48,7 +48,7 @@ public class OrderNhanhVnConfiguration : IEntityTypeConfiguration<OrderNhanhVn>
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("now()");
         
-        builder.HasIndex(x => x.ThoiGianDonHang)
+        builder.HasIndex(x => x.DeliveryDate)
             .HasFilter("""
                        "IsDeleted" = false
                        AND ("TrangThaiDonHang" IS NULL
