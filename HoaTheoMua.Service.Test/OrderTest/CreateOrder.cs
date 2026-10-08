@@ -159,6 +159,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             List<ComboSpecification>? comboSpecifications = null)
         {
             var mockOrders = (orders ?? new List<OrderEntity>()).BuildMockDbSet();
+            var mockNhanhVnOrders = new List<OrderNhanhVn>().BuildMockDbSet();
             var orderDetailsList = capturedOrderDetails ?? new List<OrderDetailEntity>();
             var mockOrderDetails = orderDetailsList.BuildMockDbSet();
             var mockCompany = (companyAddresses ?? new List<CompanyAddressEntity>()).BuildMockDbSet();
@@ -177,6 +178,12 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 .Callback<OrderEntity, CancellationToken>((item, ct) => (orders ?? new List<OrderEntity>()).Add(item))
                 .ReturnsAsync((Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<OrderEntity>)null!);
 
+            var currentVietnamHour = DateTimeOffset.UtcNow
+                .ToOffset(TimeSpan.FromHours(7))
+                .Hour;
+            var slotStartHour = (currentVietnamHour + 23) % 24;
+            var slotEndHour = (currentVietnamHour + 2) % 24;
+
             var configs = new List<ConfigEntity>
             {
                 new ConfigEntity { Key = "nhanhvn.token", Value = "{\"value\": \"test_token\"}", Group = "nhanhvn", IsDeleted = false },
@@ -185,7 +192,35 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 new ConfigEntity { Key = "nhanhvn.business_id", Value = "{\"value\": 67890}", Group = "nhanhvn", IsDeleted = false },
                 new ConfigEntity { Key = "nhanhvn.default_depot", Value = "{\"value\": 129255}", Group = "nhanhvn", IsDeleted = false },
                 new ConfigEntity { Key = "ahamove.api_key", Value = "{\"value\": \"test_api_key\"}", Group = "ahamove", IsDeleted = false },
-                new ConfigEntity { Key = "ahamove.base_url", Value = "{\"value\": \"http://ahamove.test\"}", Group = "ahamove", IsDeleted = false }
+                new ConfigEntity { Key = "ahamove.base_url", Value = "{\"value\": \"http://ahamove.test\"}", Group = "ahamove", IsDeleted = false },
+                new ConfigEntity
+                {
+                    Key = "nhanhvn.order_tags",
+                    Group = "nhanhvn",
+                    Kind = "setting",
+                    Value = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        group = "nhanhvn",
+                        label = "Giờ giao hàng",
+                        value = new[] { SlotTagId },
+                        slotLimits = new Dictionary<string, int?>
+                        {
+                            [SlotTagId.ToString()] = null
+                        },
+                        options = new[]
+                        {
+                            new
+                            {
+                                label = $"{slotStartHour}h - {slotEndHour}h",
+                                value = SlotTagId
+                            }
+                        },
+                        required = true,
+                        inputType = "multiSelect",
+                        validations = Array.Empty<object>()
+                    }),
+                    IsDeleted = false
+                }
             };
             if (freeShipDistance.HasValue)
             {
@@ -209,6 +244,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var mockDbContext = new Mock<AppDbContext>(options);
 
             mockDbContext.Setup(x => x.Orders).Returns(mockOrders.Object);
+            mockDbContext.Setup(x => x.OrderNhanhVns).Returns(mockNhanhVnOrders.Object);
             mockDbContext.Setup(x => x.OrderDetails).Returns(mockOrderDetails.Object);
             mockDbContext.Setup(x => x.CompanyAddresses).Returns(mockCompany.Object);
             mockDbContext.Setup(x => x.Addresses).Returns(mockAddresses.Object);
