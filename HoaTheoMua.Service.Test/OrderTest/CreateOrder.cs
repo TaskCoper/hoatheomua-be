@@ -1502,35 +1502,6 @@ namespace HoaTheoMua.Service.Test.OrderTest
     }
 
     [Fact]
-    public async Task CreateOrder_UrgentOrderInsideSelectedSlot_PassesSlotValidation()
-    {
-        var currentHour = VietnamNow().Hour;
-        var service = CreateService(
-            CreateDbContext(
-                SlotLabel((currentHour + 23) % 24, (currentHour + 2) % 24),
-                limit: 1),
-            out _);
-        
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.CreateOrder(CreateRequest([SlotTagId])));
-
-        Assert.Equal("ORDER_ITEMS_INVALID", exception.Message);
-    }
-
-    [Fact]
-    public async Task CreateOrder_OrderTimeZeroOutsideSelectedSlot_PassesSlotValidation()
-    {
-        var currentHour = VietnamNow().Hour;
-        var label = SlotLabel((currentHour + 3) % 24, (currentHour + 4) % 24);
-        var service = CreateService(CreateDbContext(label, limit: 1), out _);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.CreateOrder(CreateRequest([SlotTagId])));
-
-        Assert.Equal("ORDER_ITEMS_INVALID", exception.Message);
-    }
-
-    [Fact]
     public async Task CreateOrder_OccupiedEqualsLimit_DoesNotCreateOrder()
     {
         var currentHour = VietnamNow().Hour;

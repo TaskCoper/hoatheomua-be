@@ -26,8 +26,86 @@ namespace HoaTheoMua.Service.Test.FulfillmentTest;
 /// </summary>
 public class DispatchDeliveryXanhSmTest
 {
+    private const long DeliverySlotTagId = 229L;
     private const string XanhSmDeliveryId = "XANHSM-ORDER-001";
     private const string XanhSmTrackingUrl = "https://tracking.example/XANHSM-ORDER-001";
+
+    [Fact]
+    public async Task DispatchDelivery_OrderTimeZeroCreatedInsideSlot_BooksCourierAndAddsFastTag()
+    {
+        await using var dbContext = CreateDbContext();
+        var order = CreateOrder();
+        order.CreatedAt = new DateTimeOffset(2026, 10, 8, 8, 30, 0, TimeSpan.FromHours(7));
+        await dbContext.Orders.AddAsync(order);
+        await dbContext.CompanyAddresses.AddAsync(CreateCompanyAddress());
+        await dbContext.SaveChangesAsync();
+
+        var xanhSm = new Mock<XanhSmClient>();
+        xanhSm
+            .Setup(client => client.BookDoorToDoorAsync(
+                It.IsAny<IReadOnlyCollection<XanhSmDeliveryPointRequest>>(),
+                It.IsAny<long>(), It.IsAny<long?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new XanhSmDelivery
+            {
+                Id = XanhSmDeliveryId,
+                Status = "FINDING",
+                TrackingUrl = XanhSmTrackingUrl
+            });
+
+        var plan = await CreateService(dbContext, xanhSm, slotLabel: "8h - 10h")
+            .DispatchDeliveryAsync(order.Id);
+
+        Assert.True(plan.Dispatched);
+        Assert.Contains(294L, plan.TagIds);
+        xanhSm.Verify(client => client.BookDoorToDoorAsync(
+            It.IsAny<IReadOnlyCollection<XanhSmDeliveryPointRequest>>(),
+            It.IsAny<long>(), It.IsAny<long?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DispatchDelivery_OrderTimeZeroCreatedOutsideSlot_DoesNotBookCourier()
+    {
+        await using var dbContext = CreateDbContext();
+        var order = CreateOrder();
+        order.CreatedAt = new DateTimeOffset(2026, 10, 8, 11, 0, 0, TimeSpan.FromHours(7));
+        await dbContext.Orders.AddAsync(order);
+        await dbContext.SaveChangesAsync();
+
+        var xanhSm = new Mock<XanhSmClient>(MockBehavior.Strict);
+        var plan = await CreateService(dbContext, xanhSm, slotLabel: "8h - 10h")
+            .DispatchDeliveryAsync(order.Id);
+
+        Assert.False(plan.Dispatched);
+        Assert.DoesNotContain(294L, plan.TagIds);
+        xanhSm.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task DispatchDelivery_UrgentAhamoveWithInstantDeliveryDisabled_DoesNotBookCourier()
+    {
+        await using var dbContext = CreateDbContext();
+        var order = CreateOrder();
+        order.ShippingGateway = ShippingGateway.Ahamove;
+        order.CreatedAt = new DateTimeOffset(2026, 10, 8, 8, 30, 0, TimeSpan.FromHours(7));
+        await dbContext.Orders.AddAsync(order);
+        await dbContext.Configs.AddAsync(new HoaTheoMua.Repository.Entity.Config
+        {
+            Id = Guid.NewGuid(),
+            Key = "ahamove.instant_delivery",
+            Group = "ahamove",
+            Value = "{\"value\":false}",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var xanhSm = new Mock<XanhSmClient>(MockBehavior.Strict);
+        var plan = await CreateService(dbContext, xanhSm, slotLabel: "8h - 10h")
+            .DispatchDeliveryAsync(order.Id);
+
+        Assert.False(plan.Dispatched);
+        Assert.DoesNotContain(294L, plan.TagIds);
+        xanhSm.VerifyNoOtherCalls();
+    }
 
     // TC01: đơn XanhSm giao ngay -> book door-to-door, lưu id + tracking ngay, KHÔNG gọi Ahamove
     // [Fact] Tạm tắt: test đang fail, cần rà lại expectation của flow XanhSm.
@@ -243,7 +321,8 @@ public class DispatchDeliveryXanhSmTest
     internal static FulfillmentService CreateService(
         AppDbContext dbContext,
         Mock<XanhSmClient> xanhSm,
-        Func<HttpRequestMessage, HttpResponseMessage>? httpResponder = null)
+        Func<HttpRequestMessage, HttpResponseMessage>? httpResponder = null,
+        string? slotLabel = null)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -261,12 +340,30 @@ public class DispatchDeliveryXanhSmTest
             ?? (request => throw new InvalidOperationException(
                 $"No outbound HTTP call was expected, got {request.Method} {request.RequestUri}"))));
 
+        var currentVietnamHour = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).Hour;
+        slotLabel ??= $"{(currentVietnamHour + 23) % 24}h - {(currentVietnamHour + 2) % 24}h";
+        var configService = new Mock<HoaTheoMua.Service.Config.IService>();
+        configService
+            .Setup(service => service.GetNhanhVnOrderTag())
+            .ReturnsAsync(new HoaTheoMua.Service.Config.Response.ConfigItem
+            {
+                Value = [(int)DeliverySlotTagId],
+                Options =
+                [
+                    new HoaTheoMua.Service.Config.Response.Option
+                    {
+                        Label = slotLabel,
+                        Value = (int)DeliverySlotTagId
+                    }
+                ]
+            });
+
         return new FulfillmentService(
             dbContext,
             httpClient,
             configuration,
             new Mock<HoaTheoMua.Service.Order.IService>().Object,
-            new Mock<HoaTheoMua.Service.Config.IService>().Object,
+            configService.Object,
             new Mock<HoaTheoMua.Service.Revalidate.IService>().Object,
             NullLogger<FulfillmentService>.Instance,
             xanhSm.Object);
@@ -308,7 +405,7 @@ public class DispatchDeliveryXanhSmTest
             ProductFee = 100000,
             TotalFee = 133000,
             OrderTime = 0,
-            TagIds = [],
+            TagIds = [DeliverySlotTagId],
             IsExportInvoice = false,
             CreatedAt = DateTimeOffset.UtcNow,
             OrderDetails =
