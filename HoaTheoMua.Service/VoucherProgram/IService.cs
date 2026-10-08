@@ -10,7 +10,7 @@ public interface IService
     Task<Response.GenerateProgramVouchersResponse> GenerateProgramVouchers(
         Guid id, Request.GenerateProgramVouchersRequest request, CancellationToken cancellationToken = default);
 
-    Task<Response.VoucherProgramResponse> CreateVoucherProgram(
+    Task<string> CreateVoucherProgram(
         Request.CreateVoucherProgramRequest request, CancellationToken cancellationToken = default);
     Task<BasePaginationResponse> GetVoucherPrograms(
         Request.GetVoucherProgramsRequest request, CancellationToken cancellationToken = default);

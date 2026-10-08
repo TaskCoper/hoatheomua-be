@@ -21,7 +21,7 @@ public class Service : IService
         _codeGenerator = codeGenerator ?? new VoucherCodeGenerator();
     }
 
-    public async Task<Response.VoucherProgramResponse> CreateVoucherProgram(
+    public async Task<string> CreateVoucherProgram(
         Request.CreateVoucherProgramRequest request, CancellationToken cancellationToken = default)
     {
         var program = new VoucherProgramEntity
@@ -41,21 +41,22 @@ public class Service : IService
         _dbContext.VoucherPrograms.Add(program);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new Response.VoucherProgramResponse
-        {
-            Id = program.Id,
-            Name = program.Name,
-            IsActive = program.IsActive,
-            IsDeleted = program.IsDeleted,
-            StartAt = program.StartAt,
-            EndAt = program.EndAt,
-            MinOrderAmount = program.MinOrderAmount,
-            MaxOrderAmount = program.MaxOrderAmount,
-            VoucherCount = 0,
-            UsedVoucherCount = 0,
-            CreatedAt = program.CreatedAt,
-            UpdatedAt = program.UpdatedAt
-        };
+        // return new Response.VoucherProgramResponse
+        // {
+        //     Id = program.Id,
+        //     Name = program.Name,
+        //     IsActive = program.IsActive,
+        //     IsDeleted = program.IsDeleted,
+        //     StartAt = program.StartAt,
+        //     EndAt = program.EndAt,
+        //     MinOrderAmount = program.MinOrderAmount,
+        //     MaxOrderAmount = program.MaxOrderAmount,
+        //     VoucherCount = 0,
+        //     UsedVoucherCount = 0,
+        //     CreatedAt = program.CreatedAt,
+        //     UpdatedAt = program.UpdatedAt
+        // };
+        return "Create voucher program successfully";
     }
 
     public async Task<BasePaginationResponse> GetVoucherPrograms(
