@@ -36,6 +36,10 @@ public class CreateOrderRequestValidator : AbstractValidator<Request.CreateOrder
             .Must(tagIds => tagIds.Count == 1)
             .WithMessage("TAG_IDS_MUST_CONTAIN_EXACTLY_ONE_ITEM");
 
+        RuleFor(x => x.OrderTime)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("ORDER_TIME_INVALID");
+
         RuleFor(x => x.TaxCode).MaximumLength(20).WithMessage("TAX_CODE_LENGTH_INVALID");
         RuleFor(x => x.IdentityNumber).MaximumLength(20).WithMessage("IDENTITY_NUMBER_LENGTH_INVALID");
         RuleFor(x => x.ReceiptFullName).MaximumLength(100).WithMessage("RECEIPT_FULL_NAME_LENGTH_INVALID");

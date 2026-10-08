@@ -546,11 +546,15 @@ public class Service : IService
                 DeliveryDate = order.OrderTime > 0
                     ? vnDt.ToString("yyyy-MM-dd")
                     : ConvertInstantDateDelivery(plan.DelayTimeUnix),
+                // OrderTime > 0: chuyển OrderTime sang ngày yyyy-MM-dd.
+                //OrderTime = 0:  thời gian hiện tại cộng delay => có thể qua ngày mới 
                 DeliveryHour = "",
                 DeliveryMinute = "",
                 DeliveryTime = tags.Count > 0
                     ? await ConvertTimeDeliveryAsync(order)
                     : ConvertInstantTimeDelivery(plan.DelayTimeUnix),
+                // Có tag: tìm label bằng TagId, ồi lấy giờ bắt đầu là 08:00:00.
+                // Không có tag: lấy giờ từ thời gian hiện tại cộng delay.
                 CarrierAccountId = 0,
                 CarrierShopId = "",
                 DeclaredValue = null,

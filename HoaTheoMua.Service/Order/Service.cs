@@ -216,6 +216,8 @@ public class Service : IService
         var startUtc = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), vietnamOffset)
             .ToUniversalTime();
         var endUtc = startUtc.AddDays(1);
+        var startUnix = startUtc.ToUnixTimeSeconds();
+        var endUnix = endUtc.ToUnixTimeSeconds();
 
         var nhanhOrderLabelIds = await _dbContext.OrderNhanhVns
             .AsNoTracking()
@@ -233,8 +235,12 @@ public class Service : IService
             .Where(order =>
                 !order.IsDeleted &&
                 order.Status == "Pending" &&
-                order.CreatedAt >= startUtc &&
-                order.CreatedAt < endUtc)
+                ((order.OrderTime == 0 &&
+                  order.CreatedAt >= startUtc &&
+                  order.CreatedAt < endUtc) ||
+                 (order.OrderTime > 0 &&
+                  order.OrderTime >= startUnix &&
+                  order.OrderTime < endUnix)))
             .Select(order => order.TagIds)
             .ToListAsync(cancellationToken);
 
@@ -350,17 +356,14 @@ public class Service : IService
     private async Task SavePendingOrderWithSlotValidation(
         Repository.Entity.Order order,
         IReadOnlyCollection<OrderDetails> orderDetails,
-        DateOnly deliveryDate,
+        DateOnly slotDate,
         int slotTagId,
         CancellationToken cancellationToken)
     {
-        var createdAt = DateTimeOffset.UtcNow;
-        order.CreatedAt = createdAt;
-
         if (_dbContext.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
         {
             // var availability = await GetDeliverySlotAvailability(
-            //     deliveryDate,
+            //     slotDate,
             //     slotTagId,
             //     cancellationToken);
             // EnsureDeliverySlotAvailable(availability.Slots.Single());
@@ -374,11 +377,11 @@ public class Service : IService
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
         await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock({deliveryDate.DayNumber}, {slotTagId})",
+            $"SELECT pg_advisory_xact_lock({slotDate.DayNumber}, {slotTagId})",
             cancellationToken);
 
         var lockedAvailability = await GetDeliverySlotAvailability(
-            deliveryDate,
+            slotDate,
             slotTagId,
             cancellationToken);
         EnsureDeliverySlotAvailable(lockedAvailability.Slots.Single());
@@ -408,11 +411,14 @@ public class Service : IService
         }
 
         var cancellationToken = _httpContext.HttpContext?.RequestAborted ?? CancellationToken.None;
+        var createdAt = DateTimeOffset.UtcNow;
         
         // OrderTime = 0 means urgent delivery. The selected delivery-slot tag is still
         // retained for capacity counting, so the slot belongs to the current Vietnam date.
-        var deliveryDate = request.OrderTime == 0
-            ? DateOnly.FromDateTime(DateTimeOffset.UtcNow
+        //OrderTime = 0: đổi sang múi giờ Việt Nam UTC+7 rồi chỉ giữ phần ngày.
+        // OrderTime > 0:  chuyển Unix timestamp OrderTime thành giờ Việt Nam rồi chỉ giữ phần ngày.
+        var slotDate = request.OrderTime == 0
+            ? DateOnly.FromDateTime(createdAt
                 .ToOffset(TimeSpan.FromHours(7)).DateTime)
             : DateOnly.FromDateTime(DateTimeOffset
                 .FromUnixTimeSeconds(request.OrderTime)
@@ -421,7 +427,7 @@ public class Service : IService
         var slotTagId = checked((int)request.TagIds.Single());
         
         var availability = await GetDeliverySlotAvailability(
-            deliveryDate,
+            slotDate,
             slotTagId,
             cancellationToken);
         
@@ -519,7 +525,7 @@ public class Service : IService
             Phone = request.Phone,
             Remarks = request.Remarks,
             OrderTime = request.OrderTime,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = createdAt,
             ShippingFee = totalShippingFee,
             ProductFee = totalProductFee,
             TotalFee = totalProductFee + totalShippingFee + vatFee,
@@ -589,7 +595,7 @@ public class Service : IService
             await SavePendingOrderWithSlotValidation(
                 newOrder,
                 newOrderDetails,
-                deliveryDate,
+                slotDate,
                 slotTagId,
                 cancellationToken);
 
@@ -622,7 +628,7 @@ public class Service : IService
             await SavePendingOrderWithSlotValidation(
                 newOrder,
                 newOrderDetails,
-                deliveryDate,
+                slotDate,
                 slotTagId,
                 cancellationToken);
 
