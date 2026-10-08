@@ -14,7 +14,7 @@ public class GenerateProgramVouchers
     [VoucherPostgresTheory]
     [InlineData("cash", false)]
     [InlineData("percent", true)]
-    public async Task GeneratesExactQuantity_WithSharedPolicy_PrivateInactiveAndInheritedSchedule(string type, bool active)
+    public async Task GeneratesExactQuantity_WithSharedPolicy_PrivateActiveAndInheritedSchedule(string type, bool active)
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
@@ -44,7 +44,7 @@ public class GenerateProgramVouchers
             Assert.Equal(request.MaxDiscountAmount, voucher.MaxDiscountAmount);
             Assert.Equal(request.MaxUsageCount, voucher.MaxUsageCount);
             Assert.Equal(request.Description, voucher.Description);
-            Assert.False(voucher.IsActive);
+            Assert.True(voucher.IsActive);
             Assert.False(voucher.IsDeleted);
             Assert.Equal(0, voucher.UsedCount);
             Assert.Null(voucher.StartAt);
@@ -58,13 +58,13 @@ public class GenerateProgramVouchers
     }
 
     [VoucherPostgresFact]
-    public async Task Collision_WithDeletedCodeAndWithinBatch_IsRetried_AndFurtherBatchesAreAllowed()
+    public async Task Collision_WithActiveCodeAndWithinBatch_IsRetried_AndFurtherBatchesAreAllowed()
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
+        db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
         var generator = new SequenceGenerator("TAKEN", "NEWAA", "NEWAA", "NEWBB", "NEWCC");
         var service = new FeatureService(db, generator);
@@ -75,7 +75,7 @@ public class GenerateProgramVouchers
         Assert.Equal(new[] { "NEWAA", "NEWBB" }, first.Codes);
         Assert.Equal(new[] { "NEWCC" }, second.Codes);
         Assert.Equal(3, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
-        Assert.True((await db.Vouchers.SingleAsync(x => x.Code == "TAKEN")).IsDeleted);
+        Assert.True((await db.Vouchers.SingleAsync(x => x.Code == "TAKEN")).IsActive);
     }
 
     [VoucherPostgresFact]
@@ -85,7 +85,7 @@ public class GenerateProgramVouchers
         await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
+        db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
         var generator = new SequenceGenerator("NEWAA", "TAKEN");
 
@@ -98,21 +98,44 @@ public class GenerateProgramVouchers
     }
 
     [VoucherPostgresFact]
-    public async Task ProgramLimit_IncludesDeletedCodes_AllowsExactly10000_AndRejectsNextBatch()
+    public async Task Generation_AllowsMoreThan10000Total_WhenOldCodesAreInactive()
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
-        var program = Program();
+        var program = Program(true);
         db.VoucherPrograms.Add(program);
-        db.Vouchers.AddRange(Enumerable.Range(0, 9999).Select(i => Voucher(program.Id, $"OLD{i}", deleted: i == 0)));
+        db.Vouchers.AddRange(Enumerable.Range(0, 10000).Select(i => Voucher(program.Id, $"OLD{i}")));
         await db.SaveChangesAsync();
         var service = new FeatureService(db);
 
         Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
-        var error = await Assert.ThrowsAsync<ConflictException>(() => service.GenerateProgramVouchers(program.Id, GenerateRequest(1)));
+        Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
 
-        Assert.Equal("Voucher program cannot exceed 10000 vouchers.", error.Message);
-        Assert.Equal(10000, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
+        Assert.Equal(10002, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
+        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+    }
+
+    [VoucherPostgresTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Generation_ReusesInactiveCodes_FromSameProgramOtherProgramAndStandalone(bool deleted)
+    {
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
+        var program = Program();
+        var other = Program();
+        db.VoucherPrograms.AddRange(program, other);
+        db.Vouchers.AddRange(Voucher(program.Id, "SAME1", deleted: deleted),
+            Voucher(other.Id, "OTHER", deleted: deleted), Voucher(null, "ALONE", deleted: deleted));
+        await db.SaveChangesAsync();
+
+        var result = await new FeatureService(db, new SequenceGenerator("SAME1", "OTHER", "ALONE", "EXTRA"))
+            .GenerateProgramVouchers(program.Id, GenerateRequest(3));
+
+        Assert.Equal(new[] { "SAME1", "OTHER", "ALONE" }, result.Codes);
+        Assert.Equal(6, await db.Vouchers.CountAsync());
+        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.Code == "SAME1"));
+        Assert.Equal(3, await db.Vouchers.CountAsync(x => x.IsActive));
     }
 
     [VoucherPostgresFact]
@@ -123,7 +146,7 @@ public class GenerateProgramVouchers
         await using var db = fixture.Context(observer);
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
+        db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
         observer.VoucherSaves = 0;
         var generator = new SequenceGenerator("TAKEN", "NEWAA", "NEWAA", "NEWBB", "NEWCC");
@@ -157,6 +180,29 @@ public class GenerateProgramVouchers
         var result = await service.GenerateProgramVouchers(program.Id, GenerateRequest(1));
         Assert.Equal(new[] { "NEWAA" }, result.Codes);
         Assert.Equal("NEWAA", (await db.Vouchers.SingleAsync()).Code);
+    }
+
+    [VoucherPostgresFact]
+    public async Task Generation_AllowsExactly10000Active_RejectsExcess_AndAllowsMoreAfterDeactivation()
+    {
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
+        var program = Program(true);
+        db.VoucherPrograms.Add(program);
+        db.Vouchers.AddRange(Enumerable.Range(0, 9999).Select(i => Voucher(program.Id, $"ACTIVE{i}", active: true)));
+        await db.SaveChangesAsync();
+        var service = new FeatureService(db);
+
+        Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
+        var error = await Assert.ThrowsAsync<ConflictException>(() =>
+            service.GenerateProgramVouchers(program.Id, GenerateRequest(1)));
+        Assert.Equal("Voucher program cannot exceed 10000 active vouchers.", error.Message);
+        Assert.Equal(10000, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+
+        await service.UpdateVoucherProgram(program.Id, new() { IsActive = false });
+        Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
+        Assert.Equal(10001, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
+        Assert.Equal(1, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
     }
 
     private sealed class VoucherSaveObserver : SaveChangesInterceptor

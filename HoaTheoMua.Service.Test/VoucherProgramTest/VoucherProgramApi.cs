@@ -126,8 +126,8 @@ public class VoucherProgramApi
             var program = created.RootElement.GetProperty("value");
             Assert.False(program.GetProperty("isActive").GetBoolean());
             Assert.Equal(TimeSpan.Zero, program.GetProperty("startAt").GetDateTimeOffset().Offset);
-            Assert.Equal(0, program.GetProperty("voucherCount").GetInt32());
-            Assert.Equal(0, program.GetProperty("usedVoucherCount").GetInt32());
+            Assert.False(program.TryGetProperty("voucherCount", out _));
+            Assert.False(program.TryGetProperty("usedVoucherCount", out _));
 
             using var get = await client.GetAsync(route + "?keyword=20%2F10&isActive=false");
             Assert.Equal(HttpStatusCode.OK, get.StatusCode);
@@ -174,8 +174,11 @@ public class VoucherProgramApi
             Assert.Equal("20/10 cập nhật", activated.RootElement.GetProperty("value").GetProperty("name").GetString());
             using var activeList = await client.GetAsync(route + "?isActive=true");
             using var activePage = JsonDocument.Parse(await activeList.Content.ReadAsStringAsync());
-            Assert.Equal(3, Assert.Single(activePage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray())
-                .GetProperty("voucherCount").GetInt32());
+            var activeItem = Assert.Single(activePage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
+            Assert.False(activeItem.TryGetProperty("voucherCount", out _));
+            Assert.False(activeItem.TryGetProperty("usedVoucherCount", out _));
+            Assert.False(activated.RootElement.GetProperty("value").TryGetProperty("voucherCount", out _));
+            Assert.False(activated.RootElement.GetProperty("value").TryGetProperty("usedVoucherCount", out _));
 
             using var deactivate = await client.PutAsJsonAsync(programRoute, new { isActive = false });
             Assert.Equal(HttpStatusCode.OK, deactivate.StatusCode);

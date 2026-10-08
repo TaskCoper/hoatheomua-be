@@ -52,8 +52,6 @@ public class CreateVoucherProgram
         Assert.Equal(request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount, saved.MaxOrderAmount);
         Assert.Equal(saved.MinOrderAmount, result.MinOrderAmount);
         Assert.Equal(saved.MaxOrderAmount, result.MaxOrderAmount);
-        Assert.Equal(0, result.VoucherCount);
-        Assert.Equal(0, result.UsedVoucherCount);
         Assert.Empty(await db.Vouchers.ToListAsync());
     }
 }

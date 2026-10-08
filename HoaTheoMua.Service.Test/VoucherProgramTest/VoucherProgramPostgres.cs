@@ -24,7 +24,7 @@ public class VoucherProgramPostgres
         await using var db = fixture.Context(rejectProgramSave);
         var program = Program(true);
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
+        db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
 
         var failing = new FeatureService(db, new SequenceGenerator("NEWAA", "TAKEN"));
@@ -36,7 +36,7 @@ public class VoucherProgramPostgres
         Assert.Equal(new[] { "NEWAA", "NEWBB" }, result.Codes.Order());
         Assert.All(await db.Vouchers.Where(x => x.ProgramId == program.Id).ToListAsync(), voucher =>
         {
-            Assert.False(voucher.IsActive);
+            Assert.True(voucher.IsActive);
             Assert.Equal(Repository.Enum.VoucherVisibility.Private, voucher.Visibility);
             Assert.Equal(Repository.Enum.VoucherDiscountType.Percent, voucher.DiscountType);
             Assert.Null(voucher.StartAt);
@@ -46,9 +46,9 @@ public class VoucherProgramPostgres
 
         // Force SaveChanges to fail after ExecuteUpdate changed the vouchers; the transaction must roll back both.
         rejectProgramSave.Enabled = true;
-        await Assert.ThrowsAsync<DbUpdateException>(() => service.UpdateVoucherProgram(program.Id, new() { IsActive = true }));
+        await Assert.ThrowsAsync<DbUpdateException>(() => service.UpdateVoucherProgram(program.Id, new() { IsActive = false }));
         db.ChangeTracker.Clear();
-        Assert.All(await db.Vouchers.Where(x => x.ProgramId == program.Id).ToListAsync(), x => Assert.False(x.IsActive));
+        Assert.All(await db.Vouchers.Where(x => x.ProgramId == program.Id).ToListAsync(), x => Assert.True(x.IsActive));
         await Assert.ThrowsAsync<DbUpdateException>(() => service.DeleteVoucherProgram(program.Id));
         db.ChangeTracker.Clear();
         Assert.False((await db.VoucherPrograms.SingleAsync()).IsDeleted);
@@ -76,7 +76,7 @@ public class VoucherProgramPostgres
     }
 
     [VoucherPostgresFact]
-    public async Task ConcurrentBatches_CannotExceedProgramLimit()
+    public async Task ConcurrentBatches_CannotExceed10000ActiveCodes()
     {
         await using var fixture = await PostgresDatabase.Create();
         var program = Program();
@@ -84,7 +84,7 @@ public class VoucherProgramPostgres
         {
             seed.VoucherPrograms.Add(program);
             seed.Vouchers.AddRange(Enumerable.Range(1, 9990)
-                .Select(number => Voucher(program.Id, $"OLD{number}")));
+                .Select(number => Voucher(program.Id, $"OLD{number}", active: true)));
             await seed.SaveChangesAsync();
         }
 
@@ -94,15 +94,29 @@ public class VoucherProgramPostgres
         var first = new FeatureService(firstDb).GenerateProgramVouchers(program.Id, GenerateRequest(10));
         var second = new FeatureService(secondDb).GenerateProgramVouchers(program.Id, GenerateRequest(10));
 
-        var outcomes = await Task.WhenAll(Outcome(first), Outcome(second));
-        Assert.Single(outcomes, success => success);
+        var results = await Task.WhenAll(Outcome(first), Outcome(second));
+        Assert.Single(results, success => success);
         await using var verify = fixture.Context();
         Assert.Equal(10000, await verify.Vouchers.CountAsync(x => x.ProgramId == program.Id));
-        Assert.Equal(10000, await verify.Vouchers.Select(x => x.Code).Distinct().CountAsync());
+        Assert.Equal(10000, await verify.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+
+        static async Task<bool> Outcome(Task<Service.VoucherProgram.Response.GenerateProgramVouchersResponse> task)
+        {
+            try
+            {
+                Assert.Equal(10, (await task).CreatedCount);
+                return true;
+            }
+            catch (ConflictException error)
+            {
+                Assert.Equal("Voucher program cannot exceed 10000 active vouchers.", error.Message);
+                return false;
+            }
+        }
     }
 
     [VoucherPostgresFact]
-    public async Task CodeClaimedAfterExistenceCheck_RetriesFailedSave_WithoutPartialRows()
+    public async Task CodeActivatedAfterExistenceCheck_RetriesBatchWithoutPartialRows()
     {
         await using var fixture = await PostgresDatabase.Create();
         var program = Program();
@@ -116,7 +130,7 @@ public class VoucherProgramPostgres
         {
             await using var competitor = fixture.Context();
             // No parent FK: this independent write can commit while generation holds the program lock.
-            competitor.Vouchers.Add(Voucher(null, "RACE1", deleted: true));
+            competitor.Vouchers.Add(Voucher(null, "RACE1", active: true));
             await competitor.SaveChangesAsync();
         });
         await using var db = fixture.Context(race);
@@ -128,7 +142,47 @@ public class VoucherProgramPostgres
         Assert.Equal(new[] { "SAFE1", "SAFE2" }, result.Codes);
         Assert.Equal(2, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
         Assert.Empty(db.ChangeTracker.Entries<Repository.Entity.Voucher>());
-        Assert.True((await db.Vouchers.SingleAsync(x => x.Code == "RACE1")).IsDeleted);
+        Assert.Equal(1, await db.Vouchers.CountAsync(x => x.Code == "RACE1"));
+        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+    }
+
+    [VoucherPostgresFact]
+    public async Task ConcurrentActivationOfSameCode_InDifferentPrograms_OnlyOneSucceeds()
+    {
+        await using var fixture = await PostgresDatabase.Create();
+        var firstProgram = Program();
+        var secondProgram = Program();
+        await using (var seed = fixture.Context())
+        {
+            seed.VoucherPrograms.AddRange(firstProgram, secondProgram);
+            seed.Vouchers.AddRange(Voucher(firstProgram.Id, "SHARED"), Voucher(secondProgram.Id, "SHARED"));
+            await seed.SaveChangesAsync();
+        }
+
+        var synchronize = new SynchronizeFirstQueryInterceptor(2);
+        await using var firstDb = fixture.Context(synchronize);
+        await using var secondDb = fixture.Context(synchronize);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var first = Activate(new FeatureService(firstDb), firstProgram.Id);
+        var second = Activate(new FeatureService(secondDb), secondProgram.Id);
+        var results = await Task.WhenAll(first, second);
+        Assert.Single(results, success => success);
+        await using var verify = fixture.Context();
+        Assert.Equal(1, await verify.Vouchers.CountAsync(x => x.IsActive));
+        Assert.Equal(1, await verify.VoucherPrograms.CountAsync(x => x.IsActive));
+
+        async Task<bool> Activate(FeatureService service, Guid id)
+        {
+            try
+            {
+                await service.UpdateVoucherProgram(id, new() { IsActive = true }, timeout.Token);
+                return true;
+            }
+            catch (ConflictException)
+            {
+                return false;
+            }
+        }
     }
 
     private sealed class ClaimCodeBeforeInsert(Func<Task> claimCode) : DbCommandInterceptor
@@ -218,20 +272,6 @@ public class VoucherProgramPostgres
         VoucherSnapshot = voucherSnapshot,
         CreatedAt = DateTimeOffset.UtcNow
     };
-
-    private static async Task<bool> Outcome(Task<Service.VoucherProgram.Response.GenerateProgramVouchersResponse> task)
-    {
-        try
-        {
-            Assert.Equal(10, (await task).CreatedCount);
-            return true;
-        }
-        catch (ConflictException error)
-        {
-            Assert.Equal("Voucher program cannot exceed 10000 vouchers.", error.Message);
-            return false;
-        }
-    }
 
     internal sealed class PostgresDatabase : IAsyncDisposable
     {

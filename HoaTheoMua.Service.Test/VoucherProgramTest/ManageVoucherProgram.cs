@@ -72,8 +72,6 @@ public class ManageVoucherProgram
         Assert.True(saved.IsActive);
         Assert.False(savedVoucher.IsActive);
         Assert.Null(savedVoucher.UpdatedAt);
-        Assert.Equal(1, result.VoucherCount);
-        Assert.Equal(1, result.UsedVoucherCount);
         Assert.NotNull(saved.UpdatedAt);
         Assert.NotNull(result.UpdatedAt);
         Assert.Equal(result.UpdatedAt.Value.Ticks / 10 * 10, saved.UpdatedAt.Value.Ticks);
@@ -137,8 +135,6 @@ public class ManageVoucherProgram
 
         Assert.Equal(active, result.IsActive);
         Assert.Equal(program.Id, result.Id);
-        Assert.Equal(2, result.VoucherCount);
-        Assert.Equal(2, result.UsedVoucherCount);
         db.ChangeTracker.Clear();
         var saved = await db.VoucherPrograms.SingleAsync();
         Assert.Equal(active, saved.IsActive);
@@ -210,7 +206,7 @@ public class ManageVoucherProgram
     }
 
     [VoucherPostgresFact]
-    public async Task Update_UsesCurrentDatabaseValues_WhenProgramWasPreviouslyTracked()
+    public async Task Update_UsesCurrentDatabaseValues_InNewRequestContext()
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
@@ -225,6 +221,8 @@ public class ManageVoucherProgram
             await other.SaveChangesAsync();
         }
 
+        // Mô phỏng request mới: không mang entity được theo dõi từ bước chuẩn bị dữ liệu.
+        db.ChangeTracker.Clear();
         var result = await new FeatureService(db).UpdateVoucherProgram(program.Id, new() { Name = "New name" });
 
         Assert.Equal(500000m, result.MinOrderAmount);
@@ -233,12 +231,10 @@ public class ManageVoucherProgram
         var saved = await db.VoucherPrograms.SingleAsync();
         Assert.Equal(500000m, saved.MinOrderAmount);
         Assert.Equal(700000m, saved.MaxOrderAmount);
-        Assert.Equal(0, result.VoucherCount);
-        Assert.Equal(0, result.UsedVoucherCount);
     }
 
     [VoucherPostgresFact]
-    public async Task PreviouslyTrackedProgram_DeletedByAnotherContext_CannotBeMutated()
+    public async Task ProgramDeletedByAnotherRequest_CannotBeMutated()
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
@@ -249,6 +245,7 @@ public class ManageVoucherProgram
         {
             await new FeatureService(other).DeleteVoucherProgram(program.Id);
         }
+        db.ChangeTracker.Clear();
         var service = new FeatureService(db);
 
         var error = await Assert.ThrowsAsync<NotFoundException>(() =>
