@@ -74,11 +74,12 @@ public class VoucherProgramApi
         Assert.Equal(JsonValueKind.Null, value.GetProperty("maxOrderAmount").ValueKind);
     }
 
-    [Fact]
+    [VoucherPostgresFact]
     public async Task AdminEndpoints_EnforceAuthorization_ValidateRequests_AndReturnPlanEnvelopes()
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
-        await using var app = await StartApplication(key);
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var app = await StartApplication(key, fixture.Configure);
         try
         {
             var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
@@ -197,13 +198,19 @@ public class VoucherProgramApi
         }
     }
 
-    private static async Task<WebApplication> StartApplication(SecurityKey key)
+    private static async Task<WebApplication> StartApplication(SecurityKey key, Action<DbContextOptionsBuilder>? configureDatabase = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
         builder.Logging.ClearProviders();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         var databaseName = Guid.NewGuid().ToString();
-        builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
+        builder.Services.AddDbContext<AppDbContext>(options =>
+        {
+            if (configureDatabase != null)
+                configureDatabase(options);
+            else
+                options.UseInMemoryDatabase(databaseName);
+        });
         builder.Services.AddScoped<VoucherProgramFeature.IService, VoucherProgramFeature.Service>();
         builder.Services.AddValidatorsFromAssembly(typeof(VoucherProgramFeature.Service).Assembly);
         builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();

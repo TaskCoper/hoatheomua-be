@@ -14,9 +14,13 @@ internal static class VoucherProgramTestData
     public static Repository.Entity.VoucherProgram Program(bool active = false, bool deleted = false) => new()
     {
         Id = Guid.NewGuid(), Name = "20/10", IsActive = active, IsDeleted = deleted,
-        StartAt = DateTimeOffset.UtcNow, EndAt = DateTimeOffset.UtcNow.AddDays(7),
-        MinOrderAmount = 200000, MaxOrderAmount = 2000000, CreatedAt = DateTimeOffset.UtcNow
+        StartAt = PostgresUtcNow(), EndAt = PostgresUtcNow().AddDays(7),
+        MinOrderAmount = 200000, MaxOrderAmount = 2000000, CreatedAt = PostgresUtcNow()
     };
+
+    // PostgreSQL timestamps preserve microseconds; keep boundary test inputs at that precision.
+    private static DateTimeOffset PostgresUtcNow() =>
+        new(DateTimeOffset.UtcNow.Ticks / 10 * 10, TimeSpan.Zero);
 
     public static Voucher Voucher(Guid? programId, string code, bool active = false, bool deleted = false) => new()
     {

@@ -165,6 +165,27 @@ public class GetVoucherPrograms
         Assert.True(result.Value.HasPreviousPage);
     }
 
+    [Fact]
+    public async Task OversizedPage_IsBounded_AndNextPageKeepsCorrectOffset()
+    {
+        await using var db = CreateDbContext();
+        db.VoucherPrograms.AddRange(Enumerable.Range(1, 125).Select(i => Program($"Program {i}", i)));
+        await db.SaveChangesAsync();
+        var service = new VoucherProgramService(db);
+
+        var first = await service.GetVoucherPrograms(new() { pageSize = int.MaxValue });
+        var second = await service.GetVoucherPrograms(new() { pageIndex = 2, pageSize = int.MaxValue });
+
+        Assert.Equal(100, first.Value.PageSize);
+        Assert.Equal(125, first.Value.TotalCount);
+        Assert.Equal(100, first.Value.Items.Count());
+        Assert.True(first.Value.HasNextPage);
+        Assert.Equal(100, second.Value.PageSize);
+        Assert.Equal(25, second.Value.Items.Count());
+        Assert.Equal("Program 25", second.Value.Items.Cast<Response.VoucherProgramResponse>().First().Name);
+        Assert.False(second.Value.HasNextPage);
+    }
+
     private static AppDbContext CreateDbContext() => new(new DbContextOptionsBuilder<AppDbContext>()
         .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
 

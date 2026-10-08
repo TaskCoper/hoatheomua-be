@@ -1,6 +1,8 @@
+using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 using FeatureService = HoaTheoMua.Service.VoucherProgram.Service;
 using static HoaTheoMua.Service.Test.VoucherProgramTest.VoucherProgramTestData;
@@ -9,12 +11,13 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 
 public class GenerateProgramVouchers
 {
-    [Theory]
+    [VoucherPostgresTheory]
     [InlineData("cash", false)]
     [InlineData("percent", true)]
     public async Task GeneratesExactQuantity_WithSharedPolicy_PrivateInactiveAndInheritedSchedule(string type, bool active)
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program(active);
         db.VoucherPrograms.Add(program);
         await db.SaveChangesAsync();
@@ -54,10 +57,11 @@ public class GenerateProgramVouchers
         Assert.Equal(active, (await db.VoucherPrograms.SingleAsync()).IsActive);
     }
 
-    [Fact]
+    [VoucherPostgresFact]
     public async Task Collision_WithDeletedCodeAndWithinBatch_IsRetried_AndFurtherBatchesAreAllowed()
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
         db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
@@ -74,10 +78,11 @@ public class GenerateProgramVouchers
         Assert.True((await db.Vouchers.SingleAsync(x => x.Code == "TAKEN")).IsDeleted);
     }
 
-    [Fact]
+    [VoucherPostgresFact]
     public async Task CollisionExhaustion_RollsBackPartialBatchAfterFiveRounds()
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
         db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
@@ -92,10 +97,11 @@ public class GenerateProgramVouchers
         Assert.Single(await db.Vouchers.ToListAsync());
     }
 
-    [Fact]
+    [VoucherPostgresFact]
     public async Task ProgramLimit_IncludesDeletedCodes_AllowsExactly10000_AndRejectsNextBatch()
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
         db.Vouchers.AddRange(Enumerable.Range(0, 9999).Select(i => Voucher(program.Id, $"OLD{i}", deleted: i == 0)));
@@ -107,5 +113,72 @@ public class GenerateProgramVouchers
 
         Assert.Equal("Voucher program cannot exceed 10000 vouchers.", error.Message);
         Assert.Equal(10000, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
+    }
+
+    [VoucherPostgresFact]
+    public async Task Generation_StagesCollisionRoundsBeforeSaving_AndLeavesNoTrackedBatch()
+    {
+        var observer = new VoucherSaveObserver();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context(observer);
+        var program = Program();
+        db.VoucherPrograms.Add(program);
+        db.Vouchers.Add(Voucher(null, "TAKEN", deleted: true));
+        await db.SaveChangesAsync();
+        observer.VoucherSaves = 0;
+        var generator = new SequenceGenerator("TAKEN", "NEWAA", "NEWAA", "NEWBB", "NEWCC");
+
+        var result = await new FeatureService(db, generator).GenerateProgramVouchers(program.Id, GenerateRequest(2));
+
+        Assert.Equal(new[] { "NEWAA", "NEWBB" }, result.Codes);
+        Assert.Equal(1, observer.VoucherSaves);
+        Assert.DoesNotContain(db.ChangeTracker.Entries<Repository.Entity.Voucher>(), x => x.Entity.ProgramId == program.Id);
+        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
+    }
+
+    [VoucherPostgresFact]
+    public async Task UnexpectedSaveFailure_DoesNotLeakFailedVouchersIntoNextRequest()
+    {
+        var observer = new VoucherSaveObserver();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context(observer);
+        var program = Program();
+        db.VoucherPrograms.Add(program);
+        await db.SaveChangesAsync();
+        observer.FailNextVoucherSave = true;
+        var service = new FeatureService(db, new SequenceGenerator("FAIL1", "EXTRA", "NEWAA", "NEWBB"));
+
+        var error = await Assert.ThrowsAsync<DbUpdateException>(() =>
+            service.GenerateProgramVouchers(program.Id, GenerateRequest(1)));
+
+        Assert.Equal("Forced voucher write failure.", error.Message);
+        Assert.Empty(await db.Vouchers.ToListAsync());
+        Assert.Empty(db.ChangeTracker.Entries<Repository.Entity.Voucher>());
+        var result = await service.GenerateProgramVouchers(program.Id, GenerateRequest(1));
+        Assert.Equal(new[] { "NEWAA" }, result.Codes);
+        Assert.Equal("NEWAA", (await db.Vouchers.SingleAsync()).Code);
+    }
+
+    private sealed class VoucherSaveObserver : SaveChangesInterceptor
+    {
+        public int VoucherSaves { get; set; }
+        public bool FailNextVoucherSave { get; set; }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+            InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context!.ChangeTracker.Entries<Repository.Entity.Voucher>()
+                .Any(x => x.State == EntityState.Added))
+            {
+                VoucherSaves++;
+                if (FailNextVoucherSave)
+                {
+                    FailNextVoucherSave = false;
+                    throw new DbUpdateException("Forced voucher write failure.");
+                }
+            }
+
+            return ValueTask.FromResult(result);
+        }
     }
 }

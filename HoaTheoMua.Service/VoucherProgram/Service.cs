@@ -1,9 +1,7 @@
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
-using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
-using NpgsqlTypes;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Models;
 using Microsoft.EntityFrameworkCore;
@@ -42,28 +40,14 @@ public class Service : IService
         _dbContext.VoucherPrograms.Add(program);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new Response.VoucherProgramResponse
-        {
-            Id = program.Id,
-            Name = program.Name,
-            IsActive = program.IsActive,
-            IsDeleted = program.IsDeleted,
-            StartAt = program.StartAt,
-            EndAt = program.EndAt,
-            MinOrderAmount = program.MinOrderAmount,
-            MaxOrderAmount = program.MaxOrderAmount,
-            VoucherCount = 0,
-            UsedVoucherCount = 0,
-            CreatedAt = program.CreatedAt,
-            UpdatedAt = program.UpdatedAt
-        };
+        return ToResponse(program);
     }
 
     public async Task<BasePaginationResponse> GetVoucherPrograms(
         Request.GetVoucherProgramsRequest request, CancellationToken cancellationToken = default)
     {
         var pageIndex = Math.Max(1, request.pageIndex);
-        var pageSize = request.pageSize > 0 ? request.pageSize : 20;
+        var pageSize = request.pageSize > 0 ? Math.Min(request.pageSize, 100) : 20;
         var query = _dbContext.VoucherPrograms.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.keyword))
@@ -80,7 +64,8 @@ public class Service : IService
 
         var totalCount = await query.CountAsync(cancellationToken);
         var offset = (int)Math.Min((long)(pageIndex - 1) * pageSize, int.MaxValue);
-        var items = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
+        var items = offset >= totalCount ? new List<Response.VoucherProgramResponse>()
+            : await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
             .Skip(offset).Take(pageSize)
             .Select(x => new Response.VoucherProgramResponse
             {
@@ -92,12 +77,33 @@ public class Service : IService
                 EndAt = x.EndAt,
                 MinOrderAmount = x.MinOrderAmount,
                 MaxOrderAmount = x.MaxOrderAmount,
-                VoucherCount = x.Vouchers.Count(v => !v.IsDeleted),
-                // P2 reads the cached count; each used code counts once, regardless of its uses.
-                UsedVoucherCount = x.Vouchers.Count(v => !v.IsDeleted && v.UsedCount > 0),
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
             }).ToListAsync(cancellationToken);
+
+        if (items.Count > 0)
+        {
+            // Aggregate both counters together, restricted to programs on this page.
+            var programIds = items.Select(x => x.Id).ToArray();
+            var counts = await _dbContext.Vouchers.AsNoTracking()
+                .Where(x => x.ProgramId.HasValue && programIds.Contains(x.ProgramId.Value) && !x.IsDeleted)
+                .GroupBy(x => x.ProgramId!.Value)
+                .Select(group => new
+                {
+                    ProgramId = group.Key,
+                    VoucherCount = group.Count(),
+                    UsedVoucherCount = group.Count(x => x.UsedCount > 0)
+                }).ToDictionaryAsync(x => x.ProgramId, cancellationToken);
+
+            foreach (var item in items)
+            {
+                if (counts.TryGetValue(item.Id, out var count))
+                {
+                    item.VoucherCount = count.VoucherCount;
+                    item.UsedVoucherCount = count.UsedVoucherCount;
+                }
+            }
+        }
 
         var response = ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
         response.Value.HasNextPage = (long)pageIndex * pageSize < totalCount;
@@ -107,8 +113,7 @@ public class Service : IService
     public async Task<Response.VoucherProgramResponse> UpdateVoucherProgram(Guid id, Request.UpdateVoucherProgramRequest request,
         CancellationToken cancellationToken = default)
     {
-        await using var transaction = _dbContext.Database.IsRelational()
-            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         var program = await GetProgramForUpdate(id, cancellationToken);
         var startAt = request.StartAt == null ? program.StartAt
             : VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime();
@@ -147,20 +152,9 @@ public class Service : IService
         {
             var isActive = request.IsActive.Value;
             var vouchers = _dbContext.Vouchers.Where(x => x.ProgramId == id && !x.IsDeleted);
-            if (_dbContext.Database.IsRelational())
-            {
-                await vouchers.ExecuteUpdateAsync(setters => setters
-                    .SetProperty(x => x.IsActive, isActive)
-                    .SetProperty(x => x.UpdatedAt, now), cancellationToken);
-            }
-            else
-            {
-                foreach (var voucher in await vouchers.ToListAsync(cancellationToken))
-                {
-                    voucher.IsActive = isActive;
-                    voucher.UpdatedAt = now;
-                }
-            }
+            await vouchers.ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.IsActive, isActive)
+                .SetProperty(x => x.UpdatedAt, now), cancellationToken);
 
             program.IsActive = isActive;
         }
@@ -173,50 +167,36 @@ public class Service : IService
         program.MaxOrderAmount = maxOrderAmount;
         program.UpdatedAt = now;
         await _dbContext.SaveChangesAsync(cancellationToken);
-        var result = await _dbContext.VoucherPrograms.AsNoTracking().Where(x => x.Id == id)
-            .Select(x => new Response.VoucherProgramResponse
+        // The program is already loaded and updated. Read only the voucher statistics in one scan.
+        var counts = await _dbContext.Vouchers.AsNoTracking()
+            .Where(x => x.ProgramId == id && !x.IsDeleted)
+            .GroupBy(x => x.ProgramId)
+            .Select(group => new
             {
-                Id = x.Id, Name = x.Name, IsActive = x.IsActive, IsDeleted = x.IsDeleted,
-                StartAt = x.StartAt, EndAt = x.EndAt,
-                MinOrderAmount = x.MinOrderAmount, MaxOrderAmount = x.MaxOrderAmount,
-                VoucherCount = x.Vouchers.Count(v => !v.IsDeleted),
-                UsedVoucherCount = x.Vouchers.Count(v => !v.IsDeleted && v.UsedCount > 0),
-                CreatedAt = x.CreatedAt, UpdatedAt = x.UpdatedAt
-            }).SingleAsync(cancellationToken);
-        if (transaction != null)
-            await transaction.CommitAsync(cancellationToken);
+                VoucherCount = group.Count(),
+                UsedVoucherCount = group.Count(x => x.UsedCount > 0)
+            }).SingleOrDefaultAsync(cancellationToken);
+        var result = ToResponse(program, counts?.VoucherCount ?? 0, counts?.UsedVoucherCount ?? 0);
+        await transaction.CommitAsync(cancellationToken);
 
         return result;
     }
 
     public async Task<string> DeleteVoucherProgram(Guid id, CancellationToken cancellationToken = default)
     {
-        await using var transaction = _dbContext.Database.IsRelational()
-            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         var program = await GetProgramForUpdate(id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
         var vouchers = _dbContext.Vouchers.Where(x => x.ProgramId == id);
 
-        if (_dbContext.Database.IsRelational())
-        {
-            await vouchers.ExecuteUpdateAsync(setters => setters
-                .SetProperty(x => x.IsDeleted, true)
-                .SetProperty(x => x.UpdatedAt, now), cancellationToken);
-        }
-        else
-        {
-            foreach (var voucher in await vouchers.ToListAsync(cancellationToken))
-            {
-                voucher.IsDeleted = true;
-                voucher.UpdatedAt = now;
-            }
-        }
+        await vouchers.ExecuteUpdateAsync(setters => setters
+            .SetProperty(x => x.IsDeleted, true)
+            .SetProperty(x => x.UpdatedAt, now), cancellationToken);
 
         program.IsDeleted = true;
         program.UpdatedAt = now;
         await _dbContext.SaveChangesAsync(cancellationToken);
-        if (transaction != null)
-            await transaction.CommitAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return "Program deleted";
     }
@@ -224,8 +204,7 @@ public class Service : IService
     public async Task<Response.GenerateProgramVouchersResponse> GenerateProgramVouchers(
         Guid id, Request.GenerateProgramVouchersRequest request, CancellationToken cancellationToken = default)
     {
-        await using var transaction = _dbContext.Database.IsRelational()
-            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         // All three mutations lock the same row, serializing generation, activation and deletion.
         await GetProgramForUpdate(id, cancellationToken);
         var count = await _dbContext.Vouchers.CountAsync(x => x.ProgramId == id, cancellationToken);
@@ -233,61 +212,98 @@ public class Service : IService
             throw new ConflictException("Voucher program cannot exceed 10000 vouchers.");
 
         var codes = new List<string>(request.Quantity);
-        var issued = new HashSet<string>(StringComparer.Ordinal);
+        var excludedCodes = new HashSet<string>(StringComparer.Ordinal);
         var now = DateTimeOffset.UtcNow;
-        // InMemory is used by unit tests. Production relies solely on the database's unique index.
-        HashSet<string>? existingCodes = _dbContext.Database.IsRelational() ? null
-            : (await _dbContext.Vouchers.Select(x => x.Code).ToListAsync(cancellationToken))
-                .ToHashSet(StringComparer.Ordinal);
+        var saved = false;
+        var discountType = request.DiscountType == "cash" ? VoucherDiscountType.Cash : VoucherDiscountType.Percent;
 
-        for (var round = 0; round < 5 && codes.Count < request.Quantity; round++)
+        for (var round = 0; round < 5; round++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var missing = request.Quantity - codes.Count;
-            var candidates = new HashSet<string>(StringComparer.Ordinal);
-            for (var i = 0; i < (int)Math.Ceiling(missing * 1.1); i++)
+            var candidateCount = (int)Math.Ceiling(missing * 1.1);
+            var candidates = new HashSet<string>(candidateCount, StringComparer.Ordinal);
+            for (var i = 0; i < candidateCount; i++)
             {
                 var code = _codeGenerator.Generate(request.CodePrefix, request.CodeLength, request.CodeSuffix);
-                if (!issued.Contains(code))
+                if (!excludedCodes.Contains(code))
                     candidates.Add(code);
             }
 
-            var pending = candidates.ToArray();
-            for (var offset = 0; offset < pending.Length && codes.Count < request.Quantity;)
+            if (candidates.Count > 0)
             {
-                // Never insert the surplus once the requested quantity has been reached.
-                var batch = pending.Skip(offset).Take(request.Quantity - codes.Count).ToArray();
-                offset += batch.Length;
-                var inserted = existingCodes == null
-                    ? await InsertVoucherBatch(id, request, batch, now, cancellationToken)
-                    : batch.Where(code => existingCodes.Add(code)).ToList();
-                codes.AddRange(inserted);
-                issued.UnionWith(inserted);
+                // Soft-deleted and standalone vouchers also reserve their codes permanently.
+                var candidateCodes = candidates.ToArray();
+                var existingCodes = await _dbContext.Vouchers.AsNoTracking()
+                    .Where(x => candidateCodes.Contains(x.Code))
+                    .Select(x => x.Code)
+                    .ToListAsync(cancellationToken);
+                excludedCodes.UnionWith(existingCodes);
+                foreach (var code in candidates)
+                {
+                    // Reuse the exclusion set instead of allocating another set and selected array.
+                    if (excludedCodes.Add(code))
+                        codes.Add(code);
+                    if (codes.Count == request.Quantity)
+                        break;
+                }
             }
-        }
 
-        if (codes.Count != request.Quantity)
-            throw new ServerException("Unable to generate enough unique voucher codes after 5 rounds.");
-
-        if (existingCodes != null)
-        {
-            // Defer persistence until the entire batch is complete; failed test-provider batches stay empty.
-            _dbContext.Vouchers.AddRange(codes.Select(code => new Voucher
+            // Stage the complete quantity before writing; usually only one SaveChanges is needed.
+            if (codes.Count != request.Quantity)
+                continue;
+            var vouchers = codes.Select(code => new Voucher
             {
                 Id = Guid.NewGuid(), ProgramId = id, Code = code,
                 Description = request.Description,
-                DiscountType = request.DiscountType == "cash" ? VoucherDiscountType.Cash : VoucherDiscountType.Percent,
+                DiscountType = discountType,
                 DiscountValue = request.DiscountValue,
                 MaxDiscountAmount = request.MaxDiscountAmount,
                 Visibility = VoucherVisibility.Private,
                 MaxUsageCount = request.MaxUsageCount,
-                IsActive = false, UsedCount = 0, IsDeleted = false, CreatedAt = now
-            }));
-            await _dbContext.SaveChangesAsync(cancellationToken);
+                UsedCount = 0, IsActive = false, IsDeleted = false, CreatedAt = now
+            }).ToList();
+
+            try
+            {
+                _dbContext.Vouchers.AddRange(vouchers);
+                // EF creates and rolls back its own savepoint inside the existing PostgreSQL transaction.
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                saved = true;
+            }
+            catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "IX_Vouchers_Code"
+            })
+            {
+                // Replace conflicting codes below, then retry in the next round.
+            }
+            finally
+            {
+                // Detach only this batch, including on unexpected errors or cancellation.
+                foreach (var voucher in vouchers)
+                    _dbContext.Entry(voucher).State = EntityState.Detached;
+            }
+
+            if (saved)
+                break;
+
+            // A concurrent request claimed a code after the existence check. Keep the other codes
+            // and generate replacements in the next round; EF rolled back the failed savepoint.
+            var attemptedCodes = codes.ToArray();
+            var conflicts = (await _dbContext.Vouchers.AsNoTracking()
+                .Where(x => attemptedCodes.Contains(x.Code))
+                .Select(x => x.Code)
+                .ToListAsync(cancellationToken))
+                .ToHashSet(StringComparer.Ordinal);
+            codes.RemoveAll(conflicts.Contains);
         }
 
-        if (transaction != null)
-            await transaction.CommitAsync(cancellationToken);
+        if (!saved)
+            throw new ServerException("Unable to generate enough unique voucher codes after 5 rounds.");
+
+        await transaction.CommitAsync(cancellationToken);
 
         return new Response.GenerateProgramVouchersResponse
         {
@@ -297,58 +313,46 @@ public class Service : IService
 
     private async Task<VoucherProgramEntity> GetProgramForUpdate(Guid id, CancellationToken cancellationToken)
     {
-        var query = _dbContext.Database.IsRelational()
-            ? _dbContext.VoucherPrograms.FromSqlInterpolated(
-                $"SELECT * FROM \"VoucherPrograms\" WHERE \"Id\" = {id} FOR UPDATE")
-            : _dbContext.VoucherPrograms.Where(x => x.Id == id);
+        var query = _dbContext.VoucherPrograms.Where(x => x.Id == id);
 
-        var program = await query.SingleOrDefaultAsync(cancellationToken)
+        // All callers hold a transaction. A no-op update acquires a row write lock
+        // until commit, serializing mutations without changing the business timestamp.
+        var affected = await query.ExecuteUpdateAsync(setters => setters
+            .SetProperty(x => x.UpdatedAt, x => x.UpdatedAt), cancellationToken);
+        if (affected == 0)
+            throw new NotFoundException("Voucher program does not exist.");
+
+        // Read the locked database row even if this context already tracked an older version.
+        var program = await query.AsNoTracking().SingleOrDefaultAsync(cancellationToken)
                       ?? throw new NotFoundException("Voucher program does not exist.");
         if (program.IsDeleted)
             throw new NotFoundException("Voucher program has been deleted.");
 
+        var tracked = _dbContext.VoucherPrograms.Local.FirstOrDefault(x => x.Id == id);
+        if (tracked != null)
+        {
+            var entry = _dbContext.Entry(tracked);
+            entry.CurrentValues.SetValues(program);
+            entry.OriginalValues.SetValues(program);
+            entry.State = EntityState.Unchanged;
+            return tracked;
+        }
+
+        _dbContext.VoucherPrograms.Attach(program);
         return program;
     }
 
-    private async Task<List<string>> InsertVoucherBatch(Guid programId, Request.GenerateProgramVouchersRequest request,
-        string[] codes, DateTimeOffset createdAt, CancellationToken cancellationToken)
+    private static Response.VoucherProgramResponse ToResponse(VoucherProgramEntity program,
+        int voucherCount = 0, int usedVoucherCount = 0)
     {
-        const string sql = """
-            INSERT INTO "Vouchers"
-                ("Id", "ProgramId", "Code", "Description", "DiscountType", "DiscountValue",
-                 "MaxDiscountAmount", "Visibility", "MaxUsageCount", "UsedCount", "StartAt", "EndAt",
-                 "MinOrderAmount", "MaxOrderAmount", "IsActive", "CreatedAt", "UpdatedAt", "IsDeleted")
-            SELECT batch.id, @programId, batch.code, @description, @discountType, @discountValue,
-                   @maxDiscountAmount, @visibility, @maxUsageCount, 0, NULL, NULL,
-                   NULL, NULL, false, @createdAt, NULL, false
-            FROM unnest(@ids, @codes) AS batch(id, code)
-            ON CONFLICT ("Code") DO NOTHING
-            RETURNING "Code"
-            """;
-        await using var command = new NpgsqlCommand(sql,
-            (NpgsqlConnection)_dbContext.Database.GetDbConnection(),
-            (NpgsqlTransaction)_dbContext.Database.CurrentTransaction!.GetDbTransaction());
-        command.Parameters.AddWithValue("ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid,
-            codes.Select(_ => Guid.NewGuid()).ToArray());
-        command.Parameters.AddWithValue("codes", NpgsqlDbType.Array | NpgsqlDbType.Text, codes);
-        command.Parameters.AddWithValue("programId", NpgsqlDbType.Uuid, programId);
-        command.Parameters.AddWithValue("description", NpgsqlDbType.Varchar, (object?)request.Description ?? DBNull.Value);
-        // Match the existing EF string enum conversions (Cash/Percent and Private).
-        command.Parameters.AddWithValue("discountType", NpgsqlDbType.Varchar,
-            request.DiscountType == "cash" ? nameof(VoucherDiscountType.Cash) : nameof(VoucherDiscountType.Percent));
-        command.Parameters.AddWithValue("discountValue", NpgsqlDbType.Numeric, request.DiscountValue);
-        command.Parameters.AddWithValue("maxDiscountAmount", NpgsqlDbType.Numeric,
-            (object?)request.MaxDiscountAmount ?? DBNull.Value);
-        command.Parameters.AddWithValue("visibility", NpgsqlDbType.Varchar, nameof(VoucherVisibility.Private));
-        command.Parameters.AddWithValue("maxUsageCount", NpgsqlDbType.Integer, request.MaxUsageCount);
-        command.Parameters.AddWithValue("createdAt", NpgsqlDbType.TimestampTz, createdAt);
-
-        var inserted = new List<string>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-            inserted.Add(reader.GetString(0));
-
-        return inserted;
+        return new Response.VoucherProgramResponse
+        {
+            Id = program.Id, Name = program.Name, IsActive = program.IsActive, IsDeleted = program.IsDeleted,
+            StartAt = program.StartAt, EndAt = program.EndAt,
+            MinOrderAmount = program.MinOrderAmount, MaxOrderAmount = program.MaxOrderAmount,
+            VoucherCount = voucherCount, UsedVoucherCount = usedVoucherCount,
+            CreatedAt = program.CreatedAt, UpdatedAt = program.UpdatedAt
+        };
     }
 
 }
