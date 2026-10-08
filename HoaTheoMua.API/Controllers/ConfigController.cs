@@ -147,4 +147,11 @@ public class ConfigController : ControllerBase
     //     var result = await _configService.GetNhanhVnOrderSources();
     //     return Ok(ApiResponseFactory.Base(result, true,"", HttpContext.TraceIdentifier));
     // }
+    [HttpPatch("delivery-slots/limits")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> UpdateLimits([FromBody] ConfigService.Request.UpdateDeliverySlotLimitsRequest request)
+    {
+        var result = await _configService.UpdateDeliverySlotLimits(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
 }
