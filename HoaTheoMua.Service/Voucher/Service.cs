@@ -332,42 +332,24 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
 
-    public async Task<Response.BulkUpdateResponse> SetVouchersActive(Request.SetVouchersActiveRequest request)
+    public async Task<string> SetVouchersActive(Request.SetVouchersActiveRequest request)
     {
         var isActive = request.IsActive!.Value;
-        var now = DateTimeOffset.UtcNow;
 
         var vouchers = await _dbContext.Vouchers
             .Include(x => x.Program)
             .Where(x => request.Ids.Contains(x.Id) && !x.IsDeleted)
             .ToListAsync();
 
-        var response = new Response.BulkUpdateResponse
-        {
-            NotFoundIds = request.Ids.Except(vouchers.Select(x => x.Id)).ToList()
-        };
-
         foreach (var voucher in vouchers)
         {
-            if (isActive && voucher.Program != null && !voucher.Program.IsActive)
-            {
-                response.SkippedItems.Add(new Response.SkippedItem
-                {
-                    Id = voucher.Id,
-                    Code = voucher.Code,
-                    Reason = "Program is not active"
-                });
-                continue;
-            }
-
             voucher.IsActive = isActive;
-            voucher.UpdatedAt = now;
-            response.UpdatedIds.Add(voucher.Id);
+            voucher.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
         await _dbContext.SaveChangesAsync();
 
-        return response;
+        return "Voucher status updated successfully.";
     }
 
     public async Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee)

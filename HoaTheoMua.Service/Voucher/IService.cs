@@ -12,7 +12,7 @@ public interface IService
 
     Task<BasePaginationResponse> GetVoucherUsages(Guid id, int pageIndex, int pageSize);
 
-    Task<Response.BulkUpdateResponse> SetVouchersActive(Request.SetVouchersActiveRequest request);
+    Task<string> SetVouchersActive(Request.SetVouchersActiveRequest request);
 
     Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee);
 

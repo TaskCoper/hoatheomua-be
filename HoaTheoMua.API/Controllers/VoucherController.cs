@@ -85,7 +85,7 @@ public class VoucherController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
-    [HttpPost("vouchers/estimate")]
+    [HttpGet("vouchers/estimate")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     [EnableRateLimiting(RateLimitExtensions.VoucherEstimatePolicy)]
     public async Task<IActionResult> EstimateVoucher([FromBody] Request.EstimateVoucherRequest request)

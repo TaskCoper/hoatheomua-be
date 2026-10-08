@@ -88,18 +88,4 @@ public class Response
         public decimal DiscountAmount { get; set; }           // VoucherSnapshot.DiscountAmount
         public DateTimeOffset? UsedAt { get; set; }            // earliest Transaction.CreatedAt of the order
     }
-
-    public class BulkUpdateResponse
-    {
-        public List<Guid> UpdatedIds { get; set; } = new();
-        public List<Guid> NotFoundIds { get; set; } = new();
-        public List<SkippedItem> SkippedItems { get; set; } = new();
-    }
-
-    public class SkippedItem
-    {
-        public Guid Id { get; set; }
-        public required string Code { get; set; }
-        public required string Reason { get; set; }
-    }
 }
