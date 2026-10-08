@@ -50,6 +50,7 @@ public class Request
 
         public bool? IsExportInvoice { get; set; }
         public InvoiceType? InvoiceType { get; set; }
+        public string? VoucherCode { get; set; }
         // public required Guid AddressId { get; set; }
         public required string PhoneReceiver { get; set; }
         public required string FullNameReceiver { get; set; }

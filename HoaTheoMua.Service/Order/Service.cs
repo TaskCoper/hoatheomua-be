@@ -27,6 +27,7 @@ public class Service : IService
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly HoaTheoMua.Service.BaoKim.IService _baoKimService;
     private readonly HoaTheoMua.Service.XanhSm.IService? _xanhSmService;
+    private readonly HoaTheoMua.Service.Voucher.IService? _voucherService;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
 
@@ -37,7 +38,8 @@ public class Service : IService
         HoaTheoMua.Service.Product.IService serviceProduct,
         IConfiguration configuration,
         BaoKim.IService baoKimService,
-        HoaTheoMua.Service.XanhSm.IService? xanhSmService = null)
+        HoaTheoMua.Service.XanhSm.IService? xanhSmService = null,
+        HoaTheoMua.Service.Voucher.IService? voucherService = null)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
@@ -46,6 +48,7 @@ public class Service : IService
         _serviceProduct = serviceProduct;
         _baoKimService = baoKimService;
         _xanhSmService = xanhSmService;
+        _voucherService = voucherService;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
@@ -289,6 +292,18 @@ public class Service : IService
                                   .Sum(x => x.SnapShotCard!.TotalPrice);
         var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
 
+        // Check the voucher before the gateway call, so a bad code never leaves a stray payment order behind
+        Request.VoucherSnapshot? voucherSnapshot = null;
+        if (!string.IsNullOrWhiteSpace(request.VoucherCode))
+        {
+            if (_voucherService == null)
+            {
+                throw new InvalidOperationException("Voucher service is not available");
+            }
+
+            voucherSnapshot = await _voucherService.PrepareOrderVoucher(request.VoucherCode, totalProductFee);
+        }
+
         var newOrder = new Repository.Entity.Order()
         {
             Id = Guid.NewGuid(),
@@ -308,7 +323,7 @@ public class Service : IService
             CreatedAt = DateTime.UtcNow,
             ShippingFee = totalShippingFee,
             ProductFee = totalProductFee,
-            TotalFee = totalProductFee + totalShippingFee + vatFee,
+            TotalFee = totalProductFee + totalShippingFee + vatFee - (voucherSnapshot?.DiscountAmount ?? 0m),
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
             PaymentGateway = request.PaymentGateway,
@@ -325,7 +340,16 @@ public class Service : IService
             ReceiptEmail = request.ReceiptEmail,
             IsExportInvoice = request.IsExportInvoice,
             InvoiceType = request.InvoiceType,
+            VoucherSnapshot = voucherSnapshot == null
+                ? null
+                : System.Text.Json.JsonSerializer.Serialize(voucherSnapshot),
         };
+
+        // A voucher must not bring the total to zero or below; checked before the gateway call
+        if (voucherSnapshot != null && newOrder.TotalFee <= 0)
+        {
+            throw new BadRequestException("Order total must be greater than 0.");
+        }
 
         var metadataByOrderDetailId = new Dictionary<Guid, Request.OrderDetailMetadata>();
         var newOrderDetails = preparedOrder.PurchaseItems.Select(item =>

@@ -18,6 +18,8 @@ public interface IService
 
     Task<Response.EstimateVoucherResponse> EstimateVoucher(Request.EstimateVoucherRequest request);
 
+    Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee);
+
     Task<BasePaginationResponse> GetVouchers(int pageIndex, int pageSize, string? keyword, string? visibility,
         bool? isActive, Guid? programId);
     
