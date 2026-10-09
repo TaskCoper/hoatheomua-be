@@ -14,6 +14,8 @@ public interface IService
 
     Task<string> SetVouchersActive(Request.SetVouchersActiveRequest request);
 
+    Task<string> UpdateVouchers(Request.UpdateVouchersRequest request);
+
     Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee);
 
     Task<Response.EstimateVoucherResponse> EstimateVoucher(Request.EstimateVoucherRequest request);
