@@ -27,8 +27,10 @@ public class VoucherProgramPostgres
         db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
 
-        var failing = new FeatureService(db, new SequenceGenerator("NEWAA", "TAKEN"));
-        await Assert.ThrowsAsync<ServerException>(() => failing.GenerateProgramVouchers(program.Id, GenerateRequest(2)));
+        using var cancellation = new CancellationTokenSource();
+        var failing = new FeatureService(db, new CancellingGenerator(cancellation));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            failing.GenerateProgramVouchers(program.Id, GenerateRequest(2), cancellation.Token));
         Assert.Empty(await db.Vouchers.Where(x => x.ProgramId == program.Id).ToListAsync());
 
         var service = new FeatureService(db, new SequenceGenerator("TAKEN", "NEWAA", "NEWAA", "NEWBB"));

@@ -37,6 +37,20 @@ internal static class VoucherProgramTestData
         MaxDiscountAmount = 100000, Description = "Quà tặng 20/10"
     };
 
+    // Sinh trùng liên tục rồi hủy sau hơn 5 vòng để kiểm tra vòng while vẫn hủy được.
+    internal sealed class CancellingGenerator(CancellationTokenSource cancellation) : IVoucherCodeGenerator
+    {
+        private int _calls;
+
+        public string Generate(string? prefix, int length, string? suffix)
+        {
+            _calls++;
+            if (_calls >= 13)
+                cancellation.Cancel();
+            return _calls == 1 ? "NEWAA" : "TAKEN";
+        }
+    }
+
     internal sealed class SequenceGenerator(params string[] codes) : IVoucherCodeGenerator
     {
         private int _index;

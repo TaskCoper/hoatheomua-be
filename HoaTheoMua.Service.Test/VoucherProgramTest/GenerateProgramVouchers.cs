@@ -79,7 +79,7 @@ public class GenerateProgramVouchers
     }
 
     [VoucherPostgresFact]
-    public async Task CollisionExhaustion_RollsBackPartialBatchAfterFiveRounds()
+    public async Task CollisionsBeyondFiveRounds_ContinueUntilFullBatchIsSaved()
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
@@ -87,14 +87,17 @@ public class GenerateProgramVouchers
         db.VoucherPrograms.Add(program);
         db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
-        var generator = new SequenceGenerator("NEWAA", "TAKEN");
+        var generator = new SequenceGenerator(
+            new[] { "NEWAA" }.Concat(Enumerable.Repeat("TAKEN", 12)).Append("NEWBB").ToArray());
 
-        await Assert.ThrowsAsync<ServerException>(() => new FeatureService(db, generator)
-            .GenerateProgramVouchers(program.Id, GenerateRequest(2)));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var result = await new FeatureService(db, generator)
+            .GenerateProgramVouchers(program.Id, GenerateRequest(2), timeout.Token);
 
-        Assert.Equal(11, generator.Calls); // 3 candidates in round one, then 2 per remaining round.
-        Assert.Empty(await db.Vouchers.Where(x => x.ProgramId == program.Id).ToListAsync());
-        Assert.Single(await db.Vouchers.ToListAsync());
+        Assert.True(generator.Calls > 11); // Năm vòng đầu chỉ có 11 lần sinh, vẫn chưa đủ mã.
+        Assert.Equal(new[] { "NEWAA", "NEWBB" }, result.Codes);
+        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+        Assert.Equal(3, await db.Vouchers.CountAsync());
     }
 
     [VoucherPostgresFact]

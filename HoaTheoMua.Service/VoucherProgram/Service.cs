@@ -217,8 +217,9 @@ public class Service : IService
         var discountType = request.DiscountType == "cash" ? VoucherDiscountType.Cash : VoucherDiscountType.Percent;
 
         var saved = false;
-        // Tối đa 5 vòng sinh bù và thử lưu; lưu thành công thì thoát ngay.
-        for (var round = 0; round < 5; round++)
+        // Tiếp tục sinh bù và thử lưu đến khi lưu thành công đủ số lượng.
+        // Không giới hạn số vòng; vẫn dừng khi request bị hủy hoặc gặp lỗi khác ngoài trùng mã.
+        while (!saved)
         {
             // Dừng nếu request bị hủy; các thao tác DB bên dưới cũng nhận cancellationToken.
             cancellationToken.ThrowIfCancellationRequested();
@@ -258,7 +259,7 @@ public class Service : IService
                     // Chỉ mã mới được đưa vào codes; đồng thời ghi nhớ để vòng sau không chọn lại.
                     if (excludedCodes.Add(code))
                         codes.Add(code);
-                    // Đủ số lượng thì dừng chọn; break này chỉ thoát foreach, chưa thoát vòng round.
+                    // Đủ số lượng thì dừng chọn; break này chỉ thoát foreach, chưa thoát vòng while.
                     if (codes.Count == request.Quantity)
                         break;
                 }
@@ -315,9 +316,6 @@ public class Service : IService
             // Giữ các mã chưa bị chiếm trong bộ nhớ; vòng sau chỉ sinh bù phần thiếu.
             codes.RemoveAll(conflicts.Contains);
         }
-
-        if (!saved)
-            throw new ServerException("Unable to generate enough unique voucher codes after 5 rounds.");
 
         // Xác nhận toàn bộ lô và giải phóng khóa chương trình trước khi trả kết quả thành công.
         await transaction.CommitAsync(cancellationToken);
