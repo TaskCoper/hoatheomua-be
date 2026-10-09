@@ -77,7 +77,7 @@ public class VoucherProgramApi
         Assert.Equal(DateTimeOffset.Parse("2026-10-14T17:00:00Z"), saved.StartAt);
         Assert.Equal(DateTimeOffset.Parse("2026-10-31T16:59:59Z"), saved.EndAt);
         Assert.Equal(TimeSpan.Zero, saved.StartAt.Offset);
-        Assert.Equal(TimeSpan.Zero, saved.EndAt.Offset);
+        Assert.Equal(TimeSpan.Zero, saved.EndAt!.Value.Offset);
         Assert.Equal(0m, saved.MinOrderAmount);
         Assert.Null(saved.MaxOrderAmount);
     }

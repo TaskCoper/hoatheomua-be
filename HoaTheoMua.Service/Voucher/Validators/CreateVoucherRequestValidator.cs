@@ -74,9 +74,6 @@ public class CreateVoucherRequestValidator : AbstractValidator<Request.CreateVou
             .NotNull().WithMessage("Start time is required");
 
         RuleFor(x => x.EndAt)
-            .NotNull().WithMessage("End time is required");
-
-        RuleFor(x => x.EndAt)
             .GreaterThan(x => x.StartAt).When(x => x.StartAt.HasValue && x.EndAt.HasValue)
             .WithMessage("End time must be later than start time");
 

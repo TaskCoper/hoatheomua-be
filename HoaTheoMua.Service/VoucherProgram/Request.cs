@@ -29,7 +29,7 @@ public class Request
     {
         public required string Name { get; set; }
         public required string StartAt { get; set; }
-        public required string EndAt { get; set; }
+        public string? EndAt { get; set; }
         public decimal? MinOrderAmount { get; set; }
         public decimal? MaxOrderAmount { get; set; }
     }

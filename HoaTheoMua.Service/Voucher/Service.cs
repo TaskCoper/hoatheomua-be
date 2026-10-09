@@ -58,7 +58,7 @@ public class Service : IService
             MaxUsageCount = request.MaxUsageCount,
             UsedCount = 0,
             StartAt = request.StartAt!.Value.ToUniversalTime(),
-            EndAt = request.EndAt!.Value.ToUniversalTime(),
+            EndAt = request.EndAt?.ToUniversalTime(),
             MinOrderAmount = request.MinOrderAmount,
             MaxOrderAmount = request.MaxOrderAmount,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -137,7 +137,7 @@ public class Service : IService
                 MaxUsageCount = x.MaxUsageCount,
                 UsedCount = x.UsedCount,
                 StartAt = x.Program != null ? x.Program.StartAt : x.StartAt!.Value,
-                EndAt = x.Program != null ? x.Program.EndAt : x.EndAt!.Value,
+                EndAt = x.Program != null ? x.Program.EndAt : x.EndAt,
                 MinOrderAmount = x.Program != null ? x.Program.MinOrderAmount : x.MinOrderAmount,
                 MaxOrderAmount = x.Program != null ? x.Program.MaxOrderAmount : x.MaxOrderAmount,
                 CreatedAt = x.CreatedAt,
@@ -228,7 +228,7 @@ public class Service : IService
                 x.MaxUsageCount,
                 x.UsedCount,
                 StartAt = x.Program != null ? x.Program.StartAt : x.StartAt!.Value,
-                EndAt = x.Program != null ? x.Program.EndAt : x.EndAt!.Value,
+                EndAt = x.Program != null ? x.Program.EndAt : x.EndAt,
                 MinOrderAmount = x.Program != null ? x.Program.MinOrderAmount : x.MinOrderAmount,
                 MaxOrderAmount = x.Program != null ? x.Program.MaxOrderAmount : x.MaxOrderAmount,
                 x.CreatedAt,
@@ -250,7 +250,7 @@ public class Service : IService
                 MaxUsageCount = x.MaxUsageCount,
                 UsedCount = x.UsedCount,
                 StartAt = FormatExportDate(x.StartAt),
-                EndAt = FormatExportDate(x.EndAt),
+                EndAt = x.EndAt.HasValue ? FormatExportDate(x.EndAt.Value) : null,
                 MinOrderAmount = x.MinOrderAmount,
                 MaxOrderAmount = x.MaxOrderAmount,
                 CreatedAt = FormatExportDate(x.CreatedAt),
@@ -363,7 +363,7 @@ public class Service : IService
                         && x.Visibility == VoucherVisibility.Public
                         && x.ProgramId == null
                         && x.StartAt <= now
-                        && x.EndAt >= now
+                        && (x.EndAt == null || x.EndAt >= now)
                         && x.UsedCount < x.MaxUsageCount);
 
         if (productFee.HasValue)
@@ -383,7 +383,7 @@ public class Service : IService
                 x.DiscountValue,
                 x.MaxDiscountAmount,
                 x.MinOrderAmount,
-                EndAt = x.EndAt!.Value
+                x.EndAt
             })
             .ToListAsync();
 
@@ -409,7 +409,7 @@ public class Service : IService
 
     public async Task<Response.EstimateVoucherResponse> EstimateVoucher(Request.EstimateVoucherRequest request)
     {
-        var code = request.Code!.Trim().ToUpperInvariant();
+        var code = request.code!.Trim().ToUpperInvariant();
 
         var voucher = await _dbContext.Vouchers
             .AsNoTracking()
@@ -425,7 +425,7 @@ public class Service : IService
         }
 
         var startAt = voucher.Program?.StartAt ?? voucher.StartAt;
-        var endAt = voucher.Program?.EndAt ?? voucher.EndAt;
+        var endAt = voucher.Program != null ? voucher.Program.EndAt : voucher.EndAt;
         var minOrderAmount = voucher.Program != null ? voucher.Program.MinOrderAmount : voucher.MinOrderAmount;
         var maxOrderAmount = voucher.Program != null ? voucher.Program.MaxOrderAmount : voucher.MaxOrderAmount;
 
@@ -436,7 +436,7 @@ public class Service : IService
             throw new BadRequestException("Voucher is not active yet.");
         }
 
-        if (endAt < now)
+        if (endAt.HasValue && endAt.Value < now)
         {
             throw new BadRequestException("Voucher has expired.");
         }
@@ -446,18 +446,18 @@ public class Service : IService
             throw new ConflictException("Voucher has no uses left.");
         }
 
-        if (minOrderAmount.HasValue && request.ProductFee < minOrderAmount.Value)
+        if (minOrderAmount.HasValue && request.productFee < minOrderAmount.Value)
         {
             throw new BadRequestException("Order total is below the minimum for this voucher.");
         }
 
-        if (maxOrderAmount.HasValue && request.ProductFee > maxOrderAmount.Value)
+        if (maxOrderAmount.HasValue && request.productFee > maxOrderAmount.Value)
         {
             throw new BadRequestException("Order total exceeds the maximum for this voucher.");
         }
 
         var discountAmount = CalculateDiscount(
-            voucher.DiscountType, voucher.DiscountValue, voucher.MaxDiscountAmount, request.ProductFee);
+            voucher.DiscountType, voucher.DiscountValue, voucher.MaxDiscountAmount, request.productFee);
 
         return new Response.EstimateVoucherResponse
         {
@@ -470,7 +470,7 @@ public class Service : IService
             DiscountValue = voucher.DiscountValue,
             MaxDiscountAmount = voucher.MaxDiscountAmount,
             DiscountAmount = discountAmount,
-            ProductFeeAfterDiscount = request.ProductFee - discountAmount
+            ProductFeeAfterDiscount = request.productFee - discountAmount
         };
     }
 

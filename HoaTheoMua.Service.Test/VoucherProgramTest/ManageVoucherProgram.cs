@@ -90,7 +90,7 @@ public class ManageVoucherProgram
         var request = new Request.UpdateVoucherProgramRequest { IsActive = true, Name = "Must not be saved" };
         switch (changedField)
         {
-            case "startAt": request.StartAt = program.EndAt.ToString("O"); break;
+            case "startAt": request.StartAt = program.EndAt!.Value.ToString("O"); break;
             case "endAt": request.EndAt = program.StartAt.ToString("O"); break;
             case "minOrderAmount": request.MinOrderAmount = 2000001; break;
             case "maxOrderAmount": request.MaxOrderAmount = 199999; break;

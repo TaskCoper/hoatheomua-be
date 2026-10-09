@@ -16,7 +16,7 @@ public class Response
         public bool IsActive { get; set; }
         public bool IsDeleted { get; set; }
         public DateTimeOffset StartAt { get; set; }
-        public DateTimeOffset EndAt { get; set; }
+        public DateTimeOffset? EndAt { get; set; }
         public decimal? MinOrderAmount { get; set; }
         public decimal? MaxOrderAmount { get; set; }
         public int VoucherCount { get; set; }

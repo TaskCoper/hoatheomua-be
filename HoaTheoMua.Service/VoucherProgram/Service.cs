@@ -30,7 +30,8 @@ public class Service : IService
             Name = request.Name.Trim(),
             IsActive = false,
             StartAt = VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime(),
-            EndAt = VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime(),
+            EndAt = string.IsNullOrWhiteSpace(request.EndAt) ? null
+                : VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime(),
             MinOrderAmount = request.MinOrderAmount,
             MaxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -196,11 +197,12 @@ public class Service : IService
         var startAt = request.StartAt == null ? program.StartAt
             : VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime();
         var endAt = request.EndAt == null ? program.EndAt
+                : string.IsNullOrWhiteSpace(request.EndAt) ? null
             : VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime();
         var minOrderAmount = request.MinOrderAmount ?? program.MinOrderAmount;
         var maxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount ?? program.MaxOrderAmount;
         var errors = new List<ValidationError>();
-        if (endAt <= startAt)
+        if (endAt.HasValue && endAt.Value <= startAt)
         {
             errors.Add(request.StartAt != null && request.EndAt == null
                 ? new ValidationError { Field = "startAt", Message = "Start time must be earlier than the current end time" }
@@ -268,7 +270,7 @@ public class Service : IService
             }).SingleAsync(cancellationToken);
         if (transaction != null)
             await transaction.CommitAsync(cancellationToken);
-
+    
         return result;
     }
 

@@ -30,8 +30,8 @@ public class Request
 
     public class EstimateVoucherRequest
     {
-        public string? Code { get; set; }
-        public decimal ProductFee { get; set; }
+        public string? code { get; set; }
+        public decimal productFee { get; set; }
     }
 }
 

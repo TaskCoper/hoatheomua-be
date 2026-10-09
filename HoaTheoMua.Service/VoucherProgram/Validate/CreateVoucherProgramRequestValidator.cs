@@ -15,9 +15,9 @@ public class CreateVoucherProgramRequestValidator : AbstractValidator<Request.Cr
             .Must(value => VoucherProgramDateTime.TryParse(value, out _))
             .WithMessage("Start time must be a valid ISO 8601 date-time, for example 2026-10-15T00:00:00+07:00");
         RuleFor(x => x.EndAt).Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("End time is required")
             .Must(value => VoucherProgramDateTime.TryParse(value, out _))
-            .WithMessage("End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00");
+            .WithMessage("End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00")
+            .When(x => !string.IsNullOrWhiteSpace(x.EndAt));
         RuleFor(x => x.EndAt)
             .Must((request, endAt) => VoucherProgramDateTime.TryParse(request.StartAt, out var start)
                                       && VoucherProgramDateTime.TryParse(endAt, out var end) && end > start)

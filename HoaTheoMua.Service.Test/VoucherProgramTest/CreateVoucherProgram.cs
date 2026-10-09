@@ -39,7 +39,7 @@ public class CreateVoucherProgram
         Assert.Null(saved.UpdatedAt);
         Assert.InRange(saved.CreatedAt, before, DateTimeOffset.UtcNow);
         Assert.Equal(TimeSpan.Zero, saved.StartAt.Offset);
-        Assert.Equal(TimeSpan.Zero, saved.EndAt.Offset);
+        Assert.Equal(TimeSpan.Zero, saved.EndAt!.Value.Offset);
         Assert.Equal(DateTimeOffset.Parse("2026-10-14T17:00:00+00:00"), saved.StartAt);
         Assert.Equal(DateTimeOffset.Parse("2026-10-31T16:59:59+00:00"), saved.EndAt);
         Assert.Equal(request.MinOrderAmount, saved.MinOrderAmount);
