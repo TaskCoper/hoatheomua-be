@@ -38,6 +38,8 @@ using FlowerReferenceService = HoaTheoMua.Service.FlowerReference;
 using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 using CardService = HoaTheoMua.Service.Card;
 using FlowerService = HoaTheoMua.Service.Flower;
+using BackgroundJobService = HoaTheoMua.Service.BackgroundJobService;
+using Quartz;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -98,6 +100,33 @@ builder.Services.AddScoped<CategoryProductService.IService, CategoryProductServi
 builder.Services.AddScoped<CompanyAddressService.IService, CompanyAddressService.Service>();
 builder.Services.AddScoped<NewService.IService, NewService.Service>();
 builder.Services.AddScoped<OrderService.IService, OrderService.Service>();
+
+var pendingOrderJobSection = builder.Configuration
+    .GetSection(BackgroundJobService.PendingOrderJobOptions.SectionName);
+var pendingOrderJobIntervalMinutes = pendingOrderJobSection
+    .GetValue<int?>(nameof(BackgroundJobService.PendingOrderJobOptions.IntervalMinutes))
+    ?? new BackgroundJobService.PendingOrderJobOptions().IntervalMinutes;
+
+builder.Services.AddOptions<BackgroundJobService.PendingOrderJobOptions>()
+    .Bind(pendingOrderJobSection)
+    .Validate(options => options.TimeoutMinutes > 0, "PendingOrderJob.TimeoutMinutes must be greater than 0")
+    .Validate(options => options.IntervalMinutes > 0, "PendingOrderJob.IntervalMinutes must be greater than 0")
+    .ValidateOnStart();
+
+builder.Services.AddQuartz(options =>
+{
+    var jobKey = new JobKey(nameof(BackgroundJobService.ProcessPendingOrdersJob));
+
+    options.AddJob<BackgroundJobService.ProcessPendingOrdersJob>(job => job.WithIdentity(jobKey));
+    options.AddTrigger(trigger => trigger
+        .ForJob(jobKey)
+        .WithIdentity($"{nameof(BackgroundJobService.ProcessPendingOrdersJob)}-trigger")
+        .StartNow()
+        .WithSimpleSchedule(schedule => schedule
+            .WithIntervalInMinutes(pendingOrderJobIntervalMinutes)
+            .RepeatForever()));
+});
+builder.Services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 builder.Services.AddScoped<WebhookService.IService, WebhookService.Service>();
 builder.Services.AddScoped<XanhSmService.XanhSmWebhookService>();
 builder.Services.AddScoped<XanhSmService.XanhSmDeliveryCompletionService>();
