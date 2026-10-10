@@ -40,7 +40,7 @@ public class Service : IService
         _dbContext.VoucherPrograms.Add(program);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return ToResponse(program);
+        return "Create voucher program successfully";
     }
 
     public async Task<BasePaginationResponse> GetVoucherPrograms(
@@ -169,7 +169,7 @@ public class Service : IService
         return response;
     }
 
-    public async Task<Response.VoucherProgramResponse> UpdateVoucherProgram(Guid id, Request.UpdateVoucherProgramRequest request,
+    public async Task<string> UpdateVoucherProgram(Guid id, Request.UpdateVoucherProgramRequest request,
         CancellationToken cancellationToken = default)
     {
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -251,10 +251,11 @@ public class Service : IService
         program.MaxOrderAmount = maxOrderAmount;
         program.UpdatedAt = now;
         await _dbContext.SaveChangesAsync(cancellationToken);
-        var result = ToResponse(program);
+        // var result = ToResponse(program);
         await transaction.CommitAsync(cancellationToken);
 
-        return result;
+        // return result;
+        return "Update voucher program successfully";
     }
 
     public async Task<string> DeleteVoucherProgram(Guid id, CancellationToken cancellationToken = default)
@@ -353,7 +354,7 @@ public class Service : IService
             if (codes.Count != request.Quantity)
                 continue;
 
-            var vouchers = codes.Select(code => new Voucher
+            var vouchers = codes.Select(code => new Repository.Entity.Voucher
             {
                 Id = Guid.NewGuid(), ProgramId = id, Code = code,
                 Description = request.Description,

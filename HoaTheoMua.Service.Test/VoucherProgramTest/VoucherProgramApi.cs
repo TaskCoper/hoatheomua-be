@@ -131,12 +131,7 @@ public class VoucherProgramApi
             Assert.Equal(HttpStatusCode.OK, post.StatusCode);
             using var created = JsonDocument.Parse(await post.Content.ReadAsStringAsync());
             Assert.True(created.RootElement.GetProperty("isSuccess").GetBoolean());
-            var program = created.RootElement.GetProperty("value");
-            Assert.False(program.GetProperty("isActive").GetBoolean());
-            Assert.Equal(TimeSpan.Zero, program.GetProperty("startAt").GetDateTimeOffset().Offset);
-            Assert.False(program.TryGetProperty("voucherCount", out _));
-            Assert.False(program.TryGetProperty("usedVoucherCount", out _));
-
+            Assert.Equal("Create voucher program successfully", created.RootElement.GetProperty("value").GetString());
             using var get = await client.GetAsync(route + "?keyword=20%2F10&isActive=false");
             Assert.Equal(HttpStatusCode.OK, get.StatusCode);
             using var listed = JsonDocument.Parse(await get.Content.ReadAsStringAsync());

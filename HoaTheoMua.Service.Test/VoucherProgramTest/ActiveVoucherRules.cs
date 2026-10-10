@@ -37,14 +37,14 @@ public class ActiveVoucherRules
         await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.AddRange(Enumerable.Range(0, 10000).Select(i => Voucher(program.Id, $"LIMIT{i}")));
+        db.Vouchers.AddRange(Enumerable.Range(0, 10000).Select(i => NewVoucher(program.Id, $"LIMIT{i}")));
         await db.SaveChangesAsync();
         var service = new FeatureService(db);
 
         await service.UpdateVoucherProgram(program.Id, new() { IsActive = true });
         Assert.Equal(10000, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
         // Chuẩn bị thêm một mã inactive để kiểm tra giới hạn khi kích hoạt cả chương trình.
-        db.Vouchers.Add(Voucher(program.Id, "EXTRA"));
+        db.Vouchers.Add(NewVoucher(program.Id, "EXTRA"));
         await db.SaveChangesAsync();
         var error = await Assert.ThrowsAsync<ConflictException>(() =>
             service.UpdateVoucherProgram(program.Id, new() { IsActive = true, Name = "Must not change" }));
@@ -68,8 +68,8 @@ public class ActiveVoucherRules
         var program = Program();
         var other = Program(true);
         db.VoucherPrograms.AddRange(program, other);
-        db.Vouchers.AddRange(Voucher(program.Id, "SHARED"), Voucher(program.Id, "UNIQUE"),
-            Voucher(standalone ? null : other.Id, "SHARED", active: true));
+        db.Vouchers.AddRange(NewVoucher(program.Id, "SHARED"), NewVoucher(program.Id, "UNIQUE"),
+            NewVoucher(standalone ? null : other.Id, "SHARED", active: true));
         await db.SaveChangesAsync();
 
         var error = await Assert.ThrowsAsync<ConflictException>(() =>
@@ -91,7 +91,7 @@ public class ActiveVoucherRules
         await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.AddRange(Voucher(program.Id, "SAME1"), Voucher(program.Id, "SAME1"));
+        db.Vouchers.AddRange(NewVoucher(program.Id, "SAME1"), NewVoucher(program.Id, "SAME1"));
         await db.SaveChangesAsync();
 
         await Assert.ThrowsAsync<ConflictException>(() =>
@@ -111,7 +111,7 @@ public class ActiveVoucherRules
         var first = Program(true);
         var second = Program();
         db.VoucherPrograms.AddRange(first, second);
-        db.Vouchers.AddRange(Voucher(first.Id, "REUSE", active: true), Voucher(second.Id, "REUSE"));
+        db.Vouchers.AddRange(NewVoucher(first.Id, "REUSE", active: true), NewVoucher(second.Id, "REUSE"));
         await db.SaveChangesAsync();
         var service = new FeatureService(db);
 

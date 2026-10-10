@@ -25,6 +25,8 @@ public class Response
 
     public class VoucherProgramDetailResponse : VoucherProgramResponse
     {
+        public int VoucherCount { get; set; }
+        public int UsedVoucherCount { get; set; }
         public List<ProgramVoucherItem> Vouchers { get; set; } = new();
     }
     

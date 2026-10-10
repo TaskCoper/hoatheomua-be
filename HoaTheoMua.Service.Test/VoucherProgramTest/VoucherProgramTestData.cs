@@ -22,7 +22,7 @@ internal static class VoucherProgramTestData
     private static DateTimeOffset PostgresUtcNow() =>
         new(DateTimeOffset.UtcNow.Ticks / 10 * 10, TimeSpan.Zero);
 
-    public static Voucher Voucher(Guid? programId, string code, bool active = false, bool deleted = false) => new()
+    public static Repository.Entity.Voucher NewVoucher(Guid? programId, string code, bool active = false, bool deleted = false) => new()
     {
         Id = Guid.NewGuid(), ProgramId = programId, Code = code, IsActive = active, IsDeleted = deleted,
         DiscountType = VoucherDiscountType.Cash, DiscountValue = 10000,
