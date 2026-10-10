@@ -77,6 +77,8 @@ public class Service : IService
                 EndAt = x.EndAt,
                 MinOrderAmount = x.MinOrderAmount,
                 MaxOrderAmount = x.MaxOrderAmount,
+                VoucherCount = x.Vouchers.Count(v => !v.IsDeleted),
+                UsedVoucherCount = x.Vouchers.Count(v => !v.IsDeleted && v.UsedCount > 0),
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
             }).ToListAsync(cancellationToken);

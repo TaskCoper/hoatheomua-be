@@ -81,7 +81,7 @@ public class GetVoucherPrograms
     }
 
     [Fact]
-    public async Task PaginatesNewestFirst_AndReturnsOnlyProgramFields()
+    public async Task PaginatesNewestFirst_AndReturnsVoucherCounts()
     {
         await using var db = CreateDbContext();
         var oldest = Program("Oldest", 1);
@@ -107,10 +107,8 @@ public class GetVoucherPrograms
             new Request.GetVoucherProgramsRequest { pageIndex = 2, pageSize = 1 });
         var item = Assert.Single(secondPage.Value.Items.Cast<Response.VoucherProgramResponse>());
         Assert.Equal(middle.Id, item.Id);
-        var json = System.Text.Json.JsonSerializer.SerializeToElement(item,
-            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
-        Assert.False(json.TryGetProperty("usedVoucherCount", out _));
-        Assert.False(json.TryGetProperty("voucherCount", out _));
+        Assert.Equal(2, item.UsedVoucherCount);
+        Assert.Equal(3, item.VoucherCount);
         Assert.Equal(3, secondPage.Value.TotalCount);
         Assert.True(secondPage.Value.HasNextPage);
         Assert.True(secondPage.Value.HasPreviousPage);

@@ -178,20 +178,19 @@ public class VoucherProgramApi
             using var activate = await client.PutAsJsonAsync(programRoute, new { name = "20/10 cập nhật", isActive = true });
             Assert.Equal(HttpStatusCode.OK, activate.StatusCode);
             using var activated = JsonDocument.Parse(await activate.Content.ReadAsStringAsync());
-            Assert.True(activated.RootElement.GetProperty("value").GetProperty("isActive").GetBoolean());
-            Assert.Equal("20/10 cập nhật", activated.RootElement.GetProperty("value").GetProperty("name").GetString());
+            Assert.Equal("Update voucher program successfully", activated.RootElement.GetProperty("value").GetString());
             using var activeList = await client.GetAsync(route + "?isActive=true");
             using var activePage = JsonDocument.Parse(await activeList.Content.ReadAsStringAsync());
             var activeItem = Assert.Single(activePage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
-            Assert.False(activeItem.TryGetProperty("voucherCount", out _));
-            Assert.False(activeItem.TryGetProperty("usedVoucherCount", out _));
-            Assert.False(activated.RootElement.GetProperty("value").TryGetProperty("voucherCount", out _));
-            Assert.False(activated.RootElement.GetProperty("value").TryGetProperty("usedVoucherCount", out _));
+            Assert.True(activeItem.GetProperty("isActive").GetBoolean());
+            Assert.Equal("20/10 cập nhật", activeItem.GetProperty("name").GetString());
+            Assert.Equal(3, activeItem.GetProperty("voucherCount").GetInt32());
+            Assert.Equal(0, activeItem.GetProperty("usedVoucherCount").GetInt32());
 
             using var deactivate = await client.PutAsJsonAsync(programRoute, new { isActive = false });
             Assert.Equal(HttpStatusCode.OK, deactivate.StatusCode);
             using var deactivated = JsonDocument.Parse(await deactivate.Content.ReadAsStringAsync());
-            Assert.False(deactivated.RootElement.GetProperty("value").GetProperty("isActive").GetBoolean());
+            Assert.Equal("Update voucher program successfully", deactivated.RootElement.GetProperty("value").GetString());
             using var delete = await client.DeleteAsync(programRoute);
             Assert.Equal(HttpStatusCode.OK, delete.StatusCode);
             using var deleted = JsonDocument.Parse(await delete.Content.ReadAsStringAsync());
