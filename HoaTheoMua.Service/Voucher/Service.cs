@@ -692,8 +692,8 @@ public class Service : IService
         // Same checks and the same error messages as the estimate
         var estimate = await EstimateVoucher(new Request.EstimateVoucherRequest
         {
-            Code = normalizedCode,
-            ProductFee = productFee
+            code = normalizedCode,
+            productFee = productFee
         });
 
         var programId = await _dbContext.Vouchers
