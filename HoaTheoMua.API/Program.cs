@@ -38,6 +38,7 @@ using FlowerReferenceService = HoaTheoMua.Service.FlowerReference;
 using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 using CardService = HoaTheoMua.Service.Card;
 using FlowerService = HoaTheoMua.Service.Flower;
+using VoucherService = HoaTheoMua.Service.Voucher;
 using VoucherProgramService = HoaTheoMua.Service.VoucherProgram;
 
 
@@ -106,6 +107,7 @@ builder.Services.AddHttpClient<NhanhVnService.INhanhVnDeliveryStatusClient, Nhan
     "NhanhVnDeliveryStatus", client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
+builder.Services.AddScoped<VoucherService.IService, VoucherService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>("AhamoveService");
 builder.Services.AddHttpClient<XanhSmService.IService, XanhSmService.Service>("XanhSmService", client =>
 {

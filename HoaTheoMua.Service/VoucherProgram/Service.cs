@@ -1,4 +1,3 @@
-using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using Npgsql;
@@ -20,7 +19,7 @@ public class Service : IService
         _codeGenerator = codeGenerator ?? new VoucherCodeGenerator();
     }
 
-    public async Task<Response.VoucherProgramResponse> CreateVoucherProgram(
+    public async Task<string> CreateVoucherProgram(
         Request.CreateVoucherProgramRequest request, CancellationToken cancellationToken = default)
     {
         var program = new VoucherProgramEntity
@@ -29,7 +28,8 @@ public class Service : IService
             Name = request.Name.Trim(),
             IsActive = false,
             StartAt = VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime(),
-            EndAt = VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime(),
+            EndAt = string.IsNullOrWhiteSpace(request.EndAt) ? null
+                : VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime(),
             MinOrderAmount = request.MinOrderAmount,
             MaxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -46,8 +46,8 @@ public class Service : IService
     public async Task<BasePaginationResponse> GetVoucherPrograms(
         Request.GetVoucherProgramsRequest request, CancellationToken cancellationToken = default)
     {
-        var pageIndex = Math.Max(1, request.pageIndex);
-        var pageSize = request.pageSize > 0 ? Math.Min(request.pageSize, 100) : 20;
+        var pageIndex = request.pageIndex <= 0 ? 1 : request.pageIndex;
+        var pageSize = request.pageSize <= 0 ? 10 : Math.Min(request.pageSize, 100);
         var query = _dbContext.VoucherPrograms.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.keyword))
@@ -86,6 +86,89 @@ public class Service : IService
         return response;
     }
 
+    public async Task<BasePaginationResponse> GetVoucherProgramsWithVouchers(
+        int pageIndex, int pageSize, string? keyword, CancellationToken cancellationToken = default)
+    {
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+
+        var query = _dbContext.VoucherPrograms
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var name = keyword.Trim().ToLowerInvariant();
+            query = query.Where(x => x.Name.ToLower().Contains(name));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var offset = (int)Math.Min((long)(pageIndex - 1) * pageSize, int.MaxValue);
+
+        var programs = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .Skip(offset)
+            .Take(pageSize)
+            .Select(x => new Response.VoucherProgramDetailResponse
+            {
+                Id = x.Id,
+                Name = x.Name,
+                IsActive = x.IsActive,
+                IsDeleted = x.IsDeleted,
+                StartAt = x.StartAt,
+                EndAt = x.EndAt,
+                MinOrderAmount = x.MinOrderAmount,
+                MaxOrderAmount = x.MaxOrderAmount,
+                VoucherCount = x.Vouchers.Count(v => !v.IsDeleted),
+                UsedVoucherCount = x.Vouchers.Count(v => !v.IsDeleted && v.UsedCount > 0),
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        // One query for every voucher of the programs on this page (not N queries), then group by program
+        var programIds = programs.Select(x => x.Id).ToList();
+        var vouchers = await _dbContext.Vouchers
+            .AsNoTracking()
+            .Where(x => x.ProgramId != null && programIds.Contains(x.ProgramId.Value) && !x.IsDeleted)
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenBy(x => x.Code)
+            .Select(x => new
+            {
+                ProgramId = x.ProgramId!.Value,
+                Item = new Response.ProgramVoucherItem
+                {
+                    Id = x.Id,
+                    Code = x.Code,
+                    Description = x.Description,
+                    IsActive = x.IsActive,
+                    DiscountType = x.DiscountType == VoucherDiscountType.Cash
+                        ? Voucher.VoucherDiscountTypes.Cash
+                        : Voucher.VoucherDiscountTypes.Percent,
+                    DiscountValue = x.DiscountValue,
+                    MaxDiscountAmount = x.MaxDiscountAmount,
+                    MaxUsageCount = x.MaxUsageCount,
+                    UsedCount = x.UsedCount,
+                    CreatedAt = x.CreatedAt,
+                    UpdatedAt = x.UpdatedAt
+                }
+            })
+            .ToListAsync(cancellationToken);
+
+        foreach (var program in programs)
+        {
+            program.Vouchers = vouchers
+                .Where(x => x.ProgramId == program.Id)
+                .Select(x => x.Item)
+                .ToList();
+        }
+
+        var response = ApiResponseFactory.BasePagination(programs, pageIndex, pageSize, totalCount);
+        response.Value.HasNextPage = (long)pageIndex * pageSize < totalCount;
+        return response;
+    }
+
     public async Task<Response.VoucherProgramResponse> UpdateVoucherProgram(Guid id, Request.UpdateVoucherProgramRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -94,11 +177,12 @@ public class Service : IService
         var startAt = request.StartAt == null ? program.StartAt
             : VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime();
         var endAt = request.EndAt == null ? program.EndAt
+                : string.IsNullOrWhiteSpace(request.EndAt) ? null
             : VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime();
         var minOrderAmount = request.MinOrderAmount ?? program.MinOrderAmount;
         var maxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount ?? program.MaxOrderAmount;
         var errors = new List<ValidationError>();
-        if (endAt <= startAt)
+        if (endAt.HasValue && endAt.Value <= startAt)
         {
             errors.Add(request.StartAt != null && request.EndAt == null
                 ? new ValidationError { Field = "startAt", Message = "Start time must be earlier than the current end time" }
@@ -178,7 +262,7 @@ public class Service : IService
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         var program = await GetProgramForUpdate(id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
-        var vouchers = _dbContext.Vouchers.Where(x => x.ProgramId == id);
+        var vouchers = _dbContext.Vouchers.Where(x => x.ProgramId == id && !x.IsDeleted);
 
         await vouchers.ExecuteUpdateAsync(setters => setters
             .SetProperty(x => x.IsDeleted, true)

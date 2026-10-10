@@ -31,23 +31,17 @@ public class CreateVoucherProgram
         db.ChangeTracker.Clear();
         var saved = await db.VoucherPrograms.SingleAsync();
 
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal(result.Id, saved.Id);
+        Assert.Equal("Create voucher program successfully", result);
+        Assert.NotEqual(Guid.Empty, saved.Id);
         Assert.Equal("20/10", saved.Name);
-        Assert.Equal(saved.Name, result.Name);
         Assert.False(saved.IsActive);
-        Assert.False(result.IsActive);
         Assert.False(saved.IsDeleted);
         Assert.Null(saved.UpdatedAt);
-        Assert.Null(result.UpdatedAt);
         Assert.InRange(saved.CreatedAt, before, DateTimeOffset.UtcNow);
-        Assert.Equal(saved.CreatedAt, result.CreatedAt);
         Assert.Equal(TimeSpan.Zero, saved.StartAt.Offset);
-        Assert.Equal(TimeSpan.Zero, saved.EndAt.Offset);
+        Assert.Equal(TimeSpan.Zero, saved.EndAt!.Value.Offset);
         Assert.Equal(DateTimeOffset.Parse("2026-10-14T17:00:00+00:00"), saved.StartAt);
         Assert.Equal(DateTimeOffset.Parse("2026-10-31T16:59:59+00:00"), saved.EndAt);
-        Assert.Equal(saved.StartAt, result.StartAt);
-        Assert.Equal(saved.EndAt, result.EndAt);
         Assert.Equal(request.MinOrderAmount, saved.MinOrderAmount);
         Assert.Equal(request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount, saved.MaxOrderAmount);
         Assert.Equal(saved.MinOrderAmount, result.MinOrderAmount);

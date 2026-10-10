@@ -3327,7 +3327,7 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<DateTimeOffset>("EndAt")
+                    b.Property<DateTimeOffset?>("EndAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")

@@ -45,7 +45,7 @@ public class ManageVoucherProgram
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
         var program = Program(true);
-        var voucher = Voucher(program.Id, "FIRST", false);
+        var voucher = VoucherProgramTestData.Voucher(program.Id, "FIRST", false);
         var originalEnd = program.EndAt;
         var createdAt = program.CreatedAt;
         db.VoucherPrograms.Add(program);
@@ -88,12 +88,12 @@ public class ManageVoucherProgram
         await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(program.Id, "FIRST", false));
+        db.Vouchers.Add(VoucherProgramTestData.Voucher(program.Id, "FIRST", false));
         await db.SaveChangesAsync();
         var request = new Request.UpdateVoucherProgramRequest { IsActive = true, Name = "Must not be saved" };
         switch (changedField)
         {
-            case "startAt": request.StartAt = program.EndAt.ToString("O"); break;
+            case "startAt": request.StartAt = program.EndAt!.Value.ToString("O"); break;
             case "endAt": request.EndAt = program.StartAt.ToString("O"); break;
             case "minOrderAmount": request.MinOrderAmount = 2000001; break;
             case "maxOrderAmount": request.MaxOrderAmount = 199999; break;
@@ -122,10 +122,10 @@ public class ManageVoucherProgram
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
         var program = Program(!active);
-        var first = Voucher(program.Id, "FIRST", true);
-        var second = Voucher(program.Id, "SECOND", false);
-        var deleted = Voucher(program.Id, "DELETED", !active, true);
-        var unrelated = Voucher(null, "OTHER", !active);
+        var first = VoucherProgramTestData.Voucher(program.Id, "FIRST", true);
+        var second = VoucherProgramTestData.Voucher(program.Id, "SECOND", false);
+        var deleted = VoucherProgramTestData.Voucher(program.Id, "DELETED", !active, true);
+        var unrelated = VoucherProgramTestData.Voucher(null, "OTHER", !active);
         db.VoucherPrograms.Add(program);
         db.Vouchers.AddRange(first, second, deleted, unrelated);
         await db.SaveChangesAsync();
@@ -159,8 +159,8 @@ public class ManageVoucherProgram
         await using var db = fixture.Context();
         var program = Program(true);
         db.VoucherPrograms.Add(program);
-        db.Vouchers.AddRange(Voucher(program.Id, "FIRST", true), Voucher(program.Id, "DELETED", false, true),
-            Voucher(null, "OTHER", true));
+        db.Vouchers.AddRange(VoucherProgramTestData.Voucher(program.Id, "FIRST", true), VoucherProgramTestData.Voucher(program.Id, "DELETED", false, true),
+            VoucherProgramTestData.Voucher(null, "OTHER", true));
         await db.SaveChangesAsync();
 
         Assert.Equal("Program deleted", await new FeatureService(db).DeleteVoucherProgram(program.Id));
@@ -173,7 +173,10 @@ public class ManageVoucherProgram
         Assert.All(await db.Vouchers.Where(x => x.ProgramId == program.Id).ToListAsync(), voucher =>
         {
             Assert.True(voucher.IsDeleted);
-            Assert.Equal(saved.UpdatedAt, voucher.UpdatedAt);
+            if (voucher.Code == "DELETED")
+                Assert.Null(voucher.UpdatedAt);
+            else
+                Assert.Equal(saved.UpdatedAt, voucher.UpdatedAt);
             Assert.Equal(2, voucher.UsedCount);
         });
         Assert.False((await db.Vouchers.SingleAsync(x => x.Code == "OTHER")).IsDeleted);

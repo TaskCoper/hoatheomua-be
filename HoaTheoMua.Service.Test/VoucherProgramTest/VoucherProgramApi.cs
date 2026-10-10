@@ -55,7 +55,7 @@ public class VoucherProgramApi
     }
 
     [Fact]
-    public async Task IsoDateTimeRequest_WithOffset_CreatesProgramAndReturnsUtc()
+    public async Task IsoDateTimeRequest_WithOffset_SavesUtcProgramAndReturnsSuccessMessage()
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
         await using var app = await StartApplication(key);
@@ -68,10 +68,18 @@ public class VoucherProgramApi
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var value = json.RootElement.GetProperty("value");
-        Assert.Equal(DateTimeOffset.Parse("2026-10-31T16:59:59Z"), value.GetProperty("endAt").GetDateTimeOffset());
-        Assert.Equal(TimeSpan.Zero, value.GetProperty("endAt").GetDateTimeOffset().Offset);
-        Assert.Equal(JsonValueKind.Null, value.GetProperty("maxOrderAmount").ValueKind);
+        Assert.True(json.RootElement.GetProperty("isSuccess").GetBoolean());
+        Assert.Equal("Create voucher program successfully", json.RootElement.GetProperty("value").GetString());
+        Assert.NotEmpty(json.RootElement.GetProperty("traceId").GetString()!);
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var saved = await db.VoucherPrograms.SingleAsync();
+        Assert.Equal(DateTimeOffset.Parse("2026-10-14T17:00:00Z"), saved.StartAt);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-31T16:59:59Z"), saved.EndAt);
+        Assert.Equal(TimeSpan.Zero, saved.StartAt.Offset);
+        Assert.Equal(TimeSpan.Zero, saved.EndAt!.Value.Offset);
+        Assert.Equal(0m, saved.MinOrderAmount);
+        Assert.Null(saved.MaxOrderAmount);
     }
 
     [VoucherPostgresFact]
@@ -133,8 +141,13 @@ public class VoucherProgramApi
             Assert.Equal(HttpStatusCode.OK, get.StatusCode);
             using var listed = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
             var page = listed.RootElement.GetProperty("value");
-            var item = Assert.Single(page.GetProperty("items").EnumerateArray());
-            Assert.Equal(program.GetProperty("id").GetGuid(), item.GetProperty("id").GetGuid());
+            var program = Assert.Single(page.GetProperty("items").EnumerateArray());
+            Assert.NotEqual(Guid.Empty, program.GetProperty("id").GetGuid());
+            Assert.Equal(request.Name, program.GetProperty("name").GetString());
+            Assert.False(program.GetProperty("isActive").GetBoolean());
+            Assert.Equal(TimeSpan.Zero, program.GetProperty("startAt").GetDateTimeOffset().Offset);
+            Assert.Equal(0, program.GetProperty("voucherCount").GetInt32());
+            Assert.Equal(0, program.GetProperty("usedVoucherCount").GetInt32());
             Assert.Equal(1, page.GetProperty("totalCount").GetInt32());
             Assert.Equal(1, page.GetProperty("pageIndex").GetInt32());
             Assert.Equal(20, page.GetProperty("pageSize").GetInt32());
