@@ -17,7 +17,7 @@ public class Response
         public int MaxUsageCount { get; set; }
         public int UsedCount { get; set; }
         public DateTimeOffset StartAt { get; set; }
-        public DateTimeOffset EndAt { get; set; }
+        public DateTimeOffset? EndAt { get; set; }
         public decimal? MinOrderAmount { get; set; }
         public decimal? MaxOrderAmount { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
@@ -46,7 +46,7 @@ public class Response
         public int MaxUsageCount { get; set; }
         public int UsedCount { get; set; }
         public required string StartAt { get; set; }          // effective value, ISO 8601 UTC
-        public required string EndAt { get; set; }            // effective value, ISO 8601 UTC
+        public string? EndAt { get; set; }                    // effective value, ISO 8601 UTC; blank when unlimited
         public decimal? MinOrderAmount { get; set; }          // effective value
         public decimal? MaxOrderAmount { get; set; }          // effective value
         public required string CreatedAt { get; set; }
@@ -63,7 +63,7 @@ public class Response
         public decimal DiscountValue { get; set; }
         public decimal? MaxDiscountAmount { get; set; }
         public decimal? MinOrderAmount { get; set; }
-        public DateTimeOffset EndAt { get; set; }
+        public DateTimeOffset? EndAt { get; set; }
         public decimal DiscountAmount { get; set; } // preview on productFee, 0 when productFee is not sent
     }
 
@@ -87,19 +87,5 @@ public class Response
         public required string CustomerPhone { get; set; }    // Order.Phone
         public decimal DiscountAmount { get; set; }           // VoucherSnapshot.DiscountAmount
         public DateTimeOffset? UsedAt { get; set; }            // earliest Transaction.CreatedAt of the order
-    }
-
-    public class BulkUpdateResponse
-    {
-        public List<Guid> UpdatedIds { get; set; } = new();
-        public List<Guid> NotFoundIds { get; set; } = new();
-        public List<SkippedItem> SkippedItems { get; set; } = new();
-    }
-
-    public class SkippedItem
-    {
-        public Guid Id { get; set; }
-        public required string Code { get; set; }
-        public required string Reason { get; set; }
     }
 }

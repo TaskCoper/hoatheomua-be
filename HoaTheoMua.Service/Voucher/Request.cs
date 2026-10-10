@@ -28,10 +28,30 @@ public class Request
         public bool? IsActive { get; set; }
     }
 
+    public class UpdateVouchersRequest
+    {
+        public List<UpdateVoucherItem> Items { get; set; } = new();
+    }
+
+    public class UpdateVoucherItem
+    {
+        public Guid Id { get; set; }
+        public string? Description { get; set; }
+        public string? Visibility { get; set; }
+        public string? DiscountType { get; set; }
+        public decimal? DiscountValue { get; set; }
+        public decimal? MaxDiscountAmount { get; set; }
+        public int? MaxUsageCount { get; set; }
+        public DateTimeOffset? StartAt { get; set; }
+        public DateTimeOffset? EndAt { get; set; }
+        public decimal? MinOrderAmount { get; set; }
+        public decimal? MaxOrderAmount { get; set; }
+    }
+
     public class EstimateVoucherRequest
     {
-        public string? Code { get; set; }
-        public decimal ProductFee { get; set; }
+        public string? code { get; set; }
+        public decimal productFee { get; set; }
     }
 }
 

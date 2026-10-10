@@ -58,7 +58,7 @@ public class Service : IService
             MaxUsageCount = request.MaxUsageCount,
             UsedCount = 0,
             StartAt = request.StartAt!.Value.ToUniversalTime(),
-            EndAt = request.EndAt!.Value.ToUniversalTime(),
+            EndAt = request.EndAt?.ToUniversalTime(),
             MinOrderAmount = request.MinOrderAmount,
             MaxOrderAmount = request.MaxOrderAmount,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -137,7 +137,7 @@ public class Service : IService
                 MaxUsageCount = x.MaxUsageCount,
                 UsedCount = x.UsedCount,
                 StartAt = x.Program != null ? x.Program.StartAt : x.StartAt!.Value,
-                EndAt = x.Program != null ? x.Program.EndAt : x.EndAt!.Value,
+                EndAt = x.Program != null ? x.Program.EndAt : x.EndAt,
                 MinOrderAmount = x.Program != null ? x.Program.MinOrderAmount : x.MinOrderAmount,
                 MaxOrderAmount = x.Program != null ? x.Program.MaxOrderAmount : x.MaxOrderAmount,
                 CreatedAt = x.CreatedAt,
@@ -228,7 +228,7 @@ public class Service : IService
                 x.MaxUsageCount,
                 x.UsedCount,
                 StartAt = x.Program != null ? x.Program.StartAt : x.StartAt!.Value,
-                EndAt = x.Program != null ? x.Program.EndAt : x.EndAt!.Value,
+                EndAt = x.Program != null ? x.Program.EndAt : x.EndAt,
                 MinOrderAmount = x.Program != null ? x.Program.MinOrderAmount : x.MinOrderAmount,
                 MaxOrderAmount = x.Program != null ? x.Program.MaxOrderAmount : x.MaxOrderAmount,
                 x.CreatedAt,
@@ -250,7 +250,7 @@ public class Service : IService
                 MaxUsageCount = x.MaxUsageCount,
                 UsedCount = x.UsedCount,
                 StartAt = FormatExportDate(x.StartAt),
-                EndAt = FormatExportDate(x.EndAt),
+                EndAt = x.EndAt.HasValue ? FormatExportDate(x.EndAt.Value) : null,
                 MinOrderAmount = x.MinOrderAmount,
                 MaxOrderAmount = x.MaxOrderAmount,
                 CreatedAt = FormatExportDate(x.CreatedAt),
@@ -332,42 +332,24 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
 
-    public async Task<Response.BulkUpdateResponse> SetVouchersActive(Request.SetVouchersActiveRequest request)
+    public async Task<string> SetVouchersActive(Request.SetVouchersActiveRequest request)
     {
         var isActive = request.IsActive!.Value;
-        var now = DateTimeOffset.UtcNow;
 
         var vouchers = await _dbContext.Vouchers
             .Include(x => x.Program)
             .Where(x => request.Ids.Contains(x.Id) && !x.IsDeleted)
             .ToListAsync();
 
-        var response = new Response.BulkUpdateResponse
-        {
-            NotFoundIds = request.Ids.Except(vouchers.Select(x => x.Id)).ToList()
-        };
-
         foreach (var voucher in vouchers)
         {
-            if (isActive && voucher.Program != null && !voucher.Program.IsActive)
-            {
-                response.SkippedItems.Add(new Response.SkippedItem
-                {
-                    Id = voucher.Id,
-                    Code = voucher.Code,
-                    Reason = "Program is not active"
-                });
-                continue;
-            }
-
             voucher.IsActive = isActive;
-            voucher.UpdatedAt = now;
-            response.UpdatedIds.Add(voucher.Id);
+            voucher.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
         await _dbContext.SaveChangesAsync();
 
-        return response;
+        return "Voucher status updated successfully.";
     }
 
     public async Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee)
@@ -381,7 +363,7 @@ public class Service : IService
                         && x.Visibility == VoucherVisibility.Public
                         && x.ProgramId == null
                         && x.StartAt <= now
-                        && x.EndAt >= now
+                        && (x.EndAt == null || x.EndAt >= now)
                         && x.UsedCount < x.MaxUsageCount);
 
         if (productFee.HasValue)
@@ -401,7 +383,7 @@ public class Service : IService
                 x.DiscountValue,
                 x.MaxDiscountAmount,
                 x.MinOrderAmount,
-                EndAt = x.EndAt!.Value
+                x.EndAt
             })
             .ToListAsync();
 
@@ -427,7 +409,7 @@ public class Service : IService
 
     public async Task<Response.EstimateVoucherResponse> EstimateVoucher(Request.EstimateVoucherRequest request)
     {
-        var code = request.Code!.Trim().ToUpperInvariant();
+        var code = request.code!.Trim().ToUpperInvariant();
 
         var voucher = await _dbContext.Vouchers
             .AsNoTracking()
@@ -443,7 +425,7 @@ public class Service : IService
         }
 
         var startAt = voucher.Program?.StartAt ?? voucher.StartAt;
-        var endAt = voucher.Program?.EndAt ?? voucher.EndAt;
+        var endAt = voucher.Program != null ? voucher.Program.EndAt : voucher.EndAt;
         var minOrderAmount = voucher.Program != null ? voucher.Program.MinOrderAmount : voucher.MinOrderAmount;
         var maxOrderAmount = voucher.Program != null ? voucher.Program.MaxOrderAmount : voucher.MaxOrderAmount;
 
@@ -454,7 +436,7 @@ public class Service : IService
             throw new BadRequestException("Voucher is not active yet.");
         }
 
-        if (endAt < now)
+        if (endAt.HasValue && endAt.Value < now)
         {
             throw new BadRequestException("Voucher has expired.");
         }
@@ -464,18 +446,18 @@ public class Service : IService
             throw new ConflictException("Voucher has no uses left.");
         }
 
-        if (minOrderAmount.HasValue && request.ProductFee < minOrderAmount.Value)
+        if (minOrderAmount.HasValue && request.productFee < minOrderAmount.Value)
         {
             throw new BadRequestException("Order total is below the minimum for this voucher.");
         }
 
-        if (maxOrderAmount.HasValue && request.ProductFee > maxOrderAmount.Value)
+        if (maxOrderAmount.HasValue && request.productFee > maxOrderAmount.Value)
         {
             throw new BadRequestException("Order total exceeds the maximum for this voucher.");
         }
 
         var discountAmount = CalculateDiscount(
-            voucher.DiscountType, voucher.DiscountValue, voucher.MaxDiscountAmount, request.ProductFee);
+            voucher.DiscountType, voucher.DiscountValue, voucher.MaxDiscountAmount, request.productFee);
 
         return new Response.EstimateVoucherResponse
         {
@@ -488,8 +470,202 @@ public class Service : IService
             DiscountValue = voucher.DiscountValue,
             MaxDiscountAmount = voucher.MaxDiscountAmount,
             DiscountAmount = discountAmount,
-            ProductFeeAfterDiscount = request.ProductFee - discountAmount
+            ProductFeeAfterDiscount = request.productFee - discountAmount
         };
+    }
+
+    public async Task<string> UpdateVouchers(Request.UpdateVouchersRequest request)
+    {
+        var ids = request.Items.Select(x => x.Id).ToList();
+
+        var vouchers = await _dbContext.Vouchers
+            .Where(x => ids.Contains(x.Id) && !x.IsDeleted)
+            .ToListAsync();
+
+        if (vouchers.Count != ids.Count)
+        {
+            throw new NotFoundException("Voucher not found.");
+        }
+
+        var errors = new List<ValidationError>();
+        for (var i = 0; i < request.Items.Count; i++)
+        {
+            var item = request.Items[i];
+            var voucher = await _dbContext.Vouchers.FindAsync(item.Id);
+            
+            if (voucher is null)
+            {
+                throw new NotFoundException($"Voucher not found.");
+            }
+            
+            var isProgramVoucher = voucher.ProgramId != null;
+
+            if (isProgramVoucher && item.Visibility != null && item.Visibility != VoucherVisibilities.Private)
+            {
+                errors.Add(new ValidationError
+                {
+                    Field = $"items[{i}]",
+                    Message = $"Program voucher must stay private ({voucher.Code})"
+                });
+                continue;
+            }
+
+            if (isProgramVoucher
+                && (item.StartAt != null || item.EndAt != null || item.MinOrderAmount != null || item.MaxOrderAmount != null))
+            {
+                errors.Add(new ValidationError
+                {
+                    Field = $"items[{i}]",
+                    Message = $"Program voucher dates and order amounts come from the program ({voucher.Code})"
+                });
+                continue;
+            }
+
+            var discountType = voucher.DiscountType;
+            if (item.DiscountType != null)
+            {
+                discountType = item.DiscountType == VoucherDiscountTypes.Cash
+                    ? VoucherDiscountType.Cash
+                    : VoucherDiscountType.Percent;
+            }
+
+            var discountValue = item.DiscountValue ?? voucher.DiscountValue;
+            var maxDiscountAmount = item.MaxDiscountAmount ?? voucher.MaxDiscountAmount;
+
+            if (discountType == VoucherDiscountType.Percent && discountValue > 100)
+            {
+                errors.Add(new ValidationError
+                {
+                    Field = $"items[{i}]",
+                    Message = $"Discount percent must not exceed 100 ({voucher.Code})"
+                });
+                continue;
+            }
+
+            if (discountType != VoucherDiscountType.Percent && maxDiscountAmount.HasValue)
+            {
+                errors.Add(new ValidationError
+                {
+                    Field = $"items[{i}]",
+                    Message = $"Max discount amount is only for percent ({voucher.Code})"
+                });
+                continue;
+            }
+
+            if (item.MaxUsageCount.HasValue && item.MaxUsageCount.Value < voucher.UsedCount)
+            {
+                errors.Add(new ValidationError
+                {
+                    Field = $"items[{i}]",
+                    Message = $"Max usage count cannot be less than used count ({voucher.Code})"
+                });
+                continue;
+            }
+
+            if (isProgramVoucher)
+            {
+                continue;
+            }
+
+            var startAt = item.StartAt ?? voucher.StartAt;
+            var endAt = item.EndAt ?? voucher.EndAt;
+            if (endAt <= startAt)
+            {
+                errors.Add(new ValidationError
+                {
+                    Field = $"items[{i}]",
+                    Message = $"End time must be later than start time ({voucher.Code})"
+                });
+                continue;
+            }
+
+            var minOrderAmount = item.MinOrderAmount ?? voucher.MinOrderAmount;
+            var maxOrderAmount = item.MaxOrderAmount ?? voucher.MaxOrderAmount;
+            if (minOrderAmount.HasValue && maxOrderAmount.HasValue && maxOrderAmount < minOrderAmount)
+            {
+                errors.Add(new ValidationError
+                {
+                    Field = $"items[{i}]",
+                    Message = $"Max order amount cannot be less than min order amount ({voucher.Code})"
+                });
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new ValidationExceptionErrorV1(errors);
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var item in request.Items)
+        {
+            var voucher = await _dbContext.Vouchers.FindAsync(item.Id);
+            
+            if (voucher is null)
+            {
+                throw new NotFoundException($"Voucher not found");
+            }
+
+            if (item.Description != null)
+            {
+                voucher.Description = item.Description.Trim();
+            }
+
+            if (item.Visibility != null)
+            {
+                voucher.Visibility = item.Visibility == VoucherVisibilities.Public
+                    ? VoucherVisibility.Public
+                    : VoucherVisibility.Private;
+            }
+
+            if (item.DiscountType != null)
+            {
+                voucher.DiscountType = item.DiscountType == VoucherDiscountTypes.Cash
+                    ? VoucherDiscountType.Cash
+                    : VoucherDiscountType.Percent;
+            }
+
+            if (item.DiscountValue.HasValue)
+            {
+                voucher.DiscountValue = item.DiscountValue.Value;
+            }
+
+            if (item.MaxDiscountAmount.HasValue)
+            {
+                voucher.MaxDiscountAmount = item.MaxDiscountAmount;
+            }
+
+            if (item.MaxUsageCount.HasValue)
+            {
+                voucher.MaxUsageCount = item.MaxUsageCount.Value;
+            }
+
+            if (item.StartAt.HasValue)
+            {
+                voucher.StartAt = item.StartAt.Value.ToUniversalTime();
+            }
+
+            if (item.EndAt.HasValue)
+            {
+                voucher.EndAt = item.EndAt.Value.ToUniversalTime();
+            }
+
+            if (item.MinOrderAmount.HasValue)
+            {
+                voucher.MinOrderAmount = item.MinOrderAmount;
+            }
+
+            if (item.MaxOrderAmount.HasValue)
+            {
+                voucher.MaxOrderAmount = item.MaxOrderAmount;
+            }
+
+            voucher.UpdatedAt = now;
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        return "Update voucher successfully";
     }
 
     // Used by CreateOrder. EstimateVoucher does the checks and the discount; this adds the real "uses left" count

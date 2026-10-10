@@ -58,7 +58,7 @@ public class VoucherValidatorsTest
         var validator = new EstimateVoucherRequestValidator();
         Assert.False(validator.Validate(new Request.EstimateVoucherRequest()).IsValid);
         Assert.True(validator.Validate(new Request.EstimateVoucherRequest
-            { Code = "SAVE10", ProductFee = 100_000 }).IsValid);
+            { code = "SAVE10", productFee = 100_000 }).IsValid);
     }
 
     private static Request.CreateVoucherRequest ValidCreate() => new()

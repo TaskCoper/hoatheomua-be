@@ -20,8 +20,8 @@ public class VoucherConfiguration : IEntityTypeConfiguration<Voucher>
         
         builder.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
 
-        // Unique across all rows, soft-deleted included: an issued code is never reused.
-        builder.HasIndex(x => x.Code).IsUnique();
+        // Mã chỉ phải duy nhất trên toàn bảng khi active; mã inactive được phép trùng.
+        builder.HasIndex(x => x.Code).IsUnique().HasFilter("\"IsActive\" = true");
         builder.HasIndex(x => x.ProgramId).HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(x => new { x.Visibility, x.IsActive, x.IsDeleted });
     }

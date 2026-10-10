@@ -56,6 +56,14 @@ public class VoucherController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
+    [HttpPut("admin/vouchers")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> UpdateVouchers([FromBody] Request.UpdateVouchersRequest request)
+    {
+        var result = await _voucherService.UpdateVouchers(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpGet("admin/vouchers/export")]
     [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> ExportVouchers(
@@ -85,10 +93,10 @@ public class VoucherController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
-    [HttpPost("vouchers/estimate")]
+    [HttpGet("vouchers/estimate")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
     [EnableRateLimiting(RateLimitExtensions.VoucherEstimatePolicy)]
-    public async Task<IActionResult> EstimateVoucher([FromBody] Request.EstimateVoucherRequest request)
+    public async Task<IActionResult> EstimateVoucher([FromQuery] Request.EstimateVoucherRequest request)
     {
         var result = await _voucherService.EstimateVoucher(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));

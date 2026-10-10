@@ -1,8 +1,6 @@
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
-using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
-using NpgsqlTypes;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Service.Models;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +19,7 @@ public class Service : IService
         _codeGenerator = codeGenerator ?? new VoucherCodeGenerator();
     }
 
-    public async Task<Response.VoucherProgramResponse> CreateVoucherProgram(
+    public async Task<string> CreateVoucherProgram(
         Request.CreateVoucherProgramRequest request, CancellationToken cancellationToken = default)
     {
         var program = new VoucherProgramEntity
@@ -30,7 +28,8 @@ public class Service : IService
             Name = request.Name.Trim(),
             IsActive = false,
             StartAt = VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime(),
-            EndAt = VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime(),
+            EndAt = string.IsNullOrWhiteSpace(request.EndAt) ? null
+                : VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime(),
             MinOrderAmount = request.MinOrderAmount,
             MaxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -41,21 +40,7 @@ public class Service : IService
         _dbContext.VoucherPrograms.Add(program);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new Response.VoucherProgramResponse
-        {
-            Id = program.Id,
-            Name = program.Name,
-            IsActive = program.IsActive,
-            IsDeleted = program.IsDeleted,
-            StartAt = program.StartAt,
-            EndAt = program.EndAt,
-            MinOrderAmount = program.MinOrderAmount,
-            MaxOrderAmount = program.MaxOrderAmount,
-            VoucherCount = 0,
-            UsedVoucherCount = 0,
-            CreatedAt = program.CreatedAt,
-            UpdatedAt = program.UpdatedAt
-        };
+        return "Create voucher program successfully";
     }
 
     public async Task<BasePaginationResponse> GetVoucherPrograms(
@@ -79,7 +64,8 @@ public class Service : IService
 
         var totalCount = await query.CountAsync(cancellationToken);
         var offset = (int)Math.Min((long)(pageIndex - 1) * pageSize, int.MaxValue);
-        var items = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
+        var items = offset >= totalCount ? new List<Response.VoucherProgramResponse>()
+            : await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
             .Skip(offset).Take(pageSize)
             .Select(x => new Response.VoucherProgramResponse
             {
@@ -92,7 +78,6 @@ public class Service : IService
                 MinOrderAmount = x.MinOrderAmount,
                 MaxOrderAmount = x.MaxOrderAmount,
                 VoucherCount = x.Vouchers.Count(v => !v.IsDeleted),
-                // P2 reads the cached count; each used code counts once, regardless of its uses.
                 UsedVoucherCount = x.Vouchers.Count(v => !v.IsDeleted && v.UsedCount > 0),
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
@@ -186,20 +171,20 @@ public class Service : IService
         return response;
     }
 
-    public async Task<Response.VoucherProgramResponse> UpdateVoucherProgram(Guid id, Request.UpdateVoucherProgramRequest request,
+    public async Task<string> UpdateVoucherProgram(Guid id, Request.UpdateVoucherProgramRequest request,
         CancellationToken cancellationToken = default)
     {
-        await using var transaction = _dbContext.Database.IsRelational()
-            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         var program = await GetProgramForUpdate(id, cancellationToken);
         var startAt = request.StartAt == null ? program.StartAt
             : VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime();
         var endAt = request.EndAt == null ? program.EndAt
+                : string.IsNullOrWhiteSpace(request.EndAt) ? null
             : VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime();
         var minOrderAmount = request.MinOrderAmount ?? program.MinOrderAmount;
         var maxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount ?? program.MaxOrderAmount;
         var errors = new List<ValidationError>();
-        if (endAt <= startAt)
+        if (endAt.HasValue && endAt.Value <= startAt)
         {
             errors.Add(request.StartAt != null && request.EndAt == null
                 ? new ValidationError { Field = "startAt", Message = "Start time must be earlier than the current end time" }
@@ -229,19 +214,32 @@ public class Service : IService
         {
             var isActive = request.IsActive.Value;
             var vouchers = _dbContext.Vouchers.Where(x => x.ProgramId == id && !x.IsDeleted);
-            if (_dbContext.Database.IsRelational())
+            if (isActive)
             {
+                // API kích hoạt toàn bộ voucher chưa xóa. Chỉ cần đếm đến 10.001 để biết có vượt hạn mức.
+                // Tính cả mã đã active còn sót ở dữ liệu xóa mềm cũ vì index xét trực tiếp IsActive.
+                var activeCountAfterUpdate = await _dbContext.Vouchers
+                    .Where(x => x.ProgramId == id && (!x.IsDeleted || x.IsActive))
+                    .Take(10001).CountAsync(cancellationToken);
+                if (activeCountAfterUpdate > 10000)
+                    throw new ConflictException("Voucher program cannot exceed 10000 active vouchers.");
+            }
+
+            try
+            {
+                // Unique index kiểm tra toàn bảng, kể cả hai chương trình kích hoạt đồng thời
+                // hoặc các mã inactive trùng nhau trong chính chương trình này.
                 await vouchers.ExecuteUpdateAsync(setters => setters
                     .SetProperty(x => x.IsActive, isActive)
                     .SetProperty(x => x.UpdatedAt, now), cancellationToken);
             }
-            else
+            catch (PostgresException exception) when (exception is
             {
-                foreach (var voucher in await vouchers.ToListAsync(cancellationToken))
-                {
-                    voucher.IsActive = isActive;
-                    voucher.UpdatedAt = now;
-                }
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "IX_Vouchers_Code"
+            })
+            {
+                throw new ConflictException("Voucher codes must be unique among active vouchers across the system.");
             }
 
             program.IsActive = isActive;
@@ -255,50 +253,29 @@ public class Service : IService
         program.MaxOrderAmount = maxOrderAmount;
         program.UpdatedAt = now;
         await _dbContext.SaveChangesAsync(cancellationToken);
-        var result = await _dbContext.VoucherPrograms.AsNoTracking().Where(x => x.Id == id && !x.IsDeleted)
-            .Select(x => new Response.VoucherProgramResponse
-            {
-                Id = x.Id, Name = x.Name, IsActive = x.IsActive, IsDeleted = x.IsDeleted,
-                StartAt = x.StartAt, EndAt = x.EndAt,
-                MinOrderAmount = x.MinOrderAmount, MaxOrderAmount = x.MaxOrderAmount,
-                VoucherCount = x.Vouchers.Count(v => !v.IsDeleted),
-                UsedVoucherCount = x.Vouchers.Count(v => !v.IsDeleted && v.UsedCount > 0),
-                CreatedAt = x.CreatedAt, UpdatedAt = x.UpdatedAt
-            }).SingleAsync(cancellationToken);
-        if (transaction != null)
-            await transaction.CommitAsync(cancellationToken);
+        // var result = ToResponse(program);
+        await transaction.CommitAsync(cancellationToken);
 
-        return result;
+        // return result;
+        return "Update voucher program successfully";
     }
 
     public async Task<string> DeleteVoucherProgram(Guid id, CancellationToken cancellationToken = default)
     {
-        await using var transaction = _dbContext.Database.IsRelational()
-            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         var program = await GetProgramForUpdate(id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
         var vouchers = _dbContext.Vouchers.Where(x => x.ProgramId == id && !x.IsDeleted);
 
-        if (_dbContext.Database.IsRelational())
-        {
-            await vouchers.ExecuteUpdateAsync(setters => setters
-                .SetProperty(x => x.IsDeleted, true)
-                .SetProperty(x => x.UpdatedAt, now), cancellationToken);
-        }
-        else
-        {
-            foreach (var voucher in await vouchers.ToListAsync(cancellationToken))
-            {
-                voucher.IsDeleted = true;
-                voucher.UpdatedAt = now;
-            }
-        }
+        await vouchers.ExecuteUpdateAsync(setters => setters
+            .SetProperty(x => x.IsDeleted, true)
+            .SetProperty(x => x.IsActive, false)
+            .SetProperty(x => x.UpdatedAt, now), cancellationToken);
 
         program.IsDeleted = true;
         program.UpdatedAt = now;
         await _dbContext.SaveChangesAsync(cancellationToken);
-        if (transaction != null)
-            await transaction.CommitAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return "Program deleted";
     }
@@ -306,71 +283,131 @@ public class Service : IService
     public async Task<Response.GenerateProgramVouchersResponse> GenerateProgramVouchers(
         Guid id, Request.GenerateProgramVouchersRequest request, CancellationToken cancellationToken = default)
     {
-        await using var transaction = _dbContext.Database.IsRelational()
-            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken) : null;
-        // All three mutations lock the same row, serializing generation, activation and deletion.
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        // Khóa dòng chương trình trong transaction để các thao tác sinh mã, cập nhật và xóa
+        // trên cùng chương trình chờ nhau, tránh sinh mã trong lúc chương trình bị xóa.
         await GetProgramForUpdate(id, cancellationToken);
-        var count = await _dbContext.Vouchers.CountAsync(x => x.ProgramId == id, cancellationToken);
-        if ((long)count + request.Quantity > 10000)
-            throw new ConflictException("Voucher program cannot exceed 10000 vouchers.");
+        // Mã mới active ngay. Khóa chương trình được giữ trong lúc đếm và lưu để tránh vượt hạn mức.
+        // Không giới hạn tổng số mã lịch sử, chỉ đếm mã đang active.
+        var activeCount = await _dbContext.Vouchers
+            .Where(x => x.ProgramId == id && x.IsActive)
+            .Take(10001).CountAsync(cancellationToken);
+        if ((long)activeCount + request.Quantity > 10000)
+            throw new ConflictException("Voucher program cannot exceed 10000 active vouchers.");
 
+        // Các mã đã chọn được giữ qua nhiều vòng; có trong danh sách chưa có nghĩa là đã lưu DB.
         var codes = new List<string>(request.Quantity);
-        var issued = new HashSet<string>(StringComparer.Ordinal);
+        // Ghi nhớ mã đang active trong DB hoặc đã chọn trong lô này, để không chọn lại ở vòng sau.
+        var excludedCodes = new HashSet<string>(StringComparer.Ordinal);
+        // Cả lô dùng chung thời điểm tạo, kể cả khi phải sinh bù qua nhiều vòng.
         var now = DateTimeOffset.UtcNow;
-        // InMemory is used by unit tests. Production relies solely on the database's unique index.
-        HashSet<string>? existingCodes = _dbContext.Database.IsRelational() ? null
-            : (await _dbContext.Vouchers.Select(x => x.Code).ToListAsync(cancellationToken))
-                .ToHashSet(StringComparer.Ordinal);
+        var discountType = request.DiscountType == "cash" ? VoucherDiscountType.Cash : VoucherDiscountType.Percent;
 
-        for (var round = 0; round < 5 && codes.Count < request.Quantity; round++)
+        var saved = false;
+        // Tiếp tục sinh bù và thử lưu đến khi lưu thành công đủ số lượng.
+        // Không giới hạn số vòng; vẫn dừng khi request bị hủy hoặc gặp lỗi khác ngoài trùng mã.
+        while (!saved)
         {
+            // Dừng nếu request bị hủy; các thao tác DB bên dưới cũng nhận cancellationToken.
             cancellationToken.ThrowIfCancellationRequested();
+            // Chỉ sinh bù số mã còn thiếu, giữ lại các mã đã chọn từ vòng trước.
             var missing = request.Quantity - codes.Count;
-            var candidates = new HashSet<string>(StringComparer.Ordinal);
-            for (var i = 0; i < (int)Math.Ceiling(missing * 1.1); i++)
+            // Thử sinh dư khoảng 10%, làm tròn lên để dự phòng trùng.
+            // Ví dụ: thiếu 3 mã thì thử sinh 4 lần; thiếu 1 mã thì thử sinh 2 lần.
+            var candidateCount = (int)Math.Ceiling(missing * 1.1);
+            // HashSet giữ các mã ứng viên không trùng nhau trong riêng vòng hiện tại.
+            var candidates = new HashSet<string>(candidateCount, StringComparer.Ordinal);
+            // Vòng trong chạy candidateCount lần nếu không có lỗi/hủy; mã bị bỏ qua vẫn tính một lần sinh.
+            for (var i = 0; i < candidateCount; i++)
             {
+                // Mã có dạng: tiền tố + chuỗi ngẫu nhiên dài CodeLength + hậu tố.
                 var code = _codeGenerator.Generate(request.CodePrefix, request.CodeLength, request.CodeSuffix);
-                if (!issued.Contains(code))
+                // Contains chỉ kiểm tra, không thêm mã vào excludedCodes.
+                // Nếu chưa bị loại, Add ở dòng sau thêm vào candidates; mã trùng trong HashSet không được thêm lại.
+                if (!excludedCodes.Contains(code))
                     candidates.Add(code);
             }
 
-            var pending = candidates.ToArray();
-            for (var offset = 0; offset < pending.Length && codes.Count < request.Quantity;)
+            if (candidates.Count > 0)
             {
-                // Never insert the surplus once the requested quantity has been reached.
-                var batch = pending.Skip(offset).Take(request.Quantity - codes.Count).ToArray();
-                offset += batch.Length;
-                var inserted = existingCodes == null
-                    ? await InsertVoucherBatch(id, request, batch, now, cancellationToken)
-                    : batch.Where(code => existingCodes.Add(code)).ToList();
-                codes.AddRange(inserted);
-                issued.UnionWith(inserted);
+                // Kiểm tra cả nhóm mã bằng một truy vấn, không truy vấn riêng từng mã.
+                // Chỉ mã đang active được giữ chỗ, trên toàn bảng kể cả voucher độc lập.
+                // Mã inactive ở cùng hoặc khác chương trình được phép tái sử dụng.
+                var candidateCodes = candidates.ToArray();
+                var existingCodes = await _dbContext.Vouchers.AsNoTracking()
+                    .Where(x => x.IsActive && candidateCodes.Contains(x.Code))
+                    .Select(x => x.Code)
+                    .ToListAsync(cancellationToken);
+                // Đưa các mã đang active đã tìm thấy vào tập loại trừ trước khi chọn mã.
+                excludedCodes.UnionWith(existingCodes);
+                foreach (var code in candidates)
+                {
+                    // Add vừa thêm vừa trả kết quả: true nếu mã chưa có, false nếu đã có.
+                    // Chỉ mã mới được đưa vào codes; đồng thời ghi nhớ để vòng sau không chọn lại.
+                    if (excludedCodes.Add(code))
+                        codes.Add(code);
+                    // Đủ số lượng thì dừng chọn; break này chỉ thoát foreach, chưa thoát vòng while.
+                    if (codes.Count == request.Quantity)
+                        break;
+                }
             }
-        }
 
-        if (codes.Count != request.Quantity)
-            throw new ServerException("Unable to generate enough unique voucher codes after 5 rounds.");
+            // Chưa đủ mã thì sang vòng tiếp theo, chưa lưu một phần lô.
+            if (codes.Count != request.Quantity)
+                continue;
 
-        if (existingCodes != null)
-        {
-            // Defer persistence until the entire batch is complete; failed test-provider batches stay empty.
-            _dbContext.Vouchers.AddRange(codes.Select(code => new Repository.Entity.Voucher
+            var vouchers = codes.Select(code => new Repository.Entity.Voucher
             {
                 Id = Guid.NewGuid(), ProgramId = id, Code = code,
                 Description = request.Description,
-                DiscountType = request.DiscountType == "cash" ? VoucherDiscountType.Cash : VoucherDiscountType.Percent,
+                DiscountType = discountType,
                 DiscountValue = request.DiscountValue,
                 MaxDiscountAmount = request.MaxDiscountAmount,
                 Visibility = VoucherVisibility.Private,
                 MaxUsageCount = request.MaxUsageCount,
-                IsActive = false, UsedCount = 0, IsDeleted = false, CreatedAt = now
-            }));
-            await _dbContext.SaveChangesAsync(cancellationToken);
+                UsedCount = 0, IsActive = true, IsDeleted = false, CreatedAt = now
+            }).ToList();
+
+            try
+            {
+                _dbContext.Vouchers.AddRange(vouchers);
+                // EF dùng savepoint trong transaction: nếu trùng mã, hoàn tác cả lần lưu này.
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                saved = true;
+            }
+            catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: "IX_Vouchers_Code"
+            })
+            {
+                // Request ở chương trình khác có thể chiếm mã sau bước kiểm tra.
+                // Tìm mã xung đột ở phía dưới và sinh bù trong vòng tiếp theo.
+            }
+            finally
+            {
+                // Bỏ theo dõi lô vừa thử lưu, tránh giữ entity Added sau lỗi.
+                // Detached không xóa dữ liệu khỏi DB; lỗi khác vẫn được ném ra ngoài.
+                foreach (var voucher in vouchers)
+                    _dbContext.Entry(voucher).State = EntityState.Detached;
+            }
+
+            if (saved)
+                break;
+
+            var attemptedCodes = codes.ToArray();
+            var conflicts = (await _dbContext.Vouchers.AsNoTracking()
+                .Where(x => x.IsActive && attemptedCodes.Contains(x.Code))
+                .Select(x => x.Code)
+                .ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
+            // Giữ các mã chưa bị chiếm trong bộ nhớ; vòng sau chỉ sinh bù phần thiếu.
+            codes.RemoveAll(conflicts.Contains);
         }
 
-        if (transaction != null)
-            await transaction.CommitAsync(cancellationToken);
+        // Xác nhận toàn bộ lô và giải phóng khóa chương trình trước khi trả kết quả thành công.
+        await transaction.CommitAsync(cancellationToken);
 
+        // Thành công luôn trả đúng Quantity mã, không trả về một lô thiếu số lượng.
         return new Response.GenerateProgramVouchersResponse
         {
             ProgramId = id, CreatedCount = codes.Count, Codes = codes
@@ -379,10 +416,14 @@ public class Service : IService
 
     private async Task<VoucherProgramEntity> GetProgramForUpdate(Guid id, CancellationToken cancellationToken)
     {
-        var query = _dbContext.Database.IsRelational()
-            ? _dbContext.VoucherPrograms.FromSqlInterpolated(
-                $"SELECT * FROM \"VoucherPrograms\" WHERE \"Id\" = {id} FOR UPDATE")
-            : _dbContext.VoucherPrograms.Where(x => x.Id == id);
+        var query = _dbContext.VoucherPrograms.Where(x => x.Id == id);
+
+        // Các hàm gọi đều đã mở transaction. Gán UpdatedAt bằng chính nó vẫn thực hiện UPDATE
+        // để giữ khóa dòng đến khi transaction kết thúc, nhưng không đổi giá trị thời gian nghiệp vụ.
+        var affected = await query.ExecuteUpdateAsync(setters => setters
+            .SetProperty(x => x.UpdatedAt, x => x.UpdatedAt), cancellationToken);
+        if (affected == 0)
+            throw new NotFoundException("Voucher program does not exist.");
 
         var program = await query.SingleOrDefaultAsync(cancellationToken)
                       ?? throw new NotFoundException("Voucher program does not exist.");
@@ -392,46 +433,15 @@ public class Service : IService
         return program;
     }
 
-    private async Task<List<string>> InsertVoucherBatch(Guid programId, Request.GenerateProgramVouchersRequest request,
-        string[] codes, DateTimeOffset createdAt, CancellationToken cancellationToken)
+    private static Response.VoucherProgramResponse ToResponse(VoucherProgramEntity program)
     {
-        // Loại các mã đã có (thay cho ON CONFLICT DO NOTHING). Mã của voucher đã xóa mềm không tính.
-        var taken = await _dbContext.Vouchers.AsNoTracking()
-            .Where(x => !x.IsDeleted && codes.Contains(x.Code))
-            .Select(x => x.Code)
-            .ToListAsync(cancellationToken);
-
-        var free = codes.Except(taken).ToArray();
-        if (free.Length == 0)
-            return [];
-
-        // Giữ nguyên cách map cũ: "cash" là Cash, còn lại là Percent
-        var discountType = request.DiscountType == "cash"
-            ? VoucherDiscountType.Cash
-            : VoucherDiscountType.Percent;
-
-        var vouchers = free.Select(code => new Repository.Entity.Voucher()
+        return new Response.VoucherProgramResponse
         {
-            Id = Guid.NewGuid(),
-            ProgramId = programId,
-            Code = code,
-            Description = request.Description,
-            DiscountType = discountType,
-            DiscountValue = request.DiscountValue,
-            MaxDiscountAmount = request.MaxDiscountAmount,
-            Visibility = VoucherVisibility.Private,
-            MaxUsageCount = request.MaxUsageCount,
-            IsActive = false,
-            CreatedAt = createdAt,
-            UpdatedAt = null,
-            IsDeleted = false
-            // StartAt, EndAt, MinOrderAmount, MaxOrderAmount để null: lấy từ chương trình
-        }).ToList();
-
-        _dbContext.Vouchers.AddRange(vouchers);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return vouchers.Select(v => v.Code).ToList();
+            Id = program.Id, Name = program.Name, IsActive = program.IsActive, IsDeleted = program.IsDeleted,
+            StartAt = program.StartAt, EndAt = program.EndAt,
+            MinOrderAmount = program.MinOrderAmount, MaxOrderAmount = program.MaxOrderAmount,
+            CreatedAt = program.CreatedAt, UpdatedAt = program.UpdatedAt
+        };
     }
 
 }

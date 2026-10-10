@@ -1,6 +1,8 @@
+using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 using FeatureService = HoaTheoMua.Service.VoucherProgram.Service;
 using static HoaTheoMua.Service.Test.VoucherProgramTest.VoucherProgramTestData;
@@ -9,12 +11,13 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 
 public class GenerateProgramVouchers
 {
-    [Theory]
+    [VoucherPostgresTheory]
     [InlineData("cash", false)]
     [InlineData("percent", true)]
-    public async Task GeneratesExactQuantity_WithSharedPolicy_PrivateInactiveAndInheritedSchedule(string type, bool active)
+    public async Task GeneratesExactQuantity_WithSharedPolicy_PrivateActiveAndInheritedSchedule(string type, bool active)
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program(active);
         db.VoucherPrograms.Add(program);
         await db.SaveChangesAsync();
@@ -41,7 +44,7 @@ public class GenerateProgramVouchers
             Assert.Equal(request.MaxDiscountAmount, voucher.MaxDiscountAmount);
             Assert.Equal(request.MaxUsageCount, voucher.MaxUsageCount);
             Assert.Equal(request.Description, voucher.Description);
-            Assert.False(voucher.IsActive);
+            Assert.True(voucher.IsActive);
             Assert.False(voucher.IsDeleted);
             Assert.Equal(0, voucher.UsedCount);
             Assert.Null(voucher.StartAt);
@@ -54,13 +57,14 @@ public class GenerateProgramVouchers
         Assert.Equal(active, (await db.VoucherPrograms.SingleAsync()).IsActive);
     }
 
-    [Fact]
-    public async Task Collision_WithDeletedCodeAndWithinBatch_IsRetried_AndFurtherBatchesAreAllowed()
+    [VoucherPostgresFact]
+    public async Task Collision_WithActiveCodeAndWithinBatch_IsRetried_AndFurtherBatchesAreAllowed()
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(VoucherProgramTestData.Voucher(null, "TAKEN", deleted: true));
+        db.Vouchers.Add(NewVoucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
         var generator = new SequenceGenerator("TAKEN", "NEWAA", "NEWAA", "NEWBB", "NEWCC");
         var service = new FeatureService(db, generator);
@@ -71,41 +75,159 @@ public class GenerateProgramVouchers
         Assert.Equal(new[] { "NEWAA", "NEWBB" }, first.Codes);
         Assert.Equal(new[] { "NEWCC" }, second.Codes);
         Assert.Equal(3, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
-        Assert.True((await db.Vouchers.SingleAsync(x => x.Code == "TAKEN")).IsDeleted);
+        Assert.True((await db.Vouchers.SingleAsync(x => x.Code == "TAKEN")).IsActive);
     }
 
-    [Fact]
-    public async Task CollisionExhaustion_RollsBackPartialBatchAfterFiveRounds()
+    [VoucherPostgresFact]
+    public async Task CollisionsBeyondFiveRounds_ContinueUntilFullBatchIsSaved()
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(VoucherProgramTestData.Voucher(null, "TAKEN", deleted: true));
+        db.Vouchers.Add(NewVoucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
-        var generator = new SequenceGenerator("NEWAA", "TAKEN");
+        var generator = new SequenceGenerator(
+            new[] { "NEWAA" }.Concat(Enumerable.Repeat("TAKEN", 12)).Append("NEWBB").ToArray());
 
-        await Assert.ThrowsAsync<ServerException>(() => new FeatureService(db, generator)
-            .GenerateProgramVouchers(program.Id, GenerateRequest(2)));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var result = await new FeatureService(db, generator)
+            .GenerateProgramVouchers(program.Id, GenerateRequest(2), timeout.Token);
 
-        Assert.Equal(11, generator.Calls); // 3 candidates in round one, then 2 per remaining round.
-        Assert.Empty(await db.Vouchers.Where(x => x.ProgramId == program.Id).ToListAsync());
-        Assert.Single(await db.Vouchers.ToListAsync());
+        Assert.True(generator.Calls > 11); // Năm vòng đầu chỉ có 11 lần sinh, vẫn chưa đủ mã.
+        Assert.Equal(new[] { "NEWAA", "NEWBB" }, result.Codes);
+        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+        Assert.Equal(3, await db.Vouchers.CountAsync());
     }
 
-    [Fact]
-    public async Task ProgramLimit_IncludesDeletedCodes_AllowsExactly10000_AndRejectsNextBatch()
+    [VoucherPostgresFact]
+    public async Task Generation_AllowsMoreThan10000Total_WhenOldCodesAreInactive()
     {
-        await using var db = Database();
-        var program = Program();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
+        var program = Program(true);
         db.VoucherPrograms.Add(program);
-        db.Vouchers.AddRange(Enumerable.Range(0, 9999).Select(i => VoucherProgramTestData.Voucher(program.Id, $"OLD{i}", deleted: i == 0)));
+        db.Vouchers.AddRange(Enumerable.Range(0, 10000).Select(i => NewVoucher(program.Id, $"OLD{i}")));
         await db.SaveChangesAsync();
         var service = new FeatureService(db);
 
         Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
-        var error = await Assert.ThrowsAsync<ConflictException>(() => service.GenerateProgramVouchers(program.Id, GenerateRequest(1)));
+        Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
 
-        Assert.Equal("Voucher program cannot exceed 10000 vouchers.", error.Message);
-        Assert.Equal(10000, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
+        Assert.Equal(10002, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
+        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+    }
+
+    [VoucherPostgresTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Generation_ReusesInactiveCodes_FromSameProgramOtherProgramAndStandalone(bool deleted)
+    {
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
+        var program = Program();
+        var other = Program();
+        db.VoucherPrograms.AddRange(program, other);
+        db.Vouchers.AddRange(NewVoucher(program.Id, "SAME1", deleted: deleted),
+            NewVoucher(other.Id, "OTHER", deleted: deleted), NewVoucher(null, "ALONE", deleted: deleted));
+        await db.SaveChangesAsync();
+
+        var result = await new FeatureService(db, new SequenceGenerator("SAME1", "OTHER", "ALONE", "EXTRA"))
+            .GenerateProgramVouchers(program.Id, GenerateRequest(3));
+
+        Assert.Equal(new[] { "SAME1", "OTHER", "ALONE" }, result.Codes);
+        Assert.Equal(6, await db.Vouchers.CountAsync());
+        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.Code == "SAME1"));
+        Assert.Equal(3, await db.Vouchers.CountAsync(x => x.IsActive));
+    }
+
+    [VoucherPostgresFact]
+    public async Task Generation_StagesCollisionRoundsBeforeSaving_AndLeavesNoTrackedBatch()
+    {
+        var observer = new VoucherSaveObserver();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context(observer);
+        var program = Program();
+        db.VoucherPrograms.Add(program);
+        db.Vouchers.Add(NewVoucher(null, "TAKEN", active: true));
+        await db.SaveChangesAsync();
+        observer.VoucherSaves = 0;
+        var generator = new SequenceGenerator("TAKEN", "NEWAA", "NEWAA", "NEWBB", "NEWCC");
+
+        var result = await new FeatureService(db, generator).GenerateProgramVouchers(program.Id, GenerateRequest(2));
+
+        Assert.Equal(new[] { "NEWAA", "NEWBB" }, result.Codes);
+        Assert.Equal(1, observer.VoucherSaves);
+        Assert.DoesNotContain(db.ChangeTracker.Entries<Repository.Entity.Voucher>(), x => x.Entity.ProgramId == program.Id);
+        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
+    }
+
+    [VoucherPostgresFact]
+    public async Task UnexpectedSaveFailure_DoesNotLeakFailedVouchersIntoNextRequest()
+    {
+        var observer = new VoucherSaveObserver();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context(observer);
+        var program = Program();
+        db.VoucherPrograms.Add(program);
+        await db.SaveChangesAsync();
+        observer.FailNextVoucherSave = true;
+        var service = new FeatureService(db, new SequenceGenerator("FAIL1", "EXTRA", "NEWAA", "NEWBB"));
+
+        var error = await Assert.ThrowsAsync<DbUpdateException>(() =>
+            service.GenerateProgramVouchers(program.Id, GenerateRequest(1)));
+
+        Assert.Equal("Forced voucher write failure.", error.Message);
+        Assert.Empty(await db.Vouchers.ToListAsync());
+        Assert.Empty(db.ChangeTracker.Entries<Repository.Entity.Voucher>());
+        var result = await service.GenerateProgramVouchers(program.Id, GenerateRequest(1));
+        Assert.Equal(new[] { "NEWAA" }, result.Codes);
+        Assert.Equal("NEWAA", (await db.Vouchers.SingleAsync()).Code);
+    }
+
+    [VoucherPostgresFact]
+    public async Task Generation_AllowsExactly10000Active_RejectsExcess_AndAllowsMoreAfterDeactivation()
+    {
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
+        var program = Program(true);
+        db.VoucherPrograms.Add(program);
+        db.Vouchers.AddRange(Enumerable.Range(0, 9999).Select(i => NewVoucher(program.Id, $"ACTIVE{i}", active: true)));
+        await db.SaveChangesAsync();
+        var service = new FeatureService(db);
+
+        Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
+        var error = await Assert.ThrowsAsync<ConflictException>(() =>
+            service.GenerateProgramVouchers(program.Id, GenerateRequest(1)));
+        Assert.Equal("Voucher program cannot exceed 10000 active vouchers.", error.Message);
+        Assert.Equal(10000, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+
+        await service.UpdateVoucherProgram(program.Id, new() { IsActive = false });
+        Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
+        Assert.Equal(10001, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
+        Assert.Equal(1, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+    }
+
+    private sealed class VoucherSaveObserver : SaveChangesInterceptor
+    {
+        public int VoucherSaves { get; set; }
+        public bool FailNextVoucherSave { get; set; }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+            InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context!.ChangeTracker.Entries<Repository.Entity.Voucher>()
+                .Any(x => x.State == EntityState.Added))
+            {
+                VoucherSaves++;
+                if (FailNextVoucherSave)
+                {
+                    FailNextVoucherSave = false;
+                    throw new DbUpdateException("Forced voucher write failure.");
+                }
+            }
+
+            return ValueTask.FromResult(result);
+        }
     }
 }

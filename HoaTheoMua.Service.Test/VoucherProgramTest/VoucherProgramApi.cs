@@ -55,7 +55,7 @@ public class VoucherProgramApi
     }
 
     [Fact]
-    public async Task IsoDateTimeRequest_WithOffset_CreatesProgramAndReturnsUtc()
+    public async Task IsoDateTimeRequest_WithOffset_SavesUtcProgramAndReturnsSuccessMessage()
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
         await using var app = await StartApplication(key);
@@ -68,17 +68,26 @@ public class VoucherProgramApi
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var value = json.RootElement.GetProperty("value");
-        Assert.Equal(DateTimeOffset.Parse("2026-10-31T16:59:59Z"), value.GetProperty("endAt").GetDateTimeOffset());
-        Assert.Equal(TimeSpan.Zero, value.GetProperty("endAt").GetDateTimeOffset().Offset);
-        Assert.Equal(JsonValueKind.Null, value.GetProperty("maxOrderAmount").ValueKind);
+        Assert.True(json.RootElement.GetProperty("isSuccess").GetBoolean());
+        Assert.Equal("Create voucher program successfully", json.RootElement.GetProperty("value").GetString());
+        Assert.NotEmpty(json.RootElement.GetProperty("traceId").GetString()!);
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var saved = await db.VoucherPrograms.SingleAsync();
+        Assert.Equal(DateTimeOffset.Parse("2026-10-14T17:00:00Z"), saved.StartAt);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-31T16:59:59Z"), saved.EndAt);
+        Assert.Equal(TimeSpan.Zero, saved.StartAt.Offset);
+        Assert.Equal(TimeSpan.Zero, saved.EndAt!.Value.Offset);
+        Assert.Equal(0m, saved.MinOrderAmount);
+        Assert.Null(saved.MaxOrderAmount);
     }
 
-    [Fact]
+    [VoucherPostgresFact]
     public async Task AdminEndpoints_EnforceAuthorization_ValidateRequests_AndReturnPlanEnvelopes()
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
-        await using var app = await StartApplication(key);
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var app = await StartApplication(key, fixture.Configure);
         try
         {
             var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
@@ -122,18 +131,18 @@ public class VoucherProgramApi
             Assert.Equal(HttpStatusCode.OK, post.StatusCode);
             using var created = JsonDocument.Parse(await post.Content.ReadAsStringAsync());
             Assert.True(created.RootElement.GetProperty("isSuccess").GetBoolean());
-            var program = created.RootElement.GetProperty("value");
-            Assert.False(program.GetProperty("isActive").GetBoolean());
-            Assert.Equal(TimeSpan.Zero, program.GetProperty("startAt").GetDateTimeOffset().Offset);
-            Assert.Equal(0, program.GetProperty("voucherCount").GetInt32());
-            Assert.Equal(0, program.GetProperty("usedVoucherCount").GetInt32());
-
+            Assert.Equal("Create voucher program successfully", created.RootElement.GetProperty("value").GetString());
             using var get = await client.GetAsync(route + "?keyword=20%2F10&isActive=false");
             Assert.Equal(HttpStatusCode.OK, get.StatusCode);
             using var listed = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
             var page = listed.RootElement.GetProperty("value");
-            var item = Assert.Single(page.GetProperty("items").EnumerateArray());
-            Assert.Equal(program.GetProperty("id").GetGuid(), item.GetProperty("id").GetGuid());
+            var program = Assert.Single(page.GetProperty("items").EnumerateArray());
+            Assert.NotEqual(Guid.Empty, program.GetProperty("id").GetGuid());
+            Assert.Equal(request.Name, program.GetProperty("name").GetString());
+            Assert.False(program.GetProperty("isActive").GetBoolean());
+            Assert.Equal(TimeSpan.Zero, program.GetProperty("startAt").GetDateTimeOffset().Offset);
+            Assert.Equal(0, program.GetProperty("voucherCount").GetInt32());
+            Assert.Equal(0, program.GetProperty("usedVoucherCount").GetInt32());
             Assert.Equal(1, page.GetProperty("totalCount").GetInt32());
             Assert.Equal(1, page.GetProperty("pageIndex").GetInt32());
             Assert.Equal(20, page.GetProperty("pageSize").GetInt32());
@@ -169,17 +178,19 @@ public class VoucherProgramApi
             using var activate = await client.PutAsJsonAsync(programRoute, new { name = "20/10 cập nhật", isActive = true });
             Assert.Equal(HttpStatusCode.OK, activate.StatusCode);
             using var activated = JsonDocument.Parse(await activate.Content.ReadAsStringAsync());
-            Assert.True(activated.RootElement.GetProperty("value").GetProperty("isActive").GetBoolean());
-            Assert.Equal("20/10 cập nhật", activated.RootElement.GetProperty("value").GetProperty("name").GetString());
+            Assert.Equal("Update voucher program successfully", activated.RootElement.GetProperty("value").GetString());
             using var activeList = await client.GetAsync(route + "?isActive=true");
             using var activePage = JsonDocument.Parse(await activeList.Content.ReadAsStringAsync());
-            Assert.Equal(3, Assert.Single(activePage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray())
-                .GetProperty("voucherCount").GetInt32());
+            var activeItem = Assert.Single(activePage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
+            Assert.True(activeItem.GetProperty("isActive").GetBoolean());
+            Assert.Equal("20/10 cập nhật", activeItem.GetProperty("name").GetString());
+            Assert.Equal(3, activeItem.GetProperty("voucherCount").GetInt32());
+            Assert.Equal(0, activeItem.GetProperty("usedVoucherCount").GetInt32());
 
             using var deactivate = await client.PutAsJsonAsync(programRoute, new { isActive = false });
             Assert.Equal(HttpStatusCode.OK, deactivate.StatusCode);
             using var deactivated = JsonDocument.Parse(await deactivate.Content.ReadAsStringAsync());
-            Assert.False(deactivated.RootElement.GetProperty("value").GetProperty("isActive").GetBoolean());
+            Assert.Equal("Update voucher program successfully", deactivated.RootElement.GetProperty("value").GetString());
             using var delete = await client.DeleteAsync(programRoute);
             Assert.Equal(HttpStatusCode.OK, delete.StatusCode);
             using var deleted = JsonDocument.Parse(await delete.Content.ReadAsStringAsync());
@@ -197,13 +208,19 @@ public class VoucherProgramApi
         }
     }
 
-    private static async Task<WebApplication> StartApplication(SecurityKey key)
+    private static async Task<WebApplication> StartApplication(SecurityKey key, Action<DbContextOptionsBuilder>? configureDatabase = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
         builder.Logging.ClearProviders();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         var databaseName = Guid.NewGuid().ToString();
-        builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
+        builder.Services.AddDbContext<AppDbContext>(options =>
+        {
+            if (configureDatabase != null)
+                configureDatabase(options);
+            else
+                options.UseInMemoryDatabase(databaseName);
+        });
         builder.Services.AddScoped<VoucherProgramFeature.IService, VoucherProgramFeature.Service>();
         builder.Services.AddValidatorsFromAssembly(typeof(VoucherProgramFeature.Service).Assembly);
         builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();

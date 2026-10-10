@@ -6,10 +6,10 @@ public class EstimateVoucherRequestValidator : AbstractValidator<Request.Estimat
 {
     public EstimateVoucherRequestValidator()
     {
-        RuleFor(x => x.Code)
+        RuleFor(x => x.code)
             .NotEmpty().WithMessage("Voucher code is required");
 
-        RuleFor(x => x.ProductFee)
+        RuleFor(x => x.productFee)
             .GreaterThan(0).WithMessage("Product fee must be greater than 0");
     }
 }

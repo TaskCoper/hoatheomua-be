@@ -44,7 +44,7 @@ public class PublicAndEstimateVoucherTest
 
         var result = await new VoucherService(db).EstimateVoucher(new Request.EstimateVoucherRequest
         {
-            Code = " save20 ", ProductFee = 200_000
+            code = " save20 ", productFee = 200_000
         });
 
         Assert.Equal(voucher.Id, result.VoucherId);
@@ -75,7 +75,7 @@ public class PublicAndEstimateVoucherTest
         db.Vouchers.Add(voucher);
         await db.SaveChangesAsync();
         var action = () => new VoucherService(db).EstimateVoucher(
-            new Request.EstimateVoucherRequest { Code = voucher.Code, ProductFee = fee });
+            new Request.EstimateVoucherRequest { code = voucher.Code, productFee = fee });
 
         if (scenario == "exhausted")
             await Assert.ThrowsAsync<ConflictException>(action);
@@ -95,10 +95,10 @@ public class PublicAndEstimateVoucherTest
         var service = new VoucherService(db);
 
         await Assert.ThrowsAsync<NotFoundException>(() => service.EstimateVoucher(
-            new Request.EstimateVoucherRequest { Code = "MISSING", ProductFee = 100_000 }));
+            new Request.EstimateVoucherRequest { code = "MISSING", productFee = 100_000 }));
         await Assert.ThrowsAsync<NotFoundException>(() => service.EstimateVoucher(
-            new Request.EstimateVoucherRequest { Code = inactive.Code, ProductFee = 100_000 }));
+            new Request.EstimateVoucherRequest { code = inactive.Code, productFee = 100_000 }));
         await Assert.ThrowsAsync<NotFoundException>(() => service.EstimateVoucher(
-            new Request.EstimateVoucherRequest { Code = deleted.Code, ProductFee = 100_000 }));
+            new Request.EstimateVoucherRequest { code = deleted.Code, productFee = 100_000 }));
     }
 }

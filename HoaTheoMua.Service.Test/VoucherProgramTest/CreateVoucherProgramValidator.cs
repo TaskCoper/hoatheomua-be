@@ -10,7 +10,7 @@ public class CreateVoucherProgramValidator
     [InlineData("name", "Name", "Name is required")]
     [InlineData("longName", "Name", "Name must not exceed 200 characters")]
     [InlineData("start", "StartAt", "Start time is required")]
-    [InlineData("end", "EndAt", "End time is required")]
+    [InlineData("end", "EndAt", "End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00")]
     [InlineData("equalDates", "EndAt", "End time must be later than start time")]
     [InlineData("reversedDates", "EndAt", "End time must be later than start time")]
     [InlineData("min", "MinOrderAmount", "Min order amount must not be negative")]
@@ -24,7 +24,7 @@ public class CreateVoucherProgramValidator
             case "name": request.Name = "   "; break;
             case "longName": request.Name = new string('A', 201); break;
             case "start": request.StartAt = ""; break;
-            case "end": request.EndAt = ""; break;
+            case "end": request.EndAt = "not-a-date"; break;
             case "equalDates": request.EndAt = request.StartAt; break;
             case "reversedDates": request.EndAt = "2026-10-14T23:59:59+07:00"; break;
             case "min": request.MinOrderAmount = -1; break;

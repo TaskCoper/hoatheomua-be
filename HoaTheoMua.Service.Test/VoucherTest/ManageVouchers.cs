@@ -70,34 +70,34 @@ public class ManageVouchersTest
     }
 
     [Fact]
-    public async Task SetVouchersActive_ReportsUpdatedSkippedAndMissingIds()
+    public async Task SetVouchersActive_UpdatesExistingVouchersAndIgnoresMissingIds()
     {
         await using var db = VoucherTestData.Database();
         var activeProgram = VoucherTestData.Program();
         var inactiveProgram = VoucherTestData.Program(active: false);
         var standalone = VoucherTestData.Voucher("ONE", active: false);
-        var allowed = VoucherTestData.Voucher("TWO", active: false);
-        allowed.Program = activeProgram;
-        allowed.ProgramId = activeProgram.Id;
-        var skipped = VoucherTestData.Voucher("THREE", active: false);
-        skipped.Program = inactiveProgram;
-        skipped.ProgramId = inactiveProgram.Id;
+        var activeProgramVoucher = VoucherTestData.Voucher("TWO", active: false);
+        activeProgramVoucher.Program = activeProgram;
+        activeProgramVoucher.ProgramId = activeProgram.Id;
+        var inactiveProgramVoucher = VoucherTestData.Voucher("THREE", active: false);
+        inactiveProgramVoucher.Program = inactiveProgram;
+        inactiveProgramVoucher.ProgramId = inactiveProgram.Id;
         var missingId = Guid.NewGuid();
-        db.AddRange(activeProgram, inactiveProgram, standalone, allowed, skipped);
+        db.AddRange(activeProgram, inactiveProgram, standalone, activeProgramVoucher, inactiveProgramVoucher);
         await db.SaveChangesAsync();
 
         var result = await new VoucherService(db).SetVouchersActive(new Request.SetVouchersActiveRequest
         {
-            Ids = [standalone.Id, allowed.Id, skipped.Id, missingId], IsActive = true
+            Ids = [standalone.Id, activeProgramVoucher.Id, inactiveProgramVoucher.Id, missingId], IsActive = true
         });
 
-        Assert.Equal(new[] { standalone.Id, allowed.Id }, result.UpdatedIds);
-        Assert.Equal(missingId, Assert.Single(result.NotFoundIds));
-        var skippedItem = Assert.Single(result.SkippedItems);
-        Assert.Equal(skipped.Id, skippedItem.Id);
-        Assert.Equal("Program is not active", skippedItem.Reason);
-        Assert.True(standalone.IsActive);
-        Assert.True(allowed.IsActive);
-        Assert.False(skipped.IsActive);
+        Assert.Equal("Voucher status updated successfully.", result);
+        db.ChangeTracker.Clear();
+        Assert.Equal(3, db.Vouchers.Count());
+        Assert.All(db.Vouchers, voucher =>
+        {
+            Assert.True(voucher.IsActive);
+            Assert.NotNull(voucher.UpdatedAt);
+        });
     }
 }

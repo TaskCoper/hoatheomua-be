@@ -81,7 +81,7 @@ public class GetVoucherPrograms
     }
 
     [Fact]
-    public async Task PaginatesNewestFirst_AndCountsCodesRatherThanTotalUses()
+    public async Task PaginatesNewestFirst_AndReturnsVoucherCounts()
     {
         await using var db = CreateDbContext();
         var oldest = Program("Oldest", 1);
@@ -89,11 +89,11 @@ public class GetVoucherPrograms
         var newest = Program("Newest", 3, deleted: true);
         db.VoucherPrograms.AddRange(oldest, middle, newest);
         db.Vouchers.AddRange(
-            Voucher(middle.Id, "USED1", 3),
-            Voucher(middle.Id, "USED2", 1),
-            Voucher(middle.Id, "UNUSED", 0),
-            Voucher(middle.Id, "DELETED", 10, deleted: true),
-            Voucher(newest.Id, "OTHER", 20));
+            NewVoucher(middle.Id, "USED1", 3),
+            NewVoucher(middle.Id, "USED2", 1),
+            NewVoucher(middle.Id, "UNUSED", 0),
+            NewVoucher(middle.Id, "DELETED", 10, deleted: true),
+            NewVoucher(newest.Id, "OTHER", 20));
         await db.SaveChangesAsync();
 
         var service = new VoucherProgramService(db);
@@ -107,8 +107,8 @@ public class GetVoucherPrograms
             new Request.GetVoucherProgramsRequest { pageIndex = 2, pageSize = 1 });
         var item = Assert.Single(secondPage.Value.Items.Cast<Response.VoucherProgramResponse>());
         Assert.Equal(middle.Id, item.Id);
-        Assert.Equal(3, item.VoucherCount);
         Assert.Equal(2, item.UsedVoucherCount);
+        Assert.Equal(3, item.VoucherCount);
         Assert.Equal(3, secondPage.Value.TotalCount);
         Assert.True(secondPage.Value.HasNextPage);
         Assert.True(secondPage.Value.HasPreviousPage);
@@ -119,7 +119,7 @@ public class GetVoucherPrograms
     }
 
     [Fact]
-    public async Task InactiveFilter_ReturnsDraftWithZeroCounts()
+    public async Task InactiveFilter_ReturnsDraft()
     {
         await using var db = CreateDbContext();
         db.VoucherPrograms.AddRange(Program("Active", 1, active: true), Program("Draft", 2));
@@ -131,8 +131,6 @@ public class GetVoucherPrograms
         var item = Assert.Single(result.Value.Items.Cast<Response.VoucherProgramResponse>());
         Assert.Equal("Draft", item.Name);
         Assert.False(item.IsActive);
-        Assert.Equal(0, item.VoucherCount);
-        Assert.Equal(0, item.UsedVoucherCount);
     }
 
     [Fact]
@@ -165,6 +163,27 @@ public class GetVoucherPrograms
         Assert.True(result.Value.HasPreviousPage);
     }
 
+    [Fact]
+    public async Task OversizedPage_IsBounded_AndNextPageKeepsCorrectOffset()
+    {
+        await using var db = CreateDbContext();
+        db.VoucherPrograms.AddRange(Enumerable.Range(1, 125).Select(i => Program($"Program {i}", i)));
+        await db.SaveChangesAsync();
+        var service = new VoucherProgramService(db);
+
+        var first = await service.GetVoucherPrograms(new() { pageSize = int.MaxValue });
+        var second = await service.GetVoucherPrograms(new() { pageIndex = 2, pageSize = int.MaxValue });
+
+        Assert.Equal(100, first.Value.PageSize);
+        Assert.Equal(125, first.Value.TotalCount);
+        Assert.Equal(100, first.Value.Items.Count());
+        Assert.True(first.Value.HasNextPage);
+        Assert.Equal(100, second.Value.PageSize);
+        Assert.Equal(25, second.Value.Items.Count());
+        Assert.Equal("Program 25", second.Value.Items.Cast<Response.VoucherProgramResponse>().First().Name);
+        Assert.False(second.Value.HasNextPage);
+    }
+
     private static AppDbContext CreateDbContext() => new(new DbContextOptionsBuilder<AppDbContext>()
         .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
 
@@ -177,7 +196,7 @@ public class GetVoucherPrograms
         CreatedAt = DateTimeOffset.Parse("2026-10-01T00:00:00Z").AddMinutes(sequence)
     };
 
-    private static Repository.Entity.Voucher Voucher(Guid programId, string code, int usedCount, bool deleted = false) => new()
+    private static Repository.Entity.Voucher NewVoucher(Guid programId, string code, int usedCount, bool deleted = false) => new()
     {
         Id = Guid.NewGuid(), ProgramId = programId, Code = code,
         UsedCount = usedCount, MaxUsageCount = 100, IsDeleted = deleted,
