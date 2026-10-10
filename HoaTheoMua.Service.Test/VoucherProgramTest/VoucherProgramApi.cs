@@ -82,11 +82,12 @@ public class VoucherProgramApi
         Assert.Null(saved.MaxOrderAmount);
     }
 
-    [Fact]
+    [VoucherPostgresFact]
     public async Task AdminEndpoints_EnforceAuthorization_ValidateRequests_AndReturnPlanEnvelopes()
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
-        await using var app = await StartApplication(key);
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var app = await StartApplication(key, fixture.Configure);
         try
         {
             var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
@@ -130,8 +131,11 @@ public class VoucherProgramApi
             Assert.Equal(HttpStatusCode.OK, post.StatusCode);
             using var created = JsonDocument.Parse(await post.Content.ReadAsStringAsync());
             Assert.True(created.RootElement.GetProperty("isSuccess").GetBoolean());
-            Assert.Equal("Create voucher program successfully", created.RootElement.GetProperty("value").GetString());
-            Assert.NotEmpty(created.RootElement.GetProperty("traceId").GetString()!);
+            var program = created.RootElement.GetProperty("value");
+            Assert.False(program.GetProperty("isActive").GetBoolean());
+            Assert.Equal(TimeSpan.Zero, program.GetProperty("startAt").GetDateTimeOffset().Offset);
+            Assert.False(program.TryGetProperty("voucherCount", out _));
+            Assert.False(program.TryGetProperty("usedVoucherCount", out _));
 
             using var get = await client.GetAsync(route + "?keyword=20%2F10&isActive=false");
             Assert.Equal(HttpStatusCode.OK, get.StatusCode);
@@ -183,8 +187,11 @@ public class VoucherProgramApi
             Assert.Equal("20/10 cập nhật", activated.RootElement.GetProperty("value").GetProperty("name").GetString());
             using var activeList = await client.GetAsync(route + "?isActive=true");
             using var activePage = JsonDocument.Parse(await activeList.Content.ReadAsStringAsync());
-            Assert.Equal(3, Assert.Single(activePage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray())
-                .GetProperty("voucherCount").GetInt32());
+            var activeItem = Assert.Single(activePage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
+            Assert.False(activeItem.TryGetProperty("voucherCount", out _));
+            Assert.False(activeItem.TryGetProperty("usedVoucherCount", out _));
+            Assert.False(activated.RootElement.GetProperty("value").TryGetProperty("voucherCount", out _));
+            Assert.False(activated.RootElement.GetProperty("value").TryGetProperty("usedVoucherCount", out _));
 
             using var deactivate = await client.PutAsJsonAsync(programRoute, new { isActive = false });
             Assert.Equal(HttpStatusCode.OK, deactivate.StatusCode);
@@ -207,13 +214,19 @@ public class VoucherProgramApi
         }
     }
 
-    private static async Task<WebApplication> StartApplication(SecurityKey key)
+    private static async Task<WebApplication> StartApplication(SecurityKey key, Action<DbContextOptionsBuilder>? configureDatabase = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
         builder.Logging.ClearProviders();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         var databaseName = Guid.NewGuid().ToString();
-        builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
+        builder.Services.AddDbContext<AppDbContext>(options =>
+        {
+            if (configureDatabase != null)
+                configureDatabase(options);
+            else
+                options.UseInMemoryDatabase(databaseName);
+        });
         builder.Services.AddScoped<VoucherProgramFeature.IService, VoucherProgramFeature.Service>();
         builder.Services.AddValidatorsFromAssembly(typeof(VoucherProgramFeature.Service).Assembly);
         builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();

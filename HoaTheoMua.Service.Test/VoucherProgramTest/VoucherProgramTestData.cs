@@ -14,11 +14,15 @@ internal static class VoucherProgramTestData
     public static Repository.Entity.VoucherProgram Program(bool active = false, bool deleted = false) => new()
     {
         Id = Guid.NewGuid(), Name = "20/10", IsActive = active, IsDeleted = deleted,
-        StartAt = DateTimeOffset.UtcNow, EndAt = DateTimeOffset.UtcNow.AddDays(7),
-        MinOrderAmount = 200000, MaxOrderAmount = 2000000, CreatedAt = DateTimeOffset.UtcNow
+        StartAt = PostgresUtcNow(), EndAt = PostgresUtcNow().AddDays(7),
+        MinOrderAmount = 200000, MaxOrderAmount = 2000000, CreatedAt = PostgresUtcNow()
     };
 
-    public static Repository.Entity.Voucher Voucher(Guid? programId, string code, bool active = false, bool deleted = false) => new()
+    // PostgreSQL timestamps preserve microseconds; keep boundary test inputs at that precision.
+    private static DateTimeOffset PostgresUtcNow() =>
+        new(DateTimeOffset.UtcNow.Ticks / 10 * 10, TimeSpan.Zero);
+
+    public static Voucher Voucher(Guid? programId, string code, bool active = false, bool deleted = false) => new()
     {
         Id = Guid.NewGuid(), ProgramId = programId, Code = code, IsActive = active, IsDeleted = deleted,
         DiscountType = VoucherDiscountType.Cash, DiscountValue = 10000,
@@ -32,6 +36,20 @@ internal static class VoucherProgramTestData
         MaxUsageCount = 2, DiscountType = "percent", DiscountValue = 20,
         MaxDiscountAmount = 100000, Description = "Quà tặng 20/10"
     };
+
+    // Sinh trùng liên tục rồi hủy sau hơn 5 vòng để kiểm tra vòng while vẫn hủy được.
+    internal sealed class CancellingGenerator(CancellationTokenSource cancellation) : IVoucherCodeGenerator
+    {
+        private int _calls;
+
+        public string Generate(string? prefix, int length, string? suffix)
+        {
+            _calls++;
+            if (_calls >= 13)
+                cancellation.Cancel();
+            return _calls == 1 ? "NEWAA" : "TAKEN";
+        }
+    }
 
     internal sealed class SequenceGenerator(params string[] codes) : IVoucherCodeGenerator
     {

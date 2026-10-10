@@ -10,7 +10,7 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 
 public class ManageVoucherProgram
 {
-    [Theory]
+    [VoucherPostgresTheory]
     [InlineData(0, 0, null)]
     [InlineData(200000, 0, null)]
     [InlineData(3000000, 0, null)]
@@ -19,7 +19,8 @@ public class ManageVoucherProgram
     [InlineData(null, 1000000, 1000000)]
     public async Task Update_ZeroMaxRemovesUpperLimit_WhileNullKeepsExistingLimit(int? min, int? max, int? expectedMax)
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
         await db.SaveChangesAsync();
@@ -38,10 +39,11 @@ public class ManageVoucherProgram
         Assert.Equal((decimal?)min ?? 200000m, saved.MinOrderAmount);
     }
 
-    [Fact]
+    [VoucherPostgresFact]
     public async Task Update_ChangesOnlySuppliedFields_NormalizesUtc_AndPreservesVoucherStatesWhenActiveIsOmitted()
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program(true);
         var voucher = VoucherProgramTestData.Voucher(program.Id, "FIRST", false);
         var originalEnd = program.EndAt;
@@ -70,19 +72,20 @@ public class ManageVoucherProgram
         Assert.True(saved.IsActive);
         Assert.False(savedVoucher.IsActive);
         Assert.Null(savedVoucher.UpdatedAt);
-        Assert.Equal(1, result.VoucherCount);
-        Assert.Equal(1, result.UsedVoucherCount);
-        Assert.Equal(saved.UpdatedAt, result.UpdatedAt);
+        Assert.NotNull(saved.UpdatedAt);
+        Assert.NotNull(result.UpdatedAt);
+        Assert.Equal(result.UpdatedAt.Value.Ticks / 10 * 10, saved.UpdatedAt.Value.Ticks);
     }
 
-    [Theory]
+    [VoucherPostgresTheory]
     [InlineData("startAt", "startAt", "Start time must be earlier than the current end time")]
     [InlineData("endAt", "endAt", "End time must be later than the current start time")]
     [InlineData("minOrderAmount", "minOrderAmount", "Min order amount cannot exceed the current max order amount")]
     [InlineData("maxOrderAmount", "maxOrderAmount", "Max order amount cannot be less than the current min order amount")]
     public async Task Update_ValidatesMergedValuesBeforeChangingProgramOrVouchers(string changedField, string errorField, string message)
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
         db.Vouchers.Add(VoucherProgramTestData.Voucher(program.Id, "FIRST", false));
@@ -111,12 +114,13 @@ public class ManageVoucherProgram
         Assert.Null((await db.Vouchers.SingleAsync()).UpdatedAt);
     }
 
-    [Theory]
+    [VoucherPostgresTheory]
     [InlineData(true)]
     [InlineData(false)]
     public async Task Active_SetsProgramAndEveryLiveVoucher_WithoutChangingUnrelatedOrDeletedVouchers(bool active)
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program(!active);
         var first = VoucherProgramTestData.Voucher(program.Id, "FIRST", true);
         var second = VoucherProgramTestData.Voucher(program.Id, "SECOND", false);
@@ -131,8 +135,6 @@ public class ManageVoucherProgram
 
         Assert.Equal(active, result.IsActive);
         Assert.Equal(program.Id, result.Id);
-        Assert.Equal(2, result.VoucherCount);
-        Assert.Equal(2, result.UsedVoucherCount);
         db.ChangeTracker.Clear();
         var saved = await db.VoucherPrograms.SingleAsync();
         Assert.Equal(active, saved.IsActive);
@@ -150,10 +152,11 @@ public class ManageVoucherProgram
         Assert.Null(all["OTHER"].UpdatedAt);
     }
 
-    [Fact]
+    [VoucherPostgresFact]
     public async Task Delete_SoftDeletesEntireProgram_PreservesIssuedCodesAndUsage_AndLeavesOtherVouchers()
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program(true);
         db.VoucherPrograms.Add(program);
         db.Vouchers.AddRange(VoucherProgramTestData.Voucher(program.Id, "FIRST", true), VoucherProgramTestData.Voucher(program.Id, "DELETED", false, true),
@@ -180,12 +183,13 @@ public class ManageVoucherProgram
         Assert.Equal(new[] { "DELETED", "FIRST", "OTHER" }, await db.Vouchers.OrderBy(x => x.Code).Select(x => x.Code).ToArrayAsync());
     }
 
-    [Theory]
+    [VoucherPostgresTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task AllMutations_ReturnNotFound_ForMissingOrDeletedProgram(bool deleted)
     {
-        await using var db = Database();
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
         var program = Program(deleted: deleted);
         if (deleted)
         {
@@ -201,6 +205,57 @@ public class ManageVoucherProgram
         Assert.Equal(deleted ? "Voucher program has been deleted." : "Voucher program does not exist.", active.Message);
         Assert.Equal(active.Message, delete.Message);
         Assert.Equal(active.Message, generate.Message);
+        Assert.Empty(await db.Vouchers.ToListAsync());
+    }
+
+    [VoucherPostgresFact]
+    public async Task Update_UsesCurrentDatabaseValues_InNewRequestContext()
+    {
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
+        var program = Program();
+        db.VoucherPrograms.Add(program);
+        await db.SaveChangesAsync();
+        await using (var other = fixture.Context())
+        {
+            var updated = await other.VoucherPrograms.SingleAsync();
+            updated.MinOrderAmount = 500000;
+            updated.MaxOrderAmount = 700000;
+            await other.SaveChangesAsync();
+        }
+
+        // Mô phỏng request mới: không mang entity được theo dõi từ bước chuẩn bị dữ liệu.
+        db.ChangeTracker.Clear();
+        var result = await new FeatureService(db).UpdateVoucherProgram(program.Id, new() { Name = "New name" });
+
+        Assert.Equal(500000m, result.MinOrderAmount);
+        Assert.Equal(700000m, result.MaxOrderAmount);
+        db.ChangeTracker.Clear();
+        var saved = await db.VoucherPrograms.SingleAsync();
+        Assert.Equal(500000m, saved.MinOrderAmount);
+        Assert.Equal(700000m, saved.MaxOrderAmount);
+    }
+
+    [VoucherPostgresFact]
+    public async Task ProgramDeletedByAnotherRequest_CannotBeMutated()
+    {
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
+        var program = Program();
+        db.VoucherPrograms.Add(program);
+        await db.SaveChangesAsync();
+        await using (var other = fixture.Context())
+        {
+            await new FeatureService(other).DeleteVoucherProgram(program.Id);
+        }
+        db.ChangeTracker.Clear();
+        var service = new FeatureService(db);
+
+        var error = await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.UpdateVoucherProgram(program.Id, new() { IsActive = true }));
+        Assert.Equal("Voucher program has been deleted.", error.Message);
+        await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteVoucherProgram(program.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GenerateProgramVouchers(program.Id, GenerateRequest()));
         Assert.Empty(await db.Vouchers.ToListAsync());
     }
 }

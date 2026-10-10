@@ -3305,7 +3305,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = true");
 
                     b.HasIndex("ProgramId")
                         .HasFilter("\"IsDeleted\" = false");

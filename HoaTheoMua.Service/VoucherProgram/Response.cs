@@ -19,8 +19,6 @@ public class Response
         public DateTimeOffset? EndAt { get; set; }
         public decimal? MinOrderAmount { get; set; }
         public decimal? MaxOrderAmount { get; set; }
-        public int VoucherCount { get; set; }
-        public int UsedVoucherCount { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
     }

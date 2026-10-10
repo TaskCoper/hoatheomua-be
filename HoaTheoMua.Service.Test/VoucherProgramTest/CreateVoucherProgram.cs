@@ -44,6 +44,8 @@ public class CreateVoucherProgram
         Assert.Equal(DateTimeOffset.Parse("2026-10-31T16:59:59+00:00"), saved.EndAt);
         Assert.Equal(request.MinOrderAmount, saved.MinOrderAmount);
         Assert.Equal(request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount, saved.MaxOrderAmount);
+        Assert.Equal(saved.MinOrderAmount, result.MinOrderAmount);
+        Assert.Equal(saved.MaxOrderAmount, result.MaxOrderAmount);
         Assert.Empty(await db.Vouchers.ToListAsync());
     }
 }
