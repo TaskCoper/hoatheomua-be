@@ -14,8 +14,8 @@ public sealed partial class Service
         var (job, platform, account) = await store.LockJob(publicationId, ct); Expected(job, request.ExpectedRevision);
         if (job.Status != "Failed" || !job.CanRetry || job.PublishMayHaveOccurred || job.AttemptCount >= settings.Value.MaxAttempts)
             throw Error(409, "PUBLICATION_RETRY_NOT_ALLOWED", "Chỉ thử lại tác vụ được xác nhận chưa đăng và có lỗi cho phép thử lại.");
-        if (job.ErrorCode == "META_RATE_LIMITED" && job.NextRunAt > clock.GetUtcNow())
-            throw Error(429, "META_RATE_LIMITED", "Nền tảng đang giới hạn yêu cầu; chờ hết thời gian backoff trước khi thử lại.");
+        if (job.ErrorCode is "META_RATE_LIMITED" or "ZALO_RATE_LIMITED" && job.NextRunAt > clock.GetUtcNow())
+            throw Error(429, job.ErrorCode, "Nền tảng đang giới hạn yêu cầu; chờ hết thời gian backoff trước khi thử lại.");
         if (platform.IsDeleted || await db.BasePosts.AnyAsync(x => x.Id == job.BasePostId && x.IsDeleted, ct)) throw Error(409, "PUBLICATION_SOURCE_DELETED", "Bài nguồn đã bị xóa.");
         if (platform.Status == Repository.Enum.PlatformPostStatus.Generating
             || await db.PostPublications.AnyAsync(x => x.PlatformPostId == job.PlatformPostId && x.Id != job.Id

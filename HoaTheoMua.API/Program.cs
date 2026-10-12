@@ -134,7 +134,9 @@ HoaTheoMua.Service.PostPublishing.Registration.AddPostGenPublishingAdapters(buil
 builder.Services.Configure<PlatformAccountService.PlatformAccountOptions>(builder.Configuration.GetSection(nameof(PlatformAccountService.PlatformAccountOptions)));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<PlatformAccountService.TokenProtector>();
-builder.Services.AddScoped<PlatformAccountService.IService, PlatformAccountService.Service>();
+builder.Services.AddScoped<PlatformAccountService.Service>();
+builder.Services.AddScoped<PlatformAccountService.IService>(sp => sp.GetRequiredService<PlatformAccountService.Service>());
+builder.Services.AddScoped<PlatformAccountService.IPublicationTokenRefresher>(sp => sp.GetRequiredService<PlatformAccountService.Service>());
 builder.Services.AddHttpClient<PlatformAccountService.IOAuthProvider, PlatformAccountService.OAuthProvider>("PostGenOAuth", client =>
 {
     client.Timeout = Timeout.InfiniteTimeSpan;

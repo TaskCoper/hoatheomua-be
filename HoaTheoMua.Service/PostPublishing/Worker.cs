@@ -8,11 +8,24 @@ using static HoaTheoMua.Service.PostPublishing.Store;
 namespace HoaTheoMua.Service.PostPublishing;
 
 public sealed class Worker(AppDbContext db, Store store, IEnumerable<IPublishingAdapter> adapters,
-    IOptions<PublishingOptions> settings, TokenProtector protector, TimeProvider clock)
+    IOptions<PublishingOptions> settings, TokenProtector protector, TimeProvider clock, IPublicationTokenRefresher? tokenRefresher = null)
 {
     public async Task Process(Guid id, long revision, CancellationToken ct, string? candidateExternalId = null, bool manualReview = false)
     {
         settings.Value.Validate();
+        string? refreshError = null;
+        if (tokenRefresher != null)
+        {
+            var pending = await db.PostPublications.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.Revision == revision
+                && (x.Status == "Queued" || x.Status == "Scheduled" || x.Status == "Publishing" || x.Status == "NeedsReview")
+                && (x.NextRunAt <= clock.GetUtcNow() || manualReview) && (x.LeaseId == null || x.LeaseUntil <= clock.GetUtcNow()), ct);
+            if (pending != null && settings.Value.ZaloEnabled && Read<PublicationSnapshot>(pending.Snapshot).Platform == Repository.Enum.PlatformType.Zalo)
+            {
+                try { await tokenRefresher.RefreshForPublication(pending.PlatformAccountId, ct); }
+                catch (AccountException ex) when (ex.MessageCode == "PLATFORM_REFRESH_IN_PROGRESS") { return; }
+                catch (AccountException ex) { refreshError = ex.MessageCode; }
+            }
+        }
         PublicationSnapshot snapshot; PublicationCheckpoint checkpoint; Credentials credentials;
         IPublishingAdapter adapter; PublicationOperation operation; Guid attemptId; long accountRevision;
         var lease = Guid.NewGuid();
@@ -44,8 +57,8 @@ public sealed class Worker(AppDbContext db, Store store, IEnumerable<IPublishing
             }
             snapshot = Read<PublicationSnapshot>(job.Snapshot); checkpoint = Read<PublicationCheckpoint>(job.Checkpoint);
             var selected = adapters.SingleOrDefault(x => x.Platform == snapshot.Platform);
-            var error = !settings.Value.Enabled(snapshot.Platform) ? "PUBLISHING_DISABLED" : selected == null ? "PUBLISHING_ADAPTER_UNAVAILABLE"
-                : AccountError(account, snapshot, clock.GetUtcNow());
+            var error = refreshError ?? (!settings.Value.Enabled(snapshot.Platform) ? "PUBLISHING_DISABLED" : selected == null ? "PUBLISHING_ADAPTER_UNAVAILABLE"
+                : AccountError(account, snapshot, clock.GetUtcNow()));
             if (error == null && (job.AttemptCount >= settings.Value.MaxAttempts || (!manualReview && job.StepCount >= settings.Value.MaxSteps))) error = "PUBLICATION_BUDGET_EXCEEDED";
             if (error != null)
             {
@@ -55,7 +68,7 @@ public sealed class Worker(AppDbContext db, Store store, IEnumerable<IPublishing
                 await db.SaveChangesAsync(ct); if (tx != null) await tx.CommitAsync(ct); return;
             }
             adapter = selected!;
-            var cooldown = await db.PostPublications.Where(x => x.PlatformAccountId == account.Id && x.ErrorCode == "META_RATE_LIMITED"
+            var cooldown = await db.PostPublications.Where(x => x.PlatformAccountId == account.Id && (x.ErrorCode == "META_RATE_LIMITED" || x.ErrorCode == "ZALO_RATE_LIMITED")
                 && x.NextRunAt > clock.GetUtcNow()).Select(x => x.NextRunAt).MaxAsync(ct);
             if (cooldown.HasValue && !manualReview)
             {
@@ -110,6 +123,10 @@ public sealed class Worker(AppDbContext db, Store store, IEnumerable<IPublishing
             if (operation == PublicationOperation.Prepare && ex.ReadOnlyRequest && result.Retryable && !result.RequiresReauth)
                 result = result with { Outcome = PublicationOutcome.Pending };
         }
+        catch (ZaloPublishingException ex)
+        {
+            result = ex.Result(executeStarted && operation != PublicationOperation.Prepare, operation == PublicationOperation.Reconcile);
+        }
         catch (Exception)
         {
             // Exception text can include request URLs/tokens. Persist only a stable error code.
@@ -142,6 +159,9 @@ public sealed class Worker(AppDbContext db, Store store, IEnumerable<IPublishing
         }
         else if (operation == PublicationOperation.Prepare && result.Outcome is PublicationOutcome.Continue or PublicationOutcome.Pending)
             store.State(current, target, "Publishing", result.ErrorCode);
+        else if (snapshot.Platform == Repository.Enum.PlatformType.Zalo && result.Outcome == PublicationOutcome.Pending
+            && result.PublishMayHaveOccurred && result.Checkpoint?.ProtectedProviderReference != null)
+            store.State(current, target, "Publishing", result.ErrorCode);
         else
         {
             store.State(current, target, current.PublishMayHaveOccurred ? "NeedsReview" : "Failed", result.ErrorCode ?? "PUBLICATION_RESULT_UNKNOWN");
@@ -155,7 +175,7 @@ public sealed class Worker(AppDbContext db, Store store, IEnumerable<IPublishing
         }
         if (latestAccount.Revision != accountRevision && current.Status == "Publishing")
         {
-            store.State(current, target, "Failed", "PLATFORM_ACCOUNT_CHANGED"); current.CanRetry = true;
+            store.State(current, target, current.PublishMayHaveOccurred ? "NeedsReview" : "Failed", "PLATFORM_ACCOUNT_CHANGED"); current.CanRetry = !current.PublishMayHaveOccurred;
         }
         if (current.StepCount >= settings.Value.MaxSteps || current.AttemptCount >= settings.Value.MaxAttempts)
         {
@@ -173,6 +193,6 @@ public sealed class Worker(AppDbContext db, Store store, IEnumerable<IPublishing
         return r.Checkpoint == null || (r.Checkpoint.Media != null && r.Checkpoint.Media.Length <= snapshot.Images.Length
             && r.Checkpoint.Media.Select(x => x.Order).Distinct().Count() == r.Checkpoint.Media.Length
             && r.Checkpoint.Media.All(x => snapshot.Images.Any(i => i.Order == x.Order) && !string.IsNullOrWhiteSpace(x.ProviderId) && x.ProviderId.Length <= 200)
-            && r.Checkpoint.ContainerId?.Length is not > 200);
+            && r.Checkpoint.ContainerId?.Length is not > 200 && r.Checkpoint.ProtectedProviderReference?.Length is not > 32768);
     }
 }
