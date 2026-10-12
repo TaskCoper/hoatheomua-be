@@ -1,4 +1,4 @@
-using HoaTheoMua.Service.VoucherProgram;
+using HoaTheoMua.Service.Exceptions;
 using Xunit;
 using VoucherProgramService = HoaTheoMua.Service.VoucherProgram.Service;
 
@@ -15,12 +15,9 @@ public class GetVoucherProgramsWithVouchersTest
         db.VoucherPrograms.AddRange(autumn, winter);
         await db.SaveChangesAsync();
 
-        var result = await new VoucherProgramService(db)
-            .GetVoucherProgramsWithVouchers(1, 10, "  AUTUMN ", null);
+        var result = await new VoucherProgramService(db).GetDetail(autumn.Id);
 
-        var item = Assert.Single(result.Value.Items.Cast<Response.VoucherProgramDetailResponse>());
-        Assert.Equal(autumn.Id, item.Id);
-        Assert.Equal(1, result.Value.TotalCount);
+        Assert.Equal(autumn.Id, result.Id);
     }
 
     [Fact]
@@ -32,11 +29,9 @@ public class GetVoucherProgramsWithVouchersTest
         db.VoucherPrograms.AddRange(first, second);
         await db.SaveChangesAsync();
 
-        var result = await new VoucherProgramService(db)
-            .GetVoucherProgramsWithVouchers(1, 10, null, second.Id);
+        var result = await new VoucherProgramService(db).GetDetail(second.Id);
 
-        var item = Assert.Single(result.Value.Items.Cast<Response.VoucherProgramDetailResponse>());
-        Assert.Equal(second.Id, item.Id);
+        Assert.Equal(second.Id, result.Id);
     }
 
     [Fact]
@@ -48,11 +43,7 @@ public class GetVoucherProgramsWithVouchersTest
         db.VoucherPrograms.Add(deleted);
         await db.SaveChangesAsync();
 
-        var result = await new VoucherProgramService(db)
-            .GetVoucherProgramsWithVouchers(1, 10, null, deleted.Id);
-
-        Assert.Empty(result.Value.Items);
-        Assert.Equal(0, result.Value.TotalCount);
+        await Assert.ThrowsAsync<NotFoundException>(() => new VoucherProgramService(db).GetDetail(deleted.Id));
     }
 
     [Fact]
@@ -69,15 +60,10 @@ public class GetVoucherProgramsWithVouchersTest
         db.Vouchers.AddRange(firstVoucher, firstDeleted, secondVoucher, standalone);
         await db.SaveChangesAsync();
 
-        var result = await new VoucherProgramService(db)
-            .GetVoucherProgramsWithVouchers(1, 10, null, null);
+        var service = new VoucherProgramService(db);
+        var firstItem = await service.GetDetail(first.Id);
+        var secondItem = await service.GetDetail(second.Id);
 
-        var items = result.Value.Items.Cast<Response.VoucherProgramDetailResponse>().ToArray();
-        Assert.Equal(2, items.Length);
-        var firstItem = items.Single(x => x.Id == first.Id);
-        var secondItem = items.Single(x => x.Id == second.Id);
-        Assert.Equal(new[] { firstVoucher.Id }, firstItem.Vouchers.Select(x => x.Id));
-        Assert.Equal(new[] { secondVoucher.Id }, secondItem.Vouchers.Select(x => x.Id));
         Assert.Equal(1, firstItem.VoucherCount);
         Assert.Equal(1, secondItem.VoucherCount);
     }

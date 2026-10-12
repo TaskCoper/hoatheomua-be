@@ -56,16 +56,22 @@ public class VoucherProgramController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("/api/v1/admin/voucher-programs/with-vouchers")]
-    public async Task<IActionResult> GetVoucherProgramsWithVouchers(
+    [HttpGet("/api/v1/admin/voucher-programs/{id:guid}")]
+    public async Task<IActionResult> GetDetail(Guid id)
+    {
+        var result = await _voucherProgramService.GetDetail(id);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
+    [HttpGet("/api/v1/admin/voucher-programs/{programId:guid}/vouchers")]
+    public async Task<IActionResult> GetVoucherByProgramId(
+        Guid programId,
         [FromQuery] int pageIndex = 1,
         [FromQuery] int pageSize = 10,
         [FromQuery] string? keyword = null,
-        [FromQuery] Guid? programId = null,
-        CancellationToken cancellationToken = default)
+        [FromQuery] bool? isActive = null)
     {
-        var result = await _voucherProgramService.GetVoucherProgramsWithVouchers(
-            pageIndex, pageSize, keyword, programId, cancellationToken);
+        var result = await _voucherProgramService.GetVoucherByProgramId(pageIndex, pageSize, keyword, programId, isActive);
         return Ok(result);
     }
 }
