@@ -24,7 +24,5 @@ public interface IService
 
     Task<BasePaginationResponse> GetVouchers(int pageIndex, int pageSize, string? keyword, string? visibility,
         bool? isActive);
-    
-    
-    
+    Task<List<Response.FilterVoucherResponse>> FilterVoucher(List<Guid> productIds);
 }
