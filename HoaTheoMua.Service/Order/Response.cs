@@ -155,6 +155,7 @@ public class Response
         public string ReceiptPhoneNumber { get; set; } = string.Empty;
         public decimal ShippingFee { get; set; }
         public decimal ProductFee { get; set; }
+        public decimal? DiscountAmount { get; set; } //voucherSnapshot
         public decimal TotalFee { get; set; }
         public decimal? VatFee { get; set; }
         public DateTimeOffset CreateAt { get; set; }
