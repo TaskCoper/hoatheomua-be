@@ -200,6 +200,11 @@ public class Service : IService
             {
                 query = query.Where(x => x.Visibility == VoucherVisibility.Private);
             }
+            else
+            {
+                //all thì export ra public và private ko thuộc chương trình
+                query = query.Where(x => x.ProgramId == null);
+            }
 
             ordered = query.OrderByDescending(x => x.CreatedAt);
             fileKind = visibility ?? "all";
