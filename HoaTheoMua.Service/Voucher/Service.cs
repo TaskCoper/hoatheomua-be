@@ -142,7 +142,91 @@ public class Service : IService
 
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
-    
+    public async Task<List<Response.FilterVoucherResponse>> FilterVoucher(List<Guid> productIds)
+    {
+        var ids = productIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            throw new BadRequestException("productIds is required.");
+        }
+
+        var prices = await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsActive && ids.Contains(x.Id))
+            .Select(x => x.Price!.Value)
+            .ToListAsync();
+
+        if (prices.Count != ids.Count)
+        {
+            throw new BadRequestException("Some products do not exist or are inactive.");
+        }
+
+        var totalPrice = prices.Sum();
+        var now = DateTimeOffset.UtcNow;
+
+        var vouchers = await _dbContext.Vouchers
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted
+                        && x.Visibility == VoucherVisibility.Public
+                        && x.ProgramId == null)
+            .Select(x => new
+            {
+                x.Id,
+                x.Code,
+                x.Description,
+                x.DiscountType,
+                x.DiscountValue,
+                x.MaxDiscountAmount,
+                x.MinOrderAmount,
+                x.MaxOrderAmount,
+                x.IsActive,
+                x.StartAt,
+                x.EndAt,
+                x.UsedCount,
+                x.MaxUsageCount
+            })
+            .ToListAsync();
+
+        var selectedQuery = vouchers
+            .Select(x =>
+            {
+                // null = no limit
+                var isValid = x.IsActive
+                              && x.StartAt <= now
+                              && (x.EndAt == null || x.EndAt >= now)
+                              && x.UsedCount < x.MaxUsageCount
+                              && (x.MinOrderAmount == null || totalPrice >= x.MinOrderAmount)
+                              && (x.MaxOrderAmount == null || totalPrice <= x.MaxOrderAmount);
+                var discountAmount = isValid
+                    ? CalculateDiscount(x.DiscountType, x.DiscountValue, x.MaxDiscountAmount, totalPrice)
+                    : 0m;
+
+                return new Response.FilterVoucherResponse
+                {
+                    VoucherId = x.Id,
+                    Code = x.Code,
+                    Description = x.Description,
+                    DiscountType = x.DiscountType == VoucherDiscountType.Cash
+                        ? VoucherDiscountTypes.Cash
+                        : VoucherDiscountTypes.Percent,
+                    DiscountValue = x.DiscountValue,
+                    MaxDiscountAmount = x.MaxDiscountAmount,
+                    MinOrderAmount = x.MinOrderAmount,
+                    MaxOrderAmount = x.MaxOrderAmount,
+                    DiscountAmount = discountAmount,
+                    ProductFeeAfterDiscount = totalPrice - discountAmount,
+                    IsValid = isValid
+                };
+            })
+            .OrderByDescending(x => x.IsValid)
+            .ThenByDescending(x => x.DiscountAmount);
+            
+            
+            var result = selectedQuery.ToList();
+
+            return result;
+    }
+
     public async Task<Response.VoucherExportFile> ExportVouchers(string? visibility, List<Guid>? programIds)
     {
         var ids = programIds?.Distinct().ToList() ?? new List<Guid>();

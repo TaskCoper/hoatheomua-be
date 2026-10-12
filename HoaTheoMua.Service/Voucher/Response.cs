@@ -88,4 +88,11 @@ public class Response
         public decimal DiscountAmount { get; set; }           // VoucherSnapshot.DiscountAmount
         public DateTimeOffset? UsedAt { get; set; }            // earliest Transaction.CreatedAt of the order
     }
+
+    public class FilterVoucherResponse : EstimateVoucherResponse
+    {
+        public decimal? MinOrderAmount { get; set; }
+        public decimal? MaxOrderAmount { get; set; }
+        public bool IsValid { get; set; }
+    }
 }
