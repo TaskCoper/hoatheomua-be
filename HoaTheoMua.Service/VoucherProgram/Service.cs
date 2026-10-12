@@ -89,7 +89,7 @@ public class Service : IService
     }
 
     public async Task<BasePaginationResponse> GetVoucherProgramsWithVouchers(
-        int pageIndex, int pageSize, string? keyword, CancellationToken cancellationToken = default)
+        int pageIndex, int pageSize, string? keyword, Guid? programId, CancellationToken cancellationToken = default)
     {
         pageIndex = pageIndex <= 0 ? 1 : pageIndex;
         pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
@@ -102,6 +102,11 @@ public class Service : IService
         {
             var name = keyword.Trim().ToLowerInvariant();
             query = query.Where(x => x.Name.ToLower().Contains(name));
+        }
+        
+        if (programId.HasValue)
+        {
+            query = query.Where(x => x.Id == programId.Value);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

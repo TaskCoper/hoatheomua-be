@@ -61,10 +61,11 @@ public class VoucherProgramController : ControllerBase
         [FromQuery] int pageIndex = 1,
         [FromQuery] int pageSize = 10,
         [FromQuery] string? keyword = null,
+        [FromQuery] Guid? programId = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _voucherProgramService.GetVoucherProgramsWithVouchers(
-            pageIndex, pageSize, keyword, cancellationToken);
+            pageIndex, pageSize, keyword, programId, cancellationToken);
         return Ok(result);
     }
 }
