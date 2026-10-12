@@ -25,10 +25,9 @@ public class VoucherController : ControllerBase
         [FromQuery] int pageSize = 10,
         [FromQuery] string? keyword = null,
         [FromQuery] string? visibility = null,
-        [FromQuery] bool? isActive = null,
-        [FromQuery] Guid? programId = null)
+        [FromQuery] bool? isActive = null)
     {
-        var result = await _voucherService.GetVouchers(pageIndex, pageSize, keyword, visibility, isActive, programId);
+        var result = await _voucherService.GetVouchers(pageIndex, pageSize, keyword, visibility, isActive);
         return Ok(result);
     }
 

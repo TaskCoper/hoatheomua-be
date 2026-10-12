@@ -5,8 +5,8 @@ public class Response
     public class VoucherResponse
     {
         public Guid Id { get; set; }
-        public Guid? ProgramId { get; set; }
-        public string? ProgramName { get; set; }
+        // public Guid? ProgramId { get; set; }
+        // public string? ProgramName { get; set; }
         public required string Code { get; set; }
         public string? Description { get; set; }
         public required string Visibility { get; set; }       // public | private

@@ -72,7 +72,7 @@ public class Service : IService
     }
 
     public async Task<BasePaginationResponse> GetVouchers(
-        int pageIndex, int pageSize, string? keyword, string? visibility, bool? isActive, Guid? programId)
+        int pageIndex, int pageSize, string? keyword, string? visibility, bool? isActive)
     {
         if (visibility != null && visibility is not (VoucherVisibilities.Public or VoucherVisibilities.Private))
         {
@@ -84,7 +84,7 @@ public class Service : IService
 
         var query = _dbContext.Vouchers
             .AsNoTracking()
-            .Where(x => !x.IsDeleted);
+            .Where(x => !x.IsDeleted && x.ProgramId == null); //lấy những voucher ko thuộc chương trình
 
         if (!string.IsNullOrWhiteSpace(keyword))
         {
@@ -107,11 +107,6 @@ public class Service : IService
             query = query.Where(x => x.IsActive == isActive.Value);
         }
 
-        if (programId.HasValue)
-        {
-            query = query.Where(x => x.ProgramId == programId.Value);
-        }
-
         var totalCount = await query.CountAsync();
 
         var items = await query
@@ -121,8 +116,8 @@ public class Service : IService
             .Select(x => new Response.VoucherResponse
             {
                 Id = x.Id,
-                ProgramId = x.ProgramId,
-                ProgramName = x.Program != null ? x.Program.Name : null,
+                // ProgramId = x.ProgramId,
+                // ProgramName = x.Program != null ? x.Program.Name : null,
                 Code = x.Code,
                 Description = x.Description,
                 Visibility = x.Visibility == VoucherVisibility.Public
