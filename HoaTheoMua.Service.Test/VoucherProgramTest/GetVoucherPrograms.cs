@@ -81,7 +81,7 @@ public class GetVoucherPrograms
     }
 
     [Fact]
-    public async Task PaginatesNewestFirst_AndReturnsOnlyProgramFields()
+    public async Task PaginatesNewestFirst_AndReturnsVoucherCounts()
     {
         await using var db = CreateDbContext();
         var oldest = Program("Oldest", 1);
@@ -89,11 +89,11 @@ public class GetVoucherPrograms
         var newest = Program("Newest", 3, deleted: true);
         db.VoucherPrograms.AddRange(oldest, middle, newest);
         db.Vouchers.AddRange(
-            Voucher(middle.Id, "USED1", 3),
-            Voucher(middle.Id, "USED2", 1),
-            Voucher(middle.Id, "UNUSED", 0),
-            Voucher(middle.Id, "DELETED", 10, deleted: true),
-            Voucher(newest.Id, "OTHER", 20));
+            NewVoucher(middle.Id, "USED1", 3),
+            NewVoucher(middle.Id, "USED2", 1),
+            NewVoucher(middle.Id, "UNUSED", 0),
+            NewVoucher(middle.Id, "DELETED", 10, deleted: true),
+            NewVoucher(newest.Id, "OTHER", 20));
         await db.SaveChangesAsync();
 
         var service = new VoucherProgramService(db);
@@ -107,10 +107,8 @@ public class GetVoucherPrograms
             new Request.GetVoucherProgramsRequest { pageIndex = 2, pageSize = 1 });
         var item = Assert.Single(secondPage.Value.Items.Cast<Response.VoucherProgramResponse>());
         Assert.Equal(middle.Id, item.Id);
-        var json = System.Text.Json.JsonSerializer.SerializeToElement(item,
-            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
-        Assert.False(json.TryGetProperty("usedVoucherCount", out _));
-        Assert.False(json.TryGetProperty("voucherCount", out _));
+        Assert.Equal(2, item.UsedVoucherCount);
+        Assert.Equal(3, item.VoucherCount);
         Assert.Equal(3, secondPage.Value.TotalCount);
         Assert.True(secondPage.Value.HasNextPage);
         Assert.True(secondPage.Value.HasPreviousPage);
@@ -198,7 +196,7 @@ public class GetVoucherPrograms
         CreatedAt = DateTimeOffset.Parse("2026-10-01T00:00:00Z").AddMinutes(sequence)
     };
 
-    private static Repository.Entity.Voucher Voucher(Guid programId, string code, int usedCount, bool deleted = false) => new()
+    private static Repository.Entity.Voucher NewVoucher(Guid programId, string code, int usedCount, bool deleted = false) => new()
     {
         Id = Guid.NewGuid(), ProgramId = programId, Code = code,
         UsedCount = usedCount, MaxUsageCount = 100, IsDeleted = deleted,

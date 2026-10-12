@@ -24,7 +24,7 @@ public class VoucherProgramPostgres
         await using var db = fixture.Context(rejectProgramSave);
         var program = Program(true);
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
+        db.Vouchers.Add(NewVoucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
 
         using var cancellation = new CancellationTokenSource();
@@ -86,7 +86,7 @@ public class VoucherProgramPostgres
         {
             seed.VoucherPrograms.Add(program);
             seed.Vouchers.AddRange(Enumerable.Range(1, 9990)
-                .Select(number => Voucher(program.Id, $"OLD{number}", active: true)));
+                .Select(number => NewVoucher(program.Id, $"OLD{number}", active: true)));
             await seed.SaveChangesAsync();
         }
 
@@ -132,7 +132,7 @@ public class VoucherProgramPostgres
         {
             await using var competitor = fixture.Context();
             // No parent FK: this independent write can commit while generation holds the program lock.
-            competitor.Vouchers.Add(Voucher(null, "RACE1", active: true));
+            competitor.Vouchers.Add(NewVoucher(null, "RACE1", active: true));
             await competitor.SaveChangesAsync();
         });
         await using var db = fixture.Context(race);
@@ -157,7 +157,7 @@ public class VoucherProgramPostgres
         await using (var seed = fixture.Context())
         {
             seed.VoucherPrograms.AddRange(firstProgram, secondProgram);
-            seed.Vouchers.AddRange(Voucher(firstProgram.Id, "SHARED"), Voucher(secondProgram.Id, "SHARED"));
+            seed.Vouchers.AddRange(NewVoucher(firstProgram.Id, "SHARED"), NewVoucher(secondProgram.Id, "SHARED"));
             await seed.SaveChangesAsync();
         }
 

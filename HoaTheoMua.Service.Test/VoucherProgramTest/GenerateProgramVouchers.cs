@@ -64,7 +64,7 @@ public class GenerateProgramVouchers
         await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
+        db.Vouchers.Add(NewVoucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
         var generator = new SequenceGenerator("TAKEN", "NEWAA", "NEWAA", "NEWBB", "NEWCC");
         var service = new FeatureService(db, generator);
@@ -85,7 +85,7 @@ public class GenerateProgramVouchers
         await using var db = fixture.Context();
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
+        db.Vouchers.Add(NewVoucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
         var generator = new SequenceGenerator(
             new[] { "NEWAA" }.Concat(Enumerable.Repeat("TAKEN", 12)).Append("NEWBB").ToArray());
@@ -107,7 +107,7 @@ public class GenerateProgramVouchers
         await using var db = fixture.Context();
         var program = Program(true);
         db.VoucherPrograms.Add(program);
-        db.Vouchers.AddRange(Enumerable.Range(0, 10000).Select(i => Voucher(program.Id, $"OLD{i}")));
+        db.Vouchers.AddRange(Enumerable.Range(0, 10000).Select(i => NewVoucher(program.Id, $"OLD{i}")));
         await db.SaveChangesAsync();
         var service = new FeatureService(db);
 
@@ -128,8 +128,8 @@ public class GenerateProgramVouchers
         var program = Program();
         var other = Program();
         db.VoucherPrograms.AddRange(program, other);
-        db.Vouchers.AddRange(Voucher(program.Id, "SAME1", deleted: deleted),
-            Voucher(other.Id, "OTHER", deleted: deleted), Voucher(null, "ALONE", deleted: deleted));
+        db.Vouchers.AddRange(NewVoucher(program.Id, "SAME1", deleted: deleted),
+            NewVoucher(other.Id, "OTHER", deleted: deleted), NewVoucher(null, "ALONE", deleted: deleted));
         await db.SaveChangesAsync();
 
         var result = await new FeatureService(db, new SequenceGenerator("SAME1", "OTHER", "ALONE", "EXTRA"))
@@ -149,7 +149,7 @@ public class GenerateProgramVouchers
         await using var db = fixture.Context(observer);
         var program = Program();
         db.VoucherPrograms.Add(program);
-        db.Vouchers.Add(Voucher(null, "TAKEN", active: true));
+        db.Vouchers.Add(NewVoucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
         observer.VoucherSaves = 0;
         var generator = new SequenceGenerator("TAKEN", "NEWAA", "NEWAA", "NEWBB", "NEWCC");
@@ -192,7 +192,7 @@ public class GenerateProgramVouchers
         await using var db = fixture.Context();
         var program = Program(true);
         db.VoucherPrograms.Add(program);
-        db.Vouchers.AddRange(Enumerable.Range(0, 9999).Select(i => Voucher(program.Id, $"ACTIVE{i}", active: true)));
+        db.Vouchers.AddRange(Enumerable.Range(0, 9999).Select(i => NewVoucher(program.Id, $"ACTIVE{i}", active: true)));
         await db.SaveChangesAsync();
         var service = new FeatureService(db);
 

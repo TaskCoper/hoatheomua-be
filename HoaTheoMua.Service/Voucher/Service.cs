@@ -668,6 +668,63 @@ public class Service : IService
         return "Update voucher successfully";
     }
 
+    // Used by CreateOrder. EstimateVoucher does the checks and the discount; this adds the real "uses left" count
+    public async Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee)
+    {
+        var normalizedCode = code.Trim().ToUpperInvariant();
+
+        var voucherId = await _dbContext.Vouchers
+            .Where(x => x.Code == normalizedCode && !x.IsDeleted)
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync();
+
+        if (voucherId == null)
+        {
+            throw new NotFoundException("Voucher not found.");
+        }
+
+        // Uses left = Paid orders. Refresh the column first, because EstimateVoucher only reads the column
+        var usedCount = await CountPaidUsages(voucherId.Value);
+        await _dbContext.Vouchers
+            .Where(x => x.Id == voucherId.Value && x.UsedCount != usedCount)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCount, usedCount));
+
+        // Same checks and the same error messages as the estimate
+        var estimate = await EstimateVoucher(new Request.EstimateVoucherRequest
+        {
+            code = normalizedCode,
+            productFee = productFee
+        });
+
+        var programId = await _dbContext.Vouchers
+            .Where(x => x.Id == estimate.VoucherId)
+            .Select(x => x.ProgramId)
+            .SingleAsync();
+
+        return new Order.Request.VoucherSnapshot
+        {
+            VoucherId = estimate.VoucherId,
+            Code = estimate.Code,
+            DiscountType = estimate.DiscountType,
+            DiscountValue = estimate.DiscountValue,
+            MaxDiscountAmount = estimate.MaxDiscountAmount,
+            DiscountAmount = estimate.DiscountAmount,
+            ProgramId = programId
+        };
+    }
+
+    // Used count = Paid orders whose snapshot holds this voucher id
+    private async Task<int> CountPaidUsages(Guid voucherId)
+    {
+        var snapshotFilter = JsonConvert.SerializeObject(new { voucherId });
+
+        return await _dbContext.Orders
+            .AsNoTracking()
+            .CountAsync(x => !x.IsDeleted
+                             && x.Status == "Paid"
+                             && EF.Functions.JsonContains(x.VoucherSnapshot, snapshotFilter));
+    }
+
     private async Task<string> GenerateUniqueCode(string? prefix, int length, string? suffix)
     {
         for (var attempt = 1; attempt <= MaxGenerateAttempts; attempt++)

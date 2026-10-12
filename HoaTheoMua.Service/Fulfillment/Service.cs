@@ -489,6 +489,8 @@ public class Service : IService
             .Split('-', StringSplitOptions.RemoveEmptyEntries)
             .FirstOrDefault() ?? string.Empty;
 
+        var voucherSnapshot = DeserializeVoucherSnapshot(order.VoucherSnapshot);
+
         var nhanhVnRequest = new OrderRoot
         {
             Depot = new Depot { Id = NhanhDepotId, PickupDepotId = 0 },
@@ -595,8 +597,12 @@ public class Service : IService
                 CreditCode = "",
                 CreditAccountId = 0,
                 Discount = 0m,
-                DiscountType = "percent",
-                CouponCode = "",
+                // A voucher is a fixed amount for the whole order ("cash"); orders without one keep "percent"
+                DiscountType = voucherSnapshot != null ? "cash" : "percent",
+                DiscountAmount = voucherSnapshot == null
+                    ? null
+                    : (int)Math.Round(voucherSnapshot.DiscountAmount, MidpointRounding.AwayFromZero),
+                CouponCode = voucherSnapshot?.Code ?? "",
                 CouponMoney = 0m,
                 CouponIsValid = 0,
                 UsedPoints = 0,
@@ -1124,6 +1130,21 @@ public class Service : IService
         }
 
         return $"{time:D2}:00:00";
+    }
+
+    private static HoaTheoMua.Service.Order.Request.VoucherSnapshot? DeserializeVoucherSnapshot(string? snapshot)
+    {
+        if (string.IsNullOrWhiteSpace(snapshot))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<HoaTheoMua.Service.Order.Request.VoucherSnapshot>(snapshot);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     // Instant orders carry no tag, so ConvertTimeDeliveryAsync always returns empty for them. The
