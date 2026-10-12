@@ -14,7 +14,7 @@ public class GenerateProgramVouchers
     [VoucherPostgresTheory]
     [InlineData("cash", false)]
     [InlineData("percent", true)]
-    public async Task GeneratesExactQuantity_WithSharedPolicy_PrivateActiveAndInheritedSchedule(string type, bool active)
+    public async Task GeneratesExactQuantity_WithSharedPolicy_PrivateAndProgramActiveState(string type, bool active)
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
@@ -32,6 +32,7 @@ public class GenerateProgramVouchers
 
         Assert.Equal(program.Id, result.ProgramId);
         Assert.Equal(1000, result.CreatedCount);
+        Assert.Equal(active, result.IsActive);
         Assert.Equal(1000, result.Codes.Distinct().Count());
         Assert.Equal(result.Codes.Order(), vouchers.Select(x => x.Code).Order());
         Assert.All(vouchers, voucher =>
@@ -44,7 +45,7 @@ public class GenerateProgramVouchers
             Assert.Equal(request.MaxDiscountAmount, voucher.MaxDiscountAmount);
             Assert.Equal(request.MaxUsageCount, voucher.MaxUsageCount);
             Assert.Equal(request.Description, voucher.Description);
-            Assert.True(voucher.IsActive);
+            Assert.Equal(active, voucher.IsActive);
             Assert.False(voucher.IsDeleted);
             Assert.Equal(0, voucher.UsedCount);
             Assert.Null(voucher.StartAt);
@@ -83,7 +84,7 @@ public class GenerateProgramVouchers
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
-        var program = Program();
+        var program = Program(true);
         db.VoucherPrograms.Add(program);
         db.Vouchers.Add(NewVoucher(null, "TAKEN", active: true));
         await db.SaveChangesAsync();
@@ -121,23 +122,23 @@ public class GenerateProgramVouchers
     [VoucherPostgresTheory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Generation_ReusesInactiveCodes_FromSameProgramOtherProgramAndStandalone(bool deleted)
+    public async Task Generation_SkipsInactiveCodes_FromSameProgramOtherProgramAndStandalone(bool deleted)
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
-        var program = Program();
+        var program = Program(true);
         var other = Program();
         db.VoucherPrograms.AddRange(program, other);
         db.Vouchers.AddRange(NewVoucher(program.Id, "SAME1", deleted: deleted),
             NewVoucher(other.Id, "OTHER", deleted: deleted), NewVoucher(null, "ALONE", deleted: deleted));
         await db.SaveChangesAsync();
 
-        var result = await new FeatureService(db, new SequenceGenerator("SAME1", "OTHER", "ALONE", "EXTRA"))
+        var result = await new FeatureService(db, new SequenceGenerator("SAME1", "OTHER", "ALONE", "EXTRA", "NEWAA", "NEWBB"))
             .GenerateProgramVouchers(program.Id, GenerateRequest(3));
 
-        Assert.Equal(new[] { "SAME1", "OTHER", "ALONE" }, result.Codes);
+        Assert.Equal(new[] { "EXTRA", "NEWAA", "NEWBB" }, result.Codes);
         Assert.Equal(6, await db.Vouchers.CountAsync());
-        Assert.Equal(2, await db.Vouchers.CountAsync(x => x.Code == "SAME1"));
+        Assert.Equal(1, await db.Vouchers.CountAsync(x => x.Code == "SAME1"));
         Assert.Equal(3, await db.Vouchers.CountAsync(x => x.IsActive));
     }
 
@@ -205,7 +206,7 @@ public class GenerateProgramVouchers
         await service.UpdateVoucherProgram(program.Id, new() { IsActive = false });
         Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
         Assert.Equal(10001, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id));
-        Assert.Equal(1, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
+        Assert.Equal(0, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
     }
 
     private sealed class VoucherSaveObserver : SaveChangesInterceptor

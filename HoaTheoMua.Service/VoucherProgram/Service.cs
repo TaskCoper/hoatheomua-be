@@ -286,18 +286,21 @@ public class Service : IService
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         // Khóa dòng chương trình trong transaction để các thao tác sinh mã, cập nhật và xóa
         // trên cùng chương trình chờ nhau, tránh sinh mã trong lúc chương trình bị xóa.
-        await GetProgramForUpdate(id, cancellationToken);
-        // Mã mới active ngay. Khóa chương trình được giữ trong lúc đếm và lưu để tránh vượt hạn mức.
+        var program = await GetProgramForUpdate(id, cancellationToken);
+        // Chương trình đang tắt thì mã mới cũng tắt. Chương trình đang bật thì mã mới bật ngay.
+        var newVoucherIsActive = program.IsActive;
+        // Khóa chương trình được giữ trong lúc đếm và lưu để tránh vượt hạn mức.
         // Không giới hạn tổng số mã lịch sử, chỉ đếm mã đang active.
         var activeCount = await _dbContext.Vouchers
             .Where(x => x.ProgramId == id && x.IsActive)
             .Take(10001).CountAsync(cancellationToken);
-        if ((long)activeCount + request.Quantity > 10000)
+        // Mã mới đang tắt thì chưa tính vào hạn mức. Hạn mức sẽ được kiểm tra lúc bật chương trình.
+        if (newVoucherIsActive && (long)activeCount + request.Quantity > 10000)
             throw new ConflictException("Mỗi chương trình chỉ được có tối đa 10.000 voucher đang hoạt động.");
 
         // Các mã đã chọn được giữ qua nhiều vòng; có trong danh sách chưa có nghĩa là đã lưu DB.
         var codes = new List<string>(request.Quantity);
-        // Ghi nhớ mã đang active trong DB hoặc đã chọn trong lô này, để không chọn lại ở vòng sau.
+        // Ghi nhớ mã đã có trong DB hoặc đã chọn trong lô này, để không chọn lại ở vòng sau.
         var excludedCodes = new HashSet<string>(StringComparer.Ordinal);
         // Cả lô dùng chung thời điểm tạo, kể cả khi phải sinh bù qua nhiều vòng.
         var now = DateTimeOffset.UtcNow;
@@ -331,14 +334,14 @@ public class Service : IService
             if (candidates.Count > 0)
             {
                 // Kiểm tra cả nhóm mã bằng một truy vấn, không truy vấn riêng từng mã.
-                // Chỉ mã đang active được giữ chỗ, trên toàn bảng kể cả voucher độc lập.
-                // Mã inactive ở cùng hoặc khác chương trình được phép tái sử dụng.
+                // Mã mới không được trùng với voucher nào, kể cả voucher đang tắt hoặc đã xóa.
+                // Như vậy sau này bật lại voucher cũ sẽ không bị lỗi trùng mã.
                 var candidateCodes = candidates.ToArray();
                 var existingCodes = await _dbContext.Vouchers.AsNoTracking()
-                    .Where(x => x.IsActive && candidateCodes.Contains(x.Code))
+                    .Where(x => candidateCodes.Contains(x.Code))
                     .Select(x => x.Code)
                     .ToListAsync(cancellationToken);
-                // Đưa các mã đang active đã tìm thấy vào tập loại trừ trước khi chọn mã.
+                // Đưa các mã đã có trong DB vào tập loại trừ trước khi chọn mã.
                 excludedCodes.UnionWith(existingCodes);
                 foreach (var code in candidates)
                 {
@@ -365,7 +368,7 @@ public class Service : IService
                 MaxDiscountAmount = request.MaxDiscountAmount,
                 Visibility = VoucherVisibility.Private,
                 MaxUsageCount = request.MaxUsageCount,
-                UsedCount = 0, IsActive = true, IsDeleted = false, CreatedAt = now
+                UsedCount = 0, IsActive = newVoucherIsActive, IsDeleted = false, CreatedAt = now
             }).ToList();
 
             try
@@ -410,7 +413,7 @@ public class Service : IService
         // Thành công luôn trả đúng Quantity mã, không trả về một lô thiếu số lượng.
         return new Response.GenerateProgramVouchersResponse
         {
-            ProgramId = id, CreatedCount = codes.Count, Codes = codes
+            ProgramId = id, CreatedCount = codes.Count, IsActive = newVoucherIsActive, Codes = codes
         };
     }
 

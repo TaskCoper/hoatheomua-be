@@ -68,6 +68,7 @@ public class ManageVouchersTest
 
         Assert.Equal("Voucher deleted successfully", message);
         Assert.True(voucher.IsDeleted);
+        Assert.False(voucher.IsActive);
         Assert.NotNull(voucher.UpdatedAt);
     }
 
@@ -103,16 +104,17 @@ public class ManageVouchersTest
 
         var result = await new VoucherService(db).SetVouchersActive(new Request.SetVouchersActiveRequest
         {
-            Ids = [standalone.Id, activeProgramVoucher.Id, inactiveProgramVoucher.Id, missingId], IsActive = true
+            Ids = [standalone.Id, activeProgramVoucher.Id, missingId], IsActive = true
         });
 
         Assert.Equal("Voucher status updated successfully.", result);
         db.ChangeTracker.Clear();
         Assert.Equal(3, db.Vouchers.Count());
-        Assert.All(db.Vouchers, voucher =>
+        Assert.All(db.Vouchers.Where(voucher => voucher.Id != inactiveProgramVoucher.Id), voucher =>
         {
             Assert.True(voucher.IsActive);
             Assert.NotNull(voucher.UpdatedAt);
         });
+        Assert.False(db.Vouchers.Single(voucher => voucher.Id == inactiveProgramVoucher.Id).IsActive);
     }
 }

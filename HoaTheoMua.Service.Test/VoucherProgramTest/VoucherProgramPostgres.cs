@@ -81,7 +81,7 @@ public class VoucherProgramPostgres
     public async Task ConcurrentBatches_CannotExceed10000ActiveCodes()
     {
         await using var fixture = await PostgresDatabase.Create();
-        var program = Program();
+        var program = Program(true);
         await using (var seed = fixture.Context())
         {
             seed.VoucherPrograms.Add(program);
@@ -121,7 +121,7 @@ public class VoucherProgramPostgres
     public async Task CodeActivatedAfterExistenceCheck_RetriesBatchWithoutPartialRows()
     {
         await using var fixture = await PostgresDatabase.Create();
-        var program = Program();
+        var program = Program(true);
         await using (var seed = fixture.Context())
         {
             seed.VoucherPrograms.Add(program);
