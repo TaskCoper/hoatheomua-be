@@ -50,6 +50,7 @@ public class Request
 
         public bool? IsExportInvoice { get; set; }
         public InvoiceType? InvoiceType { get; set; }
+        public string? VoucherCode { get; set; }
         // public required Guid AddressId { get; set; }
         public required string PhoneReceiver { get; set; }
         public required string FullNameReceiver { get; set; }
@@ -283,5 +284,29 @@ public class Request
         public string Type { get; set; } = "card";
         [JsonProperty("content")]
         public string Content { get; set; } = string.Empty;
+    }
+    
+    public class VoucherSnapshot
+    {
+        [JsonPropertyName("voucherId")]
+        public Guid VoucherId { get; init; }
+
+        [JsonPropertyName("code")]
+        public string Code { get; init; } = string.Empty;
+
+        [JsonPropertyName("discountType")]
+        public string DiscountType { get; init; } = string.Empty;   // "cash" | "percent"
+
+        [JsonPropertyName("discountValue")]
+        public decimal DiscountValue { get; init; }
+
+        [JsonPropertyName("maxDiscountAmount")]
+        public decimal? MaxDiscountAmount { get; init; }
+
+        [JsonPropertyName("discountAmount")]
+        public decimal DiscountAmount { get; init; }
+
+        [JsonPropertyName("programId")]
+        public Guid? ProgramId { get; init; }
     }
 }
