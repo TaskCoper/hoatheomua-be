@@ -1656,6 +1656,7 @@ public class Service : IService
             InvoiceType = orders.InvoiceType,
             ShippingFee = orders.ShippingFee,
             ProductFee = orders.ProductFee,
+            DiscountAmount = DeserializeVoucherSnapshot(orders.VoucherSnapshot)?.DiscountAmount,
             TotalFee = orders.TotalFee,
             VatFee = orders.Vat,
             Remark = orders.Remarks,
@@ -1732,6 +1733,22 @@ public class Service : IService
         catch (JsonException)
         {
             // Metadata cũ hoặc lỗi không được làm trang Admin mất toàn bộ Order.
+            return null;
+        }
+    }
+
+    private static Request.VoucherSnapshot? DeserializeVoucherSnapshot(string? snapshot)
+    {
+        if (string.IsNullOrWhiteSpace(snapshot))
+            return null;
+
+        try
+        {
+            // Snapshot được ghi bằng System.Text.Json lúc tạo order
+            return System.Text.Json.JsonSerializer.Deserialize<Request.VoucherSnapshot>(snapshot);
+        }
+        catch (System.Text.Json.JsonException)
+        {
             return null;
         }
     }
