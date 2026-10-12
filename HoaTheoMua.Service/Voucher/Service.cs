@@ -194,11 +194,11 @@ public class Service : IService
         {
             if (visibility == VoucherVisibilities.Public)
             {
-                query = query.Where(x => x.Visibility == VoucherVisibility.Public);
+                query = query.Where(x => x.Visibility == VoucherVisibility.Public && x.ProgramId == null);
             }
             else if (visibility == VoucherVisibilities.Private)
             {
-                query = query.Where(x => x.Visibility == VoucherVisibility.Private);
+                query = query.Where(x => x.Visibility == VoucherVisibility.Private && x.ProgramId == null);
             }
             else
             {
