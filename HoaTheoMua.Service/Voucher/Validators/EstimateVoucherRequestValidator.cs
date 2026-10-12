@@ -7,9 +7,9 @@ public class EstimateVoucherRequestValidator : AbstractValidator<Request.Estimat
     public EstimateVoucherRequestValidator()
     {
         RuleFor(x => x.code)
-            .NotEmpty().WithMessage("Voucher code is required");
+            .NotEmpty().WithMessage("Vui lòng nhập mã voucher.");
 
         RuleFor(x => x.productFee)
-            .GreaterThan(0).WithMessage("Product fee must be greater than 0");
+            .GreaterThan(0).WithMessage("Tổng tiền sản phẩm phải lớn hơn 0.");
     }
 }

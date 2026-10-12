@@ -199,7 +199,7 @@ public class GenerateProgramVouchers
         Assert.Equal(1, (await service.GenerateProgramVouchers(program.Id, GenerateRequest(1))).CreatedCount);
         var error = await Assert.ThrowsAsync<ConflictException>(() =>
             service.GenerateProgramVouchers(program.Id, GenerateRequest(1)));
-        Assert.Equal("Voucher program cannot exceed 10000 active vouchers.", error.Message);
+        Assert.Equal("Mỗi chương trình chỉ được có tối đa 10.000 voucher đang hoạt động.", error.Message);
         Assert.Equal(10000, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
 
         await service.UpdateVoucherProgram(program.Id, new() { IsActive = false });

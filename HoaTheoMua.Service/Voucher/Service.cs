@@ -33,7 +33,7 @@ public class Service : IService
 
             if (await _dbContext.Vouchers.AnyAsync(x => x.Code == code))
             {
-                throw new ConflictException("Voucher code already exists.");
+                throw new ConflictException("Mã voucher này đã tồn tại. Vui lòng dùng mã khác.");
             }
         }
         else
@@ -78,7 +78,7 @@ public class Service : IService
         {
             throw new ValidationExceptionErrorV1(new List<ValidationError>
             {
-                new() { Field = "visibility", Message = "Visibility must be public or private" }
+                new() { Field = "visibility", Message = "Chế độ hiển thị chỉ chấp nhận public (công khai) hoặc private (riêng tư)." }
             });
         }
 
@@ -147,7 +147,7 @@ public class Service : IService
         var ids = productIds.Distinct().ToList();
         if (ids.Count == 0)
         {
-            throw new BadRequestException("productIds is required.");
+            throw new BadRequestException("Vui lòng chọn ít nhất một sản phẩm.");
         }
 
         var prices = await _dbContext.Products
@@ -158,7 +158,7 @@ public class Service : IService
 
         if (prices.Count != ids.Count)
         {
-            throw new BadRequestException("Some products do not exist or are inactive.");
+            throw new BadRequestException("Một số sản phẩm không còn tồn tại hoặc đã ngừng bán. Vui lòng kiểm tra lại.");
         }
 
         var totalPrice = prices.Sum();
@@ -234,17 +234,17 @@ public class Service : IService
 
         if (visibility != null && visibility is not ("all" or VoucherVisibilities.Public or VoucherVisibilities.Private))
         {
-            throw CreateValidationException("visibility", "Visibility must be all, public or private");
+            throw CreateValidationException("visibility", "Bộ lọc hiển thị chỉ chấp nhận all (tất cả), public (công khai) hoặc private (riêng tư).");
         }
 
         if (visibility != null && byProgram)
         {
-            throw CreateValidationException("programIds", "Choose either visibility or programIds");
+            throw CreateValidationException("programIds", "Chỉ chọn lọc theo chế độ hiển thị hoặc theo chương trình voucher.");
         }
 
         if (ids.Count > 50)
         {
-            throw CreateValidationException("programIds", "Program ids must not exceed 50");
+            throw CreateValidationException("programIds", "Mỗi lần xuất dữ liệu chỉ được chọn tối đa 50 chương trình voucher.");
         }
 
         var query = _dbContext.Vouchers
@@ -264,7 +264,7 @@ public class Service : IService
             var missingIds = ids.Except(foundIds).ToList();
             if (missingIds.Count > 0)
             {
-                throw new NotFoundException($"Voucher program not found: {string.Join(", ", missingIds)}");
+                throw new NotFoundException("Không tìm thấy một hoặc nhiều chương trình voucher đã chọn.");
             }
 
             ordered = query
@@ -359,7 +359,7 @@ public class Service : IService
 
         if (voucher == null)
         {
-            throw new NotFoundException("Voucher not found.");
+            throw new NotFoundException("Không tìm thấy voucher.");
         }
 
         voucher.IsDeleted = true;
@@ -373,7 +373,7 @@ public class Service : IService
     {
         if (!await _dbContext.Vouchers.AnyAsync(x => x.Id == id))
         {
-            throw new NotFoundException("Voucher not found.");
+            throw new NotFoundException("Không tìm thấy voucher.");
         }
 
         var snapshotFilter = JsonConvert.SerializeObject(new { voucherId = id });
@@ -505,7 +505,7 @@ public class Service : IService
 
         if (voucher == null)
         {
-            throw new NotFoundException("Voucher not found.");
+            throw new NotFoundException("Không tìm thấy voucher.");
         }
 
         var startAt = voucher.Program?.StartAt ?? voucher.StartAt;
@@ -517,27 +517,27 @@ public class Service : IService
 
         if (startAt > now)
         {
-            throw new BadRequestException("Voucher is not active yet.");
+            throw new BadRequestException("Voucher chưa đến thời gian sử dụng.");
         }
 
         if (endAt.HasValue && endAt.Value < now)
         {
-            throw new BadRequestException("Voucher has expired.");
+            throw new BadRequestException("Voucher đã hết hạn sử dụng.");
         }
 
         if (voucher.UsedCount >= voucher.MaxUsageCount)
         {
-            throw new ConflictException("Voucher has no uses left.");
+            throw new ConflictException("Voucher đã hết lượt sử dụng.");
         }
 
         if (minOrderAmount.HasValue && request.productFee < minOrderAmount.Value)
         {
-            throw new BadRequestException("Order total is below the minimum for this voucher.");
+            throw new BadRequestException("Giá trị đơn hàng chưa đạt mức tối thiểu để dùng voucher này.");
         }
 
         if (maxOrderAmount.HasValue && request.productFee > maxOrderAmount.Value)
         {
-            throw new BadRequestException("Order total exceeds the maximum for this voucher.");
+            throw new BadRequestException("Giá trị đơn hàng vượt mức tối đa để dùng voucher này.");
         }
 
         var discountAmount = CalculateDiscount(
@@ -571,7 +571,7 @@ public class Service : IService
         var notFoundIds = ids.Where(id => !voucherById.ContainsKey(id)).ToList();
         if (notFoundIds.Count > 0)
         {
-            throw new NotFoundException($"Voucher not found: {string.Join(", ", notFoundIds)}");
+            throw new NotFoundException("Không tìm thấy một hoặc nhiều voucher đã chọn.");
         }
 
         var errors = new List<ValidationError>();
@@ -587,7 +587,7 @@ public class Service : IService
                 errors.Add(new ValidationError
                 {
                     Field = $"items[{i}]",
-                    Message = $"Program voucher must stay private ({voucher.Code})"
+                    Message = $"Voucher thuộc chương trình chỉ được để ở chế độ riêng tư ({voucher.Code})."
                 });
                 continue;
             }
@@ -598,7 +598,7 @@ public class Service : IService
                 errors.Add(new ValidationError
                 {
                     Field = $"items[{i}]",
-                    Message = $"Program voucher dates and order amounts come from the program ({voucher.Code})"
+                    Message = $"Ngày áp dụng và mức giá trị đơn hàng của voucher phải chỉnh trong chương trình ({voucher.Code})."
                 });
                 continue;
             }
@@ -618,7 +618,7 @@ public class Service : IService
                 errors.Add(new ValidationError
                 {
                     Field = $"items[{i}]",
-                    Message = $"Discount percent must not exceed 100 ({voucher.Code})"
+                    Message = $"Mức giảm theo phần trăm không được vượt quá 100% ({voucher.Code})."
                 });
                 continue;
             }
@@ -628,7 +628,7 @@ public class Service : IService
                 errors.Add(new ValidationError
                 {
                     Field = $"items[{i}]",
-                    Message = $"Max discount amount is only for percent ({voucher.Code})"
+                    Message = $"Chỉ đặt mức giảm tối đa khi giảm theo phần trăm ({voucher.Code})."
                 });
                 continue;
             }
@@ -638,7 +638,7 @@ public class Service : IService
                 errors.Add(new ValidationError
                 {
                     Field = $"items[{i}]",
-                    Message = $"Max usage count cannot be less than used count ({voucher.Code})"
+                    Message = $"Giới hạn lượt sử dụng không được thấp hơn số lượt đã dùng ({voucher.Code})."
                 });
                 continue;
             }
@@ -654,7 +654,7 @@ public class Service : IService
                 errors.Add(new ValidationError
                 {
                     Field = $"items[{i}]",
-                    Message = $"End time must be later than start time ({voucher.Code})"
+                    Message = $"Thời gian kết thúc phải sau thời gian bắt đầu ({voucher.Code})."
                 });
                 continue;
             }
@@ -665,7 +665,7 @@ public class Service : IService
                 errors.Add(new ValidationError
                 {
                     Field = $"items[{i}]",
-                    Message = $"Max order amount cannot be less than min order amount ({voucher.Code})"
+                    Message = $"Giá trị đơn hàng tối đa không được nhỏ hơn giá trị tối thiểu ({voucher.Code})."
                 });
             }
         }
@@ -746,7 +746,7 @@ public class Service : IService
 
         if (voucherId == null)
         {
-            throw new NotFoundException("Voucher not found.");
+            throw new NotFoundException("Không tìm thấy voucher.");
         }
 
         // Uses left = Paid orders. Refresh the column first, because EstimateVoucher only reads the column
@@ -803,7 +803,7 @@ public class Service : IService
             }
         }
 
-        throw new ServerException("An unexpected error occurred.");
+        throw new ServerException("Không thể tạo mã voucher lúc này. Vui lòng thử lại sau.");
     }
 
     private static string GenerateCode(string? prefix, int length, string? suffix)

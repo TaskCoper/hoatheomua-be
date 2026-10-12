@@ -46,10 +46,10 @@ public class VoucherValidatorsTest
         Assert.False(validator.Validate(new Request.SetVouchersActiveRequest()).IsValid);
         var id = Guid.NewGuid();
         Assert.Contains(validator.Validate(new Request.SetVouchersActiveRequest
-            { Ids = [id, id], IsActive = true }).Errors, x => x.ErrorMessage == "Duplicate voucher id");
+            { Ids = [id, id], IsActive = true }).Errors, x => x.ErrorMessage == "Danh sách đã chọn có voucher bị lặp. Vui lòng kiểm tra lại.");
         Assert.Contains(validator.Validate(new Request.SetVouchersActiveRequest
             { Ids = Enumerable.Range(0, 1001).Select(_ => Guid.NewGuid()).ToList(), IsActive = false }).Errors,
-            x => x.ErrorMessage == "Ids must not exceed 1000");
+            x => x.ErrorMessage == "Mỗi lần chỉ được đổi trạng thái tối đa 1.000 voucher.");
     }
 
     [Fact]

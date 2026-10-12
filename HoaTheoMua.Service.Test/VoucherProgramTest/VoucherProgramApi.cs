@@ -29,9 +29,9 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 public class VoucherProgramApi
 {
     [Theory]
-    [InlineData("endAt", "31/10/2026 23:59:59", "End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00")]
-    [InlineData("endAt", "2026-10-31T23:59:59", "End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00")]
-    [InlineData("startAt", "not-a-date", "Start time must be a valid ISO 8601 date-time, for example 2026-10-15T00:00:00+07:00")]
+    [InlineData("endAt", "31/10/2026 23:59:59", "Thời gian kết thúc không đúng định dạng. Ví dụ: 2026-10-31T23:59:59+07:00.")]
+    [InlineData("endAt", "2026-10-31T23:59:59", "Thời gian kết thúc không đúng định dạng. Ví dụ: 2026-10-31T23:59:59+07:00.")]
+    [InlineData("startAt", "not-a-date", "Thời gian bắt đầu không đúng định dạng. Ví dụ: 2026-10-15T00:00:00+07:00.")]
     public async Task InvalidDateTime_ReturnsFluentValidationError_WithoutSavingProgram(string field, string value, string message)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
@@ -124,7 +124,7 @@ public class VoucherProgramApi
             Assert.Equal("VALIDATION_ERROR", error.RootElement.GetProperty("messageCode").GetString());
             var validationError = Assert.Single(error.RootElement.GetProperty("errors").EnumerateArray());
             Assert.Equal("endAt", validationError.GetProperty("field").GetString());
-            Assert.Equal("End time must be later than start time", validationError.GetProperty("message").GetString());
+            Assert.Equal("Thời gian kết thúc phải sau thời gian bắt đầu.", validationError.GetProperty("message").GetString());
 
             request.EndAt = "2026-10-31T23:59:59+07:00";
             using var post = await client.PostAsJsonAsync(route, request);

@@ -111,7 +111,7 @@ public class VoucherProgramPostgres
             }
             catch (ConflictException error)
             {
-                Assert.Equal("Voucher program cannot exceed 10000 active vouchers.", error.Message);
+                Assert.Equal("Mỗi chương trình chỉ được có tối đa 10.000 voucher đang hoạt động.", error.Message);
                 return false;
             }
         }

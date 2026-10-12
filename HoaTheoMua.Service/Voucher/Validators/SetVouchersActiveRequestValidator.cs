@@ -7,15 +7,15 @@ public class SetVouchersActiveRequestValidator : AbstractValidator<Request.SetVo
     public SetVouchersActiveRequestValidator()
     {
         RuleFor(x => x.Ids)
-            .NotEmpty().WithMessage("Ids are required");
+            .NotEmpty().WithMessage("Vui lòng chọn ít nhất một voucher.");
 
         RuleFor(x => x.Ids)
-            .Must(x => x.Count <= 1000).WithMessage("Ids must not exceed 1000");
+            .Must(x => x.Count <= 1000).WithMessage("Mỗi lần chỉ được đổi trạng thái tối đa 1.000 voucher.");
 
         RuleFor(x => x.Ids)
-            .Must(x => x.Distinct().Count() == x.Count).WithMessage("Duplicate voucher id");
+            .Must(x => x.Distinct().Count() == x.Count).WithMessage("Danh sách đã chọn có voucher bị lặp. Vui lòng kiểm tra lại.");
 
         RuleFor(x => x.IsActive)
-            .NotNull().WithMessage("Is active is required");
+            .NotNull().WithMessage("Vui lòng chọn bật hoặc tắt voucher.");
     }
 }
