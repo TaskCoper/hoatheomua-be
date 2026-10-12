@@ -56,7 +56,14 @@ x-api-env: &api-env
   TASKCOPER_STORAGE_PREFIX: ${TASKCOPER_STORAGE_PREFIX:-general/ai-flowers}
   FlowerImage__PublicBaseUrl: ${FLOWER_IMAGE_PUBLIC_BASE_URL:-}
 
-  # PostGen accounts (runtime only; Meta opt-in, Zalo deferred).
+  # AI proxy (PostGen paraphrase content/images, AI Flower, AI Card). The default host only
+  # resolves when the API container shares a Docker network with chatgpt-proxy-prod.
+  AiOption__ChatCompletionsUrl: ${AI_CHAT_COMPLETIONS_URL:-http://chatgpt-proxy-prod:1435/v1/chat/completions}
+  AiOption__Model: ${AI_MODEL:-chatgpt/gpt-5.6}
+  AiOption__ApiKey: ${AI_API_KEY:-}
+  AiOption__TimeoutSeconds: ${AI_TIMEOUT_SECONDS:-120}
+
+  # PostGen accounts (runtime only; Meta and Zalo opt-in).
   PlatformAccountOptions__Meta__Enabled: ${POSTGEN_META_ENABLED:-false}
   PlatformAccountOptions__Meta__AppId: ${POSTGEN_META_APP_ID:-}
   PlatformAccountOptions__Meta__AppSecret: ${POSTGEN_META_APP_SECRET:-}
@@ -69,7 +76,10 @@ x-api-env: &api-env
   PlatformAccountOptions__EncryptionKeys__k2: ${POSTGEN_ENCRYPTION_KEY_K2:-}
   PlatformAccountOptions__OAuthStateMinutes: ${POSTGEN_OAUTH_STATE_MINUTES:-10}
   PlatformAccountOptions__RequestTimeoutSeconds: ${POSTGEN_REQUEST_TIMEOUT_SECONDS:-30}
-  PlatformAccountOptions__Zalo__Enabled: "false"
+  PlatformAccountOptions__Zalo__Enabled: ${POSTGEN_ZALO_ENABLED:-false}
+  PlatformAccountOptions__Zalo__AppId: ${POSTGEN_ZALO_APP_ID:-}
+  PlatformAccountOptions__Zalo__AppSecret: ${POSTGEN_ZALO_APP_SECRET:-}
+  PlatformAccountOptions__Zalo__CallbackUrl: ${POSTGEN_ZALO_CALLBACK_URL:-}
   PublishingOptions__FacebookEnabled: ${POSTGEN_PUBLISH_FACEBOOK_ENABLED:-false}
   PublishingOptions__InstagramEnabled: ${POSTGEN_PUBLISH_INSTAGRAM_ENABLED:-false}
   PublishingOptions__MinScheduleLeadSeconds: ${POSTGEN_SCHEDULE_MIN_LEAD_SECONDS:-60}
