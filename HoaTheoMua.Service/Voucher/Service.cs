@@ -142,26 +142,40 @@ public class Service : IService
 
         return ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
     }
-    public async Task<List<Response.FilterVoucherResponse>> FilterVoucher(List<Guid> productIds)
+    public async Task<List<Response.FilterVoucherResponse>> FilterVoucher(Request.FilterVoucherRequest request)
     {
-        var ids = productIds.Distinct().ToList();
-        if (ids.Count == 0)
+        if (request.Products == null || request.Products.Count == 0)
         {
             throw new BadRequestException("Vui lòng chọn ít nhất một sản phẩm.");
         }
 
-        var prices = await _dbContext.Products
+        foreach (var item in request.Products)
+        {
+            if (item.Quantity <= 0)
+            {
+                throw new BadRequestException("Số lượng sản phẩm phải lớn hơn 0.");
+            }
+        }
+        
+        var ids = request.Products.Select(x => x.Id).Distinct().ToList();
+        var products = await _dbContext.Products
             .AsNoTracking()
             .Where(x => !x.IsDeleted && x.IsActive && ids.Contains(x.Id))
-            .Select(x => x.Price!.Value)
+            .Select(x => new { x.Id, Price = x.Price!.Value })
             .ToListAsync();
 
-        if (prices.Count != ids.Count)
+        if (products.Count != ids.Count)
         {
             throw new BadRequestException("Một số sản phẩm không còn tồn tại hoặc đã ngừng bán. Vui lòng kiểm tra lại.");
         }
-
-        var totalPrice = prices.Sum();
+        
+        decimal totalPrice = 0;
+        foreach (var item in request.Products)
+        {
+            var product = products.First(x => x.Id == item.Id);
+            totalPrice += product.Price * item.Quantity;
+        }
+        
         var now = DateTimeOffset.UtcNow;
 
         var vouchers = await _dbContext.Vouchers
