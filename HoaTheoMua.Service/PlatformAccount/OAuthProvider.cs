@@ -100,7 +100,8 @@ public sealed class OAuthProvider(HttpClient http, IOptions<PlatformAccountOptio
             }), token, false, ct);
             foreach (var item in pages.RootElement.GetProperty("data").EnumerateArray())
             {
-                if (!item.TryGetProperty("tasks", out var tasks) || !tasks.EnumerateArray().Any(x => x.GetString() is "CREATE_CONTENT" or "MANAGE")) continue;
+                if (!item.TryGetProperty("tasks", out var tasks) || !tasks.EnumerateArray().Any(x => x.GetString() is "CREATE_CONTENT" or "MANAGE"
+                    or "PROFILE_PLUS_CREATE_CONTENT" or "PROFILE_PLUS_MANAGE" or "PROFILE_PLUS_FULL_CONTROL")) continue;
                 var pageId = Required(item, "id");
                 var account = new ProviderAccount
                 {
