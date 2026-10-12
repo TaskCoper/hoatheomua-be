@@ -15,4 +15,7 @@ public interface IService
         Request.GetVoucherProgramsRequest request, CancellationToken cancellationToken = default);
     Task<BasePaginationResponse> GetVoucherProgramsWithVouchers(
         int pageIndex, int pageSize, string? keyword, Guid? programId, CancellationToken cancellationToken = default);
+
+    Task<BasePaginationResponse> GetVoucherByProgramId(int pageIndex, int pageSize, string? keyword, Guid programId,
+        bool? isActive);
 }

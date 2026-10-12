@@ -176,6 +176,66 @@ public class Service : IService
         return response;
     }
 
+    public async Task<BasePaginationResponse> GetVoucherByProgramId(int pageIndex, int pageSize, string? keyword, Guid programId, bool? isActive)
+    {
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
+        
+        var programExists = await _dbContext.VoucherPrograms
+            .AsNoTracking()
+            .AnyAsync(x => x.Id == programId && !x.IsDeleted);
+        if (!programExists)
+        {
+            throw new NotFoundException("Không tìm thấy chương trình voucher.");
+        }
+
+        var query = _dbContext.Vouchers
+            .AsNoTracking()
+            .Where(x => x.ProgramId == programId && !x.IsDeleted);
+        
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            keyword = keyword.Trim();
+            var codeKeyword = keyword.ToUpperInvariant();
+            query = query.Where(x => x.Code.Contains(codeKeyword)
+                                     || (x.Description != null && EF.Functions.ILike(x.Description, $"%{keyword}%")));
+        }
+
+        if (isActive.HasValue)
+        {
+            query = query.Where(x => x.IsActive == isActive.Value);
+        }
+
+        var totalCount = await query.CountAsync();
+        
+        var items = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenBy(x => x.Code)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new Response.ProgramVoucherItem
+            {
+                Id = x.Id,
+                Code = x.Code,
+                Description = x.Description,
+                IsActive = x.IsActive,
+                DiscountType = x.DiscountType == VoucherDiscountType.Cash
+                    ? Voucher.VoucherDiscountTypes.Cash
+                    : Voucher.VoucherDiscountTypes.Percent,
+                DiscountValue = x.DiscountValue,
+                MaxDiscountAmount = x.MaxDiscountAmount,
+                MaxUsageCount = x.MaxUsageCount,
+                UsedCount = x.UsedCount,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt
+            })
+            .ToListAsync();
+
+        var response = ApiResponseFactory.BasePagination(items, pageIndex, pageSize, totalCount);
+        response.Value.HasNextPage = (long)pageIndex * pageSize < totalCount;
+        return response;
+    }
+
     public async Task<string> UpdateVoucherProgram(Guid id, Request.UpdateVoucherProgramRequest request,
         CancellationToken cancellationToken = default)
     {

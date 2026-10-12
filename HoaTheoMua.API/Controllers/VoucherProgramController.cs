@@ -68,4 +68,16 @@ public class VoucherProgramController : ControllerBase
             pageIndex, pageSize, keyword, programId, cancellationToken);
         return Ok(result);
     }
+
+    [HttpGet("/api/v1/admin/voucher-programs/{programId:guid}/vouchers")]
+    public async Task<IActionResult> GetVoucherByProgramId(
+        Guid programId,
+        [FromQuery] int pageIndex = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? keyword = null,
+        [FromQuery] bool? isActive = null)
+    {
+        var result = await _voucherProgramService.GetVoucherByProgramId(pageIndex, pageSize, keyword, programId, isActive);
+        return Ok(result);
+    }
 }
