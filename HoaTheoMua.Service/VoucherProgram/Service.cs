@@ -183,33 +183,26 @@ public class Service : IService
         var program = await GetProgramForUpdate(id, cancellationToken);
         var startAt = request.StartAt == null ? program.StartAt
             : VoucherProgramDateTime.Parse(request.StartAt).ToUniversalTime();
-        var endAt = request.EndAt == null ? program.EndAt
-                : string.IsNullOrWhiteSpace(request.EndAt) ? null
-            : VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime();
-        var minOrderAmount = request.MinOrderAmount ?? program.MinOrderAmount;
-        var maxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount ?? program.MaxOrderAmount;
+
+        // EndAt, MinOrderAmount, MaxOrderAmount: new values. Not sent = null (no limit)
+        DateTimeOffset? endAt = null;
+        if (!string.IsNullOrWhiteSpace(request.EndAt))
+        {
+            endAt = VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime();
+        }
+
+        var minOrderAmount = request.MinOrderAmount;
+        var maxOrderAmount = request.MaxOrderAmount;
+
         var errors = new List<ValidationError>();
         if (endAt.HasValue && endAt.Value <= startAt)
         {
-            errors.Add(request.StartAt != null && request.EndAt == null
-                ? new ValidationError { Field = "startAt", Message = "Start time must be earlier than the current end time" }
-                : new ValidationError
-                {
-                    Field = "endAt",
-                    Message = request.StartAt != null ? "End time must be later than start time"
-                        : "End time must be later than the current start time"
-                });
-        }
-        if (minOrderAmount.HasValue && maxOrderAmount.HasValue && maxOrderAmount < minOrderAmount)
-        {
-            errors.Add(request.MinOrderAmount.HasValue && !request.MaxOrderAmount.HasValue
-                ? new ValidationError { Field = "minOrderAmount", Message = "Min order amount cannot exceed the current max order amount" }
-                : new ValidationError
-                {
-                    Field = "maxOrderAmount",
-                    Message = request.MinOrderAmount.HasValue ? "Max order amount cannot be less than min order amount"
-                        : "Max order amount cannot be less than the current min order amount"
-                });
+            errors.Add(new ValidationError
+            {
+                Field = "endAt",
+                Message = request.StartAt != null ? "End time must be later than start time"
+                    : "End time must be later than the current start time"
+            });
         }
         if (errors.Count > 0)
             throw new ValidationExceptionErrorV1(errors);

@@ -566,22 +566,20 @@ public class Service : IService
             .Where(x => ids.Contains(x.Id) && !x.IsDeleted)
             .ToListAsync();
 
-        if (vouchers.Count != ids.Count)
+        var voucherById = vouchers.ToDictionary(x => x.Id);
+
+        var notFoundIds = ids.Where(id => !voucherById.ContainsKey(id)).ToList();
+        if (notFoundIds.Count > 0)
         {
-            throw new NotFoundException("Voucher not found.");
+            throw new NotFoundException($"Voucher not found: {string.Join(", ", notFoundIds)}");
         }
 
         var errors = new List<ValidationError>();
         for (var i = 0; i < request.Items.Count; i++)
         {
             var item = request.Items[i];
-            var voucher = await _dbContext.Vouchers.FindAsync(item.Id);
-            
-            if (voucher is null)
-            {
-                throw new NotFoundException($"Voucher not found.");
-            }
-            
+            var voucher = voucherById[item.Id];
+
             var isProgramVoucher = voucher.ProgramId != null;
 
             if (isProgramVoucher && item.Visibility != null && item.Visibility != VoucherVisibilities.Private)
@@ -614,7 +612,6 @@ public class Service : IService
             }
 
             var discountValue = item.DiscountValue ?? voucher.DiscountValue;
-            var maxDiscountAmount = item.MaxDiscountAmount ?? voucher.MaxDiscountAmount;
 
             if (discountType == VoucherDiscountType.Percent && discountValue > 100)
             {
@@ -626,7 +623,7 @@ public class Service : IService
                 continue;
             }
 
-            if (discountType != VoucherDiscountType.Percent && maxDiscountAmount.HasValue)
+            if (discountType != VoucherDiscountType.Percent && item.MaxDiscountAmount.HasValue)
             {
                 errors.Add(new ValidationError
                 {
@@ -652,8 +649,7 @@ public class Service : IService
             }
 
             var startAt = item.StartAt ?? voucher.StartAt;
-            var endAt = item.EndAt ?? voucher.EndAt;
-            if (endAt <= startAt)
+            if (item.EndAt.HasValue && item.EndAt.Value <= startAt)
             {
                 errors.Add(new ValidationError
                 {
@@ -663,9 +659,8 @@ public class Service : IService
                 continue;
             }
 
-            var minOrderAmount = item.MinOrderAmount ?? voucher.MinOrderAmount;
-            var maxOrderAmount = item.MaxOrderAmount ?? voucher.MaxOrderAmount;
-            if (minOrderAmount.HasValue && maxOrderAmount.HasValue && maxOrderAmount < minOrderAmount)
+            if (item.MinOrderAmount.HasValue && item.MaxOrderAmount.HasValue
+                && item.MaxOrderAmount < item.MinOrderAmount)
             {
                 errors.Add(new ValidationError
                 {
@@ -683,12 +678,7 @@ public class Service : IService
         var now = DateTimeOffset.UtcNow;
         foreach (var item in request.Items)
         {
-            var voucher = await _dbContext.Vouchers.FindAsync(item.Id);
-            
-            if (voucher is null)
-            {
-                throw new NotFoundException($"Voucher not found");
-            }
+            var voucher = voucherById[item.Id];
 
             if (item.Description != null)
             {
@@ -714,33 +704,25 @@ public class Service : IService
                 voucher.DiscountValue = item.DiscountValue.Value;
             }
 
-            if (item.MaxDiscountAmount.HasValue)
-            {
-                voucher.MaxDiscountAmount = item.MaxDiscountAmount;
-            }
-
             if (item.MaxUsageCount.HasValue)
             {
                 voucher.MaxUsageCount = item.MaxUsageCount.Value;
             }
 
-            if (item.StartAt.HasValue)
-            {
-                voucher.StartAt = item.StartAt.Value.ToUniversalTime();
-            }
+            // New value. Not sent = null
+            voucher.MaxDiscountAmount = item.MaxDiscountAmount;
 
-            if (item.EndAt.HasValue)
+            // Program voucher takes dates and order amounts from its program, so leave them alone
+            if (voucher.ProgramId == null)
             {
-                voucher.EndAt = item.EndAt.Value.ToUniversalTime();
-            }
+                if (item.StartAt.HasValue)
+                {
+                    voucher.StartAt = item.StartAt.Value.ToUniversalTime();
+                }
 
-            if (item.MinOrderAmount.HasValue)
-            {
+                // New values. Not sent = null (no limit)
+                voucher.EndAt = item.EndAt.HasValue ? item.EndAt.Value.ToUniversalTime() : null;
                 voucher.MinOrderAmount = item.MinOrderAmount;
-            }
-
-            if (item.MaxOrderAmount.HasValue)
-            {
                 voucher.MaxOrderAmount = item.MaxOrderAmount;
             }
 

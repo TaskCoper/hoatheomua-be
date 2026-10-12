@@ -14,11 +14,11 @@ public class GenerateProgramVouchersValidator
 
         var result = new UpdateVoucherProgramRequestValidator().Validate(request);
 
-        Assert.Equal(2, result.Errors.Count);
+        Assert.Equal(3, result.Errors.Count);
         Assert.Contains(result.Errors, error => error.PropertyName == "MinOrderAmount"
             && error.ErrorMessage == "Min order amount must not be negative");
         Assert.Contains(result.Errors, error => error.PropertyName == "MaxOrderAmount"
-            && error.ErrorMessage == "Max order amount must not be negative");
+            && error.ErrorMessage == "Max order amount must be greater than 0");
     }
 
     [Fact]
