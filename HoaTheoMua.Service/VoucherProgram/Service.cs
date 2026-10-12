@@ -200,8 +200,8 @@ public class Service : IService
             errors.Add(new ValidationError
             {
                 Field = "endAt",
-                Message = request.StartAt != null ? "End time must be later than start time"
-                    : "End time must be later than the current start time"
+                Message = request.StartAt != null ? "Thời gian kết thúc phải sau thời gian bắt đầu."
+                    : "Thời gian kết thúc phải sau thời gian bắt đầu hiện tại của chương trình."
             });
         }
         if (errors.Count > 0)
@@ -220,7 +220,7 @@ public class Service : IService
                     .Where(x => x.ProgramId == id && (!x.IsDeleted || x.IsActive))
                     .Take(10001).CountAsync(cancellationToken);
                 if (activeCountAfterUpdate > 10000)
-                    throw new ConflictException("Voucher program cannot exceed 10000 active vouchers.");
+                    throw new ConflictException("Mỗi chương trình chỉ được có tối đa 10.000 voucher đang hoạt động.");
             }
 
             try
@@ -237,7 +237,7 @@ public class Service : IService
                 ConstraintName: "IX_Vouchers_Code"
             })
             {
-                throw new ConflictException("Voucher codes must be unique among active vouchers across the system.");
+                throw new ConflictException("Không thể kích hoạt vì có mã voucher bị trùng. Vui lòng kiểm tra lại các mã voucher.");
             }
 
             program.IsActive = isActive;
@@ -291,7 +291,7 @@ public class Service : IService
             .Where(x => x.ProgramId == id && x.IsActive)
             .Take(10001).CountAsync(cancellationToken);
         if ((long)activeCount + request.Quantity > 10000)
-            throw new ConflictException("Voucher program cannot exceed 10000 active vouchers.");
+            throw new ConflictException("Mỗi chương trình chỉ được có tối đa 10.000 voucher đang hoạt động.");
 
         // Các mã đã chọn được giữ qua nhiều vòng; có trong danh sách chưa có nghĩa là đã lưu DB.
         var codes = new List<string>(request.Quantity);
@@ -421,12 +421,12 @@ public class Service : IService
         var affected = await query.ExecuteUpdateAsync(setters => setters
             .SetProperty(x => x.UpdatedAt, x => x.UpdatedAt), cancellationToken);
         if (affected == 0)
-            throw new NotFoundException("Voucher program does not exist.");
+            throw new NotFoundException("Không tìm thấy chương trình voucher.");
 
         var program = await query.SingleOrDefaultAsync(cancellationToken)
-                      ?? throw new NotFoundException("Voucher program does not exist.");
+                      ?? throw new NotFoundException("Không tìm thấy chương trình voucher.");
         if (program.IsDeleted)
-            throw new NotFoundException("Voucher program has been deleted.");
+            throw new NotFoundException("Chương trình voucher đã bị xóa.");
 
         return program;
     }

@@ -7,35 +7,35 @@ public class GenerateProgramVouchersRequestValidator : AbstractValidator<Request
     public GenerateProgramVouchersRequestValidator()
     {
         RuleFor(x => x.CodeLength).InclusiveBetween(5, 10)
-            .WithMessage(x => x.CodeLength < 5 ? "Code length must be at least 5" : "Code length must not exceed 10");
+            .WithMessage(x => x.CodeLength < 5 ? "Phần mã ngẫu nhiên phải dài ít nhất 5 ký tự." : "Phần mã ngẫu nhiên không được dài quá 10 ký tự.");
         RuleFor(x => x.CodePrefix).Matches(@"\A[A-Z0-9]*\z")
-            .WithMessage("Code prefix must contain only uppercase letters or digits");
+            .WithMessage("Phần đầu mã chỉ được gồm chữ cái viết hoa hoặc chữ số.");
         RuleFor(x => x.CodeSuffix).Matches(@"\A[A-Z0-9]*\z")
-            .WithMessage("Code suffix must contain only uppercase letters or digits");
+            .WithMessage("Phần cuối mã chỉ được gồm chữ cái viết hoa hoặc chữ số.");
         RuleFor(x => x.CodeLength)
             .Must((request, length) => (long)(request.CodePrefix?.Length ?? 0) + length
                                       + (request.CodeSuffix?.Length ?? 0) <= 20)
-            .WithMessage("Voucher code must not exceed 20 characters including prefix and suffix");
+            .WithMessage("Mã voucher không được dài quá 20 ký tự, tính cả phần đầu và phần cuối mã.");
         RuleFor(x => x.Quantity).InclusiveBetween(1, 1000)
-            .WithMessage(x => x.Quantity < 1 ? "Quantity must be at least 1" : "Quantity must not exceed 1000");
+            .WithMessage(x => x.Quantity < 1 ? "Số lượng voucher cần tạo phải từ 1 trở lên." : "Mỗi lần chỉ được tạo tối đa 1.000 voucher.");
         RuleFor(x => x.MaxUsageCount).GreaterThan(0)
-            .WithMessage("Max usage count must be greater than 0");
+            .WithMessage("Giới hạn lượt sử dụng phải lớn hơn 0.");
         RuleFor(x => x.DiscountType).Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("Discount type is required")
+            .NotEmpty().WithMessage("Vui lòng chọn loại giảm giá.")
             .Must(type => type is "cash" or "percent")
-            .WithMessage("Discount type must be cash or percent");
+            .WithMessage("Loại giảm giá chỉ chấp nhận cash (giảm tiền) hoặc percent (giảm theo phần trăm).");
         RuleFor(x => x.DiscountValue).GreaterThan(0)
-            .WithMessage("Discount value must be greater than 0");
+            .WithMessage("Mức giảm giá phải lớn hơn 0.");
         RuleFor(x => x.DiscountValue).LessThanOrEqualTo(100)
             .When(x => x.DiscountType == "percent")
-            .WithMessage("Discount percent must not exceed 100");
+            .WithMessage("Mức giảm theo phần trăm không được vượt quá 100%.");
         RuleFor(x => x.MaxDiscountAmount).Null()
             .When(x => x.DiscountType != "percent")
-            .WithMessage("Max discount amount is only for percent");
+            .WithMessage("Chỉ đặt mức giảm tối đa khi giảm theo phần trăm.");
         RuleFor(x => x.MaxDiscountAmount).GreaterThan(0)
             .When(x => x.MaxDiscountAmount.HasValue)
-            .WithMessage("Max discount amount must be greater than 0");
+            .WithMessage("Mức giảm tối đa phải lớn hơn 0.");
         RuleFor(x => x.Description).MaximumLength(500)
-            .WithMessage("Description must not exceed 500 characters");
+            .WithMessage("Mô tả không được dài quá 500 ký tự.");
     }
 }

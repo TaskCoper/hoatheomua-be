@@ -39,7 +39,7 @@ public class CreateVoucherTest
         var error = await Assert.ThrowsAsync<ConflictException>(
             () => new VoucherService(db).CreateVoucher(request));
 
-        Assert.Equal("Voucher code already exists.", error.Message);
+        Assert.Equal("Mã voucher này đã tồn tại. Vui lòng dùng mã khác.", error.Message);
         Assert.Single(db.Vouchers);
     }
 
