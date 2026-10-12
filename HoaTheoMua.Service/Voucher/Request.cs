@@ -53,18 +53,6 @@ public class Request
         public string? code { get; set; }
         public decimal productFee { get; set; }
     }
-
-
-    public class FilterVoucherRequest
-    {
-        public List<ProductOrder> Products { get; set; } = new();
-    }
-
-    public class ProductOrder
-    {
-        public Guid Id { get; set; }
-        public decimal Quantity { get; set; }
-    }
 }
 
 public static class VoucherDiscountTypes
