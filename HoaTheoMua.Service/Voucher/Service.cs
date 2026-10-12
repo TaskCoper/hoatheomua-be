@@ -182,8 +182,9 @@ public class Service : IService
         var vouchers = await _dbContext.Vouchers
             .AsNoTracking()
             .Where(x => !x.IsDeleted
+                        && x.IsActive // voucher admin đã tắt thì không hiện cho khách
                         && x.Visibility == VoucherVisibility.Public
-                        && x.ProgramId == null)
+                        && x.ProgramId == null) //
             .Select(x => new
             {
                 x.Id,
