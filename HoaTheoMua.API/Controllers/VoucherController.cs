@@ -101,11 +101,11 @@ public class VoucherController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
-    [HttpGet("vouchers/filter")]
+    [HttpPost("vouchers/filter")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
-    public async Task<IActionResult> FilterVoucher([FromQuery] List<Guid> productIds)
+    public async Task<IActionResult> FilterVoucher([FromBody] Request.FilterVoucherRequest request)
     {
-        var result = await _voucherService.FilterVoucher(productIds);
+        var result = await _voucherService.FilterVoucher(request);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
