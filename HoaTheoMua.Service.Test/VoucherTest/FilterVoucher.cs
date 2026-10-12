@@ -1,6 +1,7 @@
 using HoaTheoMua.Repository.Enum;
 using HoaTheoMua.Service.Exceptions;
 using Xunit;
+using Request = HoaTheoMua.Service.Voucher.Request;
 using VoucherService = HoaTheoMua.Service.Voucher.Service;
 
 namespace HoaTheoMua.Service.Test.VoucherTest;
@@ -10,6 +11,12 @@ public class FilterVoucherTest
     private static Repository.Entity.Product Product(decimal price, bool active = true, bool deleted = false) => new()
     {
         Id = Guid.NewGuid(), ProductName = "Rose", Price = price, IsActive = active, IsDeleted = deleted
+    };
+
+    // Each id with quantity 1
+    private static Request.FilterVoucherRequest Req(params Guid[] ids) => new()
+    {
+        Products = ids.Select(id => new Request.ProductOrder { Id = id, Quantity = 1 }).ToList()
     };
 
     [Fact]
@@ -22,7 +29,7 @@ public class FilterVoucherTest
         db.AddRange(voucher, p1, p2);
         await db.SaveChangesAsync();
 
-        var result = await new VoucherService(db).FilterVoucher([p1.Id, p2.Id]);
+        var result = await new VoucherService(db).FilterVoucher(Req(p1.Id, p2.Id));
 
         var item = Assert.Single(result);
         Assert.True(item.IsValid);
@@ -41,7 +48,7 @@ public class FilterVoucherTest
         db.AddRange(voucher, product);
         await db.SaveChangesAsync();
 
-        var item = Assert.Single(await new VoucherService(db).FilterVoucher([product.Id]));
+        var item = Assert.Single(await new VoucherService(db).FilterVoucher(Req(product.Id)));
 
         Assert.Equal(50_000, item.DiscountAmount);
     }
@@ -72,7 +79,7 @@ public class FilterVoucherTest
         db.AddRange(voucher, product);
         await db.SaveChangesAsync();
 
-        var item = Assert.Single(await new VoucherService(db).FilterVoucher([product.Id]));
+        var item = Assert.Single(await new VoucherService(db).FilterVoucher(Req(product.Id)));
 
         Assert.False(item.IsValid);
         Assert.Equal(0, item.DiscountAmount);
@@ -90,7 +97,7 @@ public class FilterVoucherTest
         db.AddRange(voucher, product);
         await db.SaveChangesAsync();
 
-        var item = Assert.Single(await new VoucherService(db).FilterVoucher([product.Id]));
+        var item = Assert.Single(await new VoucherService(db).FilterVoucher(Req(product.Id)));
 
         Assert.True(item.IsValid);
         Assert.Null(item.MinOrderAmount);
@@ -113,7 +120,7 @@ public class FilterVoucherTest
         db.AddRange(publicVoucher, privateVoucher, deleted, program, programVoucher, product);
         await db.SaveChangesAsync();
 
-        var item = Assert.Single(await new VoucherService(db).FilterVoucher([product.Id]));
+        var item = Assert.Single(await new VoucherService(db).FilterVoucher(Req(product.Id)));
 
         Assert.Equal(publicVoucher.Id, item.VoucherId);
     }
@@ -131,7 +138,7 @@ public class FilterVoucherTest
         db.AddRange(small, big, invalid, product);
         await db.SaveChangesAsync();
 
-        var result = await new VoucherService(db).FilterVoucher([product.Id]);
+        var result = await new VoucherService(db).FilterVoucher(Req(product.Id));
 
         Assert.Equal(["BIG", "SMALL", "INVALID"], result.Select(x => x.Code));
     }
@@ -145,9 +152,9 @@ public class FilterVoucherTest
         db.AddRange(voucher, product);
         await db.SaveChangesAsync();
 
-        var item = Assert.Single(await new VoucherService(db).FilterVoucher([product.Id, product.Id]));
+        var item = Assert.Single(await new VoucherService(db).FilterVoucher(Req(product.Id, product.Id)));
 
-        Assert.Equal(180_000, item.ProductFeeAfterDiscount);
+        Assert.Equal(360_000, item.ProductFeeAfterDiscount); // quantity is summed: 2 x 200,000
     }
 
     [Fact]
@@ -155,7 +162,7 @@ public class FilterVoucherTest
     {
         await using var db = VoucherTestData.Database();
 
-        await Assert.ThrowsAsync<BadRequestException>(() => new VoucherService(db).FilterVoucher([]));
+        await Assert.ThrowsAsync<BadRequestException>(() => new VoucherService(db).FilterVoucher(Req()));
     }
 
     [Theory]
@@ -169,6 +176,6 @@ public class FilterVoucherTest
         if (scenario != "missing") db.Add(product);
         await db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<BadRequestException>(() => new VoucherService(db).FilterVoucher([product.Id]));
+        await Assert.ThrowsAsync<BadRequestException>(() => new VoucherService(db).FilterVoucher(Req(product.Id)));
     }
 }
