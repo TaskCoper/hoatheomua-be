@@ -378,6 +378,7 @@ public partial class Service : IService
         // Handmade không gọi AI. Card được tạo từ snapshot đã chốt ở CreateOrder
         // và được lưu cùng lần xác nhận thanh toán này.
         await CreateHandMadeCardsAsync(order);
+        await AddVoucherUsageAsync(order);
 
         // Bus outbox: this does not touch RabbitMQ. It stages an OutboxMessage row inside the very
         // same SaveChanges below, so the order can never be marked Paid without the fulfilment
@@ -427,9 +428,45 @@ public partial class Service : IService
         _dbContext.Orders.Update(order);
         _dbContext.Transactions.Add(transaction);
 
+        await AddVoucherUsageAsync(order);
         await _dbContext.SaveChangesAsync();
 
         await _fulfillmentService.RevalidateOrderProductsAsync(order.Id);
+    }
+
+    // A paid order that used a voucher takes one use. The change is saved by the same SaveChanges that
+    // marks the order Paid, so a failed or replayed callback can never count a use twice.
+    private async Task AddVoucherUsageAsync(Repository.Entity.Order order)
+    {
+        var snapshot = DeserializeVoucherSnapshot(order.VoucherSnapshot);
+        if (snapshot == null)
+        {
+            return;
+        }
+
+        // No IsDeleted filter: a deleted voucher still has the use of this order
+        var voucher = await _dbContext.Vouchers.FirstOrDefaultAsync(x => x.Id == snapshot.VoucherId);
+        if (voucher == null)
+        {
+            return;
+        }
+
+        voucher.UsedCount += 1;
+    }
+
+    private static HoaTheoMua.Service.Order.Request.VoucherSnapshot? DeserializeVoucherSnapshot(string? snapshot)
+    {
+        if (string.IsNullOrWhiteSpace(snapshot))
+            return null;
+
+        try
+        {
+            return JsonConvert.DeserializeObject<HoaTheoMua.Service.Order.Request.VoucherSnapshot>(snapshot);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private async Task CreateHandMadeCardsAsync(Repository.Entity.Order order)

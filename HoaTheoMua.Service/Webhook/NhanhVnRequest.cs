@@ -312,6 +312,9 @@ public class Payment
     [JsonPropertyName("discountType")]
     public string DiscountType { get; set; } = null!;
 
+    [JsonPropertyName("discountAmount")]
+    public int? DiscountAmount { get; set; }
+
     [JsonPropertyName("couponCode")]
     public string CouponCode { get; set; } = null!;
 
