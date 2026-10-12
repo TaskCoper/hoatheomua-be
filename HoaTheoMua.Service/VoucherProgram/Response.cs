@@ -24,11 +24,6 @@ public class Response
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
     }
-
-    public class VoucherProgramDetailResponse : VoucherProgramResponse
-    {
-        public List<ProgramVoucherItem> Vouchers { get; set; } = new();
-    }
     
     public class ProgramVoucherItem
     {

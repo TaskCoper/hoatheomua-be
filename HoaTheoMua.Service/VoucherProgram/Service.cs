@@ -88,36 +88,12 @@ public class Service : IService
         return response;
     }
 
-    public async Task<BasePaginationResponse> GetVoucherProgramsWithVouchers(
-        int pageIndex, int pageSize, string? keyword, Guid? programId, CancellationToken cancellationToken = default)
+    public async Task<Response.VoucherProgramResponse> GetDetail(Guid id)
     {
-        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
-        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
-
-        var query = _dbContext.VoucherPrograms
+        var program = await _dbContext.VoucherPrograms
             .AsNoTracking()
-            .Where(x => !x.IsDeleted);
-
-        if (!string.IsNullOrWhiteSpace(keyword))
-        {
-            var name = keyword.Trim().ToLowerInvariant();
-            query = query.Where(x => x.Name.ToLower().Contains(name));
-        }
-        
-        if (programId.HasValue)
-        {
-            query = query.Where(x => x.Id == programId.Value);
-        }
-
-        var totalCount = await query.CountAsync(cancellationToken);
-        var offset = (int)Math.Min((long)(pageIndex - 1) * pageSize, int.MaxValue);
-
-        var programs = await query
-            .OrderByDescending(x => x.CreatedAt)
-            .ThenByDescending(x => x.Id)
-            .Skip(offset)
-            .Take(pageSize)
-            .Select(x => new Response.VoucherProgramDetailResponse
+            .Where(x => x.Id == id && !x.IsDeleted)
+            .Select(x => new Response.VoucherProgramResponse
             {
                 Id = x.Id,
                 Name = x.Name,
@@ -132,48 +108,14 @@ public class Service : IService
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
             })
-            .ToListAsync(cancellationToken);
+            .FirstOrDefaultAsync();
 
-        // One query for every voucher of the programs on this page (not N queries), then group by program
-        var programIds = programs.Select(x => x.Id).ToList();
-        var vouchers = await _dbContext.Vouchers
-            .AsNoTracking()
-            .Where(x => x.ProgramId != null && programIds.Contains(x.ProgramId.Value) && !x.IsDeleted)
-            .OrderByDescending(x => x.CreatedAt)
-            .ThenBy(x => x.Code)
-            .Select(x => new
-            {
-                ProgramId = x.ProgramId!.Value,
-                Item = new Response.ProgramVoucherItem
-                {
-                    Id = x.Id,
-                    Code = x.Code,
-                    Description = x.Description,
-                    IsActive = x.IsActive,
-                    DiscountType = x.DiscountType == VoucherDiscountType.Cash
-                        ? Voucher.VoucherDiscountTypes.Cash
-                        : Voucher.VoucherDiscountTypes.Percent,
-                    DiscountValue = x.DiscountValue,
-                    MaxDiscountAmount = x.MaxDiscountAmount,
-                    MaxUsageCount = x.MaxUsageCount,
-                    UsedCount = x.UsedCount,
-                    CreatedAt = x.CreatedAt,
-                    UpdatedAt = x.UpdatedAt
-                }
-            })
-            .ToListAsync(cancellationToken);
-
-        foreach (var program in programs)
+        if (program == null)
         {
-            program.Vouchers = vouchers
-                .Where(x => x.ProgramId == program.Id)
-                .Select(x => x.Item)
-                .ToList();
+            throw new NotFoundException("Không tìm thấy chương trình voucher.");
         }
 
-        var response = ApiResponseFactory.BasePagination(programs, pageIndex, pageSize, totalCount);
-        response.Value.HasNextPage = (long)pageIndex * pageSize < totalCount;
-        return response;
+        return program;
     }
 
     public async Task<BasePaginationResponse> GetVoucherByProgramId(int pageIndex, int pageSize, string? keyword, Guid programId, bool? isActive)

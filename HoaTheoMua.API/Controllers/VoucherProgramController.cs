@@ -56,17 +56,11 @@ public class VoucherProgramController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("/api/v1/admin/voucher-programs/with-vouchers")]
-    public async Task<IActionResult> GetVoucherProgramsWithVouchers(
-        [FromQuery] int pageIndex = 1,
-        [FromQuery] int pageSize = 10,
-        [FromQuery] string? keyword = null,
-        [FromQuery] Guid? programId = null,
-        CancellationToken cancellationToken = default)
+    [HttpGet("/api/v1/admin/voucher-programs/{id:guid}")]
+    public async Task<IActionResult> GetDetail(Guid id)
     {
-        var result = await _voucherProgramService.GetVoucherProgramsWithVouchers(
-            pageIndex, pageSize, keyword, programId, cancellationToken);
-        return Ok(result);
+        var result = await _voucherProgramService.GetDetail(id);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
     [HttpGet("/api/v1/admin/voucher-programs/{programId:guid}/vouchers")]
