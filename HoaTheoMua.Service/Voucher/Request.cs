@@ -40,12 +40,12 @@ public class Request
         public string? Visibility { get; set; }
         public string? DiscountType { get; set; }
         public decimal? DiscountValue { get; set; }
-        public decimal? MaxDiscountAmount { get; set; }
+        public decimal? MaxDiscountAmount { get; set; } // new value, not sent = null
         public int? MaxUsageCount { get; set; }
         public DateTimeOffset? StartAt { get; set; }
-        public DateTimeOffset? EndAt { get; set; }
-        public decimal? MinOrderAmount { get; set; }
-        public decimal? MaxOrderAmount { get; set; }
+        public DateTimeOffset? EndAt { get; set; } // new value, not sent = null
+        public decimal? MinOrderAmount { get; set; } // new value, not sent = null
+        public decimal? MaxOrderAmount { get; set; } // new value, not sent = null
     }
 
     public class EstimateVoucherRequest

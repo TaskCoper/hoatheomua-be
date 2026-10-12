@@ -100,13 +100,13 @@ public class UpdateVouchersTest
         Assert.Equal(voucher.Visibility, updated.Visibility);
         Assert.Equal(voucher.DiscountType, updated.DiscountType);
         Assert.Equal(voucher.DiscountValue, updated.DiscountValue);
-        Assert.Equal(voucher.MaxDiscountAmount, updated.MaxDiscountAmount);
+        Assert.Null(updated.MaxDiscountAmount);
         Assert.Equal(voucher.MaxUsageCount, updated.MaxUsageCount);
         Assert.Equal(voucher.UsedCount, updated.UsedCount);
         Assert.Equal(voucher.StartAt, updated.StartAt);
-        Assert.Equal(voucher.EndAt, updated.EndAt);
-        Assert.Equal(voucher.MinOrderAmount, updated.MinOrderAmount);
-        Assert.Equal(voucher.MaxOrderAmount, updated.MaxOrderAmount);
+        Assert.Null(updated.EndAt);
+        Assert.Null(updated.MinOrderAmount);
+        Assert.Null(updated.MaxOrderAmount);
         Assert.Equal(voucher.IsActive, updated.IsActive);
         Assert.Equal(voucher.IsDeleted, updated.IsDeleted);
         Assert.Equal(voucher.CreatedAt, updated.CreatedAt);
@@ -131,7 +131,7 @@ public class UpdateVouchersTest
             Batch(new Request.UpdateVoucherItem() { Id = valid.Id, Description = "Changed" },
                 new() { Id = unavailable.Id, Description = "Changed" })));
 
-        Assert.Equal("Voucher not found.", error.Message);
+        Assert.Equal($"Voucher not found: {unavailable.Id}", error.Message);
         AssertNoUpdates(db);
     }
 
@@ -244,7 +244,10 @@ public class UpdateVouchersTest
     {
         await using var db = VoucherTestData.Database();
         var voucher = VoucherTestData.Voucher();
-        var item = new Request.UpdateVoucherItem { Id = voucher.Id, Description = "Changed" };
+        var item = new Request.UpdateVoucherItem
+        {
+            Id = voucher.Id, Description = "Changed", MaxDiscountAmount = voucher.MaxDiscountAmount
+        };
         if (scenario == "changedType") item.DiscountType = VoucherDiscountTypes.Cash;
         else
         {
@@ -291,7 +294,7 @@ public class UpdateVouchersTest
         db.Vouchers.Add(voucher);
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
-        var item = new Request.UpdateVoucherItem { Id = voucher.Id, Description = "Changed" };
+        var item = new Request.UpdateVoucherItem { Id = voucher.Id, Description = "Changed", EndAt = voucher.EndAt };
         if (updateStart) item.StartAt = voucher.EndAt!.Value.AddHours(equal ? 0 : 1);
         else item.EndAt = voucher.StartAt!.Value.AddHours(equal ? 0 : -1);
 
@@ -308,7 +311,11 @@ public class UpdateVouchersTest
         db.Vouchers.Add(voucher);
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
-        var item = new Request.UpdateVoucherItem { Id = voucher.Id, Description = "Changed" };
+        var item = new Request.UpdateVoucherItem
+        {
+            Id = voucher.Id, Description = "Changed",
+            MinOrderAmount = voucher.MinOrderAmount, MaxOrderAmount = voucher.MaxOrderAmount
+        };
         if (updateMin) item.MinOrderAmount = voucher.MaxOrderAmount + 1;
         else item.MaxOrderAmount = voucher.MinOrderAmount - 1;
 

@@ -29,11 +29,10 @@ public class UpdateVoucherProgramRequestValidator : AbstractValidator<Request.Up
                        && VoucherProgramDateTime.TryParse(x.EndAt, out _));
         RuleFor(x => x.MinOrderAmount).GreaterThanOrEqualTo(0m)
             .WithMessage("Min order amount must not be negative");
-        RuleFor(x => x.MaxOrderAmount).GreaterThanOrEqualTo(0m)
-            .WithMessage("Max order amount must not be negative")
-            .GreaterThanOrEqualTo(x => x.MinOrderAmount)
-            .WithMessage("Max order amount cannot be less than min order amount")
-            .When(x => x.MinOrderAmount.HasValue && x.MaxOrderAmount.HasValue && x.MaxOrderAmount.Value > 0m,
-                ApplyConditionTo.CurrentValidator);
+        RuleFor(x => x.MaxOrderAmount).GreaterThan(0m).When(x => x.MaxOrderAmount.HasValue)
+            .WithMessage("Max order amount must be greater than 0");
+        RuleFor(x => x.MaxOrderAmount).GreaterThanOrEqualTo(x => x.MinOrderAmount!.Value)
+            .When(x => x.MinOrderAmount.HasValue && x.MaxOrderAmount.HasValue)
+            .WithMessage("Max order amount cannot be less than min order amount");
     }
 }
