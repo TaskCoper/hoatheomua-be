@@ -106,7 +106,8 @@ public class Service : IService
 
         var ahamoveConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
 
-        var isUrgent = await IsUrgentOrderAsync(order, tags);
+        // [BỎ TAG GẤP] Không còn xác định đơn gấp.
+        // var isUrgent = await IsUrgentOrderAsync(order, tags);
         var allowInstantDelivery = !isAhamove || ahamoveConfigs.GetValue("ahamove.instant_delivery", true);
 
         // Unix seconds the courier will collect the parcel. Computed once here and carried in the
@@ -115,8 +116,10 @@ public class Service : IService
         var delayTime = isAhamove
             ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
             : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + XanhSm.XanhSmConstants.PreparationTimeSeconds;
-        //var shouldDispatch = order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery;
-        var shouldDispatch = isUrgent && allowInstantDelivery;
+        // [BỎ TAG GẤP] Không còn luật `isUrgent` (đơn gấp theo khung giờ của tag). Trả về luật gốc: đơn có tag
+        // thì không đặt shipper và không thêm tag 294 (FastTagId), admin tự đặt ship. Luật isUrgent giữ ở dòng comment bên dưới.
+        var shouldDispatch = order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery;
+        // // var shouldDispatch = isUrgent && allowInstantDelivery;
         if (shouldDispatch)
         {
             tagIds = tagIds.Append(FastTagId).ToList();
@@ -1133,20 +1136,21 @@ public class Service : IService
         return $"{time:D2}:00:00";
     }
 
-    private async Task<bool> IsUrgentOrderAsync(OrderEntity order, IReadOnlyCollection<long> tagIds)
-    {
-        if (order.OrderTime != 0)
-        {
-            return false;
-        }
-
-        var orderTagConfig = await _configService.GetNhanhVnOrderTag();
-        var selectedSlot = orderTagConfig.Options?
-            .FirstOrDefault(option =>
-                option.Value.HasValue && tagIds.Contains(option.Value.Value));
-
-        return DeliverySlotTimeHelper.IsWithinSlot(selectedSlot?.Label, order.CreatedAt);
-    }
+    // [BỎ TAG GẤP] Không còn dùng vì không còn đơn gấp. Giữ lại (comment) để có thể bật lại.
+    // private async Task<bool> IsUrgentOrderAsync(OrderEntity order, IReadOnlyCollection<long> tagIds)
+    // {
+    //     if (order.OrderTime != 0)
+    //     {
+    //         return false;
+    //     }
+    //
+    //     var orderTagConfig = await _configService.GetNhanhVnOrderTag();
+    //     var selectedSlot = orderTagConfig.Options?
+    //         .FirstOrDefault(option =>
+    //             option.Value.HasValue && tagIds.Contains(option.Value.Value));
+    //
+    //     return DeliverySlotTimeHelper.IsWithinSlot(selectedSlot?.Label, order.CreatedAt);
+    // }
 
     // Instant orders carry no tag, so ConvertTimeDeliveryAsync always returns empty for them. The
     // delivery time NhanhVn shows is the moment the courier collects the parcel, rendered in VN time.

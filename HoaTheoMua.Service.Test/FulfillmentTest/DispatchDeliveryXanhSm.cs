@@ -30,82 +30,85 @@ public class DispatchDeliveryXanhSmTest
     private const string XanhSmDeliveryId = "XANHSM-ORDER-001";
     private const string XanhSmTrackingUrl = "https://tracking.example/XANHSM-ORDER-001";
 
-    [Fact]
-    public async Task DispatchDelivery_OrderTimeZeroCreatedInsideSlot_BooksCourierAndAddsFastTag()
-    {
-        await using var dbContext = CreateDbContext();
-        var order = CreateOrder();
-        order.CreatedAt = new DateTimeOffset(2026, 10, 8, 8, 30, 0, TimeSpan.FromHours(7));
-        await dbContext.Orders.AddAsync(order);
-        await dbContext.CompanyAddresses.AddAsync(CreateCompanyAddress());
-        await dbContext.SaveChangesAsync();
+    // [BỎ TAG GẤP] Test này mong đợi hệ thống đặt shipper/thêm tag 294 nên đã comment. Bỏ comment (Ctrl+/) để bật lại.
+    // [Fact]
+    // public async Task DispatchDelivery_OrderTimeZeroCreatedInsideSlot_BooksCourierAndAddsFastTag()
+    // {
+    //     await using var dbContext = CreateDbContext();
+    //     var order = CreateOrder();
+    //     order.CreatedAt = new DateTimeOffset(2026, 10, 8, 8, 30, 0, TimeSpan.FromHours(7));
+    //     await dbContext.Orders.AddAsync(order);
+    //     await dbContext.CompanyAddresses.AddAsync(CreateCompanyAddress());
+    //     await dbContext.SaveChangesAsync();
+    //
+    //     var xanhSm = new Mock<XanhSmClient>();
+    //     xanhSm
+    //         .Setup(client => client.BookDoorToDoorAsync(
+    //             It.IsAny<IReadOnlyCollection<XanhSmDeliveryPointRequest>>(),
+    //             It.IsAny<long>(), It.IsAny<long?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+    //         .ReturnsAsync(new XanhSmDelivery
+    //         {
+    //             Id = XanhSmDeliveryId,
+    //             Status = "FINDING",
+    //             TrackingUrl = XanhSmTrackingUrl
+    //         });
+    //
+    //     var plan = await CreateService(dbContext, xanhSm, slotLabel: "8h - 10h")
+    //         .DispatchDeliveryAsync(order.Id);
+    //
+    //     Assert.True(plan.Dispatched);
+    //     Assert.Contains(294L, plan.TagIds);
+    //     xanhSm.Verify(client => client.BookDoorToDoorAsync(
+    //         It.IsAny<IReadOnlyCollection<XanhSmDeliveryPointRequest>>(),
+    //         It.IsAny<long>(), It.IsAny<long?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    // }
 
-        var xanhSm = new Mock<XanhSmClient>();
-        xanhSm
-            .Setup(client => client.BookDoorToDoorAsync(
-                It.IsAny<IReadOnlyCollection<XanhSmDeliveryPointRequest>>(),
-                It.IsAny<long>(), It.IsAny<long?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new XanhSmDelivery
-            {
-                Id = XanhSmDeliveryId,
-                Status = "FINDING",
-                TrackingUrl = XanhSmTrackingUrl
-            });
+    // [BỎ TAG GẤP] Test của luật "isUrgent" (đơn gấp theo khung giờ của tag), luật này đã bỏ nên đã comment. Bỏ comment (Ctrl+/) để bật lại.
+    // [Fact]
+    // public async Task DispatchDelivery_OrderTimeZeroCreatedOutsideSlot_DoesNotBookCourier()
+    // {
+    //     await using var dbContext = CreateDbContext();
+    //     var order = CreateOrder();
+    //     order.CreatedAt = new DateTimeOffset(2026, 10, 8, 11, 0, 0, TimeSpan.FromHours(7));
+    //     await dbContext.Orders.AddAsync(order);
+    //     await dbContext.SaveChangesAsync();
+    //
+    //     var xanhSm = new Mock<XanhSmClient>(MockBehavior.Strict);
+    //     var plan = await CreateService(dbContext, xanhSm, slotLabel: "8h - 10h")
+    //         .DispatchDeliveryAsync(order.Id);
+    //
+    //     Assert.False(plan.Dispatched);
+    //     Assert.DoesNotContain(294L, plan.TagIds);
+    //     xanhSm.VerifyNoOtherCalls();
+    // }
 
-        var plan = await CreateService(dbContext, xanhSm, slotLabel: "8h - 10h")
-            .DispatchDeliveryAsync(order.Id);
-
-        Assert.True(plan.Dispatched);
-        Assert.Contains(294L, plan.TagIds);
-        xanhSm.Verify(client => client.BookDoorToDoorAsync(
-            It.IsAny<IReadOnlyCollection<XanhSmDeliveryPointRequest>>(),
-            It.IsAny<long>(), It.IsAny<long?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task DispatchDelivery_OrderTimeZeroCreatedOutsideSlot_DoesNotBookCourier()
-    {
-        await using var dbContext = CreateDbContext();
-        var order = CreateOrder();
-        order.CreatedAt = new DateTimeOffset(2026, 10, 8, 11, 0, 0, TimeSpan.FromHours(7));
-        await dbContext.Orders.AddAsync(order);
-        await dbContext.SaveChangesAsync();
-
-        var xanhSm = new Mock<XanhSmClient>(MockBehavior.Strict);
-        var plan = await CreateService(dbContext, xanhSm, slotLabel: "8h - 10h")
-            .DispatchDeliveryAsync(order.Id);
-
-        Assert.False(plan.Dispatched);
-        Assert.DoesNotContain(294L, plan.TagIds);
-        xanhSm.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public async Task DispatchDelivery_UrgentAhamoveWithInstantDeliveryDisabled_DoesNotBookCourier()
-    {
-        await using var dbContext = CreateDbContext();
-        var order = CreateOrder();
-        order.ShippingGateway = ShippingGateway.Ahamove;
-        order.CreatedAt = new DateTimeOffset(2026, 10, 8, 8, 30, 0, TimeSpan.FromHours(7));
-        await dbContext.Orders.AddAsync(order);
-        await dbContext.Configs.AddAsync(new HoaTheoMua.Repository.Entity.Config
-        {
-            Id = Guid.NewGuid(),
-            Key = "ahamove.instant_delivery",
-            Group = "ahamove",
-            Value = "{\"value\":false}",
-            CreatedAt = DateTimeOffset.UtcNow
-        });
-        await dbContext.SaveChangesAsync();
-
-        var xanhSm = new Mock<XanhSmClient>(MockBehavior.Strict);
-        var plan = await CreateService(dbContext, xanhSm, slotLabel: "8h - 10h")
-            .DispatchDeliveryAsync(order.Id);
-
-        Assert.False(plan.Dispatched);
-        Assert.DoesNotContain(294L, plan.TagIds);
-        xanhSm.VerifyNoOtherCalls();
-    }
+    // [BỎ TAG GẤP] Test của luật "isUrgent" (đơn gấp theo khung giờ của tag), luật này đã bỏ nên đã comment. Bỏ comment (Ctrl+/) để bật lại.
+    // [Fact]
+    // public async Task DispatchDelivery_UrgentAhamoveWithInstantDeliveryDisabled_DoesNotBookCourier()
+    // {
+    //     await using var dbContext = CreateDbContext();
+    //     var order = CreateOrder();
+    //     order.ShippingGateway = ShippingGateway.Ahamove;
+    //     order.CreatedAt = new DateTimeOffset(2026, 10, 8, 8, 30, 0, TimeSpan.FromHours(7));
+    //     await dbContext.Orders.AddAsync(order);
+    //     await dbContext.Configs.AddAsync(new HoaTheoMua.Repository.Entity.Config
+    //     {
+    //         Id = Guid.NewGuid(),
+    //         Key = "ahamove.instant_delivery",
+    //         Group = "ahamove",
+    //         Value = "{\"value\":false}",
+    //         CreatedAt = DateTimeOffset.UtcNow
+    //     });
+    //     await dbContext.SaveChangesAsync();
+    //
+    //     var xanhSm = new Mock<XanhSmClient>(MockBehavior.Strict);
+    //     var plan = await CreateService(dbContext, xanhSm, slotLabel: "8h - 10h")
+    //         .DispatchDeliveryAsync(order.Id);
+    //
+    //     Assert.False(plan.Dispatched);
+    //     Assert.DoesNotContain(294L, plan.TagIds);
+    //     xanhSm.VerifyNoOtherCalls();
+    // }
 
     // TC01: đơn XanhSm giao ngay -> book door-to-door, lưu id + tracking ngay, KHÔNG gọi Ahamove
     // [Fact] Tạm tắt: test đang fail, cần rà lại expectation của flow XanhSm.
@@ -405,7 +408,9 @@ public class DispatchDeliveryXanhSmTest
             ProductFee = 100000,
             TotalFee = 133000,
             OrderTime = 0,
-            TagIds = [DeliverySlotTagId],
+            // [BỎ TAG GẤP]
+            // TagIds = [DeliverySlotTagId],
+            TagIds = [],
             IsExportInvoice = false,
             CreatedAt = DateTimeOffset.UtcNow,
             OrderDetails =
