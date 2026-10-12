@@ -1643,6 +1643,12 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("Status", "OrderTime")
+                        .HasFilter("\"IsDeleted\" = false");
+
                     b.ToTable("Orders");
                 });
 
@@ -1798,6 +1804,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("CuaHang")
                         .HasColumnType("text");
+
+                    b.Property<DateOnly?>("DeliveryDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("DiaChiKhachHang")
                         .HasColumnType("text");
@@ -2022,6 +2031,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<int?>("SoThuTuTheoNgay")
                         .HasColumnType("integer");
 
+                    b.Property<List<long>>("TagIds")
+                        .HasColumnType("bigint[]");
+
                     b.Property<string>("TaiKhoanChuyenKhoan")
                         .HasColumnType("text");
 
@@ -2103,6 +2115,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("DeliveryDate")
+                        .HasFilter("\"IsDeleted\" = false\r\nAND (\"TrangThaiDonHang\" IS NULL\r\n     OR \"TrangThaiDonHang\" NOT IN ('63', 'Khách hủy'))");
 
                     b.HasIndex("IdDonHangApi");
 
