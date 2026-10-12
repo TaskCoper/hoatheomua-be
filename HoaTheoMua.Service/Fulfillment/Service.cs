@@ -117,7 +117,7 @@ public class Service : IService
             ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() + delayCallAhamove
             : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + XanhSm.XanhSmConstants.PreparationTimeSeconds;
         // [BỎ TAG GẤP] Không còn luật `isUrgent` (đơn gấp theo khung giờ của tag). Trả về luật gốc: đơn có tag
-        // thì không đặt shipper và không thêm tag 294 (FastTagId), admin tự đặt ship. Luật isUrgent giữ ở dòng comment bên dưới.
+        // thì không đặt shipper và không thêm tag 294 (FastTagId), admin tự đặt ship
         var shouldDispatch = order.OrderTime == 0 && tags.Count == 0 && allowInstantDelivery;
         // // var shouldDispatch = isUrgent && allowInstantDelivery;
         if (shouldDispatch)
