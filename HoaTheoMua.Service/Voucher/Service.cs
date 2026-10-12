@@ -6,6 +6,7 @@ using HoaTheoMua.Service.Models;
 using Microsoft.EntityFrameworkCore;
 using MiniExcelLibs;
 using Newtonsoft.Json;
+using Npgsql;
 using VoucherEntity = HoaTheoMua.Repository.Entity.Voucher;
 
 namespace HoaTheoMua.Service.Voucher;
@@ -376,7 +377,10 @@ public class Service : IService
             throw new NotFoundException("Không tìm thấy voucher.");
         }
 
+        // Xóa voucher thì tắt luôn, để mã không còn giữ chỗ trong unique index
+        // và không bị tính vào quota voucher đang hoạt động của chương trình.
         voucher.IsDeleted = true;
+        voucher.IsActive = false;
         voucher.UpdatedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync();
 
@@ -439,13 +443,68 @@ public class Service : IService
             .Where(x => request.Ids.Contains(x.Id) && !x.IsDeleted)
             .ToListAsync();
 
+        // Khi bật active, kiểm tra mã trùng trước để báo lỗi rõ ràng
+        if (isActive)
+        {
+            // Chỉ xét voucher đang tắt. Voucher đang bật thì giữ mã của nó rồi.
+            var turningOn = vouchers.Where(x => !x.IsActive).ToList();
+            var codes = turningOn.Select(x => x.Code).Distinct().ToList();
+            var ids = turningOn.Select(x => x.Id).ToList();
+
+            // Trường hợp 1: 2 voucher trong cùng request có cùng mã
+            var sameCodeInRequest = turningOn
+                .GroupBy(x => x.Code)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key);
+
+            // Trường hợp 2: voucher khác (không nằm trong request) đang bật và dùng mã này
+            var codesInUse = await _dbContext.Vouchers
+                .AsNoTracking()
+                .Where(x => x.IsActive && codes.Contains(x.Code) && !ids.Contains(x.Id))
+                .Select(x => x.Code)
+                .ToListAsync();
+
+            // Voucher thuộc chương trình đang tắt thì không bật lẻ được
+            var inOffProgram = turningOn
+                .Where(x => x.Program != null && !x.Program.IsActive)
+                .Select(x => x.Code)
+                .OrderBy(x => x)
+                .ToList();
+            if (inOffProgram.Count > 0)
+            {
+                throw new ConflictException(
+                    $"Không thể bật vì chương trình của voucher đang tắt: {string.Join(", ", inOffProgram)}. " +
+                    "Hãy bật chương trình trước.");
+            }
+
+            var badCodes = sameCodeInRequest.Union(codesInUse).OrderBy(x => x).ToList();
+            if (badCodes.Count > 0)
+            {
+                throw new ConflictException(
+                    $"Không thể bật vì mã đang được voucher khác dùng: {string.Join(", ", badCodes)}. " +
+                    "Hãy tắt voucher đang dùng mã này trước.");
+            }
+        }
+
         foreach (var voucher in vouchers)
         {
             voucher.IsActive = isActive;
             voucher.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
-        await _dbContext.SaveChangesAsync();
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "IX_Vouchers_Code"
+        })
+        {
+            // Có người khác vừa bật mã này ngay sau lúc mình kiểm tra
+            throw new ConflictException("Không thể bật vì mã voucher bị trùng. Vui lòng thử lại.");
+        }
 
         return "Voucher status updated successfully.";
     }
@@ -515,7 +574,7 @@ public class Service : IService
             .FirstOrDefaultAsync(x => x.Code == code
                                       && !x.IsDeleted
                                       && x.IsActive
-                                      && (x.Program == null || !x.Program.IsDeleted));
+                                      && (x.Program == null || (!x.Program.IsDeleted && x.Program.IsActive)));
 
         if (voucher == null)
         {

@@ -6,6 +6,8 @@ public class Response
     {
         public Guid ProgramId { get; set; }
         public int CreatedCount { get; set; }
+        // false khi chương trình đang tắt: các mã vừa tạo cũng đang tắt
+        public bool IsActive { get; set; }
         public List<string> Codes { get; set; } = new();
     }
 
