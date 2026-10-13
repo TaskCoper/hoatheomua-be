@@ -504,7 +504,7 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             Assert.Equal(2, items[0].GetProperty("num").GetInt32());
         }
 
-        // shippingFee trả cho FE: ≤ free_ship km thì 0đ, vượt thì (km thực tế - km free) * 5.000đ
+        // total_fee trả cho FE là phí ship: ≤ free_ship km thì 0đ, vượt thì (km thực tế - km free) * 5.000đ
         [Theory]
         [InlineData(5d, 3d, 0)]
         [InlineData(5d, 5d, 0)]
@@ -513,7 +513,7 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
         [InlineData(5d, 12.5d, 37500)]
         [InlineData(5.5d, 7d, 7500)]
         [InlineData(null, 9d, 30000)]
-        public async Task EstimateShippingFee_AppliesFreeShipPolicyToShippingFee(
+        public async Task EstimateShippingFee_AppliesFreeShipPolicyToTotalFee(
             double? freeShipKm, double distanceKm, int expectedShippingFee)
         {
             // Arrange
@@ -558,8 +558,7 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             var result = await service.EstimateShippingFee(request);
 
             // Assert
-            var shippingFee = (decimal)result.GetType().GetProperty("shippingFee")!.GetValue(result)!;
-            Assert.Equal(expectedShippingFee, shippingFee);
-        }
+            var ahamoveResult = (List<ServiceResponse>)result.GetType().GetProperty("ahamoveResult")!.GetValue(result)!;
+            Assert.Equal(expectedShippingFee, ahamoveResult[0].Data.TotalFee);        }
     }
 }
