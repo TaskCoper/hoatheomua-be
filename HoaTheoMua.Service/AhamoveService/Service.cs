@@ -270,7 +270,15 @@ public class Service: IService
             throw new AhamoveException();
         }
 
-        return new { ahamoveResult, products };
+        // return new { ahamoveResult, products };
+
+        // What the buyer actually pays after the free-ship policy; ahamoveResult stays the raw carrier quote.
+        var shippingFee = HoaTheoMua.Service.Common.ShippingFeeHelper.CalculateBuyerFee(
+            ahamoveResult[0].Data.Distance,
+            configs.GetValue("ahamove.free_ship", 0d),
+            ahamoveResult[0].Data.TotalFee);
+
+        return new { ahamoveResult, products, shippingFee };
     }
     
     public async Task<ServiceDetailsResponse> GetServiceDetailsAhaMove()

@@ -1587,7 +1587,8 @@ public class Service : IService
         var ahamoveConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders/estimates";
         var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
-        var freeShipping = ahamoveConfigs.GetValue("ahamove.free_ship", 0);
+        // var freeShipping = ahamoveConfigs.GetValue("ahamove.free_ship", 0);
+        var freeShipping = ahamoveConfigs.GetValue("ahamove.free_ship", 0d);
 
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
@@ -1606,12 +1607,14 @@ public class Service : IService
             throw new BadRequestException("Ahamove returned null or empty data");
         }
 
-        if (freeShipping > 0 && result[0].Data.Distance <= freeShipping)
-        {
-            return 0;
-        }
+        // if (freeShipping > 0 && result[0].Data.Distance <= freeShipping)
+        // {
+        //     return 0;
+        // }
+        //
+        // return result[0].Data.TotalFee;
 
-        return result[0].Data.TotalFee;
+        return ShippingFeeHelper.CalculateBuyerFee(result[0].Data.Distance, freeShipping, result[0].Data.TotalFee);
     }
 
     private async Task<decimal> EstimateXanhSmShippingFeeAsync(
@@ -1662,12 +1665,14 @@ public class Service : IService
             _ => null
         };
 
-        if (freeShippingKm > 0 && distanceKm is >= 0 && distanceKm <= freeShippingKm)
-        {
-            return 0;
-        }
+        // if (freeShippingKm > 0 && distanceKm is >= 0 && distanceKm <= freeShippingKm)
+        // {
+        //     return 0;
+        // }
+        //
+        // return quote.TotalFee;
 
-        return quote.TotalFee;
+        return ShippingFeeHelper.CalculateBuyerFee(distanceKm, freeShippingKm, quote.TotalFee);
     }
 
     public async Task<Response.EstimateXanhSmShippingFeeResponse> EstimateXanhSmShippingFee(
