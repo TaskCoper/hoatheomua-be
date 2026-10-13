@@ -1185,8 +1185,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var createdOrder = Assert.Single(orders);
             Assert.Equal(100000m, createdOrder.ProductFee);
             Assert.Equal(30000m, createdOrder.ShippingFee);
-            Assert.Equal(100000m * 0.08m, createdOrder.Vat);
-            Assert.Equal(100000m + 30000m + (100000m * 0.08m), createdOrder.TotalFee);
+            Assert.Equal(100000m * 0.08m, createdOrder.Vat); // VAT tính trên tiền hàng sau voucher, không gồm ship
+            Assert.Equal(100000m + (100000m * 0.08m) + 30000m, createdOrder.TotalFee);
         }
 
         //Test case 13: Tạo đơn order được free shipping
