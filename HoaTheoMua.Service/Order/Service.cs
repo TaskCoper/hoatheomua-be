@@ -376,7 +376,11 @@ public class Service : IService
             return;
         }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        // Voucher checkout already owns a transaction. Keep both the voucher row lock
+        // and the delivery-slot lock until that caller commits the complete order.
+        await using var transaction = _dbContext.Database.CurrentTransaction == null
+            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken)
+            : null;
 
         await _dbContext.Database.ExecuteSqlInterpolatedAsync(
             $"SELECT pg_advisory_xact_lock({slotDate.DayNumber}, {slotTagId})",
@@ -391,7 +395,8 @@ public class Service : IService
         await _dbContext.Orders.AddAsync(order, cancellationToken);
         await _dbContext.OrderDetails.AddRangeAsync(orderDetails, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction != null)
+            await transaction.CommitAsync(cancellationToken);
     }
 
     // VAT applied to the product subtotal when the buyer requests an invoice.
