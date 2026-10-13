@@ -180,4 +180,11 @@ public class ProductController: ControllerBase
         await _revalidateService.RevalidateApi(jsonData);
         return Ok(ApiResponseFactory.Base("Update sản phẩm thành công", true, "", HttpContext.TraceIdentifier));
     }
+    
+    [HttpGet("/api/v1/products/by-categories")]
+    public async Task<IActionResult> GetProductsByCategories([FromQuery] List<Guid>? categoryIds)
+    {
+        var result = await _productService.GetProductsByCategories(categoryIds);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
 }

@@ -48,6 +48,12 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         
         builder.Property(o => o.CreatedAt)
             .HasDefaultValueSql("now()");
+        
+        builder.HasIndex(x => new { x.Status, x.CreatedAt })
+            .HasFilter("\"IsDeleted\" = false");
+
+        builder.HasIndex(x => new { x.Status, x.OrderTime })
+            .HasFilter("\"IsDeleted\" = false");
 
         builder.HasMany(o => o.Transactions)
             .WithOne(t => t.Order)
@@ -58,6 +64,9 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasForeignKey(x => x.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.Property(o => o.VoucherSnapshot)
+                        .HasColumnType("jsonb");
+        
         builder.SeedOrder();
     }
 }

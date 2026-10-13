@@ -176,6 +176,8 @@ public class Service : IService
                     ? MaskJsonOrString(x.Value)
                     : StringToJson(x.Value),
                 UserId = x.UserId,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt,
             })
             .ToListAsync();
 
@@ -200,6 +202,8 @@ public class Service : IService
                     ? MaskJsonOrString(x.Value)
                     : StringToJson(x.Value),
                 UserId = x.UserId,
+                CreatedAt = x.CreatedAt,
+                UpdatedAt = x.UpdatedAt,
             })
             .FirstOrDefaultAsync();
 
@@ -265,6 +269,8 @@ public class Service : IService
             IsPublic = result.IsPublic,
             Value = StringToJson(result.Value),
             UserId = result.UserId,
+            CreatedAt = result.CreatedAt,
+            UpdatedAt = result.UpdatedAt,
         };
         return query;
 
@@ -317,6 +323,7 @@ public class Service : IService
         query.Key = request.Key;
         query.Group = request.Group;
         query.Value = request.Value.GetRawText();
+        query.UpdatedAt = DateTimeOffset.UtcNow;
         // if (request.IsPublic.HasValue)
         // {
         //     query.IsPublic = request.IsPublic.GetValueOrDefault();
@@ -381,6 +388,8 @@ public class Service : IService
                 ? MaskJsonOrString(x.Value)
                 : StringToJson(x.Value),
             UserId = x.UserId,
+            CreatedAt = x.CreatedAt,
+            UpdatedAt = x.UpdatedAt,
         }).ToListAsync();
 
         return result.Count == 0 ? null :  result;
@@ -421,12 +430,97 @@ public class Service : IService
         {
             throw new BadRequestException("Cannot convert value");
         }
+
+        var selectedTagIds = config.Value.ToHashSet();
+        var configuredSlotLimits = config.SlotLimits ?? new Dictionary<int, int?>();
         
         config.Options = config.Options
-            .Where(x => x.Value.HasValue && config.Value.Contains(x.Value.Value))
+            .Where(x => x.Value.HasValue && selectedTagIds.Contains(x.Value.Value))
             .ToList();
+
+        config.SlotLimits = selectedTagIds.ToDictionary(
+            tagId => tagId,
+            tagId => configuredSlotLimits.TryGetValue(tagId, out var limit) ? limit : null);
         
         return config;
+    }
+
+    public async Task<Response.UpdateDeliverySlotLimitsResponse> UpdateDeliverySlotLimits(Request.UpdateDeliverySlotLimitsRequest request)
+    {
+        if (request.Slots == null || request.Slots.Count == 0)
+        {
+            throw new BadRequestException("Slot không được để trống");
+        }
+
+        if (request.Slots.Any(x => x.Limit < 0))
+        {
+            throw new BadRequestException("Giới hạn phải lớn hơn hoặc bằng 0");
+        }
+
+        if (request.Slots.GroupBy(x => x.TagId).Any(x => x.Count() > 1))
+        {
+            throw new BadRequestException("Nhãn không được trùng");
+        }
+
+        var entity = await _dbContext.Configs
+            .FirstOrDefaultAsync(x => 
+                !x.IsDeleted && 
+                x.Key == "nhanhvn.order_tags" &&
+                x.Group == "nhanhvn" &&
+                x.Kind == "setting") ;
+
+        if (entity == null)
+        {
+            throw new BadRequestException("Không tìm thấy cấu hình của nhãn");
+        }
+
+        var config = JsonSerializer.Deserialize<Response.ConfigItem>(entity.Value);
+        if (config == null || config.Value == null || config.Options == null)
+        {
+            throw new BadRequestException("Không thể convert json");
+        }
+
+        var selectedTagIds = config.Value.ToHashSet();
+        var optionsByTagId = config.Options
+            .Where(x => x.Value.HasValue)
+            .GroupBy(x => x.Value!.Value)
+            .ToDictionary(x => x.Key, x => x.First());
+
+        foreach (var slot in request.Slots)
+        {
+            if (!selectedTagIds.Contains(slot.TagId))
+            {
+                throw new BadRequestException($"TagId {slot.TagId} không phải là tag giao hàng theo khung giờ");
+            }
+
+            if (!optionsByTagId.ContainsKey(slot.TagId))
+            {
+                throw new BadRequestException($"TagId {slot.TagId} không tồn tại trong mục options");
+            }
+        }
+
+        config.SlotLimits ??= new Dictionary<int, int?>();
+        foreach (var slot in request.Slots)
+        {
+            config.SlotLimits[slot.TagId] = slot.Limit;
+        }
+
+        var updatedAt = DateTimeOffset.UtcNow;
+        entity.Value = JsonSerializer.Serialize(config);
+        entity.UpdatedAt = updatedAt;
+
+        await _dbContext.SaveChangesAsync();
+
+        return new Response.UpdateDeliverySlotLimitsResponse
+        {
+            Slots = request.Slots.Select(slot => new Response.DeliverySlotLimitItem
+            {
+                TagId = slot.TagId,
+                Label = optionsByTagId[slot.TagId].Label,
+                Limit = slot.Limit
+            }).ToList(),
+            UpdatedAt = updatedAt
+        };
     }
 
     public async Task<int?> GetNhanhVnOrderSources()

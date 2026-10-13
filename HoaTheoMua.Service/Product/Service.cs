@@ -2255,11 +2255,56 @@ public class Service : IService
         if (request.Description != null)
         {
             product.Description = request.Description;
+            
+            product.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+            
+            long.TryParse(product.ParentProductId, out var parentId);
+
+            
+            if (!string.IsNullOrWhiteSpace(product.ParentProductId) && parentId > 0)
+            {
+                var parent = await _dbContext.Products
+                    .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
+
+                if (parent != null)
+                {
+                    parent.NhanhUpdatedAt = DateTimeOffset.UtcNow;
+                }
+            }
         }
         
         await _dbContext.SaveChangesAsync();
 
         return product.Id.ToString();
+    }
+
+    public async Task<List<Response.ProductByCategoryResponse>> GetProductsByCategories(List<Guid>? categoryIds)
+    {
+        var ids = categoryIds?
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList() ?? new List<Guid>();
+
+        if (ids.Count == 0)
+        {
+            return new List<Response.ProductByCategoryResponse>();
+        }
+
+        // Chỉ lấy sản phẩm cha (trang sản phẩm trên web là trang của cha), chưa xoá, đang bán
+        return await _dbContext.Products
+            .AsNoTracking()
+            .Where(x => !x.IsDeleted && x.IsActive
+                                     && (x.ParentProductId == null || x.ParentProductId == string.Empty)
+                                     && x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && ids.Contains(cpd.CategoryProductId)))
+            .OrderBy(x => x.ProductName)
+            .Select(x => new Response.ProductByCategoryResponse
+            {
+                Id = x.Id,
+                Name = x.ProductName,
+                NhanhCreatedAt = x.NhanhCreatedAt,
+                NhanhUpdatedAt = x.NhanhUpdatedAt
+            })
+            .ToListAsync();
     }
 
     public async Task<string> UpdateLabelProductNhanhVn(List<Request.UpdateLabelProductNhanhVnRequest> requests)

@@ -33,6 +33,8 @@ public class Response
         public bool SalaryNegotiable { get; set; }
         public int Openings { get; set; }
         public string Status { get; set; } = null!;
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
     }
 
     public class HighestSalaryResponse

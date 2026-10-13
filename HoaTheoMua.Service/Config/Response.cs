@@ -15,6 +15,8 @@ public class Response
         public required JsonElement Value { get; set; }
         public string? Kind { get; set; }
         public  Guid UserId { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset? UpdatedAt { get; set; }
     }
 
     public class ResponseDeleteConfig
@@ -61,6 +63,9 @@ public class Response
         [JsonPropertyName("value")]
         public List<int>? Value { get; set; }
 
+        [JsonPropertyName("slotLimits")]
+        public Dictionary<int, int?> SlotLimits { get; set; } = new();
+
         [JsonPropertyName("options")]
         public List<Option>? Options { get; set; }
 
@@ -81,6 +86,19 @@ public class Response
 
         [JsonPropertyName("value")]
         public int? Value { get; set; }
+    }
+
+    public class UpdateDeliverySlotLimitsResponse
+    {
+        public List<DeliverySlotLimitItem> Slots { get; set; } = new();
+        public DateTimeOffset UpdatedAt { get; set; }
+    }
+
+    public class DeliverySlotLimitItem
+    {
+        public int TagId { get; set; }
+        public string? Label { get; set; }
+        public int Limit { get; set; }
     }
     
     public class OrderSourceConfig

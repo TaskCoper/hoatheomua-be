@@ -122,7 +122,9 @@ public class Service : IService
                 SalaryMax = job.salaryMax,
                 SalaryNegotiable = job.salaryNegotiable,
                 Openings = job.openings,
-                Status = job.status == StatusJobDescriptions.Open ? "open" : "closed"
+                Status = job.status == StatusJobDescriptions.Open ? "open" : "closed",
+                CreatedAt = job.CreatedAt,
+                UpdatedAt = job.UpdatedAt
             })
             .ToListAsync();
 

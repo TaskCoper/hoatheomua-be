@@ -13,6 +13,7 @@ using HoaTheoMua.Service.AhamoveService;
 using AhaMoveRequest = HoaTheoMua.Service.AhamoveService.AhaMoveRequest;
 using HoaTheoMua.Service.Common;
 using HoaTheoMua.Service.Exceptions;
+using HoaTheoMua.Service.Order.Validate;
 using HoaTheoMua.Service.Webhook;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -43,6 +44,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
     // mock AppDbContext bằng MockQueryable.Moq, mock HttpMessageHandler bằng Moq.Protected).
     public class CreateOrderTests
     {
+        private const int SlotTagId = 229;
         private static readonly Guid TestUserId = Guid.Parse("cba7c21c-d6f2-4b30-9b4e-8c7c10b4f0b2");
         private static readonly Guid TestAddressId = Guid.Parse("a32c276b-74f0-48fe-97b8-f3c66b42f103");
         private static readonly Guid TestProductId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -157,6 +159,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             List<ComboSpecification>? comboSpecifications = null)
         {
             var mockOrders = (orders ?? new List<OrderEntity>()).BuildMockDbSet();
+            var mockNhanhVnOrders = new List<OrderNhanhVn>().BuildMockDbSet();
             var orderDetailsList = capturedOrderDetails ?? new List<OrderDetailEntity>();
             var mockOrderDetails = orderDetailsList.BuildMockDbSet();
             var mockCompany = (companyAddresses ?? new List<CompanyAddressEntity>()).BuildMockDbSet();
@@ -175,6 +178,12 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 .Callback<OrderEntity, CancellationToken>((item, ct) => (orders ?? new List<OrderEntity>()).Add(item))
                 .ReturnsAsync((Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<OrderEntity>)null!);
 
+            var currentVietnamHour = DateTimeOffset.UtcNow
+                .ToOffset(TimeSpan.FromHours(7))
+                .Hour;
+            var slotStartHour = (currentVietnamHour + 23) % 24;
+            var slotEndHour = (currentVietnamHour + 2) % 24;
+
             var configs = new List<ConfigEntity>
             {
                 new ConfigEntity { Key = "nhanhvn.token", Value = "{\"value\": \"test_token\"}", Group = "nhanhvn", IsDeleted = false },
@@ -183,7 +192,35 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 new ConfigEntity { Key = "nhanhvn.business_id", Value = "{\"value\": 67890}", Group = "nhanhvn", IsDeleted = false },
                 new ConfigEntity { Key = "nhanhvn.default_depot", Value = "{\"value\": 129255}", Group = "nhanhvn", IsDeleted = false },
                 new ConfigEntity { Key = "ahamove.api_key", Value = "{\"value\": \"test_api_key\"}", Group = "ahamove", IsDeleted = false },
-                new ConfigEntity { Key = "ahamove.base_url", Value = "{\"value\": \"http://ahamove.test\"}", Group = "ahamove", IsDeleted = false }
+                new ConfigEntity { Key = "ahamove.base_url", Value = "{\"value\": \"http://ahamove.test\"}", Group = "ahamove", IsDeleted = false },
+                new ConfigEntity
+                {
+                    Key = "nhanhvn.order_tags",
+                    Group = "nhanhvn",
+                    Kind = "setting",
+                    Value = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        group = "nhanhvn",
+                        label = "Giờ giao hàng",
+                        value = new[] { SlotTagId },
+                        slotLimits = new Dictionary<string, int?>
+                        {
+                            [SlotTagId.ToString()] = null
+                        },
+                        options = new[]
+                        {
+                            new
+                            {
+                                label = $"{slotStartHour}h - {slotEndHour}h",
+                                value = SlotTagId
+                            }
+                        },
+                        required = true,
+                        inputType = "multiSelect",
+                        validations = Array.Empty<object>()
+                    }),
+                    IsDeleted = false
+                }
             };
             if (freeShipDistance.HasValue)
             {
@@ -207,6 +244,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var mockDbContext = new Mock<AppDbContext>(options);
 
             mockDbContext.Setup(x => x.Orders).Returns(mockOrders.Object);
+            mockDbContext.Setup(x => x.OrderNhanhVns).Returns(mockNhanhVnOrders.Object);
             mockDbContext.Setup(x => x.OrderDetails).Returns(mockOrderDetails.Object);
             mockDbContext.Setup(x => x.CompanyAddresses).Returns(mockCompany.Object);
             mockDbContext.Setup(x => x.Addresses).Returns(mockAddresses.Object);
@@ -437,6 +475,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver,
                 Items = items.ToList()
@@ -514,6 +553,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -648,6 +688,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.XanhSm,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -771,6 +812,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -799,6 +841,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             }; ;
@@ -837,6 +880,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -879,6 +923,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -913,6 +958,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -949,6 +995,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -986,6 +1033,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1029,6 +1077,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1071,6 +1120,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1123,6 +1173,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1134,8 +1185,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var createdOrder = Assert.Single(orders);
             Assert.Equal(100000m, createdOrder.ProductFee);
             Assert.Equal(30000m, createdOrder.ShippingFee);
-            Assert.Equal(100000m * 0.08m, createdOrder.Vat);
-            Assert.Equal(100000m + 30000m + (100000m * 0.08m), createdOrder.TotalFee);
+            Assert.Equal(100000m * 0.08m, createdOrder.Vat); // VAT tính trên tiền hàng sau voucher, không gồm ship
+            Assert.Equal(100000m + (100000m * 0.08m) + 30000m, createdOrder.TotalFee);
         }
 
         //Test case 13: Tạo đơn order được free shipping
@@ -1201,6 +1252,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1273,6 +1325,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 Gateway = "BaoKim",
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
+                TagIds = [SlotTagId],
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1430,5 +1483,153 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             Assert.Equal("Không đủ hàng (Yêu cầu: 4, Kho có: 3)", exception.Message);
         }
+    }
+
+    public class CreateOrderSlotTests
+    {
+        private const int SlotTagId = 229;
+        private static readonly Guid UserId = Guid.Parse("cba7c21c-d6f2-4b30-9b4e-8c7c10b4f0b2");
+
+    [Fact]
+    public async Task CreateOrder_MoreThanOneTag_FailsValidation()
+    {
+        var request = CreateRequest([SlotTagId, 234]);
+        var result = await new CreateOrderRequestValidator().ValidateAsync(request);
+
+        Assert.Contains(result.Errors, error =>
+            error.PropertyName == nameof(OrderRequest.CreateOrderRequest.TagIds) &&
+            error.ErrorMessage == "TAG_IDS_MUST_CONTAIN_EXACTLY_ONE_ITEM");
+    }
+
+    [Fact]
+    public async Task CreateOrder_OccupiedEqualsLimit_DoesNotCreateOrder()
+    {
+        var currentHour = VietnamNow().Hour;
+        var existingOrder = CreatePendingOrder(SlotTagId);
+        var service = CreateService(
+            CreateDbContext(
+                SlotLabel((currentHour + 23) % 24, (currentHour + 2) % 24),
+                limit: 1,
+                orders: [existingOrder]),
+            out var orders);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => service.CreateOrder(CreateRequest([SlotTagId])));
+
+        Assert.Contains("đã đạt giới hạn 1 đơn hàng", exception.Message);
+        Assert.Single(orders);
+        Assert.Same(existingOrder, orders[0]);
+    }
+
+    private static OrderRequest.CreateOrderRequest CreateRequest(List<long> tagIds) => new()
+    {
+        Gateway = PaymentGateway.Sepay.ToString(),
+        PaymentGateway = PaymentGateway.Sepay,
+        ShippingGateway = ShippingGateway.Ahamove,
+        TagIds = tagIds,
+        OrderTime = 0,
+        Latitude = 10.7m,
+        Longitude = 106.7m,
+        Ward = 1,
+        City = 1,
+        Address = "Test address",
+        ShortAddress = "Test address",
+        FullName = "Test user",
+        Phone = "0901234567",
+        PhoneReceiver = "0901234567",
+        FullNameReceiver = "Test receiver",
+        Remarks = "Test",
+        IsExportInvoice = false,
+        Items = []
+    };
+
+    private static AppDbContext CreateDbContext(
+        string slotLabel,
+        int limit,
+        List<OrderEntity>? orders = null)
+    {
+        orders ??= [];
+        var configs = new List<ConfigEntity>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Key = "nhanhvn.order_tags",
+                Group = "nhanhvn",
+                Kind = "setting",
+                Value = $$"""
+                          {
+                            "group": "nhanhvn",
+                            "label": "Giờ giao hàng",
+                            "value": [{{SlotTagId}}],
+                            "slotLimits": { "{{SlotTagId}}": {{limit}} },
+                            "options": [
+                              { "label": "{{slotLabel}}", "value": {{SlotTagId}} }
+                            ],
+                            "required": true,
+                            "inputType": "multiSelect",
+                            "validations": []
+                          }
+                          """,
+                IsDeleted = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            }
+        };
+
+        var options = new DbContextOptionsBuilder<AppDbContext>().Options;
+        var dbContext = new Mock<AppDbContext>(options);
+        dbContext.Setup(context => context.Configs).Returns(configs.BuildMockDbSet().Object);
+        dbContext.Setup(context => context.Orders).Returns(orders.BuildMockDbSet().Object);
+        dbContext.Setup(context => context.OrderNhanhVns)
+            .Returns(new List<OrderNhanhVn>().BuildMockDbSet().Object);
+        return dbContext.Object;
+    }
+
+    private static OrderServiceImpl CreateService(AppDbContext dbContext, out List<OrderEntity> orders)
+    {
+        orders = dbContext.Orders.ToList();
+
+        var currentUser = new Mock<ICurrentUserService>();
+        currentUser.Setup(service => service.GetRequiredUserId()).Returns(UserId);
+        currentUser.Setup(service => service.IsVerified).Returns(true);
+
+        return new OrderServiceImpl(
+            dbContext,
+            currentUser.Object,
+            new Microsoft.AspNetCore.Http.HttpContextAccessor(),
+            new HttpClient(),
+            new Mock<HoaTheoMua.Service.Product.IService>().Object,
+            new ConfigurationBuilder().Build(),
+            new Mock<HoaTheoMua.Service.BaoKim.IService>().Object);
+    }
+
+    private static OrderEntity CreatePendingOrder(long tagId) => new()
+    {
+        Id = Guid.NewGuid(),
+        UserId = UserId,
+        Status = "Pending",
+        CreatedAt = DateTimeOffset.UtcNow,
+        OrderTime = 0,
+        TagIds = [tagId],
+        TrackNumber = string.Empty,
+        Ward = 1,
+        City = 1,
+        Address = "Test address",
+        ShortAddress = "Test address",
+        FullName = "Test user",
+        Phone = "0901234567",
+        PhoneReceiver = "0901234567",
+        FullNameReceiver = "Test receiver",
+        Remarks = string.Empty,
+        PaymentGateway = PaymentGateway.Sepay,
+        ShippingGateway = ShippingGateway.Ahamove
+    };
+
+    private static DateTime VietnamNow() =>
+        DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).DateTime;
+
+    private static string SlotLabel(int startHour, int endHour) =>
+        $"{startHour}h - {endHour}h";
+    
     }
 }

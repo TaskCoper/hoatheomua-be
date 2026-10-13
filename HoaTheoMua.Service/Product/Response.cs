@@ -310,4 +310,12 @@ public class Response
         public Guid ProductId { get; set; }
         public string? ProductName { get; set; }
     }
+    
+    public class ProductByCategoryResponse
+    {
+        public Guid Id { get; set; }
+        public string? Name { get; set; }
+        public DateTimeOffset? NhanhCreatedAt { get; set; }
+        public DateTimeOffset? NhanhUpdatedAt { get; set; }
+    }
 }

@@ -10,6 +10,7 @@ public static class RateLimitExtensions
     public const string HeavyPolicy = "heavy";
     public const string OrderWritePolicy = "order-write";
     public const string ShippingEstimatePolicy = "shipping-estimate";
+    public const string VoucherEstimatePolicy = "voucher-estimate";
     public const string ImportPolicy = "import";
 
     public static void ConfigureRateLimiter(this IServiceCollection services)
@@ -95,6 +96,19 @@ public static class RateLimitExtensions
                     _ => new SlidingWindowRateLimiterOptions
                     {
                         PermitLimit = 30,
+                        Window = TimeSpan.FromMinutes(1),
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    }));
+
+            // Voucher code check: strict, so private codes cannot be guessed by brute force
+            options.AddPolicy(VoucherEstimatePolicy, context =>
+                RateLimitPartition.GetSlidingWindowLimiter(
+                    GetUserOrIpPartitionKey(context),
+                    _ => new SlidingWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
                         Window = TimeSpan.FromMinutes(1),
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
