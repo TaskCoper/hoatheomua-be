@@ -203,6 +203,197 @@ public class Service : IService
         return ApiResponseFactory.BasePagination(result, pageIndex, pageSize, totalCount);
     }
 
+    public async Task<Dictionary<long, int>> CalculateSlotOccupied(DateOnly date, IReadOnlyCollection<long> tagIds,
+        CancellationToken cancellationToken = default)
+    {
+        var occupiedByTagId = tagIds
+            .Distinct()
+            .ToDictionary(tagId => tagId, _ => 0);
+
+        if (occupiedByTagId.Count == 0)
+        {
+            return occupiedByTagId;
+        }
+
+        var vietnamOffset = TimeSpan.FromHours(7);
+        var startUtc = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), vietnamOffset)
+            .ToUniversalTime();
+        var endUtc = startUtc.AddDays(1);
+        var startUnix = startUtc.ToUnixTimeSeconds();
+        var endUnix = endUtc.ToUnixTimeSeconds();
+
+        var nhanhOrderTagIds = await _dbContext.OrderNhanhVns
+            .AsNoTracking()
+            .Where(order =>
+                !order.IsDeleted &&
+                order.DeliveryDate == date &&
+                order.TrangThaiDonHang != "63" &&
+                order.TrangThaiDonHang != "Khách hủy")
+            .Select(order => order.TagIds)
+            .ToListAsync(cancellationToken);
+
+        var pendingOrderTagIds = await _dbContext.Orders
+            .AsNoTracking()
+            .Where(order =>
+                !order.IsDeleted &&
+                order.Status == "Pending" &&
+                ((order.OrderTime == 0 &&
+                  order.CreatedAt >= startUtc &&
+                  order.CreatedAt < endUtc) ||
+                 (order.OrderTime > 0 &&
+                  order.OrderTime >= startUnix &&
+                  order.OrderTime < endUnix)))
+            .Select(order => order.TagIds)
+            .ToListAsync(cancellationToken);
+
+        CountOccupied(nhanhOrderTagIds, occupiedByTagId);
+        CountOccupied(pendingOrderTagIds, occupiedByTagId);
+
+        return occupiedByTagId;
+    }
+
+    private static void CountOccupied(IEnumerable<List<long>?> orderTagIds, IDictionary<long, int> occupiedByTagId)
+    {
+        foreach (var tagIds in orderTagIds)
+        {
+            if (tagIds == null)
+            {
+                continue;
+            }
+
+            foreach (var tagId in tagIds.Distinct())
+            {
+                if (occupiedByTagId.TryGetValue(tagId, out var occupied))
+                {
+                    occupiedByTagId[tagId] = occupied + 1;
+                }
+            }
+        }
+    }
+
+    public async Task<Response.DeliverySlotAvailabilityResponse> GetDeliverySlotAvailability(DateOnly date, int? tagId,
+        CancellationToken cancellationToken = default)
+    {
+        if (date == default)
+        {
+            throw new BadRequestException("Ngày kiểm tra không hợp lệ");
+        }
+
+        var entity = await _dbContext.Configs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(config =>
+                    !config.IsDeleted &&
+                    config.Key == "nhanhvn.order_tags" &&
+                    config.Group == "nhanhvn" &&
+                    config.Kind == "setting",
+                cancellationToken);
+
+        if (entity == null)
+        {
+            throw new BadRequestException("Không tìm thấy cấu hình của nhãn");
+        }
+
+        HoaTheoMua.Service.Config.Response.ConfigItem? config;
+        try
+        {
+            config = System.Text.Json.JsonSerializer.Deserialize<
+                HoaTheoMua.Service.Config.Response.ConfigItem>(entity.Value);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            throw new BadRequestException("Không thể convert json");
+        }
+
+        if (config?.Value == null || config.Options == null)
+        {
+            throw new BadRequestException("Không thể convert json");
+        }
+
+        var configuredTagIds = config.Value.Distinct().ToList();
+        if (tagId.HasValue && !configuredTagIds.Contains(tagId.Value))
+        {
+            throw new BadRequestException($"TagId {tagId.Value} không phải là tag giao hàng theo khung giờ");
+        }
+
+        var selectedTagIds = tagId.HasValue
+            ? new List<int> { tagId.Value }
+            : configuredTagIds;
+
+        var optionsByTagId = config.Options
+            .Where(option => option.Value.HasValue)
+            .GroupBy(option => option.Value!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        var missingOptionTagIds = selectedTagIds
+            .Where(id => !optionsByTagId.ContainsKey(id))
+            .ToList();
+        if (missingOptionTagIds.Count > 0)
+        {
+            throw new BadRequestException($"TagId {missingOptionTagIds[0]} không tồn tại trong mục options");
+        }
+
+        var occupiedByTagId = await CalculateSlotOccupied(date, selectedTagIds.Select(id => (long)id).ToList(),
+            cancellationToken);
+
+        return new Response.DeliverySlotAvailabilityResponse
+        {
+            Date = date,
+            Slots = selectedTagIds.Select(id => new Response.DeliverySlotAvailabilityItem
+            {
+                TagId = id,
+                Label = optionsByTagId[id].Label ?? string.Empty,
+                Limit = config.SlotLimits?.TryGetValue(id, out var limit) == true ? limit : null,
+                Occupied = occupiedByTagId[id]
+            }).ToList()
+        };
+    }
+    private static void EnsureDeliverySlotAvailable(Response.DeliverySlotAvailabilityItem slot)
+    {
+        if (slot.Limit.HasValue && slot.Occupied >= slot.Limit.Value)
+        {
+            throw new BadRequestException($"Khung giờ {slot.Label} đã đạt giới hạn {slot.Limit.Value} đơn hàng");
+        }
+    }
+
+    private async Task SavePendingOrderWithSlotValidation(
+        Repository.Entity.Order order,
+        IReadOnlyCollection<OrderDetails> orderDetails,
+        DateOnly slotDate,
+        int slotTagId,
+        CancellationToken cancellationToken)
+    {
+        if (_dbContext.Database?.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
+        {
+            // var availability = await GetDeliverySlotAvailability(
+            //     slotDate,
+            //     slotTagId,
+            //     cancellationToken);
+            // EnsureDeliverySlotAvailable(availability.Slots.Single());
+            //
+            await _dbContext.Orders.AddAsync(order, cancellationToken);
+            await _dbContext.OrderDetails.AddRangeAsync(orderDetails, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock({slotDate.DayNumber}, {slotTagId})",
+            cancellationToken);
+
+        var lockedAvailability = await GetDeliverySlotAvailability(
+            slotDate,
+            slotTagId,
+            cancellationToken);
+        EnsureDeliverySlotAvailable(lockedAvailability.Slots.Single());
+
+        await _dbContext.Orders.AddAsync(order, cancellationToken);
+        await _dbContext.OrderDetails.AddRangeAsync(orderDetails, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     // VAT applied to the product subtotal when the buyer requests an invoice.
     private const decimal VatRate = 0.08m;
 
@@ -215,6 +406,34 @@ public class Service : IService
         {
             throw new UnauthorizedException("User is not verified");
         }
+
+        if (request.OrderTime < 0)
+        {
+            throw new BadRequestException("Thời gian giao hàng không hợp lệ");
+        }
+
+        var cancellationToken = _httpContext.HttpContext?.RequestAborted ?? CancellationToken.None;
+        var createdAt = DateTimeOffset.UtcNow;
+        
+        // OrderTime = 0 means urgent delivery. The selected delivery-slot tag is still
+        // retained for capacity counting, so the slot belongs to the current Vietnam date.
+        //OrderTime = 0: đổi sang múi giờ Việt Nam UTC+7 rồi chỉ giữ phần ngày.
+        // OrderTime > 0:  chuyển Unix timestamp OrderTime thành giờ Việt Nam rồi chỉ giữ phần ngày.
+        var slotDate = request.OrderTime == 0
+            ? DateOnly.FromDateTime(createdAt
+                .ToOffset(TimeSpan.FromHours(7)).DateTime)
+            : DateOnly.FromDateTime(DateTimeOffset
+                .FromUnixTimeSeconds(request.OrderTime)
+                .ToOffset(TimeSpan.FromHours(7)).DateTime);
+        
+        var slotTagId = checked((int)request.TagIds.Single());
+        
+        var availability = await GetDeliverySlotAvailability(
+            slotDate,
+            slotTagId,
+            cancellationToken);
+        var selectedSlot = availability.Slots.Single();
+        EnsureDeliverySlotAvailable(selectedSlot);
 
         var checkoutConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "checkout");
 
@@ -328,7 +547,7 @@ public class Service : IService
             Phone = request.Phone,
             Remarks = request.Remarks,
             OrderTime = request.OrderTime,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = createdAt,
             ShippingFee = totalShippingFee,
             ProductFee = totalProductFee,
             TotalFee = totalProductFee + totalShippingFee + vatFee - (voucherSnapshot?.DiscountAmount ?? 0m),
@@ -404,12 +623,15 @@ public class Service : IService
 
             newOrder.PaymentUrl = createBaoKimOrderResponse.Data.PaymentUrl;
 
-            await _dbContext.Orders.AddAsync(newOrder);
-            await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
-            await _dbContext.SaveChangesAsync();
+            await SavePendingOrderWithSlotValidation(
+                newOrder,
+                newOrderDetails,
+                slotDate,
+                slotTagId,
+                cancellationToken);
             if (voucherTransaction != null)
                 await voucherTransaction.CommitAsync();
-
+            
             return createBaoKimOrderResponse.Data;
         }
         else if (request.PaymentGateway == PaymentGateway.Sepay)
@@ -436,9 +658,13 @@ public class Service : IService
 
             newOrder.QrUrl = qrCodeUrl;
 
-            await _dbContext.Orders.AddAsync(newOrder);
-            await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
-            await _dbContext.SaveChangesAsync();
+            await SavePendingOrderWithSlotValidation(
+                newOrder,
+                newOrderDetails,
+                slotDate,
+                slotTagId,
+                cancellationToken);
+            
             if (voucherTransaction != null)
                 await voucherTransaction.CommitAsync();
 

@@ -25,4 +25,8 @@ public interface IService
     Task<string> UpdateAhaMoveService(Request.UpdateAhamoveRequest request);
     Task<BasePaginationResponse> GetOrderByAdmin(string? search, int  pageIndex, int pageSize);
     Task<Response.CalculateCardPriceResponse>CalculateCardPrice(Request.CalculateCardPriceRequest request);
+    Task<Dictionary<long, int>> CalculateSlotOccupied(DateOnly date, IReadOnlyCollection<long> tagIds,
+        CancellationToken cancellationToken = default);
+    Task<Response.DeliverySlotAvailabilityResponse> GetDeliverySlotAvailability(DateOnly date, int? tagId,
+        CancellationToken cancellationToken = default);
 }

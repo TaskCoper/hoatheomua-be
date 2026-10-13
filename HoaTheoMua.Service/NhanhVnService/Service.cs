@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -601,6 +602,7 @@ public class Service: IService
             IdDonHangNhanh = idDonHangNhanh,
             LoaiDon = info.Type?.ToString(),
             ThoiGianDonHang = info.CreatedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.CreatedAt.Value) : null,
+            DeliveryDate = ParseDeliveryDate(carrier?.DeliveryDate),
             NguoiTaoDon = info.CreatedBy?.Name,
             NhanVienBanHang = info.Sale?.Name,
             NhanVienChamSocKhachHang = info.CustomerCare?.Name != null && info.CustomerCare.Id != 0 ? info.CustomerCare.Name : null,
@@ -647,6 +649,7 @@ public class Service: IService
             GhiChuCuaKhach = info.Description,
             GhiChuNoiBo = info.PrivateDescription,
             TrangThaiDonHang = info.Status?.ToString(),
+            TagIds = item.LabelIds?.Distinct().ToList(),
     
             NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : null,
             NgayGuiHangVanChuyen = !string.IsNullOrEmpty(carrier?.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate) ? sendDate.ToUniversalTime() : null,
@@ -795,6 +798,8 @@ public class Service: IService
     
             if (!string.IsNullOrEmpty(carrier.DeliveryDate) && DateTimeOffset.TryParse(carrier.DeliveryDate, out var deliveryDate))
                 order.NgayThanhCong = deliveryDate.ToUniversalTime();
+
+            order.DeliveryDate = ParseDeliveryDate(carrier.DeliveryDate) ?? order.DeliveryDate;
         }
     
         if (payment != null)
@@ -820,6 +825,10 @@ public class Service: IService
         order.GhiChuCuaKhach = info.Description ?? order.GhiChuCuaKhach;
         order.GhiChuNoiBo = info.PrivateDescription ?? order.GhiChuNoiBo;
         order.TrangThaiDonHang = info.Status?.ToString() ?? order.TrangThaiDonHang;
+        if (item.LabelIds != null)
+        {
+            order.TagIds = item.LabelIds.Distinct().ToList();
+        }
         order.NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value).ToUniversalTime() : order.NgayXacNhan;
     
         order.NguonDonHang = item.Channel?.SaleChannel?.ToString() ?? order.NguonDonHang;
@@ -1275,5 +1284,17 @@ public class Service: IService
         if (string.IsNullOrWhiteSpace(text)) return null;
         var cleaned = text.Replace('\u00A0', ' ').Trim().Normalize(NormalizationForm.FormC);
         return string.IsNullOrWhiteSpace(cleaned) ? null : cleaned;
+    }
+    
+    private static DateOnly? ParseDeliveryDate(string? value)
+    {
+        return DateOnly.TryParseExact(
+            value,
+            "yyyy-MM-dd",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var deliveryDate)
+            ? deliveryDate
+            : null;
     }
 }

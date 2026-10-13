@@ -32,7 +32,7 @@ public class Request
     {
         public required string Gateway { get; set; }
         public string? TaxCode { get; set; }
-        public List<long>? TagIds { get; set; }
+        public required List<long> TagIds { get; set; }
 
         public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.VA;
         public required PaymentGateway PaymentGateway { get; set; }
