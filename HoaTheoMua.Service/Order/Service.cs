@@ -509,7 +509,7 @@ public class Service : IService
                                   .SelectMany(x => x.ProductMetadata)
                                   .Where(x => x.SnapShotCard != null)
                                   .Sum(x => x.SnapShotCard!.TotalPrice);
-        var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
+        // var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
 
         // Check the voucher before the gateway call, so a bad code never leaves a stray payment order behind
         Request.VoucherSnapshot? voucherSnapshot = null;
@@ -531,6 +531,11 @@ public class Service : IService
             voucherSnapshot = await _voucherService.PrepareOrderVoucher(request.VoucherCode, totalProductFee);
         }
 
+        // VAT tính trên (tiền hàng đã trừ voucher + tiền ship)
+        var discountAmount = voucherSnapshot?.DiscountAmount ?? 0m;
+        var taxableAmount = totalProductFee - discountAmount;
+        var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : taxableAmount * VatRate;
+
         var newOrder = new Repository.Entity.Order()
         {
             Id = Guid.NewGuid(),
@@ -550,7 +555,7 @@ public class Service : IService
             CreatedAt = createdAt,
             ShippingFee = totalShippingFee,
             ProductFee = totalProductFee,
-            TotalFee = totalProductFee + totalShippingFee + vatFee - (voucherSnapshot?.DiscountAmount ?? 0m),
+            TotalFee = taxableAmount + vatFee + totalShippingFee,
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
             PaymentGateway = request.PaymentGateway,
