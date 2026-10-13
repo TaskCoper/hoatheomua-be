@@ -428,7 +428,8 @@ public class Service: IService
             Id = Guid.NewGuid(),
             NhanhProductId = item.Id.ToString(),
             CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
+            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+            IsActive = true
         };
 
             product.ParentProductId = item.ParentId?.ToString();
@@ -895,7 +896,8 @@ public class Service: IService
             {
                 Id = Guid.NewGuid(),
                 NhanhProductId = item.Id.ToString(),
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                IsActive = true
             };
             await _appDbContext.Products.AddAsync(product);
         }

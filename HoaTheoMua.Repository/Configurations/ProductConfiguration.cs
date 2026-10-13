@@ -109,7 +109,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasDefaultValue(false);
         
         builder.Property(x => x.IsActive)
-            .HasDefaultValue(false);
+            .HasDefaultValue(true);
 
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("now()");
