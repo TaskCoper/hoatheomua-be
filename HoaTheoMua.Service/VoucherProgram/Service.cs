@@ -31,7 +31,7 @@ public class Service : IService
             EndAt = string.IsNullOrWhiteSpace(request.EndAt) ? null
                 : VoucherProgramDateTime.Parse(request.EndAt).ToUniversalTime(),
             MinOrderAmount = request.MinOrderAmount,
-            MaxOrderAmount = request.MaxOrderAmount == 0m ? null : request.MaxOrderAmount,
+            MaxOrderAmount = request.MaxOrderAmount,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = null,
             IsDeleted = false
@@ -59,8 +59,9 @@ public class Service : IService
         if (request.isActive.HasValue)
             query = query.Where(x => x.IsActive == request.isActive.Value);
 
-        if (request.isDelete.HasValue)
-            query = query.Where(x => x.IsDeleted == request.isDelete.Value);
+        // Soft delete: deleted programs only come back when the client asks with isDelete = true
+        var isDeleted = request.isDelete ?? false;
+        query = query.Where(x => x.IsDeleted == isDeleted);
 
         var totalCount = await query.CountAsync(cancellationToken);
         var offset = (int)Math.Min((long)(pageIndex - 1) * pageSize, int.MaxValue);

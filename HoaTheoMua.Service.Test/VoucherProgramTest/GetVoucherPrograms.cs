@@ -11,7 +11,7 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 public class GetVoucherPrograms
 {
     [Theory]
-    [InlineData(null, 2)]
+    [InlineData(null, 1)]
     [InlineData(true, 1)]
     [InlineData(false, 1)]
     public async Task FiltersByNameActiveAndOptionalDeletionState(bool? isDelete, int expectedCount)
@@ -32,16 +32,11 @@ public class GetVoucherPrograms
         {
             true => new[] { "Sale 20/10 old" },
             false => new[] { "SALE 20/10" },
-            null => new[] { "Sale 20/10 old", "SALE 20/10" }
+            null => new[] { "SALE 20/10" }
         };
         Assert.Equal(expectedNames, items.Select(x => x.Name));
-        if (isDelete.HasValue)
-            Assert.All(items, item => Assert.Equal(isDelete.Value, item.IsDeleted));
-        else
-        {
-            Assert.True(items[0].IsDeleted);
-            Assert.False(items[1].IsDeleted);
-        }
+        // Not sent = active programs only
+        Assert.All(items, item => Assert.Equal(isDelete ?? false, item.IsDeleted));
         Assert.Equal(expectedCount, result.Value.TotalCount);
         Assert.Equal(1, result.Value.PageIndex);
         Assert.Equal(20, result.Value.PageSize);
@@ -50,7 +45,7 @@ public class GetVoucherPrograms
     }
 
     [Fact]
-    public async Task AdminList_IncludesExpiredAndDeletedProgramsAlongsideCurrentAndFuturePrograms()
+    public async Task AdminList_IncludesExpiredProgramsButHidesDeletedOnesByDefault()
     {
         await using var db = CreateDbContext();
         var now = DateTimeOffset.UtcNow;
@@ -72,12 +67,14 @@ public class GetVoucherPrograms
         var result = await new VoucherProgramService(db).GetVoucherPrograms(new());
 
         var items = result.Value.Items.Cast<Response.VoucherProgramResponse>().ToArray();
-        Assert.Equal(4, result.Value.TotalCount);
-        Assert.Equal(new[] { future.Id, current.Id, deleted.Id, expired.Id }, items.Select(x => x.Id));
-        Assert.True(items[2].IsDeleted);
-        Assert.False(items[3].IsDeleted);
-        Assert.Equal(expired.EndAt, items[3].EndAt);
-        Assert.True(items[3].EndAt < now);
+        Assert.Equal(3, result.Value.TotalCount);
+        Assert.Equal(new[] { future.Id, current.Id, expired.Id }, items.Select(x => x.Id));
+        Assert.All(items, item => Assert.False(item.IsDeleted));
+        Assert.Equal(expired.EndAt, items[2].EndAt);
+        Assert.True(items[2].EndAt < now);
+
+        var deletedOnly = await new VoucherProgramService(db).GetVoucherPrograms(new() { isDelete = true });
+        Assert.Equal(deleted.Id, Assert.Single(deletedOnly.Value.Items.Cast<Response.VoucherProgramResponse>()).Id);
     }
 
     [Fact]
@@ -86,7 +83,7 @@ public class GetVoucherPrograms
         await using var db = CreateDbContext();
         var oldest = Program("Oldest", 1);
         var middle = Program("Middle", 2);
-        var newest = Program("Newest", 3, deleted: true);
+        var newest = Program("Newest", 3);
         db.VoucherPrograms.AddRange(oldest, middle, newest);
         db.Vouchers.AddRange(
             NewVoucher(middle.Id, "USED1", 3),
@@ -100,7 +97,7 @@ public class GetVoucherPrograms
         var firstPage = await service.GetVoucherPrograms(new Request.GetVoucherProgramsRequest { pageSize = 1 });
         var firstItem = Assert.Single(firstPage.Value.Items.Cast<Response.VoucherProgramResponse>());
         Assert.Equal(newest.Id, firstItem.Id);
-        Assert.True(firstItem.IsDeleted);
+        Assert.False(firstItem.IsDeleted);
         Assert.True(firstPage.Value.HasNextPage);
 
         var secondPage = await service.GetVoucherPrograms(

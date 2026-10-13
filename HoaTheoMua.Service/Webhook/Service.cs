@@ -378,7 +378,6 @@ public partial class Service : IService
         // Handmade không gọi AI. Card được tạo từ snapshot đã chốt ở CreateOrder
         // và được lưu cùng lần xác nhận thanh toán này.
         await CreateHandMadeCardsAsync(order);
-        await AddVoucherUsageAsync(order);
 
         // Bus outbox: this does not touch RabbitMQ. It stages an OutboxMessage row inside the very
         // same SaveChanges below, so the order can never be marked Paid without the fulfilment
@@ -403,6 +402,8 @@ public partial class Service : IService
             // the status check above is read-then-act and both can pass it. Ack and drop.
             return;
         }
+
+        await AddVoucherUsageAsync(order);
     }
 
     /// <summary>
@@ -428,14 +429,15 @@ public partial class Service : IService
         _dbContext.Orders.Update(order);
         _dbContext.Transactions.Add(transaction);
 
-        await AddVoucherUsageAsync(order);
         await _dbContext.SaveChangesAsync();
+        await AddVoucherUsageAsync(order);
 
         await _fulfillmentService.RevalidateOrderProductsAsync(order.Id);
     }
 
-    // A paid order that used a voucher takes one use. The change is saved by the same SaveChanges that
-    // marks the order Paid, so a failed or replayed callback can never count a use twice.
+    // A paid order that used a voucher takes one use. Called only after the SaveChanges that marks the
+    // order Paid succeeded: a replayed callback stops at the Paid guard, so a use is never counted twice.
+    // If the process dies in between, the column is only behind until PrepareOrderVoucher recounts it.
     private async Task AddVoucherUsageAsync(Repository.Entity.Order order)
     {
         var snapshot = DeserializeVoucherSnapshot(order.VoucherSnapshot);
@@ -444,14 +446,11 @@ public partial class Service : IService
             return;
         }
 
-        // No IsDeleted filter: a deleted voucher still has the use of this order
-        var voucher = await _dbContext.Vouchers.FirstOrDefaultAsync(x => x.Id == snapshot.VoucherId);
-        if (voucher == null)
-        {
-            return;
-        }
-
-        voucher.UsedCount += 1;
+        // One UPDATE ... SET "UsedCount" = "UsedCount" + 1, so two orders paid at the same time cannot
+        // overwrite each other's increment. No IsDeleted filter: a deleted voucher still has this use.
+        await _dbContext.Vouchers
+            .Where(x => x.Id == snapshot.VoucherId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCount, x => x.UsedCount + 1));
     }
 
     private static HoaTheoMua.Service.Order.Request.VoucherSnapshot? DeserializeVoucherSnapshot(string? snapshot)

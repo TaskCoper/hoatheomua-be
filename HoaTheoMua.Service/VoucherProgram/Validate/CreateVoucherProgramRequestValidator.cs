@@ -27,10 +27,10 @@ public class CreateVoucherProgramRequestValidator : AbstractValidator<Request.Cr
 
         RuleFor(x => x.MinOrderAmount)
             .GreaterThanOrEqualTo(0m).WithMessage("Giá trị đơn hàng tối thiểu phải từ 0 trở lên.");
+        // Not sent = no limit. A sent value, 0 included, is stored as is
         RuleFor(x => x.MaxOrderAmount)
             .GreaterThanOrEqualTo(0m).WithMessage("Giá trị đơn hàng tối đa phải từ 0 trở lên.")
-            .GreaterThanOrEqualTo(x => x.MinOrderAmount).WithMessage("Giá trị đơn hàng tối đa không được nhỏ hơn giá trị tối thiểu.")
-            .When(x => x.MinOrderAmount.HasValue && x.MaxOrderAmount.HasValue && x.MaxOrderAmount.Value > 0m,
-                ApplyConditionTo.CurrentValidator);
+            .GreaterThan(x => x.MinOrderAmount).WithMessage("Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu.")
+            .When(x => x.MinOrderAmount.HasValue && x.MaxOrderAmount.HasValue, ApplyConditionTo.CurrentValidator);
     }
 }

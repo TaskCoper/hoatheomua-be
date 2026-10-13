@@ -61,6 +61,37 @@ public class VoucherValidatorsTest
             { code = "SAVE10", productFee = 100_000 }).IsValid);
     }
 
+    [Theory]
+    [InlineData(0, null, null)]
+    [InlineData(null, 0, null)]
+    [InlineData(0, 1, null)]
+    [InlineData(-1, null, "Giá trị đơn hàng tối thiểu phải từ 0 trở lên.")]
+    [InlineData(null, -1, "Giá trị đơn hàng tối đa phải từ 0 trở lên.")]
+    [InlineData(0, 0, "Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu.")]
+    [InlineData(200_000, 200_000, "Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu.")]
+    public void OrderAmounts_AllowZero_RequireMaxAboveMin_InCreateAndUpdate(int? min, int? max, string? error)
+    {
+        var create = ValidCreate();
+        create.MinOrderAmount = min;
+        create.MaxOrderAmount = max;
+        var update = new Request.UpdateVouchersRequest
+        {
+            Items = [new() { Id = Guid.NewGuid(), MinOrderAmount = min, MaxOrderAmount = max }]
+        };
+
+        var createResult = new CreateVoucherRequestValidator().Validate(create);
+        var updateResult = new UpdateVouchersRequestValidator().Validate(update);
+
+        if (error == null)
+        {
+            Assert.True(createResult.IsValid);
+            Assert.True(updateResult.IsValid);
+            return;
+        }
+        Assert.Equal(error, Assert.Single(createResult.Errors).ErrorMessage);
+        Assert.Equal(error, Assert.Single(updateResult.Errors).ErrorMessage);
+    }
+
     private static Request.CreateVoucherRequest ValidCreate() => new()
     {
         Code = "SAVE10", Visibility = VoucherVisibilities.Public, DiscountType = VoucherDiscountTypes.Percent,

@@ -58,6 +58,9 @@ public class Request
     public class FilterVoucherRequest
     {
         public List<ProductOrder> Products { get; set; } = new();
+
+        // Greeting card total of the cart. CreateOrder adds it to the product fee, so the preview must too
+        // public decimal? CardTotal { get; set; }
     }
 
     public class ProductOrder

@@ -61,7 +61,7 @@ public class VoucherProgramApi
         await using var app = await StartApplication(key);
         using var client = CreateAdminClient(app, key);
         using var body = new StringContent("""
-            {"name":"20/10","startAt":"2026-10-15T00:00:00+07:00","endAt":"2026-10-31T23:59:59+07:00","minOrderAmount":0,"maxOrderAmount":0}
+            {"name":"20/10","startAt":"2026-10-15T00:00:00+07:00","endAt":"2026-10-31T23:59:59+07:00","minOrderAmount":0,"maxOrderAmount":500000}
             """, Encoding.UTF8, "application/json");
 
         using var response = await client.PostAsync("/api/v1/admin/voucher-programs", body);
@@ -79,7 +79,7 @@ public class VoucherProgramApi
         Assert.Equal(TimeSpan.Zero, saved.StartAt.Offset);
         Assert.Equal(TimeSpan.Zero, saved.EndAt!.Value.Offset);
         Assert.Equal(0m, saved.MinOrderAmount);
-        Assert.Null(saved.MaxOrderAmount);
+        Assert.Equal(500000m, saved.MaxOrderAmount);
     }
 
     [VoucherPostgresFact]
@@ -196,7 +196,11 @@ public class VoucherProgramApi
             using var deleted = JsonDocument.Parse(await delete.Content.ReadAsStringAsync());
             Assert.Equal("Program deleted", deleted.RootElement.GetProperty("value").GetString());
             await AssertMutationAuthorization(client, programRoute, batchRequest, HttpStatusCode.NotFound);
-            using var finalList = await client.GetAsync(route);
+            // Deleted programs are hidden by default; ask for them explicitly
+            using var hiddenList = await client.GetAsync(route);
+            using var hiddenPage = JsonDocument.Parse(await hiddenList.Content.ReadAsStringAsync());
+            Assert.Empty(hiddenPage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
+            using var finalList = await client.GetAsync(route + "?isDelete=true");
             using var finalPage = JsonDocument.Parse(await finalList.Content.ReadAsStringAsync());
             var deletedItem = Assert.Single(finalPage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
             Assert.Equal(program.GetProperty("id").GetGuid(), deletedItem.GetProperty("id").GetGuid());

@@ -29,10 +29,11 @@ public class UpdateVoucherProgramRequestValidator : AbstractValidator<Request.Up
                        && VoucherProgramDateTime.TryParse(x.EndAt, out _));
         RuleFor(x => x.MinOrderAmount).GreaterThanOrEqualTo(0m)
             .WithMessage("Giá trị đơn hàng tối thiểu phải từ 0 trở lên.");
-        RuleFor(x => x.MaxOrderAmount).GreaterThan(0m).When(x => x.MaxOrderAmount.HasValue)
-            .WithMessage("Giá trị đơn hàng tối đa phải lớn hơn 0.");
-        RuleFor(x => x.MaxOrderAmount).GreaterThanOrEqualTo(x => x.MinOrderAmount!.Value)
+        // Not sent = no limit. A sent value, 0 included, is stored as is
+        RuleFor(x => x.MaxOrderAmount).GreaterThanOrEqualTo(0m).When(x => x.MaxOrderAmount.HasValue)
+            .WithMessage("Giá trị đơn hàng tối đa phải từ 0 trở lên.");
+        RuleFor(x => x.MaxOrderAmount).GreaterThan(x => x.MinOrderAmount!.Value)
             .When(x => x.MinOrderAmount.HasValue && x.MaxOrderAmount.HasValue)
-            .WithMessage("Giá trị đơn hàng tối đa không được nhỏ hơn giá trị tối thiểu.");
+            .WithMessage("Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu.");
     }
 }

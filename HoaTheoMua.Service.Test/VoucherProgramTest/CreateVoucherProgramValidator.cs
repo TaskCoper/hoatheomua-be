@@ -15,7 +15,7 @@ public class CreateVoucherProgramValidator
     [InlineData("reversedDates", "EndAt", "Thời gian kết thúc phải sau thời gian bắt đầu.")]
     [InlineData("min", "MinOrderAmount", "Giá trị đơn hàng tối thiểu phải từ 0 trở lên.")]
     [InlineData("max", "MaxOrderAmount", "Giá trị đơn hàng tối đa phải từ 0 trở lên.")]
-    [InlineData("range", "MaxOrderAmount", "Giá trị đơn hàng tối đa không được nhỏ hơn giá trị tối thiểu.")]
+    [InlineData("range", "MaxOrderAmount", "Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu.")]
     public void RejectsInvalidFieldsWithPlanMessages(string scenario, string field, string message)
     {
         var request = ValidRequest();
@@ -42,9 +42,7 @@ public class CreateVoucherProgramValidator
     [InlineData(null, null)]
     [InlineData(0, null)]
     [InlineData(null, 0)]
-    [InlineData(0, 0)]
-    [InlineData(200000, 0)]
-    [InlineData(200000, 200000)]
+    [InlineData(200000, 200001)]
     public void AllowsOptionalAndInclusiveOrderAmountBounds(int? min, int? max)
     {
         var request = ValidRequest();

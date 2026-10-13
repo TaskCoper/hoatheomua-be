@@ -294,6 +294,14 @@ public class Service : IService
 
         // Check the voucher before the gateway call, so a bad code never leaves a stray payment order behind
         Request.VoucherSnapshot? voucherSnapshot = null;
+
+        // PrepareOrderVoucher locks the voucher row; the lock holds until the order is saved and this commits,
+        // so a concurrent order with the same code sees this one as Pending and cannot take the same last use
+        await using var voucherTransaction = !string.IsNullOrWhiteSpace(request.VoucherCode)
+                                             && _dbContext.Database.IsRelational()
+            ? await _dbContext.Database.BeginTransactionAsync()
+            : null;
+
         if (!string.IsNullOrWhiteSpace(request.VoucherCode))
         {
             if (_voucherService == null)
@@ -399,6 +407,8 @@ public class Service : IService
             await _dbContext.Orders.AddAsync(newOrder);
             await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
             await _dbContext.SaveChangesAsync();
+            if (voucherTransaction != null)
+                await voucherTransaction.CommitAsync();
 
             return createBaoKimOrderResponse.Data;
         }
@@ -429,6 +439,8 @@ public class Service : IService
             await _dbContext.Orders.AddAsync(newOrder);
             await _dbContext.OrderDetails.AddRangeAsync(newOrderDetails);
             await _dbContext.SaveChangesAsync();
+            if (voucherTransaction != null)
+                await voucherTransaction.CommitAsync();
 
             return sepayReponse;
         }
