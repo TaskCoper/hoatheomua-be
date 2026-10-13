@@ -32,6 +32,23 @@ public class ManageVouchersTest
         Assert.Equal(1, result.Value.TotalCount);
     }
 
+    [Theory]
+    [InlineData(0, 10, 1, 10)]
+    [InlineData(-3, 0, 1, 10)]
+    [InlineData(1, 100_000, 1, 100)]
+    public async Task GetVouchers_NormalizesPaging(int pageIndex, int pageSize, int expectedIndex, int expectedSize)
+    {
+        await using var db = VoucherTestData.Database();
+        db.Vouchers.Add(VoucherTestData.Voucher());
+        await db.SaveChangesAsync();
+
+        var result = await new VoucherService(db).GetVouchers(pageIndex, pageSize, null, null, null);
+
+        Assert.Equal(expectedIndex, result.Value.PageIndex);
+        Assert.Equal(expectedSize, result.Value.PageSize);
+        Assert.Single(result.Value.Items);
+    }
+
     [Fact]
     public async Task GetVouchers_FiltersByVisibilityAndActive()
     {

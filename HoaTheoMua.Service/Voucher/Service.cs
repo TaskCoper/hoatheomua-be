@@ -16,6 +16,10 @@ public class Service : IService
     private const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private const int MaxGenerateAttempts = 5;
 
+    // TEMPORARY: orders have no expiry yet, so a Pending order holds its voucher use only for this window.
+    // When an order-expiry job exists (Pending -> Expired), delete this and count Pending orders by status alone.  
+    private static readonly TimeSpan PendingHoldWindow = TimeSpan.FromMinutes(15);
+
     private readonly AppDbContext _dbContext;
 
     public Service(AppDbContext dbContext)
@@ -32,7 +36,8 @@ public class Service : IService
         {
             code = request.Code!.Trim().ToUpperInvariant();
 
-            if (await _dbContext.Vouchers.AnyAsync(x => x.Code == code))
+            // A deleted voucher frees its code (it is already off the active-code unique index)
+            if (await _dbContext.Vouchers.AnyAsync(x => x.Code == code && !x.IsDeleted))
             {
                 throw new ConflictException("Mã voucher này đã tồn tại. Vui lòng dùng mã khác.");
             }
@@ -82,6 +87,9 @@ public class Service : IService
                 new() { Field = "visibility", Message = "Chế độ hiển thị chỉ chấp nhận public (công khai) hoặc private (riêng tư)." }
             });
         }
+
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
         var query = _dbContext.Vouchers
             .AsNoTracking()
@@ -157,24 +165,36 @@ public class Service : IService
                 throw new BadRequestException("Số lượng sản phẩm phải lớn hơn 0.");
             }
         }
-        
+
+        // if (request.CardTotal < 0)
+        // {
+        //     throw new BadRequestException("Tiền thiệp không được nhỏ hơn 0.");
+        // }
+
         var ids = request.Products.Select(x => x.Id).Distinct().ToList();
         var products = await _dbContext.Products
             .AsNoTracking()
             .Where(x => !x.IsDeleted && x.IsActive && ids.Contains(x.Id))
-            .Select(x => new { x.Id, Price = x.Price!.Value })
+            .Select(x => new { x.Id, x.Price })
             .ToListAsync();
 
         if (products.Count != ids.Count)
         {
             throw new BadRequestException("Một số sản phẩm không còn tồn tại hoặc đã ngừng bán. Vui lòng kiểm tra lại.");
         }
-        
-        decimal totalPrice = 0;
+
+        if (products.Any(x => x.Price == null))
+        {
+            throw new BadRequestException("Một số sản phẩm chưa có giá bán. Vui lòng thử lại sau.");
+        }
+
+        // Same base as CreateOrder: products plus greeting cards
+        // var totalPrice = request.CardTotal ?? 0m;
+        var totalPrice = 0m;
         foreach (var item in request.Products)
         {
             var product = products.First(x => x.Id == item.Id);
-            totalPrice += product.Price * item.Quantity;
+            totalPrice += product.Price!.Value * item.Quantity;
         }
         
         var now = DateTimeOffset.UtcNow;
@@ -182,8 +202,9 @@ public class Service : IService
         var vouchers = await _dbContext.Vouchers
             .AsNoTracking()
             .Where(x => !x.IsDeleted
+                        && x.IsActive // voucher admin đã tắt thì không hiện cho khách
                         && x.Visibility == VoucherVisibility.Public
-                        && x.ProgramId == null)
+                        && x.ProgramId == null) //
             .Select(x => new
             {
                 x.Id,
@@ -357,12 +378,26 @@ public class Service : IService
                 IsDeleted = "false"
             });
 
-        using var stream = new MemoryStream();
-        await MiniExcel.SaveAsAsync(stream, rows, sheetName: "Vouchers", excelType: ExcelType.XLSX);
+        // Build the file on disk, not in memory: a large export would otherwise sit in RAM twice
+        // (MemoryStream + ToArray). The temp file deletes itself when the response disposes the stream.
+        var stream = new FileStream(
+            Path.Combine(Path.GetTempPath(), $"voucher-export-{Guid.NewGuid():N}.xlsx"),
+            FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, bufferSize: 81920,
+            FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+        try
+        {
+            await MiniExcel.SaveAsAsync(stream, rows, sheetName: "Vouchers", excelType: ExcelType.XLSX);
+            stream.Position = 0;
+        }
+        catch
+        {
+            await stream.DisposeAsync();
+            throw;
+        }
 
         return new Response.VoucherExportFile
         {
-            Content = stream.ToArray(),
+            Content = stream,
             FileName = $"vouchers-{fileKind}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.xlsx"
         };
     }
@@ -389,10 +424,14 @@ public class Service : IService
 
     public async Task<BasePaginationResponse> GetVoucherUsages(Guid id, int pageIndex, int pageSize)
     {
+        // No IsDeleted filter on purpose: a deleted voucher's paid orders stay visible for reconciliation
         if (!await _dbContext.Vouchers.AnyAsync(x => x.Id == id))
         {
             throw new NotFoundException("Không tìm thấy voucher.");
         }
+
+        pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+        pageSize = pageSize <= 0 ? 10 : Math.Min(pageSize, 100);
 
         var snapshotFilter = JsonConvert.SerializeObject(new { voucherId = id });
 
@@ -414,7 +453,9 @@ public class Service : IService
                 x.VoucherSnapshot,
                 UsedAt = x.Transactions.Min(t => (DateTimeOffset?)t.CreatedAt)
             })
-            .OrderByDescending(x => x.UsedAt)
+            // PostgreSQL puts NULL first on DESC; keep orders without a payment time at the bottom
+            .OrderBy(x => x.UsedAt == null)
+            .ThenByDescending(x => x.UsedAt)
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -566,12 +607,20 @@ public class Service : IService
 
     public async Task<Response.EstimateVoucherResponse> EstimateVoucher(Request.EstimateVoucherRequest request)
     {
-        var code = request.code!.Trim().ToUpperInvariant();
+        var voucher = await FindUsableVoucher(request.code!);
+
+        // The UsedCount column may lag; PrepareOrderVoucher re-checks with the counted uses
+        return QuoteVoucher(voucher, request.productFee, voucher.UsedCount);
+    }
+
+    private async Task<VoucherEntity> FindUsableVoucher(string code)
+    {
+        var normalizedCode = code.Trim().ToUpperInvariant();
 
         var voucher = await _dbContext.Vouchers
             .AsNoTracking()
             .Include(x => x.Program)
-            .FirstOrDefaultAsync(x => x.Code == code
+            .FirstOrDefaultAsync(x => x.Code == normalizedCode
                                       && !x.IsDeleted
                                       && x.IsActive
                                       && (x.Program == null || (!x.Program.IsDeleted && x.Program.IsActive)));
@@ -581,6 +630,11 @@ public class Service : IService
             throw new NotFoundException("Không tìm thấy voucher.");
         }
 
+        return voucher;
+    }
+
+    private static Response.EstimateVoucherResponse QuoteVoucher(VoucherEntity voucher, decimal productFee, int usedCount)
+    {
         var startAt = voucher.Program?.StartAt ?? voucher.StartAt;
         var endAt = voucher.Program != null ? voucher.Program.EndAt : voucher.EndAt;
         var minOrderAmount = voucher.Program != null ? voucher.Program.MinOrderAmount : voucher.MinOrderAmount;
@@ -598,23 +652,23 @@ public class Service : IService
             throw new BadRequestException("Voucher đã hết hạn sử dụng.");
         }
 
-        if (voucher.UsedCount >= voucher.MaxUsageCount)
+        if (usedCount >= voucher.MaxUsageCount)
         {
             throw new ConflictException("Voucher đã hết lượt sử dụng.");
         }
 
-        if (minOrderAmount.HasValue && request.productFee < minOrderAmount.Value)
+        if (minOrderAmount.HasValue && productFee < minOrderAmount.Value)
         {
             throw new BadRequestException("Giá trị đơn hàng chưa đạt mức tối thiểu để dùng voucher này.");
         }
 
-        if (maxOrderAmount.HasValue && request.productFee > maxOrderAmount.Value)
+        if (maxOrderAmount.HasValue && productFee > maxOrderAmount.Value)
         {
             throw new BadRequestException("Giá trị đơn hàng vượt mức tối đa để dùng voucher này.");
         }
 
         var discountAmount = CalculateDiscount(
-            voucher.DiscountType, voucher.DiscountValue, voucher.MaxDiscountAmount, request.productFee);
+            voucher.DiscountType, voucher.DiscountValue, voucher.MaxDiscountAmount, productFee);
 
         return new Response.EstimateVoucherResponse
         {
@@ -627,7 +681,7 @@ public class Service : IService
             DiscountValue = voucher.DiscountValue,
             MaxDiscountAmount = voucher.MaxDiscountAmount,
             DiscountAmount = discountAmount,
-            ProductFeeAfterDiscount = request.productFee - discountAmount
+            ProductFeeAfterDiscount = productFee - discountAmount
         };
     }
 
@@ -732,13 +786,24 @@ public class Service : IService
                 continue;
             }
 
-            if (item.MinOrderAmount.HasValue && item.MaxOrderAmount.HasValue
-                && item.MaxOrderAmount < item.MinOrderAmount)
+            // Only a changed end date must be in the future, so an expired voucher can still be edited
+            if (item.EndAt.HasValue && item.EndAt != voucher.EndAt && item.EndAt.Value <= DateTimeOffset.UtcNow)
             {
                 errors.Add(new ValidationError
                 {
                     Field = $"items[{i}]",
-                    Message = $"Giá trị đơn hàng tối đa không được nhỏ hơn giá trị tối thiểu ({voucher.Code})."
+                    Message = $"Thời gian kết thúc phải sau thời điểm hiện tại ({voucher.Code})."
+                });
+                continue;
+            }
+
+            if (item.MinOrderAmount.HasValue && item.MaxOrderAmount.HasValue
+                && item.MaxOrderAmount <= item.MinOrderAmount)
+            {
+                errors.Add(new ValidationError
+                {
+                    Field = $"items[{i}]",
+                    Message = $"Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu ({voucher.Code})."
                 });
             }
         }
@@ -782,8 +847,10 @@ public class Service : IService
                 voucher.MaxUsageCount = item.MaxUsageCount.Value;
             }
 
-            // New value. Not sent = null
-            voucher.MaxDiscountAmount = item.MaxDiscountAmount;
+            // New value. Not sent = null. Only a percent discount has a cap
+            voucher.MaxDiscountAmount = voucher.DiscountType == VoucherDiscountType.Percent
+                ? item.MaxDiscountAmount
+                : null;
 
             // Program voucher takes dates and order amounts from its program, so leave them alone
             if (voucher.ProgramId == null)
@@ -807,38 +874,25 @@ public class Service : IService
         return "Update voucher successfully";
     }
 
-    // Used by CreateOrder. EstimateVoucher does the checks and the discount; this adds the real "uses left" count
+    // Used by CreateOrder, inside the transaction that saves the order. Same checks and error messages as
+    // EstimateVoucher, but "uses left" is counted from orders, and Pending orders still hold their use.
     public async Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee)
     {
-        var normalizedCode = code.Trim().ToUpperInvariant();
+        var voucher = await FindUsableVoucher(code);
 
-        var voucherId = await _dbContext.Vouchers
-            .Where(x => x.Code == normalizedCode && !x.IsDeleted)
-            .Select(x => (Guid?)x.Id)
-            .FirstOrDefaultAsync();
+        // Lock the voucher row until the caller commits, so two orders cannot both take the last use
+        await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT 1 FROM \"Vouchers\" WHERE \"Id\" = {voucher.Id} FOR UPDATE");
 
-        if (voucherId == null)
-        {
-            throw new NotFoundException("Không tìm thấy voucher.");
-        }
+        var paidCount = await CountUsages(voucher.Id, pendingSince: null);
+        var reservedCount = await CountUsages(voucher.Id, pendingSince: DateTimeOffset.UtcNow - PendingHoldWindow);
 
-        // Uses left = Paid orders. Refresh the column first, because EstimateVoucher only reads the column
-        var usedCount = await CountPaidUsages(voucherId.Value);
+        // The column is for display and only counts Paid orders; refresh it while we have the real number
         await _dbContext.Vouchers
-            .Where(x => x.Id == voucherId.Value && x.UsedCount != usedCount)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCount, usedCount));
+            .Where(x => x.Id == voucher.Id && x.UsedCount != paidCount)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCount, paidCount));
 
-        // Same checks and the same error messages as the estimate
-        var estimate = await EstimateVoucher(new Request.EstimateVoucherRequest
-        {
-            code = normalizedCode,
-            productFee = productFee
-        });
-
-        var programId = await _dbContext.Vouchers
-            .Where(x => x.Id == estimate.VoucherId)
-            .Select(x => x.ProgramId)
-            .SingleAsync();
+        var estimate = QuoteVoucher(voucher, productFee, reservedCount);
 
         return new Order.Request.VoucherSnapshot
         {
@@ -848,19 +902,20 @@ public class Service : IService
             DiscountValue = estimate.DiscountValue,
             MaxDiscountAmount = estimate.MaxDiscountAmount,
             DiscountAmount = estimate.DiscountAmount,
-            ProgramId = programId
+            ProgramId = voucher.ProgramId
         };
     }
 
-    // Used count = Paid orders whose snapshot holds this voucher id
-    private async Task<int> CountPaidUsages(Guid voucherId)
+    // Uses = Paid orders whose snapshot holds this voucher id, plus Pending ones created after pendingSince
+    private async Task<int> CountUsages(Guid voucherId, DateTimeOffset? pendingSince)
     {
         var snapshotFilter = JsonConvert.SerializeObject(new { voucherId });
 
         return await _dbContext.Orders
             .AsNoTracking()
             .CountAsync(x => !x.IsDeleted
-                             && x.Status == "Paid"
+                             && (x.Status == "Paid"
+                                 || (pendingSince != null && x.Status == "Pending" && x.CreatedAt > pendingSince))
                              && EF.Functions.JsonContains(x.VoucherSnapshot, snapshotFilter));
     }
 
@@ -870,7 +925,7 @@ public class Service : IService
         {
             var code = GenerateCode(prefix, length, suffix);
 
-            if (!await _dbContext.Vouchers.AnyAsync(x => x.Code == code))
+            if (!await _dbContext.Vouchers.AnyAsync(x => x.Code == code && !x.IsDeleted))
             {
                 return code;
             }

@@ -26,7 +26,8 @@ public class Response
 
     public class VoucherExportFile
     {
-        public required byte[] Content { get; set; }
+        // Temp file opened with DeleteOnClose, positioned at 0. Whoever sends it must dispose it
+        public required Stream Content { get; set; }
         public required string FileName { get; set; }
     }
 
