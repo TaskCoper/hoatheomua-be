@@ -40,8 +40,7 @@ public class UpdateVoucherItemValidator : AbstractValidator<Request.UpdateVouche
             .WithMessage("Loại giảm giá chỉ chấp nhận cash (giảm tiền) hoặc percent (giảm theo phần trăm).");
 
         RuleFor(x => x.DiscountValue)
-            .GreaterThan(0).When(x => x.DiscountValue.HasValue)
-            .WithMessage("Mức giảm giá phải lớn hơn 0.");
+            .GreaterThanOrEqualTo(0).WithMessage("Mức giảm giá không được âm.");
 
         RuleFor(x => x.MaxDiscountAmount)
             .GreaterThan(0).When(x => x.MaxDiscountAmount.HasValue)

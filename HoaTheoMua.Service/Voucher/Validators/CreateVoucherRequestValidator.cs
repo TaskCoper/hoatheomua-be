@@ -53,7 +53,7 @@ public class CreateVoucherRequestValidator : AbstractValidator<Request.CreateVou
             .WithMessage("Loại giảm giá chỉ chấp nhận cash (giảm tiền) hoặc percent (giảm theo phần trăm).");
 
         RuleFor(x => x.DiscountValue)
-            .GreaterThan(0).WithMessage("Mức giảm giá phải lớn hơn 0.");
+            .GreaterThanOrEqualTo(0).WithMessage("Mức giảm giá không được âm.");
 
         RuleFor(x => x.DiscountValue)
             .LessThanOrEqualTo(100).When(x => x.DiscountType == VoucherDiscountTypes.Percent)
