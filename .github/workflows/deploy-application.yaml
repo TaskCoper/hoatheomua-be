@@ -135,6 +135,9 @@ jobs:
       # Sepay (verifies the "Authorization: Apikey <ApiKey>" header on inbound webhooks)
       SEPAY_API_KEY: ${{ secrets.SEPAY_API_KEY }}
 
+      # Frontend base URL (admin order links sent to NhanhVn)
+      FE_BASE_URL: ${{ secrets.FE_BASE_URL }}
+
       # Revalidate (outbound cache purge to the storefront:
       # POST SECRET_BASE_URL with header "x-revalidate-secret: <SECRET_KEY>")
       SECRET_BASE_URL: ${{ secrets.SECRET_BASE_URL }}

@@ -81,6 +81,9 @@ services:
       # Sepay Configuration (verifies the "Authorization: Apikey <ApiKey>" header on inbound webhooks)
       SepayOption__ApiKey: ${SEPAY_API_KEY}
 
+      # Frontend base URL (used to build admin order links sent to NhanhVn)
+      FrontendOption__BaseUrl: ${FE_BASE_URL}
+
       # Revalidate Configuration (outbound cache purge to the storefront:
       # POST BaseUrl with header "x-revalidate-secret: <SecretKey>")
       SecretOptions__BaseUrl: ${SECRET_BASE_URL}
