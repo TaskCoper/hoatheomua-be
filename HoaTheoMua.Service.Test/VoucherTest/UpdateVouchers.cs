@@ -100,13 +100,13 @@ public class UpdateVouchersTest
         Assert.Equal(voucher.Visibility, updated.Visibility);
         Assert.Equal(voucher.DiscountType, updated.DiscountType);
         Assert.Equal(voucher.DiscountValue, updated.DiscountValue);
-        Assert.Equal(voucher.MaxDiscountAmount, updated.MaxDiscountAmount);
+        Assert.Null(updated.MaxDiscountAmount);
         Assert.Equal(voucher.MaxUsageCount, updated.MaxUsageCount);
         Assert.Equal(voucher.UsedCount, updated.UsedCount);
         Assert.Equal(voucher.StartAt, updated.StartAt);
-        Assert.Equal(voucher.EndAt, updated.EndAt);
-        Assert.Equal(voucher.MinOrderAmount, updated.MinOrderAmount);
-        Assert.Equal(voucher.MaxOrderAmount, updated.MaxOrderAmount);
+        Assert.Null(updated.EndAt);
+        Assert.Null(updated.MinOrderAmount);
+        Assert.Null(updated.MaxOrderAmount);
         Assert.Equal(voucher.IsActive, updated.IsActive);
         Assert.Equal(voucher.IsDeleted, updated.IsDeleted);
         Assert.Equal(voucher.CreatedAt, updated.CreatedAt);
@@ -131,7 +131,7 @@ public class UpdateVouchersTest
             Batch(new Request.UpdateVoucherItem() { Id = valid.Id, Description = "Changed" },
                 new() { Id = unavailable.Id, Description = "Changed" })));
 
-        Assert.Equal("Voucher not found.", error.Message);
+        Assert.Equal("Không tìm thấy một hoặc nhiều voucher đã chọn.", error.Message);
         AssertNoUpdates(db);
     }
 
@@ -182,11 +182,11 @@ public class UpdateVouchersTest
     }
 
     [Theory]
-    [InlineData("visibility", "Program voucher must stay private")]
-    [InlineData("startAt", "Program voucher dates and order amounts come from the program")]
-    [InlineData("endAt", "Program voucher dates and order amounts come from the program")]
-    [InlineData("minOrderAmount", "Program voucher dates and order amounts come from the program")]
-    [InlineData("maxOrderAmount", "Program voucher dates and order amounts come from the program")]
+    [InlineData("visibility", "Voucher thuộc chương trình chỉ được để ở chế độ riêng tư")]
+    [InlineData("startAt", "Ngày áp dụng và mức giá trị đơn hàng của voucher phải chỉnh trong chương trình")]
+    [InlineData("endAt", "Ngày áp dụng và mức giá trị đơn hàng của voucher phải chỉnh trong chương trình")]
+    [InlineData("minOrderAmount", "Ngày áp dụng và mức giá trị đơn hàng của voucher phải chỉnh trong chương trình")]
+    [InlineData("maxOrderAmount", "Ngày áp dụng và mức giá trị đơn hàng của voucher phải chỉnh trong chương trình")]
     public async Task ProgramVoucher_RejectsRestrictedFields(string field, string message)
     {
         await using var db = VoucherTestData.Database();
@@ -205,7 +205,7 @@ public class UpdateVouchersTest
             case "maxOrderAmount": item.MaxOrderAmount = 3_000_000; break;
         }
 
-        await AssertValidationError(db, item, $"{message} ({voucher.Code})");
+        await AssertValidationError(db, item, $"{message} ({voucher.Code}).");
     }
 
     [Theory]
@@ -233,7 +233,7 @@ public class UpdateVouchersTest
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
 
-        await AssertValidationError(db, item, $"Discount percent must not exceed 100 ({voucher.Code})");
+        await AssertValidationError(db, item, $"Mức giảm theo phần trăm không được vượt quá 100% ({voucher.Code}).");
     }
 
     [Theory]
@@ -244,7 +244,10 @@ public class UpdateVouchersTest
     {
         await using var db = VoucherTestData.Database();
         var voucher = VoucherTestData.Voucher();
-        var item = new Request.UpdateVoucherItem { Id = voucher.Id, Description = "Changed" };
+        var item = new Request.UpdateVoucherItem
+        {
+            Id = voucher.Id, Description = "Changed", MaxDiscountAmount = voucher.MaxDiscountAmount
+        };
         if (scenario == "changedType") item.DiscountType = VoucherDiscountTypes.Cash;
         else
         {
@@ -259,7 +262,7 @@ public class UpdateVouchersTest
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
 
-        await AssertValidationError(db, item, $"Max discount amount is only for percent ({voucher.Code})");
+        await AssertValidationError(db, item, $"Chỉ đặt mức giảm tối đa khi giảm theo phần trăm ({voucher.Code}).");
     }
 
     [Theory]
@@ -276,7 +279,7 @@ public class UpdateVouchersTest
         db.ChangeTracker.Clear();
 
         await AssertValidationError(db, new() { Id = voucher.Id, MaxUsageCount = 4 },
-            $"Max usage count cannot be less than used count ({voucher.Code})");
+            $"Giới hạn lượt sử dụng không được thấp hơn số lượt đã dùng ({voucher.Code}).");
     }
 
     [Theory]
@@ -291,32 +294,38 @@ public class UpdateVouchersTest
         db.Vouchers.Add(voucher);
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
-        var item = new Request.UpdateVoucherItem { Id = voucher.Id, Description = "Changed" };
+        var item = new Request.UpdateVoucherItem { Id = voucher.Id, Description = "Changed", EndAt = voucher.EndAt };
         if (updateStart) item.StartAt = voucher.EndAt!.Value.AddHours(equal ? 0 : 1);
         else item.EndAt = voucher.StartAt!.Value.AddHours(equal ? 0 : -1);
 
-        await AssertValidationError(db, item, $"End time must be later than start time ({voucher.Code})");
+        await AssertValidationError(db, item, $"Thời gian kết thúc phải sau thời gian bắt đầu ({voucher.Code}).");
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task MaxOrderBelowMinOrder_RejectsMergedAmounts(bool updateMin)
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    public async Task MaxOrderNotAboveMinOrder_RejectsMergedAmounts(bool updateMin, bool equal)
     {
         await using var db = VoucherTestData.Database();
         var voucher = VoucherTestData.Voucher();
         db.Vouchers.Add(voucher);
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
-        var item = new Request.UpdateVoucherItem { Id = voucher.Id, Description = "Changed" };
-        if (updateMin) item.MinOrderAmount = voucher.MaxOrderAmount + 1;
-        else item.MaxOrderAmount = voucher.MinOrderAmount - 1;
+        var item = new Request.UpdateVoucherItem
+        {
+            Id = voucher.Id, Description = "Changed",
+            MinOrderAmount = voucher.MinOrderAmount, MaxOrderAmount = voucher.MaxOrderAmount
+        };
+        if (updateMin) item.MinOrderAmount = voucher.MaxOrderAmount + (equal ? 0 : 1);
+        else item.MaxOrderAmount = voucher.MinOrderAmount - (equal ? 0 : 1);
 
-        await AssertValidationError(db, item, $"Max order amount cannot be less than min order amount ({voucher.Code})");
+        await AssertValidationError(db, item, $"Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu ({voucher.Code}).");
     }
 
     [Fact]
-    public async Task BoundaryValues_Accepts100PercentUsageEqualToUsedAndEqualOrderAmounts()
+    public async Task BoundaryValues_Accepts100PercentUsageEqualToUsedAndMaxJustAboveMin()
     {
         await using var db = VoucherTestData.Database();
         var voucher = VoucherTestData.Voucher();
@@ -328,7 +337,7 @@ public class UpdateVouchersTest
         await new VoucherService(db).UpdateVouchers(Batch(new Request.UpdateVoucherItem()
         {
             Id = voucher.Id, DiscountValue = 100, MaxUsageCount = 5,
-            MinOrderAmount = 200_000, MaxOrderAmount = 200_000
+            MinOrderAmount = 200_000, MaxOrderAmount = 200_001
         }));
 
         db.ChangeTracker.Clear();
@@ -337,7 +346,7 @@ public class UpdateVouchersTest
         Assert.Equal(5, updated.MaxUsageCount);
         Assert.Equal(5, updated.UsedCount);
         Assert.Equal(200_000m, updated.MinOrderAmount);
-        Assert.Equal(200_000m, updated.MaxOrderAmount);
+        Assert.Equal(200_001m, updated.MaxOrderAmount);
         Assert.NotNull(updated.UpdatedAt);
     }
 
@@ -386,15 +395,76 @@ public class UpdateVouchersTest
             first =>
             {
                 Assert.Equal("items[1]", first.Field);
-                Assert.Equal("Discount percent must not exceed 100 (INVALID_PERCENT)", first.Message);
+                Assert.Equal("Mức giảm theo phần trăm không được vượt quá 100% (INVALID_PERCENT).", first.Message);
             },
             second =>
             {
                 Assert.Equal("items[2]", second.Field);
-                Assert.Equal("Max usage count cannot be less than used count (INVALID_USAGE)", second.Message);
+                Assert.Equal("Giới hạn lượt sử dụng không được thấp hơn số lượt đã dùng (INVALID_USAGE).", second.Message);
             });
         AssertNoUpdates(db);
         Assert.All(db.Vouchers, voucher => Assert.Equal(10m, voucher.DiscountValue));
+    }
+
+    [Fact]
+    public async Task ExpiredVoucher_CanBeEditedWhenEndAtIsSentUnchanged()
+    {
+        await using var db = VoucherTestData.Database();
+        var voucher = VoucherTestData.Voucher("EXPIRED");
+        voucher.StartAt = DateTimeOffset.UtcNow.AddDays(-10);
+        voucher.EndAt = DateTimeOffset.UtcNow.AddDays(-1);
+        db.Vouchers.Add(voucher);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        await new VoucherService(db).UpdateVouchers(Batch(new Request.UpdateVoucherItem
+        {
+            Id = voucher.Id, Description = "Fixed typo", EndAt = voucher.EndAt,
+            MaxDiscountAmount = voucher.MaxDiscountAmount,
+            MinOrderAmount = voucher.MinOrderAmount, MaxOrderAmount = voucher.MaxOrderAmount
+        }));
+
+        db.ChangeTracker.Clear();
+        var updated = await db.Vouchers.SingleAsync();
+        Assert.Equal("Fixed typo", updated.Description);
+        Assert.Equal(voucher.EndAt, updated.EndAt);
+    }
+
+    [Fact]
+    public async Task ChangedEndAtInThePast_IsRejected()
+    {
+        await using var db = VoucherTestData.Database();
+        var voucher = VoucherTestData.Voucher("PAST");
+        voucher.StartAt = DateTimeOffset.UtcNow.AddDays(-10);
+        db.Vouchers.Add(voucher);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        await AssertValidationError(db,
+            new Request.UpdateVoucherItem { Id = voucher.Id, EndAt = DateTimeOffset.UtcNow.AddDays(-2) },
+            "Thời gian kết thúc phải sau thời điểm hiện tại (PAST).");
+    }
+
+    [Fact]
+    public async Task IdOnlyItem_PassesValidator_AndClearsOptionalLimits()
+    {
+        var item = new Request.UpdateVoucherItem { Id = Guid.NewGuid() };
+        Assert.True(new Voucher.Validators.UpdateVouchersRequestValidator().Validate(Batch(item)).IsValid);
+
+        await using var db = VoucherTestData.Database();
+        var voucher = VoucherTestData.Voucher("CLEAR");
+        db.Vouchers.Add(voucher);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        await new VoucherService(db).UpdateVouchers(Batch(new Request.UpdateVoucherItem { Id = voucher.Id }));
+
+        db.ChangeTracker.Clear();
+        var updated = await db.Vouchers.SingleAsync();
+        Assert.Null(updated.MinOrderAmount);
+        Assert.Null(updated.MaxOrderAmount);
+        Assert.Null(updated.EndAt);
+        Assert.Null(updated.MaxDiscountAmount);
     }
 
     private static Request.UpdateVouchersRequest Batch(params Request.UpdateVoucherItem[] items)

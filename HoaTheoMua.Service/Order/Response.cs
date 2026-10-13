@@ -8,6 +8,20 @@ namespace HoaTheoMua.Service.Order;
 
 public class Response
 {
+    public class DeliverySlotAvailabilityResponse
+    {
+        public DateOnly Date { get; set; }
+        public List<DeliverySlotAvailabilityItem> Slots { get; set; } = new();
+    }
+
+    public class DeliverySlotAvailabilityItem
+    {
+        public int TagId { get; set; }
+        public string Label { get; set; } = string.Empty;
+        public int? Limit { get; set; }
+        public int Occupied { get; set; }
+    }
+
     public class EstimateXanhSmShippingFeeResponse
     {
         public decimal ShippingFee { get; set; }
@@ -141,6 +155,7 @@ public class Response
         public string ReceiptPhoneNumber { get; set; } = string.Empty;
         public decimal ShippingFee { get; set; }
         public decimal ProductFee { get; set; }
+        public decimal? DiscountAmount { get; set; } //voucherSnapshot
         public decimal TotalFee { get; set; }
         public decimal? VatFee { get; set; }
         public DateTimeOffset CreateAt { get; set; }

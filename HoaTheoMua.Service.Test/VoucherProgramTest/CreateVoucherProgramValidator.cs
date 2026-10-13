@@ -7,15 +7,15 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 public class CreateVoucherProgramValidator
 {
     [Theory]
-    [InlineData("name", "Name", "Name is required")]
-    [InlineData("longName", "Name", "Name must not exceed 200 characters")]
-    [InlineData("start", "StartAt", "Start time is required")]
-    [InlineData("end", "EndAt", "End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00")]
-    [InlineData("equalDates", "EndAt", "End time must be later than start time")]
-    [InlineData("reversedDates", "EndAt", "End time must be later than start time")]
-    [InlineData("min", "MinOrderAmount", "Min order amount must not be negative")]
-    [InlineData("max", "MaxOrderAmount", "Max order amount must not be negative")]
-    [InlineData("range", "MaxOrderAmount", "Max order amount cannot be less than min order amount")]
+    [InlineData("name", "Name", "Vui lòng nhập tên chương trình voucher.")]
+    [InlineData("longName", "Name", "Tên chương trình voucher không được dài quá 200 ký tự.")]
+    [InlineData("start", "StartAt", "Vui lòng nhập thời gian bắt đầu.")]
+    [InlineData("end", "EndAt", "Thời gian kết thúc không đúng định dạng. Ví dụ: 2026-10-31T23:59:59+07:00.")]
+    [InlineData("equalDates", "EndAt", "Thời gian kết thúc phải sau thời gian bắt đầu.")]
+    [InlineData("reversedDates", "EndAt", "Thời gian kết thúc phải sau thời gian bắt đầu.")]
+    [InlineData("min", "MinOrderAmount", "Giá trị đơn hàng tối thiểu phải từ 0 trở lên.")]
+    [InlineData("max", "MaxOrderAmount", "Giá trị đơn hàng tối đa phải từ 0 trở lên.")]
+    [InlineData("range", "MaxOrderAmount", "Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu.")]
     public void RejectsInvalidFieldsWithPlanMessages(string scenario, string field, string message)
     {
         var request = ValidRequest();
@@ -42,9 +42,7 @@ public class CreateVoucherProgramValidator
     [InlineData(null, null)]
     [InlineData(0, null)]
     [InlineData(null, 0)]
-    [InlineData(0, 0)]
-    [InlineData(200000, 0)]
-    [InlineData(200000, 200000)]
+    [InlineData(200000, 200001)]
     public void AllowsOptionalAndInclusiveOrderAmountBounds(int? min, int? max)
     {
         var request = ValidRequest();

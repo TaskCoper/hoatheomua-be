@@ -9,28 +9,60 @@ namespace HoaTheoMua.Service.Test.VoucherTest;
 public class ManageVouchersTest
 {
     [Fact]
-    public async Task GetVouchers_FiltersAndUsesProgramEffectiveValues()
+    public async Task GetVouchers_ReturnsOnlyStandaloneNotDeletedVouchers()
     {
         await using var db = VoucherTestData.Database();
         var program = VoucherTestData.Program();
-        var included = VoucherTestData.Voucher("PROGRAM10", visibility: VoucherVisibility.Private);
-        included.Program = program;
-        included.ProgramId = program.Id;
-        included.StartAt = null;
-        included.EndAt = null;
-        var excluded = VoucherTestData.Voucher("PUBLIC10");
-        db.AddRange(program, included, excluded);
+        var standalone = VoucherTestData.Voucher("STANDALONE10");
+        var programVoucher = VoucherTestData.Voucher("PROGRAM10", visibility: VoucherVisibility.Private);
+        programVoucher.Program = program;
+        programVoucher.ProgramId = program.Id;
+        var deleted = VoucherTestData.Voucher("DELETED10");
+        deleted.IsDeleted = true;
+        db.AddRange(program, standalone, programVoucher, deleted);
         await db.SaveChangesAsync();
 
-        var result = await new VoucherService(db).GetVouchers(1, 10, null, VoucherVisibilities.Private, true, program.Id);
+        var result = await new VoucherService(db).GetVouchers(1, 10, null, null, null);
 
         var item = Assert.Single(result.Value.Items.Cast<Response.VoucherResponse>());
-        Assert.Equal(included.Id, item.Id);
-        Assert.Equal(program.Name, item.ProgramName);
-        Assert.Equal(program.StartAt, item.StartAt);
-        Assert.Equal(program.EndAt, item.EndAt);
-        Assert.Equal(program.MinOrderAmount, item.MinOrderAmount);
+        Assert.Equal(standalone.Id, item.Id);
+        // Assert.Null(item.ProgramId);
+        Assert.Equal(standalone.StartAt, item.StartAt);
+        Assert.Equal(standalone.EndAt, item.EndAt);
         Assert.Equal(1, result.Value.TotalCount);
+    }
+
+    [Theory]
+    [InlineData(0, 10, 1, 10)]
+    [InlineData(-3, 0, 1, 10)]
+    [InlineData(1, 100_000, 1, 100)]
+    public async Task GetVouchers_NormalizesPaging(int pageIndex, int pageSize, int expectedIndex, int expectedSize)
+    {
+        await using var db = VoucherTestData.Database();
+        db.Vouchers.Add(VoucherTestData.Voucher());
+        await db.SaveChangesAsync();
+
+        var result = await new VoucherService(db).GetVouchers(pageIndex, pageSize, null, null, null);
+
+        Assert.Equal(expectedIndex, result.Value.PageIndex);
+        Assert.Equal(expectedSize, result.Value.PageSize);
+        Assert.Single(result.Value.Items);
+    }
+
+    [Fact]
+    public async Task GetVouchers_FiltersByVisibilityAndActive()
+    {
+        await using var db = VoucherTestData.Database();
+        var match = VoucherTestData.Voucher("PRIV1", active: true, visibility: VoucherVisibility.Private);
+        var wrongVisibility = VoucherTestData.Voucher("PUB1", active: true);
+        var wrongActive = VoucherTestData.Voucher("PRIV2", active: false, visibility: VoucherVisibility.Private);
+        db.AddRange(match, wrongVisibility, wrongActive);
+        await db.SaveChangesAsync();
+
+        var result = await new VoucherService(db).GetVouchers(1, 10, null, VoucherVisibilities.Private, true);
+
+        var item = Assert.Single(result.Value.Items.Cast<Response.VoucherResponse>());
+        Assert.Equal(match.Id, item.Id);
     }
 
     [Fact]
@@ -38,7 +70,7 @@ public class ManageVouchersTest
     {
         await using var db = VoucherTestData.Database();
         await Assert.ThrowsAsync<ValidationExceptionErrorV1>(
-            () => new VoucherService(db).GetVouchers(1, 10, null, "hidden", null, null));
+            () => new VoucherService(db).GetVouchers(1, 10, null, "hidden", null));
     }
 
     [Fact]
@@ -53,6 +85,7 @@ public class ManageVouchersTest
 
         Assert.Equal("Voucher deleted successfully", message);
         Assert.True(voucher.IsDeleted);
+        Assert.False(voucher.IsActive);
         Assert.NotNull(voucher.UpdatedAt);
     }
 
@@ -88,16 +121,17 @@ public class ManageVouchersTest
 
         var result = await new VoucherService(db).SetVouchersActive(new Request.SetVouchersActiveRequest
         {
-            Ids = [standalone.Id, activeProgramVoucher.Id, inactiveProgramVoucher.Id, missingId], IsActive = true
+            Ids = [standalone.Id, activeProgramVoucher.Id, missingId], IsActive = true
         });
 
         Assert.Equal("Voucher status updated successfully.", result);
         db.ChangeTracker.Clear();
         Assert.Equal(3, db.Vouchers.Count());
-        Assert.All(db.Vouchers, voucher =>
+        Assert.All(db.Vouchers.Where(voucher => voucher.Id != inactiveProgramVoucher.Id), voucher =>
         {
             Assert.True(voucher.IsActive);
             Assert.NotNull(voucher.UpdatedAt);
         });
+        Assert.False(db.Vouchers.Single(voucher => voucher.Id == inactiveProgramVoucher.Id).IsActive);
     }
 }

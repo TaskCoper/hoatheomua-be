@@ -51,9 +51,17 @@ public class ProviderContracts
     }
 
     [Theory]
-    [InlineData(PlatformType.Facebook)]
-    [InlineData(PlatformType.Instagram)]
-    public async Task MetaExchangesCodeChecksPermissionsAndDiscoversPageTokens(PlatformType platform)
+    [InlineData(PlatformType.Facebook, "CREATE_CONTENT")]
+    [InlineData(PlatformType.Facebook, "MANAGE")]
+    [InlineData(PlatformType.Facebook, "PROFILE_PLUS_CREATE_CONTENT")]
+    [InlineData(PlatformType.Facebook, "PROFILE_PLUS_MANAGE")]
+    [InlineData(PlatformType.Facebook, "PROFILE_PLUS_FULL_CONTROL")]
+    [InlineData(PlatformType.Instagram, "CREATE_CONTENT")]
+    [InlineData(PlatformType.Instagram, "MANAGE")]
+    [InlineData(PlatformType.Instagram, "PROFILE_PLUS_CREATE_CONTENT")]
+    [InlineData(PlatformType.Instagram, "PROFILE_PLUS_MANAGE")]
+    [InlineData(PlatformType.Instagram, "PROFILE_PLUS_FULL_CONTROL")]
+    public async Task MetaExchangesCodeChecksPermissionsAndDiscoversPageTokens(PlatformType platform, string task)
     {
         var calls = new List<string>();
         var handler = new Handler(async r =>
@@ -70,13 +78,64 @@ public class ProviderContracts
             Assert.Equal("long", r.Headers.Authorization!.Parameter);
             if (r.RequestUri.AbsolutePath.EndsWith("me/permissions")) return Json(new { data = OAuthProvider.RequiredScopes(platform).Select(x => new { permission = x, status = "granted" }) });
             Assert.EndsWith("me/accounts", r.RequestUri.AbsolutePath);
-            return await Task.FromResult(Json(new { data = new[] { new { id = "123", name = "Page", access_token = "page-token", tasks = new[] { "CREATE_CONTENT" }, instagram_business_account = new { id = "456", username = "flowers" } } } }));
+            return await Task.FromResult(Json(new { data = new[] { new { id = "123", name = "Page", access_token = "page-token", tasks = new[] { task }, instagram_business_account = new { id = "456", username = "flowers" } } } }));
         });
         var provider = Client(handler);
         var result = Assert.Single(await provider.Exchange(platform, "the-code", "verifier", default));
         Assert.Equal(platform == PlatformType.Facebook ? "123" : "456", result.ExternalId);
         Assert.Equal("123", result.PageId); Assert.Equal("page-token", result.Credentials.AccessToken); Assert.Null(result.Credentials.RefreshToken);
         Assert.Equal(4, calls.Count); Assert.NotNull(result.ExpiresAt);
+    }
+
+    [Theory]
+    [InlineData("ANALYZE")]
+    [InlineData("ADVERTISE")]
+    [InlineData("PROFILE_PLUS_ANALYZE")]
+    [InlineData("PROFILE_PLUS_ADVERTISE")]
+    [InlineData("UNKNOWN_TASK")]
+    [InlineData(null)]
+    public async Task MetaRejectsPagesWithoutContentManagementTasks(string? task)
+    {
+        var provider = Client(new Handler(r =>
+        {
+            if (r.RequestUri!.AbsolutePath.EndsWith("access_token"))
+                return Task.FromResult(Json(new { access_token = "token" }));
+            if (r.RequestUri.AbsolutePath.EndsWith("permissions"))
+                return Task.FromResult(Json(new { data = OAuthProvider.RequiredScopes(PlatformType.Facebook)
+                    .Select(x => new { permission = x, status = "granted" }) }));
+            return Task.FromResult(Json(new { data = new[] { new { id = "123", name = "Page",
+                access_token = "page-token", tasks = task == null ? Array.Empty<string>() : new[] { task } } } }));
+        }));
+        var error = await Assert.ThrowsAsync<AccountException>(() =>
+            provider.Exchange(PlatformType.Facebook, "code", "verifier", default));
+        Assert.Equal("PLATFORM_NO_ELIGIBLE_ACCOUNT", error.MessageCode);
+        Assert.Contains("Meta trả về 1 Trang", error.Message);
+        Assert.DoesNotContain("page-token", error.Message);
+    }
+
+    [Theory]
+    [InlineData(PlatformType.Facebook, false, "Meta không trả về Trang nào")]
+    [InlineData(PlatformType.Instagram, false, "Meta không trả về Trang nào")]
+    [InlineData(PlatformType.Instagram, true, "không có tài khoản Instagram chuyên nghiệp liên kết")]
+    public async Task MetaDiscoveryExplainsEmptyPagesAndMissingInstagram(PlatformType platform, bool hasPage, string expected)
+    {
+        var provider = Client(new Handler(r =>
+        {
+            if (r.RequestUri!.AbsolutePath.EndsWith("access_token"))
+                return Task.FromResult(Json(new { access_token = "private-user-token" }));
+            if (r.RequestUri.AbsolutePath.EndsWith("permissions"))
+                return Task.FromResult(Json(new { data = OAuthProvider.RequiredScopes(platform)
+                    .Select(x => new { permission = x, status = "granted" }) }));
+            object[] pages = hasPage
+                ? [new { id = "123", name = "Private Page", access_token = "private-page-token", tasks = new[] { "CREATE_CONTENT" } }]
+                : [];
+            return Task.FromResult(Json(new { data = pages }));
+        }));
+        var error = await Assert.ThrowsAsync<AccountException>(() =>
+            provider.Exchange(platform, "code", "verifier", default));
+        Assert.Equal("PLATFORM_NO_ELIGIBLE_ACCOUNT", error.MessageCode);
+        Assert.Contains(expected, error.Message);
+        Assert.DoesNotContain("private", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

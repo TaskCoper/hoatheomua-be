@@ -46,10 +46,10 @@ public class VoucherValidatorsTest
         Assert.False(validator.Validate(new Request.SetVouchersActiveRequest()).IsValid);
         var id = Guid.NewGuid();
         Assert.Contains(validator.Validate(new Request.SetVouchersActiveRequest
-            { Ids = [id, id], IsActive = true }).Errors, x => x.ErrorMessage == "Duplicate voucher id");
+            { Ids = [id, id], IsActive = true }).Errors, x => x.ErrorMessage == "Danh sách đã chọn có voucher bị lặp. Vui lòng kiểm tra lại.");
         Assert.Contains(validator.Validate(new Request.SetVouchersActiveRequest
             { Ids = Enumerable.Range(0, 1001).Select(_ => Guid.NewGuid()).ToList(), IsActive = false }).Errors,
-            x => x.ErrorMessage == "Ids must not exceed 1000");
+            x => x.ErrorMessage == "Mỗi lần chỉ được đổi trạng thái tối đa 1.000 voucher.");
     }
 
     [Fact]
@@ -59,6 +59,37 @@ public class VoucherValidatorsTest
         Assert.False(validator.Validate(new Request.EstimateVoucherRequest()).IsValid);
         Assert.True(validator.Validate(new Request.EstimateVoucherRequest
             { code = "SAVE10", productFee = 100_000 }).IsValid);
+    }
+
+    [Theory]
+    [InlineData(0, null, null)]
+    [InlineData(null, 0, null)]
+    [InlineData(0, 1, null)]
+    [InlineData(-1, null, "Giá trị đơn hàng tối thiểu phải từ 0 trở lên.")]
+    [InlineData(null, -1, "Giá trị đơn hàng tối đa phải từ 0 trở lên.")]
+    [InlineData(0, 0, "Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu.")]
+    [InlineData(200_000, 200_000, "Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu.")]
+    public void OrderAmounts_AllowZero_RequireMaxAboveMin_InCreateAndUpdate(int? min, int? max, string? error)
+    {
+        var create = ValidCreate();
+        create.MinOrderAmount = min;
+        create.MaxOrderAmount = max;
+        var update = new Request.UpdateVouchersRequest
+        {
+            Items = [new() { Id = Guid.NewGuid(), MinOrderAmount = min, MaxOrderAmount = max }]
+        };
+
+        var createResult = new CreateVoucherRequestValidator().Validate(create);
+        var updateResult = new UpdateVouchersRequestValidator().Validate(update);
+
+        if (error == null)
+        {
+            Assert.True(createResult.IsValid);
+            Assert.True(updateResult.IsValid);
+            return;
+        }
+        Assert.Equal(error, Assert.Single(createResult.Errors).ErrorMessage);
+        Assert.Equal(error, Assert.Single(updateResult.Errors).ErrorMessage);
     }
 
     private static Request.CreateVoucherRequest ValidCreate() => new()

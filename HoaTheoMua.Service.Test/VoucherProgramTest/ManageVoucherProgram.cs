@@ -11,13 +11,9 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 public class ManageVoucherProgram
 {
     [VoucherPostgresTheory]
-    [InlineData(0, 0, null)]
-    [InlineData(200000, 0, null)]
-    [InlineData(3000000, 0, null)]
-    [InlineData(null, 0, null)]
     [InlineData(null, null, 2000000)]
     [InlineData(null, 1000000, 1000000)]
-    public async Task Update_ZeroMaxRemovesUpperLimit_WhileNullKeepsExistingLimit(int? min, int? max, int? expectedMax)
+    public async Task Update_NullKeepsExistingLimit(int? min, int? max, int? expectedMax)
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
@@ -76,7 +72,7 @@ public class ManageVoucherProgram
 
     [VoucherPostgresTheory]
     [InlineData("startAt", "startAt", "Start time must be earlier than the current end time")]
-    [InlineData("endAt", "endAt", "End time must be later than the current start time")]
+    [InlineData("endAt", "endAt", "Thời gian kết thúc phải sau thời gian bắt đầu hiện tại của chương trình.")]
     [InlineData("minOrderAmount", "minOrderAmount", "Min order amount cannot exceed the current max order amount")]
     [InlineData("maxOrderAmount", "maxOrderAmount", "Max order amount cannot be less than the current min order amount")]
     public async Task Update_ValidatesMergedValuesBeforeChangingProgramOrVouchers(string changedField, string errorField, string message)
@@ -197,7 +193,7 @@ public class ManageVoucherProgram
         var delete = await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteVoucherProgram(program.Id));
         var generate = await Assert.ThrowsAsync<NotFoundException>(() => service.GenerateProgramVouchers(program.Id, GenerateRequest()));
 
-        Assert.Equal(deleted ? "Voucher program has been deleted." : "Voucher program does not exist.", active.Message);
+        Assert.Equal(deleted ? "Chương trình voucher đã bị xóa." : "Không tìm thấy chương trình voucher.", active.Message);
         Assert.Equal(active.Message, delete.Message);
         Assert.Equal(active.Message, generate.Message);
         Assert.Empty(await db.Vouchers.ToListAsync());
@@ -246,7 +242,7 @@ public class ManageVoucherProgram
 
         var error = await Assert.ThrowsAsync<NotFoundException>(() =>
             service.UpdateVoucherProgram(program.Id, new() { IsActive = true }));
-        Assert.Equal("Voucher program has been deleted.", error.Message);
+        Assert.Equal("Chương trình voucher đã bị xóa.", error.Message);
         await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteVoucherProgram(program.Id));
         await Assert.ThrowsAsync<NotFoundException>(() => service.GenerateProgramVouchers(program.Id, GenerateRequest()));
         Assert.Empty(await db.Vouchers.ToListAsync());

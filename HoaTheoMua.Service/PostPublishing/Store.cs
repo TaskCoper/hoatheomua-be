@@ -100,6 +100,8 @@ public sealed class Store(AppDbContext db, TimeProvider clock)
             || a.AccessTokenExpiresAt <= now) return "PLATFORM_REAUTH_REQUIRED";
         if (a.Platform != s.Platform || a.ExternalAccountId != s.ExternalAccountId || a.PageId != s.PageId) return "PLATFORM_ACCOUNT_MISMATCH";
         if (a.RefreshLeaseId != null) return "PLATFORM_REFRESH_IN_PROGRESS";
+        // Zalo does not return Meta-style scopes. The adapter checks OA identity using getoa.
+        if (s.Platform == PlatformType.Zalo) return null;
         var scopes = s.Platform == PlatformType.Facebook ? new[] { "pages_read_engagement", "pages_manage_posts" }
             : new[] { "pages_read_engagement", "instagram_basic", "instagram_content_publish" };
         return scopes.Except(a.GrantedScopes).Any() ? "PLATFORM_PERMISSION_REQUIRED" : null;

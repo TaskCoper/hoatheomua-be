@@ -91,6 +91,7 @@ public class CreateOrderRequestValidatorTests
         Gateway = "BaoKim",
         PaymentGateway = PaymentGateway.BaoKim,
         ShippingGateway = ShippingGateway.Ahamove,
+        TagIds = [229],
         PhoneReceiver = "0901234567",
         FullNameReceiver = "Nguyen Van A",
         FullName = "Nguyen Van A",

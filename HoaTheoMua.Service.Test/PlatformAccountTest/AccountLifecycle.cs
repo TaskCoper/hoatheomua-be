@@ -16,6 +16,28 @@ namespace HoaTheoMua.Service.Test.PlatformAccountTest;
 public class AccountLifecycle
 {
     [Fact]
+    public async Task BackgroundRefreshRotatesOnlyWhenDueAndWithoutHttpUser()
+    {
+        await using var db = Database(); var clock = new Clock(); var provider = Provider();
+        var setup = Create(db, provider.Object, clock); var proof = AccountService.Random();
+        var connection = await setup.Connect("zalo", proof);
+        var account = Assert.Single(await setup.Callback("zalo", State(connection), "code", null, proof));
+        var stored = await db.PlatformAccounts.SingleAsync(); stored.AccessTokenExpiresAt = clock.Now.AddHours(1); await db.SaveChangesAsync();
+        var user = new Mock<ICurrentUserService>(MockBehavior.Strict);
+        var service = new AccountService(db, user.Object, provider.Object, new(Options()), Options(), clock);
+        await service.RefreshForPublication(account.Id, default);
+        provider.Verify(x => x.Refresh(It.IsAny<PlatformType>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Credentials>(), It.IsAny<CancellationToken>()), Times.Never);
+        clock.Now = clock.Now.AddMinutes(58);
+        provider.Setup(x => x.Refresh(PlatformType.Zalo, "page", It.IsAny<string>(), It.IsAny<Credentials>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderAccount { ExternalId = "page", Credentials = new() { AccessToken = "new-access", RefreshToken = "new-refresh" }, ExpiresAt = clock.Now.AddHours(25) });
+        await service.RefreshForPublication(account.Id, default);
+        await service.RefreshForPublication(account.Id, default);
+        provider.Verify(x => x.Refresh(PlatformType.Zalo, "page", It.IsAny<string>(), It.IsAny<Credentials>(), It.IsAny<CancellationToken>()), Times.Once);
+        user.VerifyNoOtherCalls();
+        Assert.Contains("new-refresh", new TokenProtector(Options()).Unprotect((await db.PlatformAccounts.SingleAsync()).ProtectedCredentials!, $"postgen:account:{account.Id}"));
+    }
+
+    [Fact]
     public async Task CallbackEncryptsTokensConsumesStateAndListDoesNotExposeSecrets()
     {
         await using var db = Database(); var clock = new Clock(); var provider = Provider(); var service = Create(db, provider.Object, clock);

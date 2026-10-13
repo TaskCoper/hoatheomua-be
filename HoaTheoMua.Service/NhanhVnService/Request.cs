@@ -399,7 +399,8 @@ public class NhanhUnitsDto
     [JsonPropertyName("name")]
     public string? Name { get; set; }
     [JsonPropertyName("list")]
-    public List<NhanhUnitItemDto>? List { get; set; }
+    public JsonElement? List { get; set; }
+
 }
 
 public class NhanhUnitItemDto
@@ -564,6 +565,9 @@ public class NhanhOrderUpdateWebhookRequest
 
 public class NhanhOrderAddDataDto
 {
+    [JsonPropertyName("labelIds")]
+    public List<long>? LabelIds { get; set; }
+
     [JsonPropertyName("info")]
     public NhanhOrderInfoDto? Info { get; set; }
 

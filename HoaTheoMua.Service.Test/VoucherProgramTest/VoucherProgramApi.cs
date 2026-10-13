@@ -29,9 +29,9 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 public class VoucherProgramApi
 {
     [Theory]
-    [InlineData("endAt", "31/10/2026 23:59:59", "End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00")]
-    [InlineData("endAt", "2026-10-31T23:59:59", "End time must be a valid ISO 8601 date-time, for example 2026-10-31T23:59:59+07:00")]
-    [InlineData("startAt", "not-a-date", "Start time must be a valid ISO 8601 date-time, for example 2026-10-15T00:00:00+07:00")]
+    [InlineData("endAt", "31/10/2026 23:59:59", "Thời gian kết thúc không đúng định dạng. Ví dụ: 2026-10-31T23:59:59+07:00.")]
+    [InlineData("endAt", "2026-10-31T23:59:59", "Thời gian kết thúc không đúng định dạng. Ví dụ: 2026-10-31T23:59:59+07:00.")]
+    [InlineData("startAt", "not-a-date", "Thời gian bắt đầu không đúng định dạng. Ví dụ: 2026-10-15T00:00:00+07:00.")]
     public async Task InvalidDateTime_ReturnsFluentValidationError_WithoutSavingProgram(string field, string value, string message)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("voucher-program-api-test-signing-key-only"));
@@ -61,7 +61,7 @@ public class VoucherProgramApi
         await using var app = await StartApplication(key);
         using var client = CreateAdminClient(app, key);
         using var body = new StringContent("""
-            {"name":"20/10","startAt":"2026-10-15T00:00:00+07:00","endAt":"2026-10-31T23:59:59+07:00","minOrderAmount":0,"maxOrderAmount":0}
+            {"name":"20/10","startAt":"2026-10-15T00:00:00+07:00","endAt":"2026-10-31T23:59:59+07:00","minOrderAmount":0,"maxOrderAmount":500000}
             """, Encoding.UTF8, "application/json");
 
         using var response = await client.PostAsync("/api/v1/admin/voucher-programs", body);
@@ -79,7 +79,7 @@ public class VoucherProgramApi
         Assert.Equal(TimeSpan.Zero, saved.StartAt.Offset);
         Assert.Equal(TimeSpan.Zero, saved.EndAt!.Value.Offset);
         Assert.Equal(0m, saved.MinOrderAmount);
-        Assert.Null(saved.MaxOrderAmount);
+        Assert.Equal(500000m, saved.MaxOrderAmount);
     }
 
     [VoucherPostgresFact]
@@ -124,7 +124,7 @@ public class VoucherProgramApi
             Assert.Equal("VALIDATION_ERROR", error.RootElement.GetProperty("messageCode").GetString());
             var validationError = Assert.Single(error.RootElement.GetProperty("errors").EnumerateArray());
             Assert.Equal("endAt", validationError.GetProperty("field").GetString());
-            Assert.Equal("End time must be later than start time", validationError.GetProperty("message").GetString());
+            Assert.Equal("Thời gian kết thúc phải sau thời gian bắt đầu.", validationError.GetProperty("message").GetString());
 
             request.EndAt = "2026-10-31T23:59:59+07:00";
             using var post = await client.PostAsJsonAsync(route, request);
@@ -196,7 +196,11 @@ public class VoucherProgramApi
             using var deleted = JsonDocument.Parse(await delete.Content.ReadAsStringAsync());
             Assert.Equal("Program deleted", deleted.RootElement.GetProperty("value").GetString());
             await AssertMutationAuthorization(client, programRoute, batchRequest, HttpStatusCode.NotFound);
-            using var finalList = await client.GetAsync(route);
+            // Deleted programs are hidden by default; ask for them explicitly
+            using var hiddenList = await client.GetAsync(route);
+            using var hiddenPage = JsonDocument.Parse(await hiddenList.Content.ReadAsStringAsync());
+            Assert.Empty(hiddenPage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
+            using var finalList = await client.GetAsync(route + "?isDelete=true");
             using var finalPage = JsonDocument.Parse(await finalList.Content.ReadAsStringAsync());
             var deletedItem = Assert.Single(finalPage.RootElement.GetProperty("value").GetProperty("items").EnumerateArray());
             Assert.Equal(program.GetProperty("id").GetGuid(), deletedItem.GetProperty("id").GetGuid());

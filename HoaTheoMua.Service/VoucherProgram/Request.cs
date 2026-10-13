@@ -6,9 +6,9 @@ public class Request
     {
         public string? Name { get; set; }
         public string? StartAt { get; set; }
-        public string? EndAt { get; set; }
-        public decimal? MinOrderAmount { get; set; }
-        public decimal? MaxOrderAmount { get; set; }
+        public string? EndAt { get; set; } // new value, not sent = null
+        public decimal? MinOrderAmount { get; set; } // new value, not sent = null
+        public decimal? MaxOrderAmount { get; set; } // new value, not sent = null
         public bool? IsActive { get; set; }
     }
 

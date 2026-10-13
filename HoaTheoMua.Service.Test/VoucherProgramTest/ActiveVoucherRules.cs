@@ -48,7 +48,7 @@ public class ActiveVoucherRules
         await db.SaveChangesAsync();
         var error = await Assert.ThrowsAsync<ConflictException>(() =>
             service.UpdateVoucherProgram(program.Id, new() { IsActive = true, Name = "Must not change" }));
-        Assert.Equal("Voucher program cannot exceed 10000 active vouchers.", error.Message);
+        Assert.Equal("Mỗi chương trình chỉ được có tối đa 10.000 voucher đang hoạt động.", error.Message);
         db.ChangeTracker.Clear();
         Assert.Equal("20/10", (await db.VoucherPrograms.SingleAsync()).Name);
         Assert.Equal(10000, await db.Vouchers.CountAsync(x => x.ProgramId == program.Id && x.IsActive));
@@ -75,7 +75,7 @@ public class ActiveVoucherRules
         var error = await Assert.ThrowsAsync<ConflictException>(() =>
             new FeatureService(db).UpdateVoucherProgram(program.Id, new() { IsActive = true, Name = "Must not change" }));
 
-        Assert.Equal("Voucher codes must be unique among active vouchers across the system.", error.Message);
+        Assert.Equal("Không thể kích hoạt vì có mã voucher bị trùng. Vui lòng kiểm tra lại các mã voucher.", error.Message);
         db.ChangeTracker.Clear();
         Assert.False(await db.Vouchers.AnyAsync(x => x.ProgramId == program.Id && x.IsActive));
         var saved = await db.VoucherPrograms.SingleAsync(x => x.Id == program.Id);

@@ -14,11 +14,27 @@ public class GenerateProgramVouchersValidator
 
         var result = new UpdateVoucherProgramRequestValidator().Validate(request);
 
-        Assert.Equal(2, result.Errors.Count);
+        Assert.Equal(3, result.Errors.Count);
         Assert.Contains(result.Errors, error => error.PropertyName == "MinOrderAmount"
-            && error.ErrorMessage == "Min order amount must not be negative");
+            && error.ErrorMessage == "Giá trị đơn hàng tối thiểu phải từ 0 trở lên.");
         Assert.Contains(result.Errors, error => error.PropertyName == "MaxOrderAmount"
-            && error.ErrorMessage == "Max order amount must not be negative");
+            && error.ErrorMessage == "Giá trị đơn hàng tối đa phải từ 0 trở lên.");
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(0, false)] // max must be strictly greater than min
+    [InlineData(200_000, false)]
+    public void ZeroMaxOrderAmount_IsAcceptedOnlyWhenMinIsNotSent(int? min, bool valid)
+    {
+        var update = new Request.UpdateVoucherProgramRequest { MinOrderAmount = min, MaxOrderAmount = 0 };
+        var create = new Request.CreateVoucherProgramRequest
+        {
+            Name = "Zero max", StartAt = "2026-10-15T00:00:00+07:00", MinOrderAmount = min, MaxOrderAmount = 0
+        };
+
+        Assert.Equal(valid, new UpdateVoucherProgramRequestValidator().Validate(update).IsValid);
+        Assert.Equal(valid, new CreateVoucherProgramRequestValidator().Validate(create).IsValid);
     }
 
     [Fact]
@@ -32,9 +48,9 @@ public class GenerateProgramVouchersValidator
 
         Assert.Equal(2, result.Errors.Count);
         Assert.Contains(result.Errors, error => error.PropertyName == "CodePrefix"
-            && error.ErrorMessage == "Code prefix must contain only uppercase letters or digits");
+            && error.ErrorMessage == "Phần đầu mã chỉ được gồm chữ cái viết hoa hoặc chữ số.");
         Assert.Contains(result.Errors, error => error.PropertyName == "CodeSuffix"
-            && error.ErrorMessage == "Code suffix must contain only uppercase letters or digits");
+            && error.ErrorMessage == "Phần cuối mã chỉ được gồm chữ cái viết hoa hoặc chữ số.");
     }
 
     [Theory]
@@ -55,24 +71,24 @@ public class GenerateProgramVouchersValidator
     }
 
     [Theory]
-    [InlineData("CodeLength", "4", "Code length must be at least 5")]
-    [InlineData("CodeLength", "11", "Code length must not exceed 10")]
-    [InlineData("CodeLength", "0", "Code length must be at least 5")]
-    [InlineData("CodePrefix", "htm", "Code prefix must contain only uppercase letters or digits")]
-    [InlineData("CodePrefix", "HTM\n", "Code prefix must contain only uppercase letters or digits")]
-    [InlineData("CodeSuffix", "-26", "Code suffix must contain only uppercase letters or digits")]
-    [InlineData("CodeSuffix", "AAAAAAAAAAAAAAAAAAAA", "Voucher code must not exceed 20 characters including prefix and suffix", "CodeLength")]
-    [InlineData("Quantity", "0", "Quantity must be at least 1")]
-    [InlineData("Quantity", "1001", "Quantity must not exceed 1000")]
-    [InlineData("MaxUsageCount", "0", "Max usage count must be greater than 0")]
-    [InlineData("DiscountType", "PERCENT", "Discount type must be cash or percent")]
-    [InlineData("DiscountType", "", "Discount type is required")]
-    [InlineData("DiscountValue", "0", "Discount value must be greater than 0")]
-    [InlineData("DiscountValue", "101", "Discount percent must not exceed 100")]
-    [InlineData("MaxDiscountAmount", "0", "Max discount amount must be greater than 0")]
-    [InlineData("MaxDiscountAmount", "-1", "Max discount amount must be greater than 0")]
-    [InlineData("DiscountType", "cash", "Max discount amount is only for percent", "MaxDiscountAmount")]
-    [InlineData("Description", "long", "Description must not exceed 500 characters")]
+    [InlineData("CodeLength", "4", "Phần mã ngẫu nhiên phải dài ít nhất 5 ký tự.")]
+    [InlineData("CodeLength", "11", "Phần mã ngẫu nhiên không được dài quá 10 ký tự.")]
+    [InlineData("CodeLength", "0", "Phần mã ngẫu nhiên phải dài ít nhất 5 ký tự.")]
+    [InlineData("CodePrefix", "htm", "Phần đầu mã chỉ được gồm chữ cái viết hoa hoặc chữ số.")]
+    [InlineData("CodePrefix", "HTM\n", "Phần đầu mã chỉ được gồm chữ cái viết hoa hoặc chữ số.")]
+    [InlineData("CodeSuffix", "-26", "Phần cuối mã chỉ được gồm chữ cái viết hoa hoặc chữ số.")]
+    [InlineData("CodeSuffix", "AAAAAAAAAAAAAAAAAAAA", "Mã voucher không được dài quá 20 ký tự, tính cả phần đầu và phần cuối mã.", "CodeLength")]
+    [InlineData("Quantity", "0", "Số lượng voucher cần tạo phải từ 1 trở lên.")]
+    [InlineData("Quantity", "1001", "Mỗi lần chỉ được tạo tối đa 1.000 voucher.")]
+    [InlineData("MaxUsageCount", "0", "Giới hạn lượt sử dụng phải lớn hơn 0.")]
+    [InlineData("DiscountType", "PERCENT", "Loại giảm giá chỉ chấp nhận cash (giảm tiền) hoặc percent (giảm theo phần trăm).")]
+    [InlineData("DiscountType", "", "Vui lòng chọn loại giảm giá.")]
+    [InlineData("DiscountValue", "0", "Mức giảm giá phải lớn hơn 0.")]
+    [InlineData("DiscountValue", "101", "Mức giảm theo phần trăm không được vượt quá 100%.")]
+    [InlineData("MaxDiscountAmount", "0", "Mức giảm tối đa phải lớn hơn 0.")]
+    [InlineData("MaxDiscountAmount", "-1", "Mức giảm tối đa phải lớn hơn 0.")]
+    [InlineData("DiscountType", "cash", "Chỉ đặt mức giảm tối đa khi giảm theo phần trăm.", "MaxDiscountAmount")]
+    [InlineData("Description", "long", "Mô tả không được dài quá 500 ký tự.")]
     public async Task RejectsInvalidGenerationFields(string field, string value, string message, string? errorField = null)
     {
         var request = GenerateRequest();
@@ -105,6 +121,6 @@ public class GenerateProgramVouchersValidator
 
         Assert.Equal(valid, result.IsValid);
         if (!valid)
-            Assert.Equal("At least one voucher program field must be provided for update", Assert.Single(result.Errors).ErrorMessage);
+            Assert.Equal("Vui lòng nhập ít nhất một thông tin cần cập nhật cho chương trình voucher.", Assert.Single(result.Errors).ErrorMessage);
     }
 }

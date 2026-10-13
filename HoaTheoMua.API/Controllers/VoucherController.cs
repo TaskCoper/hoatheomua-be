@@ -25,10 +25,9 @@ public class VoucherController : ControllerBase
         [FromQuery] int pageSize = 10,
         [FromQuery] string? keyword = null,
         [FromQuery] string? visibility = null,
-        [FromQuery] bool? isActive = null,
-        [FromQuery] Guid? programId = null)
+        [FromQuery] bool? isActive = null)
     {
-        var result = await _voucherService.GetVouchers(pageIndex, pageSize, keyword, visibility, isActive, programId);
+        var result = await _voucherService.GetVouchers(pageIndex, pageSize, keyword, visibility, isActive);
         return Ok(result);
     }
 
@@ -71,6 +70,7 @@ public class VoucherController : ControllerBase
         [FromQuery] List<Guid>? programIds = null)
     {
         var file = await _voucherService.ExportVouchers(visibility, programIds);
+        // FileStreamResult streams the temp file and disposes it afterwards, which deletes it
         return File(file.Content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", file.FileName);
     }
 
@@ -102,6 +102,12 @@ public class VoucherController : ControllerBase
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
     
-    
+    [HttpPost("vouchers/filter")]
+    [Authorize(Policy = JwtExtensions.CustomerPolicy)]
+    public async Task<IActionResult> FilterVoucher([FromBody] Request.FilterVoucherRequest request)
+    {
+        var result = await _voucherService.FilterVoucher(request);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
     
 }

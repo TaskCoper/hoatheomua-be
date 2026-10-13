@@ -39,8 +39,25 @@ public class CreateVoucherTest
         var error = await Assert.ThrowsAsync<ConflictException>(
             () => new VoucherService(db).CreateVoucher(request));
 
-        Assert.Equal("Voucher code already exists.", error.Message);
+        Assert.Equal("Mã voucher này đã tồn tại. Vui lòng dùng mã khác.", error.Message);
         Assert.Single(db.Vouchers);
+    }
+
+    [Fact]
+    public async Task CodeOfDeletedVoucher_CanBeReused()
+    {
+        await using var db = VoucherTestData.Database();
+        var deleted = VoucherTestData.Voucher("TET2027", active: false);
+        deleted.IsDeleted = true;
+        db.Vouchers.Add(deleted);
+        await db.SaveChangesAsync();
+        var request = ValidRequest();
+        request.Code = "tet2027";
+
+        await new VoucherService(db).CreateVoucher(request);
+
+        Assert.Equal(2, db.Vouchers.Count(x => x.Code == "TET2027"));
+        Assert.Single(db.Vouchers, x => x.Code == "TET2027" && !x.IsDeleted);
     }
 
     [Fact]

@@ -5,8 +5,8 @@ public class Response
     public class VoucherResponse
     {
         public Guid Id { get; set; }
-        public Guid? ProgramId { get; set; }
-        public string? ProgramName { get; set; }
+        // public Guid? ProgramId { get; set; }
+        // public string? ProgramName { get; set; }
         public required string Code { get; set; }
         public string? Description { get; set; }
         public required string Visibility { get; set; }       // public | private
@@ -26,7 +26,8 @@ public class Response
 
     public class VoucherExportFile
     {
-        public required byte[] Content { get; set; }
+        // Temp file opened with DeleteOnClose, positioned at 0. Whoever sends it must dispose it
+        public required Stream Content { get; set; }
         public required string FileName { get; set; }
     }
 
@@ -87,5 +88,12 @@ public class Response
         public required string CustomerPhone { get; set; }    // Order.Phone
         public decimal DiscountAmount { get; set; }           // VoucherSnapshot.DiscountAmount
         public DateTimeOffset? UsedAt { get; set; }            // earliest Transaction.CreatedAt of the order
+    }
+
+    public class FilterVoucherResponse : EstimateVoucherResponse
+    {
+        public decimal? MinOrderAmount { get; set; }
+        public decimal? MaxOrderAmount { get; set; }
+        public bool IsValid { get; set; }
     }
 }

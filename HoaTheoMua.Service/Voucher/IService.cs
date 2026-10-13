@@ -23,8 +23,6 @@ public interface IService
     Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee);
 
     Task<BasePaginationResponse> GetVouchers(int pageIndex, int pageSize, string? keyword, string? visibility,
-        bool? isActive, Guid? programId);
-    
-    
-    
+        bool? isActive);
+    Task<List<Response.FilterVoucherResponse>> FilterVoucher(Request.FilterVoucherRequest request);
 }

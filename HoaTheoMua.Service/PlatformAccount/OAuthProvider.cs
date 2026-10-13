@@ -92,6 +92,8 @@ public sealed class OAuthProvider(HttpClient http, IOptions<PlatformAccountOptio
         if (RequiredScopes(platform).Except(granted).Any()) throw AuthError();
         var expires = Expiry(longToken.RootElement, "expires_in");
         var result = new List<ProviderAccount>(); cursor = null;
+        var discoveredPages = 0;
+        var contentPages = 0;
         for (var page = 0; page < 20; page++)
         {
             using var pages = await Get(Query(Graph("me/accounts"), new()
@@ -100,7 +102,10 @@ public sealed class OAuthProvider(HttpClient http, IOptions<PlatformAccountOptio
             }), token, false, ct);
             foreach (var item in pages.RootElement.GetProperty("data").EnumerateArray())
             {
-                if (!item.TryGetProperty("tasks", out var tasks) || !tasks.EnumerateArray().Any(x => x.GetString() is "CREATE_CONTENT" or "MANAGE")) continue;
+                discoveredPages++;
+                if (!item.TryGetProperty("tasks", out var tasks) || !tasks.EnumerateArray().Any(x => x.GetString() is "CREATE_CONTENT" or "MANAGE"
+                    or "PROFILE_PLUS_CREATE_CONTENT" or "PROFILE_PLUS_MANAGE" or "PROFILE_PLUS_FULL_CONTROL")) continue;
+                contentPages++;
                 var pageId = Required(item, "id");
                 var account = new ProviderAccount
                 {
@@ -119,7 +124,15 @@ public sealed class OAuthProvider(HttpClient http, IOptions<PlatformAccountOptio
             if (cursor == null) break;
             if (page == 19) throw InvalidResponse();
         }
-        if (result.Count == 0) throw new AccountException(400, "PLATFORM_NO_ELIGIBLE_ACCOUNT", "Không tìm thấy Page/tài khoản chuyên nghiệp có quyền tạo nội dung.");
+        if (result.Count == 0)
+        {
+            var detail = discoveredPages == 0
+                ? "Meta không trả về Trang nào cho phiên cấp quyền này. Hãy kết nối lại, chọn Chỉnh sửa phần cài đặt và kiểm tra Trang được cấp quyền cùng quyền truy cập Trang của tài khoản Facebook."
+                : contentPages == 0
+                    ? $"Meta trả về {discoveredPages} Trang nhưng không có Trang nào có quyền tạo hoặc quản lý nội dung được hỗ trợ. Hãy kiểm tra quyền trên Trang và quyền được cấp qua doanh nghiệp."
+                    : $"Meta trả về {contentPages} Trang có quyền nội dung nhưng không có tài khoản Instagram chuyên nghiệp liên kết. Hãy kiểm tra liên kết Instagram với Trang đã chọn.";
+            throw new AccountException(400, "PLATFORM_NO_ELIGIBLE_ACCOUNT", detail);
+        }
         return result;
     }
 

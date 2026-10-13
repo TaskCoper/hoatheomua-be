@@ -81,7 +81,7 @@ public class VoucherProgramPostgres
     public async Task ConcurrentBatches_CannotExceed10000ActiveCodes()
     {
         await using var fixture = await PostgresDatabase.Create();
-        var program = Program();
+        var program = Program(true);
         await using (var seed = fixture.Context())
         {
             seed.VoucherPrograms.Add(program);
@@ -111,7 +111,7 @@ public class VoucherProgramPostgres
             }
             catch (ConflictException error)
             {
-                Assert.Equal("Voucher program cannot exceed 10000 active vouchers.", error.Message);
+                Assert.Equal("Mỗi chương trình chỉ được có tối đa 10.000 voucher đang hoạt động.", error.Message);
                 return false;
             }
         }
@@ -121,7 +121,7 @@ public class VoucherProgramPostgres
     public async Task CodeActivatedAfterExistenceCheck_RetriesBatchWithoutPartialRows()
     {
         await using var fixture = await PostgresDatabase.Create();
-        var program = Program();
+        var program = Program(true);
         await using (var seed = fixture.Context())
         {
             seed.VoucherPrograms.Add(program);
