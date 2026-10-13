@@ -35,6 +35,9 @@ x-api-env: &api-env
   ASPNETCORE_URLS: http://+:8080
   HttpPort: ${HTTP_PORT}
 
+  # System Configuration
+  SystemOption__ClientUrl: ${CLIENT_URL}
+
   # The API has no published host port in this compose file and is reached through cloudflared.
   ReverseProxy__TrustForwardedHeaders: "true"
 

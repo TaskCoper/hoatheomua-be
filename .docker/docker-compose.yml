@@ -56,6 +56,9 @@ services:
       ASPNETCORE_URLS: http://+:8080
       HttpPort: ${HTTP_PORT}
 
+      # System Configuration
+      SystemOption__ClientUrl: ${CLIENT_URL}
+
       # Connection Strings
       ConnectionStrings__PostgresSql: Host=hoatheomua-postgres;Port=5432;Database=${POSTGRES_DBNAME};Username=${POSTGRES_USERNAME};Password=${POSTGRES_PASSWORD}
 

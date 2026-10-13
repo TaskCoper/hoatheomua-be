@@ -37,6 +37,9 @@ jobs:
       # Environment
       ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
 
+      # System
+      CLIENT_URL: ${{ secrets.CLIENT_URL }}
+
       # HTTP
       HTTP_PORT: ${{ secrets.HTTP_PORT }}
 
