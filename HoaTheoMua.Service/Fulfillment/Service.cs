@@ -34,7 +34,7 @@ public class Service : IService
 
     // NhanhVn tag ids. 253 marks a VAT-invoice order, 294 marks "giao ngay".
     private const long VatTagId = 253L;
-    private const long FastTagId = 294L;
+    // private const long FastTagId = 294L;
 
     // NhanhVn depot + accounting ids, carried over unchanged from the original implementation.
     private const int NhanhDepotId = 129255;
@@ -87,11 +87,13 @@ public class Service : IService
                 $"Shipping gateway {order.ShippingGateway} is not supported");
         }
 
+        /* Legacy auto-dispatch flow: keep this code for easy rollback if automatic courier booking returns.
         var isAhamove = order.ShippingGateway == ShippingGateway.Ahamove;
 
         var companyAddress = await _dbContext.CompanyAddresses
             .Where(x => x.IsDeleted == false)
             .FirstOrDefaultAsync(cancellationToken);
+        */
 
         // Legacy: privateDescription từng chứa ghi chú, thông tin người nhận,
         // lịch giao và hóa đơn. Chi tiết Order hiện được xem tại trang Admin.
@@ -104,6 +106,20 @@ public class Service : IService
             ? tags.Append(VatTagId).ToList()
             : tags;
 
+        // Current flow: Admin books the courier manually. Keep this fulfilment step so the saga
+        // can continue to create the Nhanh.vn order, but do not call Ahamove or XanhSM.
+        return new DeliveryDispatchResult
+        {
+            Dispatched = false,
+            ShippingGateway = order.ShippingGateway,
+            ShippingPartyOrderId = null,
+            ShippingTrackingUrl = null,
+            DelayTimeUnix = 0,
+            TagIds = tagIds,
+            PrivateDescription = privateDescription
+        };
+
+        /* Legacy auto-dispatch flow: keep this code for easy rollback if automatic courier booking returns.
         var ahamoveConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
 
         var isUrgent = await IsUrgentOrderAsync(order, tags);
@@ -173,6 +189,7 @@ public class Service : IService
             order.ShippingGateway, shippingPartyOrderId, orderId);
 
         return Plan(dispatched: true, shippingPartyOrderId, shippingTrackingUrl);
+        */
     }
     
     // private async Task<(string OrderId, string? TrackingUrl)> BookAhamoveAsync(
@@ -544,12 +561,11 @@ public class Service : IService
                 IsDeclaredFee = 0,
                 IsFeeCustomerReject = 0,
                 FeeCustomerReject = 0m,
-                //nếu gấp thì lấy ngày delay | nếu ko gấp thì lấy createdAt
+                //orderTime > 0 là ngày mai cho tới ngày thứ 7
+                //orderTime = 0 là ngày hôm nay
                 DeliveryDate = order.OrderTime > 0
                     ? vnDt.ToString("yyyy-MM-dd")
-                    : plan.Dispatched
-                        ? ConvertInstantDateDelivery(plan.DelayTimeUnix)
-                        : order.CreatedAt.ToOffset(TimeSpan.FromHours(7))
+                    : order.CreatedAt.ToOffset(TimeSpan.FromHours(7))
                             .ToString("yyyy-MM-dd"),
                 // OrderTime > 0: chuyển OrderTime sang ngày yyyy-MM-dd.
                 //OrderTime = 0:  thời gian hiện tại cộng delay => có thể qua ngày mới 

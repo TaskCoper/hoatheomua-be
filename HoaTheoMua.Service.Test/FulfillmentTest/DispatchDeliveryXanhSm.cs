@@ -30,8 +30,8 @@ public class DispatchDeliveryXanhSmTest
     private const string XanhSmDeliveryId = "XANHSM-ORDER-001";
     private const string XanhSmTrackingUrl = "https://tracking.example/XANHSM-ORDER-001";
 
-    [Fact]
-    public async Task DispatchDelivery_OrderTimeZeroCreatedInsideSlot_BooksCourierAndAddsFastTag()
+    // [Fact] Legacy auto-dispatch: re-enable when courier booking is restored.
+    private async Task DispatchDelivery_OrderTimeZeroCreatedInsideSlot_BooksCourierAndAddsFastTag()
     {
         await using var dbContext = CreateDbContext();
         var order = CreateOrder();
@@ -62,8 +62,8 @@ public class DispatchDeliveryXanhSmTest
             It.IsAny<long>(), It.IsAny<long?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task DispatchDelivery_OrderTimeZeroCreatedOutsideSlot_DoesNotBookCourier()
+    // [Fact] Legacy urgent-slot dispatch rule: re-enable when courier booking is restored.
+    private async Task DispatchDelivery_OrderTimeZeroCreatedOutsideSlot_DoesNotBookCourier()
     {
         await using var dbContext = CreateDbContext();
         var order = CreateOrder();
@@ -80,8 +80,8 @@ public class DispatchDeliveryXanhSmTest
         xanhSm.VerifyNoOtherCalls();
     }
 
-    [Fact]
-    public async Task DispatchDelivery_UrgentAhamoveWithInstantDeliveryDisabled_DoesNotBookCourier()
+    // [Fact] Legacy Ahamove instant-delivery config: re-enable when courier booking is restored.
+    private async Task DispatchDelivery_UrgentAhamoveWithInstantDeliveryDisabled_DoesNotBookCourier()
     {
         await using var dbContext = CreateDbContext();
         var order = CreateOrder();
@@ -171,8 +171,8 @@ public class DispatchDeliveryXanhSmTest
     }
 
     // TC02: đơn XanhSm đã có ShippingPartyOrderId (message gửi lại) -> không book lần hai
-    [Fact]
-    public async Task DispatchDelivery_XanhSmOrderAlreadyBooked_SkipsBooking()
+    // [Fact] Legacy booking idempotency: re-enable when courier booking is restored.
+    private async Task DispatchDelivery_XanhSmOrderAlreadyBooked_SkipsBooking()
     {
         await using var dbContext = CreateDbContext();
         var order = CreateOrder();
@@ -193,12 +193,12 @@ public class DispatchDeliveryXanhSmTest
     }
 
     // TC03: XanhSm trả lỗi hạ tầng -> transient (retry); trả lỗi nghiệp vụ -> permanent (fault ngay)
-    [Theory]
-    [InlineData(typeof(BadGatewayException), typeof(FulfillmentTransientException))]
-    [InlineData(typeof(TooManyRequestException), typeof(FulfillmentTransientException))]
-    [InlineData(typeof(BadRequestException), typeof(FulfillmentPermanentException))]
-    [InlineData(typeof(NotFoundException), typeof(FulfillmentPermanentException))]
-    public async Task DispatchDelivery_XanhSmFails_MapsToRetryClass(Type thrown, Type expected)
+    // [Theory] Legacy booking error mapping: re-enable when courier booking is restored.
+    // [InlineData(typeof(BadGatewayException), typeof(FulfillmentTransientException))]
+    // [InlineData(typeof(TooManyRequestException), typeof(FulfillmentTransientException))]
+    // [InlineData(typeof(BadRequestException), typeof(FulfillmentPermanentException))]
+    // [InlineData(typeof(NotFoundException), typeof(FulfillmentPermanentException))]
+    private async Task DispatchDelivery_XanhSmFails_MapsToRetryClass(Type thrown, Type expected)
     {
         await using var dbContext = CreateDbContext();
         var order = CreateOrder();
@@ -223,13 +223,35 @@ public class DispatchDeliveryXanhSmTest
         Assert.Null(savedOrder.ShippingPartyOrderId);
     }
 
+    [Fact]
+    public async Task DispatchDelivery_ManualCourierFlow_ReturnsPlanWithoutBookingCourier()
+    {
+        await using var dbContext = CreateDbContext();
+        var order = CreateOrder();
+        await dbContext.Orders.AddAsync(order);
+        await dbContext.SaveChangesAsync();
+
+        var xanhSm = new Mock<XanhSmClient>(MockBehavior.Strict);
+
+        var plan = await CreateService(dbContext, xanhSm)
+            .DispatchDeliveryAsync(order.Id);
+
+        Assert.False(plan.Dispatched);
+        Assert.Equal(ShippingGateway.XanhSm, plan.ShippingGateway);
+        Assert.Null(plan.ShippingPartyOrderId);
+        Assert.Null(plan.ShippingTrackingUrl);
+        Assert.Equal(0, plan.DelayTimeUnix);
+        Assert.Equal([DeliverySlotTagId], plan.TagIds);
+        Assert.Contains(order.Id.ToString(), plan.PrivateDescription);
+        xanhSm.VerifyNoOtherCalls();
+    }
+
     // TC04: đơn XanhSm lên NhanhVn với carrier tự kết nối (id 0, isSelfConnect 1) và appOrderId mang id XanhSm
     [Fact]
     public async Task CreatePosOrder_XanhSmPlan_SendsSelfConnectedCarrier()
     {
         await using var dbContext = CreateDbContext();
         var order = CreateOrder();
-        order.ShippingPartyOrderId = XanhSmDeliveryId;
         await dbContext.Orders.AddAsync(order);
         await dbContext.SaveChangesAsync();
 
@@ -249,12 +271,12 @@ public class DispatchDeliveryXanhSmTest
 
         var plan = new DeliveryDispatchResult
         {
-            Dispatched = true,
+            Dispatched = false,
             ShippingGateway = ShippingGateway.XanhSm,
-            ShippingPartyOrderId = XanhSmDeliveryId,
-            ShippingTrackingUrl = XanhSmTrackingUrl,
-            DelayTimeUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            TagIds = [294L],
+            ShippingPartyOrderId = null,
+            ShippingTrackingUrl = null,
+            DelayTimeUnix = 0,
+            TagIds = [DeliverySlotTagId],
             PrivateDescription = "pick-up note"
         };
 
@@ -267,7 +289,7 @@ public class DispatchDeliveryXanhSmTest
         var carrier = body.RootElement.GetProperty("carrier");
         Assert.Equal(0, carrier.GetProperty("id").GetInt32());
         Assert.Equal(1, carrier.GetProperty("isSelfConnect").GetInt32());
-        Assert.StartsWith(XanhSmDeliveryId + " - ", body.RootElement.GetProperty("channel").GetProperty("appOrderId").GetString());
+        Assert.Equal(order.Id.ToString(), body.RootElement.GetProperty("channel").GetProperty("appOrderId").GetString());
 
         var savedOrder = await dbContext.Orders.SingleAsync(entity => entity.Id == order.Id);
         Assert.Equal(12345, savedOrder.NhanhOrderId);
@@ -280,7 +302,6 @@ public class DispatchDeliveryXanhSmTest
         await using var dbContext = CreateDbContext();
         var order = CreateOrder();
         order.ShippingGateway = ShippingGateway.Ahamove;
-        order.ShippingPartyOrderId = "AHA-123";
         await dbContext.Orders.AddAsync(order);
         await dbContext.SaveChangesAsync();
 
@@ -299,11 +320,11 @@ public class DispatchDeliveryXanhSmTest
 
         var plan = new DeliveryDispatchResult
         {
-            Dispatched = true,
+            Dispatched = false,
             ShippingGateway = ShippingGateway.Ahamove,
-            ShippingPartyOrderId = "AHA-123",
+            ShippingPartyOrderId = null,
             DelayTimeUnix = 0,
-            TagIds = [294L],
+            TagIds = [DeliverySlotTagId],
             PrivateDescription = "pick-up note"
         };
 
