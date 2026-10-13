@@ -70,6 +70,7 @@ public class VoucherController : ControllerBase
         [FromQuery] List<Guid>? programIds = null)
     {
         var file = await _voucherService.ExportVouchers(visibility, programIds);
+        // FileStreamResult streams the temp file and disposes it afterwards, which deletes it
         return File(file.Content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", file.FileName);
     }
 

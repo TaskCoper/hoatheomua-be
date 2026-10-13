@@ -178,4 +178,18 @@ public class FilterVoucherTest
 
         await Assert.ThrowsAsync<BadRequestException>(() => new VoucherService(db).FilterVoucher(Req(product.Id)));
     }
+
+    [Fact]
+    public async Task FilterVoucher_ProductWithoutPrice_ThrowsBadRequestInsteadOf500()
+    {
+        await using var db = VoucherTestData.Database();
+        var product = Product(0);
+        product.Price = null;
+        db.Add(product);
+        await db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<BadRequestException>(
+            () => new VoucherService(db).FilterVoucher(Req(product.Id)));
+        Assert.Equal("Một số sản phẩm chưa có giá bán. Vui lòng thử lại sau.", error.Message);
+    }
 }

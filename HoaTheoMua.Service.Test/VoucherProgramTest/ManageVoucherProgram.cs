@@ -11,13 +11,9 @@ namespace HoaTheoMua.Service.Test.VoucherProgramTest;
 public class ManageVoucherProgram
 {
     [VoucherPostgresTheory]
-    [InlineData(0, 0, null)]
-    [InlineData(200000, 0, null)]
-    [InlineData(3000000, 0, null)]
-    [InlineData(null, 0, null)]
     [InlineData(null, null, 2000000)]
     [InlineData(null, 1000000, 1000000)]
-    public async Task Update_ZeroMaxRemovesUpperLimit_WhileNullKeepsExistingLimit(int? min, int? max, int? expectedMax)
+    public async Task Update_NullKeepsExistingLimit(int? min, int? max, int? expectedMax)
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();

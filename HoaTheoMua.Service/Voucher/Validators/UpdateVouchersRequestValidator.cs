@@ -23,19 +23,8 @@ public class UpdateVoucherItemValidator : AbstractValidator<Request.UpdateVouche
 {
     public UpdateVoucherItemValidator()
     {
-        RuleFor(x => x)
-            .Must(x => x.Description != null
-                       || x.Visibility != null
-                       || x.DiscountType != null
-                       || x.DiscountValue != null
-                       || x.MaxDiscountAmount != null
-                       || x.MaxUsageCount != null
-                       || x.StartAt != null
-                       || x.EndAt != null
-                       || x.MinOrderAmount != null
-                       || x.MaxOrderAmount != null)
-            .OverridePropertyName("id")
-            .WithMessage("Vui lòng nhập ít nhất một thông tin cần cập nhật.");
+        // No "at least one field" rule: an item with only its id is a real update,
+        // because omitted EndAt / MinOrderAmount / MaxOrderAmount / MaxDiscountAmount clear those limits.
 
         RuleFor(x => x.Description)
             .MaximumLength(500).WithMessage("Mô tả không được dài quá 500 ký tự.");
@@ -62,25 +51,18 @@ public class UpdateVoucherItemValidator : AbstractValidator<Request.UpdateVouche
             .GreaterThan(0).When(x => x.MaxUsageCount.HasValue)
             .WithMessage("Giới hạn lượt sử dụng phải lớn hơn 0.");
 
-        RuleFor(x => x.EndAt)
-            .Must(x => x!.Value > DateTimeOffset.UtcNow).When(x => x.EndAt.HasValue)
-            .WithMessage("Thời gian kết thúc phải sau thời điểm hiện tại.");
+        // "EndAt after now" is checked in UpdateVouchers, and only when EndAt actually changes
 
         RuleFor(x => x.EndAt)
             .GreaterThan(x => x.StartAt).When(x => x.StartAt.HasValue && x.EndAt.HasValue)
             .WithMessage("Thời gian kết thúc phải sau thời gian bắt đầu.");
 
         RuleFor(x => x.MinOrderAmount)
-            .GreaterThan(0).When(x => x.MinOrderAmount.HasValue)
-            .WithMessage("Giá trị đơn hàng phải lớn hơn 0.");
-
+            .GreaterThanOrEqualTo(0m).WithMessage("Giá trị đơn hàng tối thiểu phải từ 0 trở lên.");
+        // Not sent = no limit. A sent value, 0 included, is stored as is
         RuleFor(x => x.MaxOrderAmount)
-            .GreaterThan(0).When(x => x.MaxOrderAmount.HasValue)
-            .WithMessage("Giá trị đơn hàng phải lớn hơn 0.");
-
-        RuleFor(x => x.MaxOrderAmount)
-            .GreaterThanOrEqualTo(x => x.MinOrderAmount!.Value)
-            .When(x => x.MinOrderAmount.HasValue && x.MaxOrderAmount.HasValue)
-            .WithMessage("Giá trị đơn hàng tối đa không được nhỏ hơn giá trị tối thiểu.");
+            .GreaterThanOrEqualTo(0m).WithMessage("Giá trị đơn hàng tối đa phải từ 0 trở lên.")
+            .GreaterThan(x => x.MinOrderAmount).WithMessage("Giá trị đơn hàng tối đa phải lớn hơn giá trị tối thiểu.")
+            .When(x => x.MinOrderAmount.HasValue && x.MaxOrderAmount.HasValue, ApplyConditionTo.CurrentValidator);
     }
 }

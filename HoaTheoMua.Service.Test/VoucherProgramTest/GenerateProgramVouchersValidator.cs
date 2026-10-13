@@ -18,7 +18,23 @@ public class GenerateProgramVouchersValidator
         Assert.Contains(result.Errors, error => error.PropertyName == "MinOrderAmount"
             && error.ErrorMessage == "Giá trị đơn hàng tối thiểu phải từ 0 trở lên.");
         Assert.Contains(result.Errors, error => error.PropertyName == "MaxOrderAmount"
-            && error.ErrorMessage == "Giá trị đơn hàng tối đa phải lớn hơn 0.");
+            && error.ErrorMessage == "Giá trị đơn hàng tối đa phải từ 0 trở lên.");
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(0, false)] // max must be strictly greater than min
+    [InlineData(200_000, false)]
+    public void ZeroMaxOrderAmount_IsAcceptedOnlyWhenMinIsNotSent(int? min, bool valid)
+    {
+        var update = new Request.UpdateVoucherProgramRequest { MinOrderAmount = min, MaxOrderAmount = 0 };
+        var create = new Request.CreateVoucherProgramRequest
+        {
+            Name = "Zero max", StartAt = "2026-10-15T00:00:00+07:00", MinOrderAmount = min, MaxOrderAmount = 0
+        };
+
+        Assert.Equal(valid, new UpdateVoucherProgramRequestValidator().Validate(update).IsValid);
+        Assert.Equal(valid, new CreateVoucherProgramRequestValidator().Validate(create).IsValid);
     }
 
     [Fact]

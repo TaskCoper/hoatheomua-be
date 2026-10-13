@@ -44,6 +44,23 @@ public class CreateVoucherTest
     }
 
     [Fact]
+    public async Task CodeOfDeletedVoucher_CanBeReused()
+    {
+        await using var db = VoucherTestData.Database();
+        var deleted = VoucherTestData.Voucher("TET2027", active: false);
+        deleted.IsDeleted = true;
+        db.Vouchers.Add(deleted);
+        await db.SaveChangesAsync();
+        var request = ValidRequest();
+        request.Code = "tet2027";
+
+        await new VoucherService(db).CreateVoucher(request);
+
+        Assert.Equal(2, db.Vouchers.Count(x => x.Code == "TET2027"));
+        Assert.Single(db.Vouchers, x => x.Code == "TET2027" && !x.IsDeleted);
+    }
+
+    [Fact]
     public async Task GeneratedCode_UsesRequestedShape()
     {
         await using var db = VoucherTestData.Database();
