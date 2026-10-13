@@ -28,6 +28,7 @@ public class Order : BaseEntity<Guid>, IAuditableEntity
     public decimal ShippingFee { get; set; }
     public decimal ProductFee { get; set; }
     public decimal TotalFee { get; set; }
+    public string? VoucherSnapshot { get; set; }
     public required long OrderTime { get; set; } = 0;
     // public Guid? AddressId { get; set; }
     public required string PhoneReceiver { get; set; }

@@ -1,6 +1,5 @@
 
 using System.Net.Http.Json;
-using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
@@ -28,6 +27,7 @@ public class Service : IService
     private readonly HoaTheoMua.Service.Product.IService _serviceProduct;
     private readonly HoaTheoMua.Service.BaoKim.IService _baoKimService;
     private readonly HoaTheoMua.Service.XanhSm.IService? _xanhSmService;
+    private readonly HoaTheoMua.Service.Voucher.IService? _voucherService;
     private readonly NhanhVnOption _nhanhVnOption;
     private readonly AhaMoveOption _ahaMoveOption;
 
@@ -38,7 +38,8 @@ public class Service : IService
         HoaTheoMua.Service.Product.IService serviceProduct,
         IConfiguration configuration,
         BaoKim.IService baoKimService,
-        HoaTheoMua.Service.XanhSm.IService? xanhSmService = null)
+        HoaTheoMua.Service.XanhSm.IService? xanhSmService = null,
+        HoaTheoMua.Service.Voucher.IService? voucherService = null)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
@@ -47,6 +48,7 @@ public class Service : IService
         _serviceProduct = serviceProduct;
         _baoKimService = baoKimService;
         _xanhSmService = xanhSmService;
+        _voucherService = voucherService;
         _nhanhVnOption = new NhanhVnOption();
         _ahaMoveOption = new AhaMoveOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
@@ -353,44 +355,6 @@ public class Service : IService
         }
     }
 
-    private static void EnsureUrgentOrderMatchesCurrentSlot(
-        long orderTime,
-        Response.DeliverySlotAvailabilityItem slot,
-        DateTimeOffset createdAt)
-    {
-        if (orderTime != 0)
-        {
-            return;
-        }
-
-        var hourMatches = Regex.Matches(
-            slot.Label,
-            @"(?<!\d)(?<hour>[01]?\d|2[0-3])\s*h",
-            RegexOptions.IgnoreCase);
-
-        if (hourMatches.Count < 2 ||
-            !int.TryParse(hourMatches[0].Groups["hour"].Value, out var startHour) ||
-            !int.TryParse(hourMatches[1].Groups["hour"].Value, out var endHour) ||
-            startHour == endHour)
-        {
-            throw new BadRequestException($"Không thể xác định khung giờ từ tag {slot.Label}");
-        }
-
-        var currentVietnamTime = TimeOnly.FromDateTime(
-            createdAt.ToOffset(TimeSpan.FromHours(7)).DateTime);
-        var startTime = new TimeOnly(startHour, 0);
-        var endTime = new TimeOnly(endHour, 0);
-        var isInSlot = startTime < endTime
-            ? currentVietnamTime >= startTime && currentVietnamTime < endTime
-            : currentVietnamTime >= startTime || currentVietnamTime < endTime;
-
-        if (!isInSlot)
-        {
-            throw new BadRequestException(
-                $"Đơn giao gấp chỉ được tạo khi thời gian hiện tại nằm trong khung giờ {slot.Label}");
-        }
-    }
-
     private async Task SavePendingOrderWithSlotValidation(
         Repository.Entity.Order order,
         IReadOnlyCollection<OrderDetails> orderDetails,
@@ -398,7 +362,7 @@ public class Service : IService
         int slotTagId,
         CancellationToken cancellationToken)
     {
-        if (_dbContext.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
+        if (_dbContext.Database?.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
         {
             // var availability = await GetDeliverySlotAvailability(
             //     slotDate,
@@ -412,7 +376,11 @@ public class Service : IService
             return;
         }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        // Voucher checkout already owns a transaction. Keep both the voucher row lock
+        // and the delivery-slot lock until that caller commits the complete order.
+        await using var transaction = _dbContext.Database.CurrentTransaction == null
+            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken)
+            : null;
 
         await _dbContext.Database.ExecuteSqlInterpolatedAsync(
             $"SELECT pg_advisory_xact_lock({slotDate.DayNumber}, {slotTagId})",
@@ -427,7 +395,8 @@ public class Service : IService
         await _dbContext.Orders.AddAsync(order, cancellationToken);
         await _dbContext.OrderDetails.AddRangeAsync(orderDetails, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction != null)
+            await transaction.CommitAsync(cancellationToken);
     }
 
     // VAT applied to the product subtotal when the buyer requests an invoice.
@@ -469,7 +438,6 @@ public class Service : IService
             slotTagId,
             cancellationToken);
         var selectedSlot = availability.Slots.Single();
-        EnsureUrgentOrderMatchesCurrentSlot(request.OrderTime, selectedSlot, createdAt);
         EnsureDeliverySlotAvailable(selectedSlot);
 
         var checkoutConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "checkout");
@@ -546,7 +514,32 @@ public class Service : IService
                                   .SelectMany(x => x.ProductMetadata)
                                   .Where(x => x.SnapShotCard != null)
                                   .Sum(x => x.SnapShotCard!.TotalPrice);
-        var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
+        // var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
+
+        // Check the voucher before the gateway call, so a bad code never leaves a stray payment order behind
+        Request.VoucherSnapshot? voucherSnapshot = null;
+
+        // PrepareOrderVoucher locks the voucher row; the lock holds until the order is saved and this commits,
+        // so a concurrent order with the same code sees this one as Pending and cannot take the same last use
+        await using var voucherTransaction = !string.IsNullOrWhiteSpace(request.VoucherCode)
+                                             && _dbContext.Database.IsRelational()
+            ? await _dbContext.Database.BeginTransactionAsync()
+            : null;
+
+        if (!string.IsNullOrWhiteSpace(request.VoucherCode))
+        {
+            if (_voucherService == null)
+            {
+                throw new InvalidOperationException("Voucher service is not available");
+            }
+
+            voucherSnapshot = await _voucherService.PrepareOrderVoucher(request.VoucherCode, totalProductFee);
+        }
+
+        // VAT tính trên (tiền hàng đã trừ voucher + tiền ship)
+        var discountAmount = voucherSnapshot?.DiscountAmount ?? 0m;
+        var taxableAmount = totalProductFee - discountAmount;
+        var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : taxableAmount * VatRate;
 
         var newOrder = new Repository.Entity.Order()
         {
@@ -567,7 +560,7 @@ public class Service : IService
             CreatedAt = createdAt,
             ShippingFee = totalShippingFee,
             ProductFee = totalProductFee,
-            TotalFee = totalProductFee + totalShippingFee + vatFee,
+            TotalFee = taxableAmount + vatFee + totalShippingFee,
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
             PaymentGateway = request.PaymentGateway,
@@ -584,7 +577,16 @@ public class Service : IService
             ReceiptEmail = request.ReceiptEmail,
             IsExportInvoice = request.IsExportInvoice,
             InvoiceType = request.InvoiceType,
+            VoucherSnapshot = voucherSnapshot == null
+                ? null
+                : System.Text.Json.JsonSerializer.Serialize(voucherSnapshot),
         };
+
+        // A voucher must not bring the total to zero or below; checked before the gateway call
+        if (voucherSnapshot != null && newOrder.TotalFee <= 0)
+        {
+            throw new BadRequestException("Order total must be greater than 0.");
+        }
 
         var metadataByOrderDetailId = new Dictionary<Guid, Request.OrderDetailMetadata>();
         var newOrderDetails = preparedOrder.PurchaseItems.Select(item =>
@@ -637,7 +639,9 @@ public class Service : IService
                 slotDate,
                 slotTagId,
                 cancellationToken);
-
+            if (voucherTransaction != null)
+                await voucherTransaction.CommitAsync();
+            
             return createBaoKimOrderResponse.Data;
         }
         else if (request.PaymentGateway == PaymentGateway.Sepay)
@@ -670,6 +674,9 @@ public class Service : IService
                 slotDate,
                 slotTagId,
                 cancellationToken);
+            
+            if (voucherTransaction != null)
+                await voucherTransaction.CommitAsync();
 
             return sepayReponse;
         }
@@ -1897,6 +1904,7 @@ public class Service : IService
             InvoiceType = orders.InvoiceType,
             ShippingFee = orders.ShippingFee,
             ProductFee = orders.ProductFee,
+            DiscountAmount = DeserializeVoucherSnapshot(orders.VoucherSnapshot)?.DiscountAmount,
             TotalFee = orders.TotalFee,
             VatFee = orders.Vat,
             Remark = orders.Remarks,
@@ -1973,6 +1981,22 @@ public class Service : IService
         catch (JsonException)
         {
             // Metadata cũ hoặc lỗi không được làm trang Admin mất toàn bộ Order.
+            return null;
+        }
+    }
+
+    private static Request.VoucherSnapshot? DeserializeVoucherSnapshot(string? snapshot)
+    {
+        if (string.IsNullOrWhiteSpace(snapshot))
+            return null;
+
+        try
+        {
+            // Snapshot được ghi bằng System.Text.Json lúc tạo order
+            return System.Text.Json.JsonSerializer.Deserialize<Request.VoucherSnapshot>(snapshot);
+        }
+        catch (System.Text.Json.JsonException)
+        {
             return null;
         }
     }

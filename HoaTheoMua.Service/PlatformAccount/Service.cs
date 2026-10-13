@@ -13,7 +13,7 @@ using AccountEntity = HoaTheoMua.Repository.Entity.PlatformAccount;
 namespace HoaTheoMua.Service.PlatformAccount;
 
 public class Service(AppDbContext db, ICurrentUserService user, IOAuthProvider provider,
-    TokenProtector protector, IOptions<PlatformAccountOptions> settings, TimeProvider clock) : IService
+    TokenProtector protector, IOptions<PlatformAccountOptions> settings, TimeProvider clock) : IService, IPublicationTokenRefresher
 {
     public async Task<List<Response.Account>> List(string? platform = null, CancellationToken ct = default)
     {
@@ -144,12 +144,25 @@ public class Service(AppDbContext db, ICurrentUserService user, IOAuthProvider p
     public async Task<Response.Account> Refresh(Guid id, CancellationToken ct = default)
     {
         user.GetRequiredUserId();
+        return await RefreshCore(id, false, ct);
+    }
+    public async Task RefreshForPublication(Guid accountId, CancellationToken ct)
+        => _ = await RefreshCore(accountId, true, ct);
+
+    private async Task<Response.Account> RefreshCore(Guid id, bool onlyIfDue, CancellationToken ct)
+    {
         AccountEntity account; Credentials credentials; var lease = Guid.NewGuid();
         await using (var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null)
         {
             account = await LockAccount(id, ct);
+            if (onlyIfDue && (account.Platform != PlatformType.Zalo || account.Status != "Connected"
+                || account.AccessTokenExpiresAt > clock.GetUtcNow().AddMinutes(5)))
+            { if (tx != null) await tx.CommitAsync(ct); return ToResponse(account); }
             settings.Value.RequireConfigured(account.Platform);
             if (account.Status != "Connected") throw new AccountException(409, "PLATFORM_REAUTH_REQUIRED", "Tài khoản cần kết nối lại trước khi làm mới token.");
+            if (account.Platform == PlatformType.Zalo && await db.PostPublications.AnyAsync(x => x.PlatformAccountId == id
+                && x.LeaseId != null && x.LeaseUntil > clock.GetUtcNow(), ct))
+                throw new AccountException(409, "PLATFORM_REFRESH_IN_PROGRESS", "Tài khoản đang được dùng để đăng bài; thử lại sau.");
             if (account.RefreshLeaseId != null)
             {
                 if (account.RefreshLeaseUntil > clock.GetUtcNow()) throw new AccountException(409, "PLATFORM_REFRESH_IN_PROGRESS", "Tài khoản đang được làm mới token.");

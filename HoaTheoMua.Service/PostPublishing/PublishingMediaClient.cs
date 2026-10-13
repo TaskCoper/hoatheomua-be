@@ -47,7 +47,7 @@ public sealed class PublishingMediaClient(HttpClient http)
             using var request = new HttpRequestMessage(HttpMethod.Get, image.Url);
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode) throw new MetaPublishingException("MEDIA_FETCH_FAILED" + suffix, true, true);
-            var limit = (platform == PlatformType.Instagram ? 8 : 10) * 1024 * 1024;
+            var limit = platform == PlatformType.Zalo ? 1_000_000 : (platform == PlatformType.Instagram ? 8 : 10) * 1024 * 1024;
             if (response.Content.Headers.ContentLength > limit) throw new MetaPublishingException("MEDIA_TOO_LARGE" + suffix, definitive: true);
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
             using var bytes = new MemoryStream(); var buffer = new byte[16384]; int read;
@@ -76,7 +76,8 @@ public sealed class PublishingMediaClient(HttpClient http)
                 "image/tiff" => data.Length >= 8 && (data.AsSpan(0, 4).SequenceEqual(new byte[] { 73, 73, 42, 0 }) || data.AsSpan(0, 4).SequenceEqual(new byte[] { 77, 77, 0, 42 })),
                 _ => false
             };
-            if (!valid) throw new MetaPublishingException("FACEBOOK_IMAGE_FORMAT_INVALID" + suffix, definitive: true);
+            if (platform == PlatformType.Zalo && mime is not ("image/jpeg" or "image/png")) valid = false;
+            if (!valid) throw new MetaPublishingException((platform == PlatformType.Zalo ? "ZALO_IMAGE_FORMAT_INVALID" : "FACEBOOK_IMAGE_FORMAT_INVALID") + suffix, definitive: true);
             return new(jpeg?.Width, jpeg?.Height);
         }
         catch (HttpRequestException) { throw new MetaPublishingException("MEDIA_FETCH_FAILED" + suffix, true, true); }

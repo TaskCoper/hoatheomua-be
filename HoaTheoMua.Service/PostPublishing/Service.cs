@@ -43,7 +43,8 @@ public sealed partial class Service(AppDbContext db, Store store, ICurrentUserSe
         if (selected.Count == 0) reasons.Add("MISSING_IMAGES");
         var text = string.Join("\n\n", new[] { content?.Title, content?.Content, content?.Hashtag }.Where(x => !string.IsNullOrWhiteSpace(x)));
         var snapshot = new PublicationSnapshot(target.BasePostId, target.Id, account.Id, account.ExternalAccountId, account.PageId, target.Platform,
-            accountSettings.Value.Meta.GraphApiVersion, "postgen-text-v1", content?.Id ?? Guid.Empty, content?.Title, content?.Content ?? "", content?.Hashtag, text, selected.ToArray());
+            target.Platform == PlatformType.Zalo ? "v2.0" : accountSettings.Value.Meta.GraphApiVersion, "postgen-text-v1", content?.Id ?? Guid.Empty, content?.Title, content?.Content ?? "", content?.Hashtag, text, selected.ToArray(),
+            target.Platform == PlatformType.Zalo ? new PublicationArticle(settings.Value.ZaloAuthor, content?.Title ?? "") : null);
         if (target.Status == PlatformPostStatus.Generating) reasons.Add("GENERATION_IN_PROGRESS");
         if (await db.PostPublications.AnyAsync(x => x.PlatformPostId == target.Id && (ActiveStates.Contains(x.Status) || PreventRepostStates.Contains(x.Status)), ct)
             || target.Status is PlatformPostStatus.Scheduled or PlatformPostStatus.Publishing or PlatformPostStatus.Published) reasons.Add("PUBLICATION_EXISTS");

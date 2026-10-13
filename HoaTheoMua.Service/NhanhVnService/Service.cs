@@ -634,7 +634,10 @@ public class Service: IService
             TaiKhoanChuyenKhoan = payment?.Transfer?.AccountId?.ToString(),
             TienDatCoc = (payment?.Deposit?.Amount ?? 0),
             TaiKhoanDatCoc = payment?.Deposit?.AccountId?.ToString(),
-            TienChietKhau = (payment?.Discount?.Amount ?? 0),
+            TienChietKhau = payment?.Discount?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true   // ① có phải loại % không?
+                                ? (products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))                            // ② tổng tiền hàng
+                                * (payment?.Discount?.Amount ?? 0) / 100)                                        //    × % / 100
+                                : (payment?.Discount?.Amount ?? 0),                                                 // ③ loại cash: lấy thẳng số tiền
             TienVat = (payment?.Vat?.Amount ?? 0),
             TyLeVat = payment?.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment?.Vat?.Value?.ToString() : null,
             TienQuetThe = (payment?.Credit?.Amount ?? 0),
@@ -805,7 +808,10 @@ public class Service: IService
             order.TaiKhoanChuyenKhoan = payment.Transfer?.AccountId?.ToString() ?? order.TaiKhoanChuyenKhoan;
             order.TienDatCoc = (payment.Deposit?.Amount ?? (long?)order.TienDatCoc);
             order.TaiKhoanDatCoc = payment.Deposit?.AccountId?.ToString() ?? order.TaiKhoanDatCoc;
-            order.TienChietKhau = (payment.Discount?.Amount ?? (long?)order.TienChietKhau);
+            order.TienChietKhau = payment?.Discount?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true   // ① có phải loại % không?
+                                ? (products.Sum(p => (p.Price ?? 0) * (p.Quantity ?? 0))                            // ② tổng tiền hàng
+                                * (payment?.Discount?.Amount ?? 0) / 100)                                        //    × % / 100
+                                : (payment?.Discount?.Amount ?? 0);
             order.TienVat = (payment.Vat?.Amount ?? (long?)order.TienVat);
             order.TyLeVat = payment.Vat?.Type?.Equals("percent", StringComparison.OrdinalIgnoreCase) == true ? payment.Vat.Value?.ToString() : order.TyLeVat;
             order.TienQuetThe = (payment.Credit?.Amount ?? order.TienQuetThe);

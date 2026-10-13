@@ -8,7 +8,8 @@ public sealed class PublicationException(int status, string code, string message
 public record PublicationImage(Guid GenerationId, string Url, int Order);
 public record PublicationSnapshot(Guid BasePostId, Guid PlatformPostId, Guid AccountId, string ExternalAccountId,
     string? PageId, PlatformType Platform, string ApiVersion, string FormatterVersion, Guid GenerationId,
-    string? Title, string Content, string? Hashtag, string Text, PublicationImage[] Images);
+    string? Title, string Content, string? Hashtag, string Text, PublicationImage[] Images, PublicationArticle? Article = null);
+public record PublicationArticle(string Author, string Description);
 
 // Only provider identifiers belong here. Never store raw provider responses or credentials.
 public record MediaCheckpoint(int Order, string ProviderId, int? Width = null, int? Height = null, bool Ready = false);
@@ -18,6 +19,8 @@ public record PublicationCheckpoint
     public string? ContainerId { get; init; }
     public bool ReadyToPublish { get; init; }
     public DateTimeOffset? PreparedAt { get; init; }
+    // Encrypted Zalo processing token; never exposed in API responses or attempt logs.
+    public string? ProtectedProviderReference { get; init; }
 }
 public enum PublicationOperation { Prepare, Publish, Reconcile }
 public enum PublicationOutcome { Continue, Pending, Succeeded, Rejected, Unknown }
@@ -52,6 +55,8 @@ public class PublishingOptions
 {
     public bool FacebookEnabled { get; set; }
     public bool InstagramEnabled { get; set; }
+    public bool ZaloEnabled { get; set; }
+    public string ZaloAuthor { get; set; } = "PostGen";
     public int OperationTimeoutSeconds { get; set; } = 30;
     public int LeaseSeconds { get; set; } = 120;
     public int MaxSteps { get; set; } = 80;
@@ -60,7 +65,7 @@ public class PublishingOptions
     public int MinScheduleLeadSeconds { get; set; } = 60;
     public int MaxScheduleDays { get; set; } = 30;
     public int ScheduleLatenessSeconds { get; set; } = 900;
-    public bool Enabled(PlatformType p) => p == PlatformType.Facebook ? FacebookEnabled : p == PlatformType.Instagram && InstagramEnabled;
+    public bool Enabled(PlatformType p) => p switch { PlatformType.Facebook => FacebookEnabled, PlatformType.Instagram => InstagramEnabled, PlatformType.Zalo => ZaloEnabled, _ => false };
     public void Validate()
     {
         if (OperationTimeoutSeconds is < 1 or > 60 || LeaseSeconds < OperationTimeoutSeconds + 30 || LeaseSeconds > 600

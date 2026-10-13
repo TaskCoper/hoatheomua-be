@@ -1635,10 +1635,19 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<decimal?>("Vat")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("VoucherSnapshot")
+                        .HasColumnType("jsonb");
+
                     b.Property<int>("Ward")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("Status", "OrderTime")
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("Orders");
                 });
@@ -1795,6 +1804,9 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.Property<string>("CuaHang")
                         .HasColumnType("text");
+
+                    b.Property<DateOnly?>("DeliveryDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("DiaChiKhachHang")
                         .HasColumnType("text");
@@ -2019,6 +2031,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<int?>("SoThuTuTheoNgay")
                         .HasColumnType("integer");
 
+                    b.Property<List<long>>("TagIds")
+                        .HasColumnType("bigint[]");
+
                     b.Property<string>("TaiKhoanChuyenKhoan")
                         .HasColumnType("text");
 
@@ -2100,6 +2115,9 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("DeliveryDate")
+                        .HasFilter("\"IsDeleted\" = false\r\nAND (\"TrangThaiDonHang\" IS NULL\r\n     OR \"TrangThaiDonHang\" NOT IN ('63', 'Khách hủy'))");
 
                     b.HasIndex("IdDonHangApi");
 
@@ -3227,6 +3245,136 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("Transactions");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Voucher", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset?>("EndAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("MaxDiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("MaxOrderAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("MaxUsageCount")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("MinOrderAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("ProgramId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("StartAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UsedCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = true");
+
+                    b.HasIndex("ProgramId")
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("Visibility", "IsActive", "IsDeleted");
+
+                    b.ToTable("Vouchers");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.VoucherProgram", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTimeOffset?>("EndAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("MaxOrderAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("MinOrderAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("StartAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("VoucherPrograms");
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
                 {
                     b.Property<long>("Id")
@@ -3679,6 +3827,16 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.Voucher", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.VoucherProgram", "Program")
+                        .WithMany("Vouchers")
+                        .HasForeignKey("ProgramId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Program");
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
                 {
                     b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
@@ -3734,6 +3892,11 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Navigation("MatIds");
 
                     b.Navigation("SubIds");
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.VoucherProgram", b =>
+                {
+                    b.Navigation("Vouchers");
                 });
 #pragma warning restore 612, 618
         }

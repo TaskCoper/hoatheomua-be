@@ -1,56 +1,41 @@
 {
   "skill": "api-integration-tester",
-  "status": "FAIL",
-  "started_at": "2026-08-31T08:01:52Z",
+  "status": "BLOCKED",
+  "started_at": "2026-10-12T17:50:56.949269+00:00",
   "checks": [
     {
-      "name": "official_express_contract_inventory",
+      "name": "PostPublishing + PlatformAccount unit/contract/lifecycle tests",
       "status": "PASS",
-      "evidence": "Reviewed the current official Vietnam Express documentation for authentication, list-available-services, estimate/order, create-order, orders/{id}, list-user-orders, cancel-order, place/geocode, and webhooks."
+      "evidence": "231 passed, 3 PostgreSQL-dependent tests skipped; dotnet test filter PostPublishingTest|PlatformAccountTest. Fake HttpMessageHandler and EF InMemory; not live OA evidence."
     },
     {
-      "name": "implemented_door_to_door_types",
+      "name": "API build",
       "status": "PASS",
-      "evidence": "All fields used by the current partner_pay Door-to-door estimate and booking flow are compatible with the official schemas. Response order_time accepts both the documented numeric string and the numeric value observed in production."
+      "evidence": "dotnet build HoaTheoMua.API --no-restore -m:1: 0 errors; existing ImageSharp advisory warnings."
     },
     {
-      "name": "cod_and_cash_payer_request_contract",
-      "status": "FAIL",
-      "evidence": "XanhSmAddonRequest does not model remain_cod or value, and XanhSmDeliveryPointRequest does not model the point-level addons object or is_payment_check_point boolean. COD and explicit cash-payer requests cannot be represented."
-    },
-    {
-      "name": "geocode_contract",
-      "status": "FAIL",
-      "evidence": "The official GET place/geocode API and its response model are not implemented in the XanhSM client."
-    },
-    {
-      "name": "webhook_contract",
-      "status": "FAIL",
-      "evidence": "No XanhSM webhook envelope, event payload DTOs, or HMAC signature handling were found. Official event_time is an integer, but the documentation is internally inconsistent about seconds versus milliseconds."
-    },
-    {
-      "name": "documented_numeric_precision",
+      "name": "Admin check and production build",
       "status": "PASS",
-      "evidence": "A few DTO fields use double where the documentation says integer, including service max/min distance and express package max weight. These are wider compatible types and do not create deserialization failures."
+      "evidence": "corepack yarn check and build; 336 viewport assertions; TypeScript/lint/i18n checks."
     },
     {
-      "name": "xanhsm_regression_tests",
+      "name": "Deployment validation",
       "status": "PASS",
-      "evidence": "dotnet test filtered to FullyQualifiedName~XanhSm passed 23/23 tests."
+      "evidence": "Zalo-only valid config accepted; missing encryption, publish without OAuth enabled, invalid flag rejected."
     },
     {
-      "name": "production_endpoint_after_deployment",
+      "name": "Browser",
       "status": "BLOCKED",
-      "evidence": "The order_time compatibility change has not been deployed from this workspace, and no dedicated customer test token was provided for authenticated live contract probes."
+      "evidence": "Local Vite loaded and admin route redirected to sign-in. No dedicated authenticated test session available."
+    },
+    {
+      "name": "Live OA create/verify/detail and real API persistence",
+      "status": "BLOCKED",
+      "evidence": "Requires authorized test OA, valid credentials, eligible service plan and approved article fixture. No live publication attempted."
     }
   ],
-  "failures": [
-    "COD addon fields and point-level payment/addon fields are missing from request DTOs.",
-    "The official geocode API is not represented by the client.",
-    "The official webhook contract and signature verification are not implemented.",
-    "Production verification remains pending deployment and an authenticated test request."
-  ],
+  "failures": [],
   "redactions": [
-    "No JWT, XanhSM credential, customer data, or raw provider response body was recorded."
+    "No access/refresh tokens, app secrets or process tokens recorded. Synthetic credentials used in tests."
   ]
 }
