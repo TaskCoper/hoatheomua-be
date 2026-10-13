@@ -602,7 +602,7 @@ public class Service : IService
                 DiscountAmount = voucherSnapshot == null
                     ? null
                     : (int)Math.Round(voucherSnapshot.DiscountAmount, MidpointRounding.AwayFromZero),
-                CouponCode = voucherSnapshot?.Code ?? "",
+                CouponCode = "",
                 CouponMoney = 0m,
                 CouponIsValid = 0,
                 UsedPoints = 0,
