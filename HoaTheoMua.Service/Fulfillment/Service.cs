@@ -51,6 +51,7 @@ public class Service : IService
     private readonly Revalidate.IService _revalidateService;
     private readonly XanhSm.IService _xanhSmService;
     private readonly ILogger<Service> _logger;
+    private readonly SystemOption _systemOption = new();
 
     public Service(
         AppDbContext dbContext,
@@ -74,6 +75,7 @@ public class Service : IService
         _ahaMoveOption = new AhaMoveOption();
         configuration.GetSection(nameof(NhanhVnOption)).Bind(_nhanhVnOption);
         configuration.GetSection(nameof(AhaMoveOption)).Bind(_ahaMoveOption);
+        configuration.GetSection(nameof(SystemOption)).Bind(_systemOption);
     }
 
     public async Task<DeliveryDispatchResult> DispatchDeliveryAsync(
@@ -98,7 +100,7 @@ public class Service : IService
         // Legacy: privateDescription từng chứa ghi chú, thông tin người nhận,
         // lịch giao và hóa đơn. Chi tiết Order hiện được xem tại trang Admin.
         // var privateDescription = await BuildPrivateDescriptionAsync(order, companyAddress?.Remarks);
-        var privateDescription = $"https://hoatheomua-dev-client.bentran1vn.com/htm/system-orders/{order.Id}?tab=snapshot";
+        var privateDescription = $"{_systemOption.ClientUrl}/htm/system-orders/{order.Id}?tab=snapshot";
 
 
         var tags = order.TagIds ?? new List<long>();
