@@ -1,5 +1,11 @@
 namespace HoaTheoMua.Service.PlatformAccount;
 
+// Worker-only capability. No anonymous HTTP endpoint exposes token rotation.
+public interface IPublicationTokenRefresher
+{
+    Task RefreshForPublication(Guid accountId, CancellationToken ct);
+}
+
 public interface IService
 {
     Task<List<Response.Account>> List(string? platform = null, CancellationToken ct = default);

@@ -105,6 +105,8 @@ services:
       PlatformAccountOptions__Zalo__Enabled: "false"
       PublishingOptions__FacebookEnabled: ${POSTGEN_PUBLISH_FACEBOOK_ENABLED:-false}
       PublishingOptions__InstagramEnabled: ${POSTGEN_PUBLISH_INSTAGRAM_ENABLED:-false}
+      PublishingOptions__ZaloEnabled: ${POSTGEN_PUBLISH_ZALO_ENABLED:-false}
+      PublishingOptions__ZaloAuthor: ${POSTGEN_ZALO_ARTICLE_AUTHOR:-PostGen}
       PublishingOptions__MinScheduleLeadSeconds: ${POSTGEN_SCHEDULE_MIN_LEAD_SECONDS:-60}
       PublishingOptions__MaxScheduleDays: ${POSTGEN_SCHEDULE_MAX_DAYS:-30}
       PublishingOptions__ScheduleLatenessSeconds: ${POSTGEN_SCHEDULE_LATENESS_SECONDS:-900}

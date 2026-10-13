@@ -38,6 +38,8 @@ using FlowerReferenceService = HoaTheoMua.Service.FlowerReference;
 using CardTemplateService = HoaTheoMua.Service.CardTemplate;
 using CardService = HoaTheoMua.Service.Card;
 using FlowerService = HoaTheoMua.Service.Flower;
+using VoucherService = HoaTheoMua.Service.Voucher;
+using VoucherProgramService = HoaTheoMua.Service.VoucherProgram;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -105,6 +107,7 @@ builder.Services.AddHttpClient<NhanhVnService.INhanhVnDeliveryStatusClient, Nhan
     "NhanhVnDeliveryStatus", client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddScoped<JobDescriptionService.IService, JobDescriptionService.Service>();
 builder.Services.AddScoped<RecruitmentRequestService.IService, RecruitmentRequestService.Service>();
+builder.Services.AddScoped<VoucherService.IService, VoucherService.Service>();
 builder.Services.AddHttpClient<AhamoveService.IService, AhamoveService.Service>("AhamoveService");
 builder.Services.AddHttpClient<XanhSmService.IService, XanhSmService.Service>("XanhSmService", client =>
 {
@@ -113,6 +116,8 @@ builder.Services.AddHttpClient<XanhSmService.IService, XanhSmService.Service>("X
 builder.Services.AddHttpClient<BaoKimService.IService, BaoKimService.Service>("BaoKimService");
 builder.Services.AddScoped<ProductService.IService, ProductService.Service>();
 builder.Services.AddScoped<ConfigService.IService, ConfigService.Service>();
+builder.Services.AddScoped<VoucherProgramService.IService, VoucherProgramService.Service>();
+builder.Services.AddSingleton<VoucherProgramService.IVoucherCodeGenerator, VoucherProgramService.VoucherCodeGenerator>();
 builder.Services.AddScoped<AddressService.IService, AddressService.Service>();
 builder.Services.AddScoped<NhanhVnService.IService, NhanhVnService.Service>();
 builder.Services.AddScoped<ProductImportService.IService, ProductImportService.Service>();
@@ -134,7 +139,9 @@ HoaTheoMua.Service.PostPublishing.Registration.AddPostGenPublishingAdapters(buil
 builder.Services.Configure<PlatformAccountService.PlatformAccountOptions>(builder.Configuration.GetSection(nameof(PlatformAccountService.PlatformAccountOptions)));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<PlatformAccountService.TokenProtector>();
-builder.Services.AddScoped<PlatformAccountService.IService, PlatformAccountService.Service>();
+builder.Services.AddScoped<PlatformAccountService.Service>();
+builder.Services.AddScoped<PlatformAccountService.IService>(sp => sp.GetRequiredService<PlatformAccountService.Service>());
+builder.Services.AddScoped<PlatformAccountService.IPublicationTokenRefresher>(sp => sp.GetRequiredService<PlatformAccountService.Service>());
 builder.Services.AddHttpClient<PlatformAccountService.IOAuthProvider, PlatformAccountService.OAuthProvider>("PostGenOAuth", client =>
 {
     client.Timeout = Timeout.InfiniteTimeSpan;

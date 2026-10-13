@@ -64,6 +64,9 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasForeignKey(x => x.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.Property(o => o.VoucherSnapshot)
+                        .HasColumnType("jsonb");
+        
         builder.SeedOrder();
     }
 }

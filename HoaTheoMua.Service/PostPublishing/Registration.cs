@@ -8,6 +8,12 @@ public static class Registration
     {
         services.AddScoped<IPublishingAdapter, FacebookPublisher>();
         services.AddScoped<IPublishingAdapter, InstagramPublisher>();
+        services.AddScoped<IPublishingAdapter, ZaloPublisher>();
+        services.AddHttpClient<ZaloPublishingClient>("PostGenZaloPublishing", client =>
+        {
+            client.Timeout = Timeout.InfiniteTimeSpan;
+            client.MaxResponseContentBufferSize = 1024 * 1024;
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false }).RemoveAllLoggers();
         services.AddHttpClient<MetaPublishingClient>("PostGenPublishing", client =>
         {
             client.Timeout = Timeout.InfiniteTimeSpan;
