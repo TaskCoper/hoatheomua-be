@@ -166,6 +166,11 @@ public class Service : IService
             }
         }
 
+        if (request.OrderTime < 0)
+        {
+            throw new BadRequestException("Thời gian giao hàng không hợp lệ");
+        }
+
         // if (request.CardTotal < 0)
         // {
         //     throw new BadRequestException("Tiền thiệp không được nhỏ hơn 0.");
@@ -198,6 +203,8 @@ public class Service : IService
         }
         
         var now = DateTimeOffset.UtcNow;
+        // OrderTime = 0 is urgent delivery, so it is delivered now
+        var deliveryAt = request.OrderTime == 0 ? now : DateTimeOffset.FromUnixTimeSeconds(request.OrderTime);
 
         var vouchers = await _dbContext.Vouchers
             .AsNoTracking()
@@ -229,7 +236,8 @@ public class Service : IService
                 // null = no limit
                 var isValid = x.IsActive
                               && x.StartAt <= now
-                              && (x.EndAt == null || x.EndAt >= now)
+                              // && (x.EndAt == null || x.EndAt >= now)
+                              && (x.EndAt == null || x.EndAt >= deliveryAt)
                               && x.UsedCount < x.MaxUsageCount
                               && (x.MinOrderAmount == null || totalPrice >= x.MinOrderAmount)
                               && (x.MaxOrderAmount == null || totalPrice <= x.MaxOrderAmount);
@@ -550,9 +558,17 @@ public class Service : IService
         return "Voucher status updated successfully.";
     }
 
-    public async Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee)
+    // public async Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee)
+    public async Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee, long orderTime = 0)
     {
+        if (orderTime < 0)
+        {
+            throw new BadRequestException("Thời gian giao hàng không hợp lệ");
+        }
+
         var now = DateTimeOffset.UtcNow;
+        // orderTime = 0 is urgent delivery, so it is delivered now
+        var deliveryAt = orderTime == 0 ? now : DateTimeOffset.FromUnixTimeSeconds(orderTime);
 
         var query = _dbContext.Vouchers
             .AsNoTracking()
@@ -561,7 +577,8 @@ public class Service : IService
                         && x.Visibility == VoucherVisibility.Public
                         && x.ProgramId == null
                         && x.StartAt <= now
-                        && (x.EndAt == null || x.EndAt >= now)
+                        // && (x.EndAt == null || x.EndAt >= now)
+                        && (x.EndAt == null || x.EndAt >= deliveryAt)
                         && x.UsedCount < x.MaxUsageCount);
 
         if (productFee.HasValue)
@@ -610,7 +627,12 @@ public class Service : IService
         var voucher = await FindUsableVoucher(request.code!);
 
         // The UsedCount column may lag; PrepareOrderVoucher re-checks with the counted uses
-        return QuoteVoucher(voucher, request.productFee, voucher.UsedCount);
+        // return QuoteVoucher(voucher, request.productFee, voucher.UsedCount);
+        // orderTime = 0 is urgent delivery, so it is delivered now
+        var deliveryAt = request.orderTime == 0
+            ? DateTimeOffset.UtcNow
+            : DateTimeOffset.FromUnixTimeSeconds(request.orderTime);
+        return QuoteVoucher(voucher, request.productFee, voucher.UsedCount, deliveryAt);
     }
 
     private async Task<VoucherEntity> FindUsableVoucher(string code)
@@ -633,7 +655,9 @@ public class Service : IService
         return voucher;
     }
 
-    private static Response.EstimateVoucherResponse QuoteVoucher(VoucherEntity voucher, decimal productFee, int usedCount)
+    // private static Response.EstimateVoucherResponse QuoteVoucher(VoucherEntity voucher, decimal productFee, int usedCount)
+    private static Response.EstimateVoucherResponse QuoteVoucher(VoucherEntity voucher, decimal productFee, int usedCount,
+        DateTimeOffset deliveryAt)
     {
         var startAt = voucher.Program?.StartAt ?? voucher.StartAt;
         var endAt = voucher.Program != null ? voucher.Program.EndAt : voucher.EndAt;
@@ -647,7 +671,9 @@ public class Service : IService
             throw new BadRequestException("Voucher chưa đến thời gian sử dụng.");
         }
 
-        if (endAt.HasValue && endAt.Value < now)
+        // if (endAt.HasValue && endAt.Value < now)
+        // The end date is checked against the delivery time, not the time the order is placed
+        if (endAt.HasValue && endAt.Value < deliveryAt)
         {
             throw new BadRequestException("Voucher đã hết hạn sử dụng.");
         }
@@ -876,7 +902,9 @@ public class Service : IService
 
     // Used by CreateOrder, inside the transaction that saves the order. Same checks and error messages as
     // EstimateVoucher, but "uses left" is counted from orders, and Pending orders still hold their use.
-    public async Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee)
+    // public async Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee)
+    public async Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee,
+        DateTimeOffset deliveryAt)
     {
         var voucher = await FindUsableVoucher(code);
 
@@ -892,7 +920,8 @@ public class Service : IService
             .Where(x => x.Id == voucher.Id && x.UsedCount != paidCount)
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCount, paidCount));
 
-        var estimate = QuoteVoucher(voucher, productFee, reservedCount);
+        // var estimate = QuoteVoucher(voucher, productFee, reservedCount);
+        var estimate = QuoteVoucher(voucher, productFee, reservedCount, deliveryAt);
 
         return new Order.Request.VoucherSnapshot
         {
