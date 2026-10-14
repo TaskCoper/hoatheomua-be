@@ -565,8 +565,6 @@ public class NhanhOrderUpdateWebhookRequest
 
 public class NhanhOrderAddDataDto
 {
-    [JsonPropertyName("labelIds")]
-    public List<long>? LabelIds { get; set; }
 
     [JsonPropertyName("info")]
     public NhanhOrderInfoDto? Info { get; set; }
@@ -646,6 +644,9 @@ public class NhanhOrderInfoDto
 
     [JsonPropertyName("trackingUrl")]
     public string? TrackingUrl { get; set; }
+    
+    [JsonPropertyName("tagIds")]
+    public List<long>? TagIds { get; set; }
 }
 
 public class NhanhOrderPartDeliveryDto
