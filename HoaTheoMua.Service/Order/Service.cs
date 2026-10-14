@@ -376,7 +376,11 @@ public class Service : IService
             return;
         }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        // Voucher checkout already owns a transaction. Keep both the voucher row lock
+        // and the delivery-slot lock until that caller commits the complete order.
+        await using var transaction = _dbContext.Database.CurrentTransaction == null
+            ? await _dbContext.Database.BeginTransactionAsync(cancellationToken)
+            : null;
 
         await _dbContext.Database.ExecuteSqlInterpolatedAsync(
             $"SELECT pg_advisory_xact_lock({slotDate.DayNumber}, {slotTagId})",
@@ -391,7 +395,8 @@ public class Service : IService
         await _dbContext.Orders.AddAsync(order, cancellationToken);
         await _dbContext.OrderDetails.AddRangeAsync(orderDetails, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction != null)
+            await transaction.CommitAsync(cancellationToken);
     }
 
     // VAT applied to the product subtotal when the buyer requests an invoice.
@@ -509,7 +514,7 @@ public class Service : IService
                                   .SelectMany(x => x.ProductMetadata)
                                   .Where(x => x.SnapShotCard != null)
                                   .Sum(x => x.SnapShotCard!.TotalPrice);
-        var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
+        // var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : totalProductFee * VatRate;
 
         // Check the voucher before the gateway call, so a bad code never leaves a stray payment order behind
         Request.VoucherSnapshot? voucherSnapshot = null;
@@ -531,6 +536,11 @@ public class Service : IService
             voucherSnapshot = await _voucherService.PrepareOrderVoucher(request.VoucherCode, totalProductFee);
         }
 
+        // VAT tính trên (tiền hàng đã trừ voucher + tiền ship)
+        var discountAmount = voucherSnapshot?.DiscountAmount ?? 0m;
+        var taxableAmount = totalProductFee - discountAmount;
+        var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : taxableAmount * VatRate;
+
         var newOrder = new Repository.Entity.Order()
         {
             Id = Guid.NewGuid(),
@@ -550,7 +560,7 @@ public class Service : IService
             CreatedAt = createdAt,
             ShippingFee = totalShippingFee,
             ProductFee = totalProductFee,
-            TotalFee = totalProductFee + totalShippingFee + vatFee - (voucherSnapshot?.DiscountAmount ?? 0m),
+            TotalFee = taxableAmount + vatFee + totalShippingFee,
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
             PaymentGateway = request.PaymentGateway,
@@ -1577,7 +1587,8 @@ public class Service : IService
         var ahamoveConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "ahamove");
         var ahamoveApi = ahamoveConfigs.GetValue("ahamove.base_url", _ahaMoveOption.BaseUrl) + "/v3/orders/estimates";
         var ahamoveToken = ahamoveConfigs.GetValue("ahamove.api_key", _ahaMoveOption.Token);
-        var freeShipping = ahamoveConfigs.GetValue("ahamove.free_ship", 0);
+        // var freeShipping = ahamoveConfigs.GetValue("ahamove.free_ship", 0);
+        var freeShipping = ahamoveConfigs.GetValue("ahamove.free_ship", 0d);
 
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, ahamoveApi);
@@ -1596,12 +1607,14 @@ public class Service : IService
             throw new BadRequestException("Ahamove returned null or empty data");
         }
 
-        if (freeShipping > 0 && result[0].Data.Distance <= freeShipping)
-        {
-            return 0;
-        }
+        // if (freeShipping > 0 && result[0].Data.Distance <= freeShipping)
+        // {
+        //     return 0;
+        // }
+        //
+        // return result[0].Data.TotalFee;
 
-        return result[0].Data.TotalFee;
+        return ShippingFeeHelper.CalculateBuyerFee(result[0].Data.Distance, freeShipping, result[0].Data.TotalFee);
     }
 
     private async Task<decimal> EstimateXanhSmShippingFeeAsync(
@@ -1652,12 +1665,14 @@ public class Service : IService
             _ => null
         };
 
-        if (freeShippingKm > 0 && distanceKm is >= 0 && distanceKm <= freeShippingKm)
-        {
-            return 0;
-        }
+        // if (freeShippingKm > 0 && distanceKm is >= 0 && distanceKm <= freeShippingKm)
+        // {
+        //     return 0;
+        // }
+        //
+        // return quote.TotalFee;
 
-        return quote.TotalFee;
+        return ShippingFeeHelper.CalculateBuyerFee(distanceKm, freeShippingKm, quote.TotalFee);
     }
 
     public async Task<Response.EstimateXanhSmShippingFeeResponse> EstimateXanhSmShippingFee(

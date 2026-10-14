@@ -270,6 +270,13 @@ public class Service: IService
             throw new AhamoveException();
         }
 
+        // total_fee trả cho FE là phí ship người mua trả: ≤ ahamove.free_ship km thì 0,
+        // vượt thì (km thực tế - km free) * 5.000.
+        ahamoveResult[0].Data.TotalFee = HoaTheoMua.Service.Common.ShippingFeeHelper.CalculateBuyerFee(
+            ahamoveResult[0].Data.Distance,
+            configs.GetValue("ahamove.free_ship", 0d),
+            ahamoveResult[0].Data.TotalFee);
+
         return new { ahamoveResult, products };
     }
     

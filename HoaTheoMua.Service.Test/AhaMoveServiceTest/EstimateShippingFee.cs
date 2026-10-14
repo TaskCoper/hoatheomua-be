@@ -41,7 +41,8 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
 
         private AppDbContext CreateMockDbContext(
             List<CompanyAddressEntity> companyAddresses,
-            List<HoaTheoMua.Repository.Entity.Product>? products = null)
+            List<HoaTheoMua.Repository.Entity.Product>? products = null,
+            double? freeShipKm = null)
         {
             var mockDbSet = companyAddresses.BuildMockDbSet();
             var mockProducts = (products ?? new List<HoaTheoMua.Repository.Entity.Product>
@@ -70,6 +71,10 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
                 new HoaTheoMua.Repository.Entity.Config { Key = "ahamove.api_key", Value = "{\"value\": \"test_api_key\"}", Group = "ahamove", IsDeleted = false },
                 new HoaTheoMua.Repository.Entity.Config { Key = "ahamove.base_url", Value = "{\"value\": \"http://ahamove.test\"}", Group = "ahamove", IsDeleted = false }
             };
+            if (freeShipKm.HasValue)
+            {
+                configs.Add(new HoaTheoMua.Repository.Entity.Config { Key = "ahamove.free_ship", Value = JsonSerializer.Serialize(new { value = freeShipKm.Value }), Group = "ahamove", IsDeleted = false });
+            }
             var mockConfigDbSet = configs.BuildMockDbSet();
 
             var options = new DbContextOptionsBuilder<AppDbContext>().Options;
@@ -498,5 +503,62 @@ namespace HoaTheoMua.Service.Test.AhaMoveServiceTest
             Assert.Equal(100000, items[0].GetProperty("price").GetInt32());
             Assert.Equal(2, items[0].GetProperty("num").GetInt32());
         }
+
+        // total_fee trả cho FE là phí ship: ≤ free_ship km thì 0đ, vượt thì (km thực tế - km free) * 5.000đ
+        [Theory]
+        [InlineData(5d, 3d, 0)]
+        [InlineData(5d, 5d, 0)]
+        [InlineData(5d, 5.4d, 2000)]
+        [InlineData(5d, 9d, 20000)]
+        [InlineData(5d, 12.5d, 37500)]
+        [InlineData(5.5d, 7d, 7500)]
+        [InlineData(null, 9d, 30000)]
+        public async Task EstimateShippingFee_AppliesFreeShipPolicyToTotalFee(
+            double? freeShipKm, double distanceKm, int expectedShippingFee)
+        {
+            // Arrange
+            var dbContext = CreateMockDbContext(
+                new List<CompanyAddressEntity> { CreateAddress() }, freeShipKm: freeShipKm);
+
+            var mockConfig = new Mock<IConfiguration>();
+            mockConfig.Setup(x => x.GetSection(It.IsAny<string>())).Returns(new Mock<IConfigurationSection>().Object);
+
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req => req.RequestUri.ToString().Contains("ahamove")),
+                    ItExpr.IsAny<CancellationToken>()
+                )
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = JsonContent.Create(new List<ServiceResponse>
+                    {
+                        new ServiceResponse
+                        {
+                            ServiceId = "SGN-BIKE",
+                            Data = new ServiceData { Distance = distanceKm, TotalFee = 30000m }
+                        }
+                    })
+                });
+
+            var service = new AhaMoveServiceImplementation(
+                new HttpClient(mockHttpMessageHandler.Object), dbContext, mockConfig.Object);
+
+            var request = new AhaMoveRequest.EstimateShippingFeeRequest
+            {
+                Items = new List<AhaMoveRequest.Items>
+                {
+                    new AhaMoveRequest.Items { ProductId = DefaultProductId, Number = 1 }
+                }
+            };
+
+            // Act
+            var result = await service.EstimateShippingFee(request);
+
+            // Assert
+            var ahamoveResult = (List<ServiceResponse>)result.GetType().GetProperty("ahamoveResult")!.GetValue(result)!;
+            Assert.Equal(expectedShippingFee, ahamoveResult[0].Data.TotalFee);        }
     }
 }
