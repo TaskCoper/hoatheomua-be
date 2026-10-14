@@ -533,7 +533,10 @@ public class Service : IService
                 throw new InvalidOperationException("Voucher service is not available");
             }
 
-            voucherSnapshot = await _voucherService.PrepareOrderVoucher(request.VoucherCode, totalProductFee);
+            // voucherSnapshot = await _voucherService.PrepareOrderVoucher(request.VoucherCode, totalProductFee);
+            // OrderTime = 0 is urgent delivery, so it is delivered now
+            var deliveryAt = request.OrderTime == 0 ? createdAt : DateTimeOffset.FromUnixTimeSeconds(request.OrderTime);
+            voucherSnapshot = await _voucherService.PrepareOrderVoucher(request.VoucherCode, totalProductFee, deliveryAt);
         }
 
         // VAT tính trên (tiền hàng đã trừ voucher + tiền ship)
