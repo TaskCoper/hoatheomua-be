@@ -579,20 +579,21 @@ namespace HoaTheoMua.Service.Test.OrderTest
         {
             yield return [7d, 0.08d, "km", 0m];
             yield return [7d, 7d, "km", 0m];
-            yield return [7d, 7.001d, "km", 33000m];
+            yield return [7d, 7.001d, "km", 5m];
             yield return [2.5d, 2.5d, "km", 0m];
-            yield return [2.5d, 2.501d, "km", 33000m];
+            yield return [2.5d, 2.501d, "km", 5m];
             yield return [null, 4d, "km", 33000m];
             yield return [0d, 4d, "km", 33000m];
             yield return [-1d, 4d, "km", 33000m];
             yield return [5d, 4d, "km", 0m];
             yield return [5d, 5d, "km", 0m];
-            yield return [5d, 5.001d, "km", 33000m];
-            yield return [5d, 5.33d, "km", 33000m];
+            yield return [5d, 5.001d, "km", 5m];
+            yield return [5d, 5.33d, "km", 1650m];
             yield return [5d, 5000d, "m", 0m];
-            yield return [5d, 5001d, "m", 33000m];
+            yield return [5d, 5001d, "m", 5m];
             yield return [5d, 4d, " KM ", 0m];
-            yield return [3d, 4d, "km", 33000m];
+            yield return [3d, 4d, "km", 5000m];
+            yield return [5d, 12.5d, "km", 37500m];
             yield return [5d, 0d, "km", 0m];
             yield return [5d, null, "km", 33000m];
             yield return [5d, 4d, null, 33000m];
@@ -1200,7 +1201,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var dbContextMock = CreateMockDbContext(
                 orders: orders,
                 companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
-                freeShipDistance: 5000
+                freeShipDistance: 5
                 );
             var currentUser = CreateMockCurrentUserService(TestUserId);
             var productService = CreateMockProductService();
@@ -1232,7 +1233,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 .Setup<Task<HttpResponseMessage>>("SendAsync",
                     ItExpr.Is<HttpRequestMessage>(r => r.RequestUri.ToString().Contains("ahamove")),
                     ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(AhamoveSuccess(30000m, distance: 4000));
+                .ReturnsAsync(AhamoveSuccess(30000m, distance: 4));
 
             var httpClient = new HttpClient(handler.Object);
             var service = CreateService(dbContextMock.Object, httpClient, currentUser, productService);
@@ -1266,7 +1267,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             Assert.Equal(50000m, createdOrder.TotalFee);
         }
 
-        //Test case 14: Tạo đơn order ngoài bán kính thì vẫn tính phí bình thường
+        //Test case 14: Tạo đơn order ngoài bán kính thì tính (km thực tế - km free) * 5.000đ
         [Fact]
         public async Task CreateOrder_DistanceOutOfFreeShipConfig_HaveShippingFee()
         {
@@ -1274,7 +1275,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             var dbContextMock = CreateMockDbContext(
                 orders: orders,
                 companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
-                freeShipDistance: 5000);
+                freeShipDistance: 5);
             var currentUser = CreateMockCurrentUserService(TestUserId);
             var productService = CreateMockProductService();
 
@@ -1305,7 +1306,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 .Setup<Task<HttpResponseMessage>>("SendAsync",
                     ItExpr.Is<HttpRequestMessage>(r => r.RequestUri.ToString().Contains("ahamove")),
                     ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(AhamoveSuccess(30000m, distance: 9000));
+                .ReturnsAsync(AhamoveSuccess(30000m, distance: 9));
 
             var httpClient = new HttpClient(handler.Object);
             var service = CreateService(dbContextMock.Object, httpClient, currentUser, productService);
@@ -1335,8 +1336,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
             //
             var createdOrder = Assert.Single(orders);
-            Assert.Equal(30000m, createdOrder.ShippingFee);
-            Assert.Equal(80000m, createdOrder.TotalFee);
+            Assert.Equal(20000m, createdOrder.ShippingFee); // (9 - 5) * 5.000
+            Assert.Equal(70000m, createdOrder.TotalFee);
 
         }
 
