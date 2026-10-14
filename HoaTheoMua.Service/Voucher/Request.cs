@@ -52,12 +52,17 @@ public class Request
     {
         public string? code { get; set; }
         public decimal productFee { get; set; }
+        // Delivery time, Unix seconds, same as CreateOrder. Not sent or 0 = urgent delivery (now)
+        public long orderTime { get; set; }
     }
 
 
     public class FilterVoucherRequest
     {
         public List<ProductOrder> Products { get; set; } = new();
+
+        // Delivery time, Unix seconds, same as CreateOrder. Not sent or 0 = urgent delivery (now)
+        public long OrderTime { get; set; }
 
         // Greeting card total of the cart. CreateOrder adds it to the product fee, so the preview must too
         // public decimal? CardTotal { get; set; }

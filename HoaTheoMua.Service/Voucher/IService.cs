@@ -16,11 +16,13 @@ public interface IService
 
     Task<string> UpdateVouchers(Request.UpdateVouchersRequest request);
 
-    Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee);
+    // Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee);
+    Task<List<Response.PublicVoucherResponse>> GetPublicVouchers(decimal? productFee, long orderTime = 0);
 
     Task<Response.EstimateVoucherResponse> EstimateVoucher(Request.EstimateVoucherRequest request);
 
-    Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee);
+    // Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee);
+    Task<Order.Request.VoucherSnapshot> PrepareOrderVoucher(string code, decimal productFee, DateTimeOffset deliveryAt);
 
     Task<BasePaginationResponse> GetVouchers(int pageIndex, int pageSize, string? keyword, string? visibility,
         bool? isActive);

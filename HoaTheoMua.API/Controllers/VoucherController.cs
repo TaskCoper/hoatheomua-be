@@ -87,9 +87,12 @@ public class VoucherController : ControllerBase
 
     [HttpGet("vouchers/public")]
     [Authorize(Policy = JwtExtensions.CustomerPolicy)]
-    public async Task<IActionResult> GetPublicVouchers([FromQuery] decimal? productFee = null)
+    // public async Task<IActionResult> GetPublicVouchers([FromQuery] decimal? productFee = null)
+    public async Task<IActionResult> GetPublicVouchers([FromQuery] decimal? productFee = null,
+        [FromQuery] long orderTime = 0)
     {
-        var result = await _voucherService.GetPublicVouchers(productFee);
+        // var result = await _voucherService.GetPublicVouchers(productFee);
+        var result = await _voucherService.GetPublicVouchers(productFee, orderTime);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
