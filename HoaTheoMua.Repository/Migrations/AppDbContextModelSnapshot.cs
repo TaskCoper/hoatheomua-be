@@ -2122,7 +2122,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("IdDonHangApi");
 
                     b.HasIndex("IdDonHangNhanh")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.HasIndex("MaKhachHang");
 
