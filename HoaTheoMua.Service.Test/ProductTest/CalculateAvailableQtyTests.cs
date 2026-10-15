@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -66,6 +66,60 @@ public class CalculateAvailableQtyTests
     }
 
     #region UT-005: CalculateAvailableQty Method Tests
+
+    [Theory]
+    [InlineData(null, 0)]
+    [InlineData(0d, 0)]
+    [InlineData(-3d, 0)]
+    [InlineData(7.9, 7)]
+    public async Task NormalProduct_AllReadPaths_UseAvailableForSaleWithoutStockFallback(double? available, int expected)
+    {
+        using var db = CreateInMemoryDbContext();
+        var service = CreateService(db);
+        var product = new ProductEntity
+        {
+            Id = Guid.NewGuid(), NhanhProductId = "normal-parent", ProductType = "Sản phẩm",
+            Stock = 100, AvailableForSale = available.HasValue ? (decimal)available.Value : null,
+            IsActive = true, IsDeleted = false
+        };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var quantities = await service.CalculateAvailableQty(new List<Guid> { product.Id });
+        Assert.Equal(expected, quantities[product.Id].SellableQuantity);
+        Assert.Equal(expected > 0 ? "Còn hàng" : "Hết hàng", quantities[product.Id].StockStatus);
+        foreach (var sort in new[] { "price", "-sellablequantity" })
+        {
+            var page = await service.GetLocalProducts(new Request.LocalProductQueryRequest { sortBy = new List<string> { sort } });
+            Assert.Equal(expected, Assert.Single(page.Value.Items.Cast<Response.ProductDetailResponse>()).SellableQuantity);
+        }
+        var v2 = await service.GetLocalProductsV2(new Request.LocalProductQueryRequest());
+        Assert.Equal(expected, Assert.Single(v2.Value.Items.Cast<Response.ProductDetailResponse>()).SellableQuantity);
+        Assert.Equal(expected, (await service.GetLocalProductDetail(product.Id)).SellableQuantity);
+        Assert.Equal(expected, (await service.GetProductFamily(product.Id)).Parent.SellableQuantity);
+        Assert.Equal(expected, (await service.GetProductDetailByCustomer(product.Id)).SellableQuantity);
+        var byIds = await service.GetProductByIds(new Request.GetProductByIds { ProductIds = new List<Guid> { product.Id } });
+        Assert.Equal(expected, Assert.Single(byIds).SellableQuantity);
+    }
+
+    [Fact]
+    public async Task NormalVariant_FamilyAndDetail_UseOwnAvailableForSale()
+    {
+        using var db = CreateInMemoryDbContext();
+        var service = CreateService(db, isAdmin: true);
+        var parent = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "parent", ProductType = "Sản phẩm", Stock = 100, AvailableForSale = 9, IsActive = true };
+        var child = new ProductEntity { Id = Guid.NewGuid(), NhanhProductId = "child", ParentProductId = "parent", ProductType = "Sản phẩm", Stock = 200, AvailableForSale = 3, IsActive = true };
+        db.Products.AddRange(parent, child);
+        await db.SaveChangesAsync();
+
+        var detail = await service.GetLocalProductDetail(parent.Id);
+        Assert.Equal(9, detail.SellableQuantity);
+        Assert.Equal(3, Assert.Single(detail.Children).SellableQuantity);
+        Assert.Equal(3, (await service.GetLocalProductDetail(child.Id)).SellableQuantity);
+        var family = await service.GetProductFamily(child.Id);
+        Assert.Equal(9, family.Parent.SellableQuantity);
+        Assert.Equal(3, Assert.Single(family.Children).SellableQuantity);
+    }
 
     /// <summary>
     /// UT-005-01: Combo không biến thể có SellableQuantity đúng.
@@ -176,17 +230,17 @@ public class CalculateAvailableQtyTests
     }
 
     /// <summary>
-    /// UT-005-03: Sản phẩm thường lấy trực tiếp Stock.
+    /// UT-005-03: Sản phẩm thường lấy trực tiếp AvailableForSale.
     ///
-    /// **Rationale:** Xác nhận sản phẩm thường dùng trực tiếp Stock
+    /// **Rationale:** Xác nhận sản phẩm thường dùng trực tiếp AvailableForSale
     /// </summary>
     [Fact]
-    public async Task UT_005_03_NormalProduct_ReturnsStockDirectly()
+    public async Task UT_005_03_NormalProduct_ReturnsAvailableForSaleDirectly()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 15, IsDeleted = false };
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", Stock = 100, AvailableForSale = 15, IsDeleted = false };
         await dbContext.Products.AddAsync(product);
         await dbContext.SaveChangesAsync();
 
@@ -737,7 +791,7 @@ public class CalculateAvailableQtyTests
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
 
-        var product1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Normal 1", Stock = 10, IsDeleted = false };
+        var product1 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Normal 1", Stock = 100, AvailableForSale = 10, IsDeleted = false };
         var combo = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Combo", ProductName = "Combo 1", IsDeleted = false };
         var product2 = new ProductEntity { Id = Guid.NewGuid(), ProductType = "Sản phẩm", ProductName = "Normal 2", Stock = 0, IsDeleted = false };
 
@@ -992,12 +1046,12 @@ public class CalculateAvailableQtyTests
     #region UT-013: GetLocalProductDetail Integration Tests
 
     /// <summary>
-    /// UT-013-01: Sản phẩm thường lấy Stock.
+    /// UT-013-01: Sản phẩm thường lấy AvailableForSale.
     ///
-    /// **Rationale:** Xác nhận sản phẩm thường dùng trực tiếp Stock
+    /// **Rationale:** Xác nhận sản phẩm thường dùng trực tiếp AvailableForSale
     /// </summary>
     [Fact]
-    public async Task UT_013_01_GetLocalProductDetail_NormalProduct_UsesStockForSellableQuantity()
+    public async Task UT_013_01_GetLocalProductDetail_NormalProduct_UsesAvailableForSaleForSellableQuantity()
     {
         using var dbContext = CreateInMemoryDbContext();
         var service = CreateService(dbContext);
@@ -1006,7 +1060,8 @@ public class CalculateAvailableQtyTests
         {
             Id = Guid.NewGuid(),
             ProductType = "Sản phẩm",
-            Stock = 15,
+            Stock = 100,
+            AvailableForSale = 15,
             Position = 3.5,
             Factor = 1.25m,
             IsActive = true,
