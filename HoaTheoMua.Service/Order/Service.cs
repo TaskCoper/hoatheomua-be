@@ -542,7 +542,17 @@ public class Service : IService
         // VAT tính trên (tiền hàng đã trừ voucher + tiền ship)
         var discountAmount = voucherSnapshot?.DiscountAmount ?? 0m;
         var taxableAmount = totalProductFee - discountAmount;
-        var vatFee = string.IsNullOrEmpty(request.TaxCode) ? 0m : taxableAmount * VatRate;
+        var vatFee = string.IsNullOrEmpty(request.TaxCode)
+            ? 0m
+            : decimal.Round(
+                taxableAmount * VatRate,
+                0,
+                MidpointRounding.AwayFromZero);
+
+        var totalFee = decimal.Round(
+            taxableAmount + vatFee + totalShippingFee,
+            0,
+            MidpointRounding.AwayFromZero);
 
         var newOrder = new Repository.Entity.Order()
         {
@@ -563,7 +573,7 @@ public class Service : IService
             CreatedAt = createdAt,
             ShippingFee = totalShippingFee,
             ProductFee = totalProductFee,
-            TotalFee = taxableAmount + vatFee + totalShippingFee,
+            TotalFee = totalFee,
             Vat = vatFee,
             PaymentMethod = request.PaymentMethod,
             PaymentGateway = request.PaymentGateway,
@@ -1873,7 +1883,8 @@ public class Service : IService
             .ToDictionaryAsync(x => x.NhanhProductId!);
 
         var parentNhanhProductIds = findProduct.Values
-            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
+            // .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
+            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId) && x.ParentProductId != "-1" && x.ParentProductId != "-2")
             .Select(x => x.ParentProductId!)
             .Distinct()
             .ToList();

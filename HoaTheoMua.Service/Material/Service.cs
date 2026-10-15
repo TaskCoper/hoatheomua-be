@@ -126,7 +126,7 @@ public class Service : IService
 
         var combo = await _dbContext.Products
                         .AsNoTracking()
-                        .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
+                        .Where(x => x.Id == comboId && (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2") && !x.IsDeleted)
                         .Select(x => new { x.Id, x.NhanhProductId, x.ProductType, x.IsActive })
                         .FirstOrDefaultAsync()
                     ?? throw new NotFoundException("Không tìm thấy combo");
@@ -290,7 +290,7 @@ public class Service : IService
         // 2. Load combo cha
         var combo = await _dbContext.Products
                         .AsNoTracking()
-                        .Where(x => x.Id == comboId && x.ParentProductId == null && !x.IsDeleted)
+                        .Where(x => x.Id == comboId && (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2") && !x.IsDeleted)
                         .Select(x => new { x.Id, x.NhanhProductId, x.ProductType, x.IsActive })
                         .FirstOrDefaultAsync()
                     ?? throw new NotFoundException("Không tìm thấy combo");
@@ -481,7 +481,7 @@ public class Service : IService
             var combo = await _dbContext.Products
                             .AsNoTracking()
                             .Where(x => x.Id == comboId
-                                        && x.ParentProductId == null
+                                        && (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2")
                                         && !x.IsDeleted)
                             .Select(x => new { x.NhanhProductId, x.IsActive })
                             .FirstOrDefaultAsync()
@@ -602,13 +602,13 @@ public class Service : IService
             throw new ConflictException("Sản phẩm đang mở bán, không thể cập nhật hệ số");
         }
 
-        if (childProduct.ParentProductId == null)
+        if (childProduct.ParentProductId == null || childProduct.ParentProductId == string.Empty || childProduct.ParentProductId == "-1" || childProduct.ParentProductId == "-2")
             throw new BadRequestException("Sản phẩm không phải là combo con (không có sản phẩm cha)");
 
         var parentProduct = await _dbContext.Products
                                 .AsNoTracking()
                                 .Where(x => x.NhanhProductId == childProduct.ParentProductId
-                                            && x.ParentProductId == null
+                                            && (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2")
                                             && !x.IsDeleted)
                                 .Select(x => new { x.Id, x.IsActive })
                                 .FirstOrDefaultAsync()
