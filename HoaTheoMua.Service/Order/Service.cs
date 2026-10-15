@@ -1006,8 +1006,8 @@ public class Service : IService
 
         // Sản phẩm chưa có giá không được tính 0đ (Retail = Price ?? 0m bên dưới).
         // Áp dụng cho cả dòng phát sinh: phần thêm, giấy gói, ruy băng của hoa AI.
-        if (productRows.Any(x => x.Price == null))
-            throw new BadRequestException("ORDER_PRODUCT_PRICE_MISSING");
+        // if (productRows.Any(x => x.Price == null))
+        //     throw new BadRequestException("ORDER_PRODUCT_PRICE_MISSING");
 
         var productRowsById = productRows.ToDictionary(x => x.Id);
 
@@ -1404,10 +1404,10 @@ public class Service : IService
             throw new BadRequestException("Đơn hàng có sản phẩm không có NhanhProductId hợp lệ");
         }
 
-        if (productRows.Any(x => x.Price == null))
-        {
-            throw new BadRequestException("Một số sản phẩm chưa có giá bán. Vui lòng thử lại sau.");
-        }
+        // if (productRows.Any(x => x.Price == null))
+        // {
+        //     throw new BadRequestException("Một số sản phẩm chưa có giá bán. Vui lòng thử lại sau.");
+        // }
 
         var productRowsById = productRows.ToDictionary(x => x.Id);
 

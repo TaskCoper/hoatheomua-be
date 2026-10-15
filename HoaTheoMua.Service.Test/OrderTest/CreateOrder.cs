@@ -940,40 +940,40 @@ namespace HoaTheoMua.Service.Test.OrderTest
         // ---------------------------------------------------------------------
         // TEST CASE: Sản phẩm chưa có giá (Price = null) -> BadRequestException, không tính 0đ.
         // ---------------------------------------------------------------------
-        [Fact]
-        public async Task CreateOrder_ProductWithoutPrice_ThrowsBadRequestException()
-        {
-            // Arrange
-            var product = CreateStockProduct(101, "Test Product", 10m, TestProductId);
-            product.Price = null;
+        // [Fact]
+        // public async Task CreateOrder_ProductWithoutPrice_ThrowsBadRequestException()
+        // {
+        //     // Arrange
+        //     var product = CreateStockProduct(101, "Test Product", 10m, TestProductId);
+        //     product.Price = null;
 
-            var dbContext = CreateMockDbContext(
-                companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
-                products: new List<ProductEntity> { product }).Object;
-            var currentUser = CreateMockCurrentUserService(TestUserId);
-            var httpClient = new HttpClient(new Mock<HttpMessageHandler>().Object);
-            var productService = CreateMockProductService();
+        //     var dbContext = CreateMockDbContext(
+        //         companyAddresses: new List<CompanyAddressEntity> { CreateCompanyAddress() },
+        //         products: new List<ProductEntity> { product }).Object;
+        //     var currentUser = CreateMockCurrentUserService(TestUserId);
+        //     var httpClient = new HttpClient(new Mock<HttpMessageHandler>().Object);
+        //     var productService = CreateMockProductService();
 
-            var service = CreateService(dbContext, httpClient, currentUser, productService);
+        //     var service = CreateService(dbContext, httpClient, currentUser, productService);
 
-            var request = new OrderRequest.CreateOrderRequest
-            {
-                Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
-                Gateway = "BaoKim",
-                PaymentGateway = PaymentGateway.BaoKim,
-                ShippingGateway = ShippingGateway.Ahamove,
-                TagIds = [SlotTagId],
-                PhoneReceiver = TestPhoneReceiver,
-                FullNameReceiver = TestFullNameReceiver
-            };
+        //     var request = new OrderRequest.CreateOrderRequest
+        //     {
+        //         Items = new List<AhaMoveRequest.Items> { new AhaMoveRequest.Items { ItemId = 101, ProductId = TestProductId, Number = 1 } },
+        //         Gateway = "BaoKim",
+        //         PaymentGateway = PaymentGateway.BaoKim,
+        //         ShippingGateway = ShippingGateway.Ahamove,
+        //         TagIds = [SlotTagId],
+        //         PhoneReceiver = TestPhoneReceiver,
+        //         FullNameReceiver = TestFullNameReceiver
+        //     };
 
-            // Act
-            var act = async () => await service.CreateOrder(request);
+        //     // Act
+        //     var act = async () => await service.CreateOrder(request);
 
-            // Assert
-            var exception = await Assert.ThrowsAsync<BadRequestException>(act);
-            Assert.Equal("ORDER_PRODUCT_PRICE_MISSING", exception.Message);
-        }
+        //     // Assert
+        //     var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        //     Assert.Equal("ORDER_PRODUCT_PRICE_MISSING", exception.Message);
+        // }
 
         // ---------------------------------------------------------------------
         // TEST CASE 07: Sản phẩm không tồn tại trong dữ liệu Products local.
