@@ -360,27 +360,27 @@ public class Service: IService
             }
             
             // Parent.NhanhProductId == Child.ParentProductId.
-            var existParent = await _appDbContext.Products
-                .FirstOrDefaultAsync(x => x.NhanhProductId == product.ParentProductId);
-            //hỏi thử rằng là: product đó, nếu nó đã tồn tại rồi, thì hỏi thử có tồn tại 
-            //parent của nó hay không
-            if (existParent != null)
-            {
-                //update parent
-                existParent.AvailableForSale += (decimal?)item.Available;
-                existParent.TotalStock += (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
-                existParent.Stock += (decimal?)item.Remain;
-                existParent.DeliveringStock += (decimal?)item.Shipping;
-                existParent.StockError += (decimal?)item.Damaged;
-                existParent.Held += (decimal?)item.Holding;//tạm giữ các kho
-                existParent.StockTransferring += (decimal?)item.Transfering;
-                // product.HeldComponents = item.Holding;
-            
-                // product.WarehouseStock += (decimal?)item.Warranty.Remain;
-                existParent.WarrantyStock += (decimal?)item.Warranty?.Remain;
-                existParent.HeldComponents += (decimal?)item.Warranty?.Holding;
-                existParent.UpdatedAt = DateTimeOffset.UtcNow;
-            }
+            // var existParent = await _appDbContext.Products
+            //     .FirstOrDefaultAsync(x => x.NhanhProductId == product.ParentProductId);
+            // //hỏi thử rằng là: product đó, nếu nó đã tồn tại rồi, thì hỏi thử có tồn tại 
+            // //parent của nó hay không
+            // if (existParent != null)
+            // {
+            //     //update parent
+            //     existParent.AvailableForSale += (decimal?)item.Available;
+            //     existParent.TotalStock += (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
+            //     existParent.Stock += (decimal?)item.Remain;
+            //     existParent.DeliveringStock += (decimal?)item.Shipping;
+            //     existParent.StockError += (decimal?)item.Damaged;
+            //     existParent.Held += (decimal?)item.Holding;//tạm giữ các kho
+            //     existParent.StockTransferring += (decimal?)item.Transfering;
+            //     // product.HeldComponents = item.Holding;
+            //
+            //     // product.WarehouseStock += (decimal?)item.Warranty.Remain;
+            //     existParent.WarrantyStock += (decimal?)item.Warranty?.Remain;
+            //     existParent.HeldComponents += (decimal?)item.Warranty?.Holding;
+            //     existParent.UpdatedAt = DateTimeOffset.UtcNow;
+            // }
             
             
             product.AvailableForSale = (decimal?)item.Available;
@@ -428,7 +428,8 @@ public class Service: IService
             Id = Guid.NewGuid(),
             NhanhProductId = item.Id.ToString(),
             CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime()
+            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
+            IsActive = true
         };
 
             product.ParentProductId = item.ParentId?.ToString();
@@ -649,7 +650,7 @@ public class Service: IService
             GhiChuCuaKhach = info.Description,
             GhiChuNoiBo = info.PrivateDescription,
             TrangThaiDonHang = info.Status?.ToString(),
-            TagIds = item.LabelIds?.Distinct().ToList(),
+            TagIds = info.TagIds?.Distinct().ToList(),
     
             NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : null,
             NgayGuiHangVanChuyen = !string.IsNullOrEmpty(carrier?.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate) ? sendDate.ToUniversalTime() : null,
@@ -825,9 +826,9 @@ public class Service: IService
         order.GhiChuCuaKhach = info.Description ?? order.GhiChuCuaKhach;
         order.GhiChuNoiBo = info.PrivateDescription ?? order.GhiChuNoiBo;
         order.TrangThaiDonHang = info.Status?.ToString() ?? order.TrangThaiDonHang;
-        if (item.LabelIds != null)
+        if (info.TagIds != null)
         {
-            order.TagIds = item.LabelIds.Distinct().ToList();
+            order.TagIds = info.TagIds.Distinct().ToList();
         }
         order.NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value).ToUniversalTime() : order.NgayXacNhan;
     
@@ -895,7 +896,8 @@ public class Service: IService
             {
                 Id = Guid.NewGuid(),
                 NhanhProductId = item.Id.ToString(),
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                IsActive = true
             };
             await _appDbContext.Products.AddAsync(product);
         }

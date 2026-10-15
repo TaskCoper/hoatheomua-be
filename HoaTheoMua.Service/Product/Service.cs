@@ -233,7 +233,7 @@ public class Service : IService
             .ThenInclude(cs => cs.Mat)
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty) && x.IsActive);
+        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2") && x.IsActive);
         
         //sort theo sellableQuantiy giảm dần
 
@@ -335,7 +335,7 @@ public class Service : IService
                     ProductType = product.ProductType,
                     ParentProductId = product.ParentProductId,
                     NhanhProductId = product.NhanhProductId,
-                    Stock = product.Stock
+                    AvailableForSale = product.AvailableForSale
                 })
                 .ToList());
 
@@ -363,7 +363,7 @@ public class Service : IService
                     ProductType = product.ProductType,
                     ParentProductId = product.ParentProductId,
                     NhanhProductId = product.NhanhProductId,
-                    Stock = product.Stock
+                    AvailableForSale = product.AvailableForSale
                 })
                 .ToList());
         }
@@ -417,7 +417,7 @@ public class Service : IService
             .AsNoTracking()
             .AsQueryable();
 
-        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty));
+        query = query.Where(x => !x.IsDeleted && (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2"));
 
         // Giai đoạn 3: Áp dụng các điều kiện lọc tại cơ sở dữ liệu.
         if (!string.IsNullOrWhiteSpace(search))
@@ -486,16 +486,16 @@ public class Service : IService
                         (x.ProductType == "Combo" &&
                           !_dbContext.Products.Any(child =>
                               !child.IsDeleted &&
-                              child.ParentProductId == x.NhanhProductId))
+                              (child.ParentProductId != null && child.ParentProductId != "" && child.ParentProductId != "-1" && child.ParentProductId != "-2") && child.ParentProductId == x.NhanhProductId))
                         ||
                         // Combo cha: parent có type Sản phẩm, có con và tất cả con đều có type Combo.
                         (x.ProductType == "Sản phẩm" &&
                          _dbContext.Products.Any(child =>
                              !child.IsDeleted &&
-                             child.ParentProductId == x.NhanhProductId) &&
+                             (child.ParentProductId != null && child.ParentProductId != "" && child.ParentProductId != "-1" && child.ParentProductId != "-2") && child.ParentProductId == x.NhanhProductId) &&
                          !_dbContext.Products.Any(child =>
                              !child.IsDeleted &&
-                             child.ParentProductId == x.NhanhProductId &&
+                             (child.ParentProductId != null && child.ParentProductId != "" && child.ParentProductId != "-1" && child.ParentProductId != "-2") && child.ParentProductId == x.NhanhProductId &&
                              child.ProductType != "Combo")));
                     break;
                 
@@ -506,11 +506,11 @@ public class Service : IService
                             // Sản phẩm độc lập
                             !_dbContext.Products.Any(child =>
                                 !child.IsDeleted &&
-                                child.ParentProductId == x.NhanhProductId) ||
+                                (child.ParentProductId != null && child.ParentProductId != "" && child.ParentProductId != "-1" && child.ParentProductId != "-2") && child.ParentProductId == x.NhanhProductId) ||
                             // Sản phẩm có con nhưng không phải full combo
                             _dbContext.Products.Any(child =>
                                 !child.IsDeleted &&
-                                child.ParentProductId == x.NhanhProductId &&
+                                (child.ParentProductId != null && child.ParentProductId != "" && child.ParentProductId != "-1" && child.ParentProductId != "-2") && child.ParentProductId == x.NhanhProductId &&
                                 child.ProductType != "Combo")
                         ));
                     break;
@@ -543,7 +543,7 @@ public class Service : IService
                     .AsNoTracking()
                     .Where(child =>
                         !child.IsDeleted &&
-                        child.ParentProductId != null &&
+                        child.ParentProductId != null && child.ParentProductId != "" && child.ParentProductId != "-1" && child.ParentProductId != "-2" &&
                         parentNhanhProductIds.Contains(child.ParentProductId))
                     .Select(child => child.Id)
                     .ToListAsync();
@@ -624,7 +624,7 @@ public class Service : IService
                 ProductType = product.ProductType,
                 ParentProductId = product.ParentProductId,
                 NhanhProductId = product.NhanhProductId,
-                Stock = product.Stock
+                AvailableForSale = product.AvailableForSale
             })
             .ToList());
 
@@ -653,7 +653,7 @@ public class Service : IService
             .Where(p => p.Id == id &&
                         !p.IsDeleted &&//nếu nó là con, ko phải là admin thì không cho xem details
                         (isAdmin || (p.IsActive &&
-                                     (p.ParentProductId == null || p.ParentProductId == string.Empty))))
+                                     (p.ParentProductId == null || p.ParentProductId == string.Empty || p.ParentProductId == "-1" || p.ParentProductId == "-2"))))
             .Select(LocalProductDetailSelector)
             .FirstOrDefaultAsync();
 
@@ -676,7 +676,7 @@ public class Service : IService
             .ToListAsync();
 
         // Giai đoạn 2: Xác định sản phẩm cha nếu sản phẩm hiện tại là biến thể.
-        var isParentProduct = string.IsNullOrWhiteSpace(response.ParentProductId);
+        var isParentProduct = !IsVariant(response.ParentProductId);
 
         if (!isParentProduct)
         {
@@ -700,7 +700,7 @@ public class Service : IService
             ? new List<Response.LocalProductDetailResponse>()
             : await _dbContext.Products
                 .AsNoTracking()
-                .Where(p => !p.IsDeleted && p.ParentProductId == response.NhanhProductId)
+                .Where(p => !p.IsDeleted && (p.ParentProductId != null && p.ParentProductId != "" && p.ParentProductId != "-1" && p.ParentProductId != "-2") && p.ParentProductId == response.NhanhProductId)
                 .Select(LocalProductDetailSelector)
                 .ToListAsync();
 
@@ -734,7 +734,7 @@ public class Service : IService
                 ProductType = response.ProductType,
                 ParentProductId = response.ParentProductId,
                 NhanhProductId = response.NhanhProductId,
-                Stock = response.Stock
+                AvailableForSale = response.AvailableForSale
             }
         };
         productsToCalculate.AddRange(response.Children.Select(c => new ProductQtyProjection
@@ -743,7 +743,7 @@ public class Service : IService
             ProductType = c.ProductType,
             ParentProductId = c.ParentProductId,
             NhanhProductId = c.NhanhProductId,
-            Stock = c.Stock
+            AvailableForSale = c.AvailableForSale
         }));
 
         // Giai đoạn 5: Tính và gán số lượng khả dụng cho sản phẩm chính và từng biến thể.
@@ -799,7 +799,7 @@ public class Service : IService
         if (selectedProduct == null)
             throw new NotFoundException("PRODUCT_NOT_FOUND", "PRODUCT_NOT_FOUND");
 
-        var parentNhanhProductId = string.IsNullOrWhiteSpace(selectedProduct.ParentProductId)
+        var parentNhanhProductId = !IsVariant(selectedProduct.ParentProductId)
             ? selectedProduct.NhanhProductId
             : selectedProduct.ParentProductId;
 
@@ -823,7 +823,7 @@ public class Service : IService
                 product.ProductType,
                 product.ParentProductId,
                 product.NhanhProductId,
-                product.Stock
+                product.AvailableForSale
             })
             .FirstOrDefaultAsync();
 
@@ -848,7 +848,7 @@ public class Service : IService
 
         var children = await _dbContext.Products
             .AsNoTracking()
-            .Where(product => product.ParentProductId == parentNhanhProductId &&
+            .Where(product => (product.ParentProductId != null && product.ParentProductId != "" && product.ParentProductId != "-1" && product.ParentProductId != "-2") && product.ParentProductId == parentNhanhProductId &&
                               !product.IsDeleted && product.IsActive)
             .Select(product => new
             {
@@ -864,7 +864,7 @@ public class Service : IService
                 product.ProductType,
                 product.ParentProductId,
                 product.NhanhProductId,
-                product.Stock
+                product.AvailableForSale
             })
             .ToListAsync();
 
@@ -889,7 +889,7 @@ public class Service : IService
                 ProductType = parentRecord.ProductType,
                 ParentProductId = parentRecord.ParentProductId,
                 NhanhProductId = parentRecord.NhanhProductId,
-                Stock = parentRecord.Stock
+                AvailableForSale = parentRecord.AvailableForSale
             }
         };
         productsToCalculate.AddRange(children.Select(child => new ProductQtyProjection
@@ -898,7 +898,7 @@ public class Service : IService
             ProductType = child.ProductType,
             ParentProductId = child.ParentProductId,
             NhanhProductId = child.NhanhProductId,
-            Stock = child.Stock
+            AvailableForSale = child.AvailableForSale
         }));
 
         var quantities = await CalculateAvailableQty(productsToCalculate, variantsArePreloaded: true);
@@ -1226,13 +1226,17 @@ public class Service : IService
         };
     }
 
+    // In-memory classification; query predicates use the same comparisons directly for SQL translation.
+    private static bool IsVariant([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? parentProductId) =>
+        !string.IsNullOrEmpty(parentProductId) && parentProductId != "-1" && parentProductId != "-2";
+
     private class ProductQtyProjection
     {
         public Guid Id { get; set; }
         public string? ProductType { get; set; }
         public string? ParentProductId { get; set; }
         public string? NhanhProductId { get; set; }
-        public decimal? Stock { get; set; }
+        public decimal? AvailableForSale { get; set; }
     }
 
     private static (int? SellableQuantity, string? StockStatus, string? UnavailableReason) GetQuantityInfo(
@@ -1242,7 +1246,7 @@ public class Service : IService
         if (quantities.TryGetValue(product.Id, out var quantityInfo))
             return quantityInfo;
 
-        var stock = Math.Max(0, (int)(product.Stock ?? 0));
+        var stock = Math.Max(0, (int)(product.AvailableForSale ?? 0));
         return (stock, stock > 0 ? "Còn hàng" : "Hết hàng", null);
     }
 
@@ -1263,7 +1267,7 @@ public class Service : IService
                 ProductType = p.ProductType,
                 ParentProductId = p.ParentProductId,
                 NhanhProductId = p.NhanhProductId,
-                Stock = p.Stock
+                AvailableForSale = p.AvailableForSale
             })
             .ToListAsync();
 
@@ -1287,7 +1291,7 @@ public class Service : IService
             .ToHashSet();
 
         var parentNhanhIds = products
-            .Where(p => p.ProductType == "Sản phẩm" && string.IsNullOrEmpty(p.ParentProductId))
+            .Where(p => p.ProductType == "Sản phẩm" && !IsVariant(p.ParentProductId))
             .Select(p => p.NhanhProductId)
             .Where(id => !string.IsNullOrEmpty(id))
             .Select(id => id!)
@@ -1302,7 +1306,7 @@ public class Service : IService
         else if (variantsArePreloaded)
         {
             comboVariants = products
-                .Where(p => p.ProductType == "Combo" && parentNhanhIds.Contains(p.ParentProductId!))
+                .Where(p => p.ProductType == "Combo" && (p.ParentProductId != null && p.ParentProductId != "" && p.ParentProductId != "-1" && p.ParentProductId != "-2") && parentNhanhIds.Contains(p.ParentProductId!))
                 .ToList();
         }
         else
@@ -1311,7 +1315,7 @@ public class Service : IService
                 .AsNoTracking()
                 .Where(p => !p.IsDeleted &&
                             p.ProductType == "Combo" &&
-                            parentNhanhIds.Contains(p.ParentProductId!))
+                            (p.ParentProductId != null && p.ParentProductId != "" && p.ParentProductId != "-1" && p.ParentProductId != "-2") && parentNhanhIds.Contains(p.ParentProductId!))
                 .Select(p => new ProductQtyProjection
                 {
                     Id = p.Id,
@@ -1447,7 +1451,7 @@ public class Service : IService
                 }
             }
             else if (product.ProductType == "Sản phẩm" &&
-                     string.IsNullOrEmpty(product.ParentProductId) &&
+                     !IsVariant(product.ParentProductId) &&
                      !string.IsNullOrEmpty(product.NhanhProductId))
             {
                 var variants = comboVariantsByParent[product.NhanhProductId];
@@ -1482,14 +1486,14 @@ public class Service : IService
                 else
                 {
                     // Sản phẩm cha không có biến thể combo dùng tồn kho trực tiếp, có clamp âm.
-                    quantity = Math.Max(0, (int)(product.Stock ?? 0));
+                    quantity = Math.Max(0, (int)(product.AvailableForSale ?? 0));
                     stockStatus = quantity > 0 ? "Còn hàng" : "Hết hàng";
                 }
             }
             else
             {
                 // Sản phẩm thường hoặc biến thể không phải combo dùng tồn kho trực tiếp, có clamp âm.
-                quantity = Math.Max(0, (int)(product.Stock ?? 0));
+                quantity = Math.Max(0, (int)(product.AvailableForSale ?? 0));
                 stockStatus = quantity > 0 ? "Còn hàng" : "Hết hàng";
             }
 
@@ -1544,7 +1548,7 @@ public class Service : IService
                     x.IsPin &&
                     !x.CategoryProduct.IsDeleted &&
                     !x.Product.IsDeleted &&
-                    (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty));
+                    (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty || x.Product.ParentProductId == "-1" || x.Product.ParentProductId == "-2"));
 
             if (categoryProductDetail == null)
             {
@@ -1560,7 +1564,7 @@ public class Service : IService
                                                                                     x.Id == id &&
                                                                                     !x.IsDeleted &&
                                                                                     x.IsPin &&
-                                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty));
+                                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2"));
 
             if (product == null)
             {
@@ -1597,7 +1601,7 @@ public class Service : IService
         var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
                                                                     x.Id == request.ProductId &&
                                                                     !x.IsDeleted &&
-                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty));
+                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2"));
 
         if (product == null)
         {
@@ -1613,7 +1617,7 @@ public class Service : IService
                         !x.IsDeleted &&
                         x.CategoryProductId == request.CategoryId.Value &&
                         x.IsPin &&
-                        (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty));
+                        (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty || x.Product.ParentProductId == "-1" || x.Product.ParentProductId == "-2"));
 
                 if (pinnedCategoryProductCount >= 32)
                 {
@@ -1626,7 +1630,7 @@ public class Service : IService
                     .CountAsync(x =>
                         !x.IsDeleted &&
                         x.IsPin &&
-                        (x.ParentProductId == null || x.ParentProductId == string.Empty));
+                        (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2"));
 
                 if (pinnedProductCount >= 32)
                 {
@@ -1687,7 +1691,7 @@ public class Service : IService
                     x.CategoryProductId == request.CategoryId.Value &&
                     !x.CategoryProduct.IsDeleted &&
                     !x.Product.IsDeleted &&
-                    (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty))
+                    (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty || x.Product.ParentProductId == "-1" || x.Product.ParentProductId == "-2"))
                 .OrderBy(x => x.Position)
                 .ThenBy(x => x.Product.ProductName);
 
@@ -1712,7 +1716,7 @@ public class Service : IService
             .Where(x =>
                 !x.IsDeleted &&
                 x.IsPin &&
-                x.ParentProductId == null)
+                (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2"))
             .OrderBy(x => x.Position)
             .ThenBy(x => x.ProductName);
 
@@ -1798,7 +1802,7 @@ public class Service : IService
         // Với input là sản phẩm con, thu thập ID cha để tra trạng thái cha.
         // ParentProductId lưu NhanhProductId của cha, không phải Guid Id nội bộ.
         var parentNhanhProductIds = products
-            .Where(p => !string.IsNullOrWhiteSpace(p.ParentProductId))
+            .Where(p => IsVariant(p.ParentProductId))
             .Select(p => p.ParentProductId!)
             .Distinct()
             .ToList();
@@ -1814,7 +1818,7 @@ public class Service : IService
         // Với input là sản phẩm cha hoặc sản phẩm độc lập, thu thập NhanhProductId
         // để kiểm tra xem chúng có sản phẩm con hay không.
         var requestedParentNhanhProductIds = products
-            .Where(p => string.IsNullOrWhiteSpace(p.ParentProductId) &&
+            .Where(p => !IsVariant(p.ParentProductId) &&
                         !string.IsNullOrWhiteSpace(p.NhanhProductId))
             .Select(p => p.NhanhProductId!)
             .Distinct()
@@ -1830,7 +1834,7 @@ public class Service : IService
             var childActiveStates = await _dbContext.Products
                 .AsNoTracking()
                 .Where(p => !p.IsDeleted &&
-                            p.ParentProductId != null &&
+                            p.ParentProductId != null && p.ParentProductId != "" && p.ParentProductId != "-1" && p.ParentProductId != "-2" &&
                             requestedParentNhanhProductIds.Contains(p.ParentProductId))
                 .Select(p => new { p.ParentProductId, p.IsActive })
                 .ToListAsync();
@@ -1847,7 +1851,7 @@ public class Service : IService
             ProductType = p.ProductType,
             ParentProductId = p.ParentProductId,
             NhanhProductId = p.NhanhProductId,
-            Stock = p.Stock
+            AvailableForSale = p.AvailableForSale
         }).ToList());
 
         // Tạo lookup để map response đúng thứ tự productIds trong request.
@@ -1866,7 +1870,7 @@ public class Service : IService
                 var isActive = product.IsActive;
 
                 // Input là con: cha false sẽ ép kết quả false; cha true thì dùng trạng thái của con.
-                if (!string.IsNullOrWhiteSpace(product.ParentProductId) &&
+                if (IsVariant(product.ParentProductId) &&
                     parentActiveByNhanhProductId.TryGetValue(product.ParentProductId, out var parentIsActive))
                 {
                     isActive = parentIsActive && product.IsActive;
@@ -1923,7 +1927,7 @@ public class Service : IService
         // ParentProductId của Nhanh.vn là NhanhProductId của sản phẩm cha,
         // không phải Id (Guid) của entity Product.
         Response.ParentProductInfo? parent = null;
-        if (!string.IsNullOrWhiteSpace(product.ParentProductId))
+        if (IsVariant(product.ParentProductId))
         {
             parent = await _dbContext.Products
                 .AsNoTracking()
@@ -1948,7 +1952,7 @@ public class Service : IService
                 ProductType = product.ProductType,
                 ParentProductId = product.ParentProductId,
                 NhanhProductId = product.NhanhProductId,
-                Stock = product.Stock
+                AvailableForSale = product.AvailableForSale
             }
         });
 
@@ -2145,7 +2149,7 @@ public class Service : IService
                 .Where(p => !p.IsDeleted &&
                             p.IsActive &&
                             p.ProductType == "Combo" &&
-                            parentNhanhIds.Contains(p.ParentProductId!))
+                            (p.ParentProductId != null && p.ParentProductId != "" && p.ParentProductId != "-1" && p.ParentProductId != "-2") && parentNhanhIds.Contains(p.ParentProductId!))
                 .Select(p => new { p.Id, p.ParentProductId })
                 .ToListAsync();
 
@@ -2257,11 +2261,8 @@ public class Service : IService
             product.Description = request.Description;
             
             product.NhanhUpdatedAt = DateTimeOffset.UtcNow;
-            
-            long.TryParse(product.ParentProductId, out var parentId);
 
-            
-            if (!string.IsNullOrWhiteSpace(product.ParentProductId) && parentId > 0)
+            if (IsVariant(product.ParentProductId))
             {
                 var parent = await _dbContext.Products
                     .FirstOrDefaultAsync(x => !x.IsDeleted && x.NhanhProductId == product.ParentProductId);
@@ -2294,7 +2295,7 @@ public class Service : IService
         return await _dbContext.Products
             .AsNoTracking()
             .Where(x => !x.IsDeleted && x.IsActive
-                                     && (x.ParentProductId == null || x.ParentProductId == string.Empty)
+                                     && (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2")
                                      && x.CategoryProductDetails.Any(cpd => !cpd.IsDeleted && ids.Contains(cpd.CategoryProductId)))
             .OrderBy(x => x.ProductName)
             .Select(x => new Response.ProductByCategoryResponse

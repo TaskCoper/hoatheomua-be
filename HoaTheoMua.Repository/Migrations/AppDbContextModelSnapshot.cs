@@ -2122,7 +2122,8 @@ namespace HoaTheoMua.Repository.Migrations
                     b.HasIndex("IdDonHangApi");
 
                     b.HasIndex("IdDonHangNhanh")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.HasIndex("MaKhachHang");
 
@@ -2877,7 +2878,7 @@ namespace HoaTheoMua.Repository.Migrations
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
