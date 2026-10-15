@@ -16,7 +16,8 @@ public class OrderNhanhVnConfiguration : IEntityTypeConfiguration<OrderNhanhVn>
             .HasMaxLength(100);
 
         builder.HasIndex(p => p.IdDonHangNhanh)
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(x => x.IdDonHangApi);
         builder.HasIndex(x => x.MaVanDon);
         builder.HasIndex(x => x.MaKhachHang);

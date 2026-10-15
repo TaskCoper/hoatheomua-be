@@ -649,7 +649,7 @@ public class Service: IService
             GhiChuCuaKhach = info.Description,
             GhiChuNoiBo = info.PrivateDescription,
             TrangThaiDonHang = info.Status?.ToString(),
-            TagIds = item.LabelIds?.Distinct().ToList(),
+            TagIds = info.TagIds?.Distinct().ToList(),
     
             NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value) : null,
             NgayGuiHangVanChuyen = !string.IsNullOrEmpty(carrier?.SendCarrier?.Date) && DateTimeOffset.TryParse(carrier.SendCarrier.Date, out var sendDate) ? sendDate.ToUniversalTime() : null,
@@ -825,9 +825,9 @@ public class Service: IService
         order.GhiChuCuaKhach = info.Description ?? order.GhiChuCuaKhach;
         order.GhiChuNoiBo = info.PrivateDescription ?? order.GhiChuNoiBo;
         order.TrangThaiDonHang = info.Status?.ToString() ?? order.TrangThaiDonHang;
-        if (item.LabelIds != null)
+        if (info.TagIds != null)
         {
-            order.TagIds = item.LabelIds.Distinct().ToList();
+            order.TagIds = info.TagIds.Distinct().ToList();
         }
         order.NgayXacNhan = info.ConfirmedAt.HasValue ? DateTimeOffset.FromUnixTimeSeconds(info.ConfirmedAt.Value).ToUniversalTime() : order.NgayXacNhan;
     
