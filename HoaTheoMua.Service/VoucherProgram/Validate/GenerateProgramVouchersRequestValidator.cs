@@ -26,8 +26,6 @@ public class GenerateProgramVouchersRequestValidator : AbstractValidator<Request
             .WithMessage("Loại giảm giá chỉ chấp nhận cash (giảm tiền) hoặc percent (giảm theo phần trăm).");
         RuleFor(x => x.DiscountValue).GreaterThan(0)
             .WithMessage("Mức giảm giá phải lớn hơn 0.");
-        RuleFor(x => x.DiscountValue).PrecisionScale(18, 3, true)
-            .WithMessage("Mức giảm giá chỉ được có tối đa 3 chữ số thập phân.");
         RuleFor(x => x.DiscountValue).LessThanOrEqualTo(100)
             .When(x => x.DiscountType == "percent")
             .WithMessage("Mức giảm theo phần trăm không được vượt quá 100%.");

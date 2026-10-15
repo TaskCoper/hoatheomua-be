@@ -42,10 +42,6 @@ public class UpdateVoucherItemValidator : AbstractValidator<Request.UpdateVouche
         RuleFor(x => x.DiscountValue)
             .GreaterThanOrEqualTo(0).WithMessage("Mức giảm giá không được âm.");
 
-        RuleFor(x => x.DiscountValue)
-            .PrecisionScale(18, 3, true)
-            .WithMessage("Mức giảm giá chỉ được có tối đa 3 chữ số thập phân.");
-
         RuleFor(x => x.MaxDiscountAmount)
             .GreaterThan(0).When(x => x.MaxDiscountAmount.HasValue)
             .WithMessage("Mức giảm tối đa phải lớn hơn 0.");
