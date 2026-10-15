@@ -11,5 +11,8 @@ public class EstimateVoucherRequestValidator : AbstractValidator<Request.Estimat
 
         RuleFor(x => x.productFee)
             .GreaterThan(0).WithMessage("Tổng tiền sản phẩm phải lớn hơn 0.");
+
+        RuleFor(x => x.orderTime)
+            .GreaterThanOrEqualTo(0).WithMessage("Thời gian giao hàng không hợp lệ");
     }
 }

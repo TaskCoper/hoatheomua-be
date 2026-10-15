@@ -21,7 +21,8 @@ public class PrepareOrderVoucherTest
         await db.SaveChangesAsync();
 
         var error = await Assert.ThrowsAsync<ConflictException>(
-            () => new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000));
+            // () => new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000));
+            () => new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000, DateTimeOffset.UtcNow));
 
         Assert.Equal("Voucher đã hết lượt sử dụng.", error.Message);
     }
@@ -37,7 +38,8 @@ public class PrepareOrderVoucherTest
         db.Orders.Add(Order(voucher.Id, status, DateTimeOffset.UtcNow.AddMinutes(-minutesAgo)));
         await db.SaveChangesAsync();
 
-        var snapshot = await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000);
+        // var snapshot = await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000);
+        var snapshot = await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000, DateTimeOffset.UtcNow);
 
         Assert.Equal(voucher.Id, snapshot.VoucherId);
         Assert.Equal(20_000, snapshot.DiscountAmount);
@@ -55,7 +57,8 @@ public class PrepareOrderVoucherTest
             Order(voucher.Id, "Pending", DateTimeOffset.UtcNow));
         await db.SaveChangesAsync();
 
-        await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000);
+        // await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000);
+        await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000, DateTimeOffset.UtcNow);
 
         db.ChangeTracker.Clear();
         Assert.Equal(2, (await db.Vouchers.SingleAsync()).UsedCount);
@@ -72,7 +75,8 @@ public class PrepareOrderVoucherTest
         await db.SaveChangesAsync();
         var active = await SeedVoucher(db, maxUsageCount: 1, code: "SAME");
 
-        var snapshot = await new VoucherService(db).PrepareOrderVoucher("same", 200_000);
+        // var snapshot = await new VoucherService(db).PrepareOrderVoucher("same", 200_000);
+        var snapshot = await new VoucherService(db).PrepareOrderVoucher("same", 200_000, DateTimeOffset.UtcNow);
 
         Assert.Equal(active.Id, snapshot.VoucherId);
     }
@@ -88,10 +92,12 @@ public class PrepareOrderVoucherTest
         await using var firstDb = fixture.Context();
         await using var secondDb = fixture.Context();
         await using var firstTransaction = await firstDb.Database.BeginTransactionAsync();
-        var firstSnapshot = await new VoucherService(firstDb).PrepareOrderVoucher(voucher.Code, 200_000);
+        // var firstSnapshot = await new VoucherService(firstDb).PrepareOrderVoucher(voucher.Code, 200_000);
+        var firstSnapshot = await new VoucherService(firstDb).PrepareOrderVoucher(voucher.Code, 200_000, DateTimeOffset.UtcNow);
 
         await using var secondTransaction = await secondDb.Database.BeginTransactionAsync();
-        var second = new VoucherService(secondDb).PrepareOrderVoucher(voucher.Code, 200_000);
+        // var second = new VoucherService(secondDb).PrepareOrderVoucher(voucher.Code, 200_000);
+        var second = new VoucherService(secondDb).PrepareOrderVoucher(voucher.Code, 200_000, DateTimeOffset.UtcNow);
 
         // The second order blocks on the row lock while the first is still saving its order
         await Task.Delay(500);
