@@ -335,7 +335,7 @@ public class Service : IService
                     ProductType = product.ProductType,
                     ParentProductId = product.ParentProductId,
                     NhanhProductId = product.NhanhProductId,
-                    Stock = product.Stock
+                    AvailableForSale = product.AvailableForSale
                 })
                 .ToList());
 
@@ -363,7 +363,7 @@ public class Service : IService
                     ProductType = product.ProductType,
                     ParentProductId = product.ParentProductId,
                     NhanhProductId = product.NhanhProductId,
-                    Stock = product.Stock
+                    AvailableForSale = product.AvailableForSale
                 })
                 .ToList());
         }
@@ -624,7 +624,7 @@ public class Service : IService
                 ProductType = product.ProductType,
                 ParentProductId = product.ParentProductId,
                 NhanhProductId = product.NhanhProductId,
-                Stock = product.Stock
+                AvailableForSale = product.AvailableForSale
             })
             .ToList());
 
@@ -734,7 +734,7 @@ public class Service : IService
                 ProductType = response.ProductType,
                 ParentProductId = response.ParentProductId,
                 NhanhProductId = response.NhanhProductId,
-                Stock = response.Stock
+                AvailableForSale = response.AvailableForSale
             }
         };
         productsToCalculate.AddRange(response.Children.Select(c => new ProductQtyProjection
@@ -743,7 +743,7 @@ public class Service : IService
             ProductType = c.ProductType,
             ParentProductId = c.ParentProductId,
             NhanhProductId = c.NhanhProductId,
-            Stock = c.Stock
+            AvailableForSale = c.AvailableForSale
         }));
 
         // Giai đoạn 5: Tính và gán số lượng khả dụng cho sản phẩm chính và từng biến thể.
@@ -823,7 +823,7 @@ public class Service : IService
                 product.ProductType,
                 product.ParentProductId,
                 product.NhanhProductId,
-                product.Stock
+                product.AvailableForSale
             })
             .FirstOrDefaultAsync();
 
@@ -864,7 +864,7 @@ public class Service : IService
                 product.ProductType,
                 product.ParentProductId,
                 product.NhanhProductId,
-                product.Stock
+                product.AvailableForSale
             })
             .ToListAsync();
 
@@ -889,7 +889,7 @@ public class Service : IService
                 ProductType = parentRecord.ProductType,
                 ParentProductId = parentRecord.ParentProductId,
                 NhanhProductId = parentRecord.NhanhProductId,
-                Stock = parentRecord.Stock
+                AvailableForSale = parentRecord.AvailableForSale
             }
         };
         productsToCalculate.AddRange(children.Select(child => new ProductQtyProjection
@@ -898,7 +898,7 @@ public class Service : IService
             ProductType = child.ProductType,
             ParentProductId = child.ParentProductId,
             NhanhProductId = child.NhanhProductId,
-            Stock = child.Stock
+            AvailableForSale = child.AvailableForSale
         }));
 
         var quantities = await CalculateAvailableQty(productsToCalculate, variantsArePreloaded: true);
@@ -1232,7 +1232,7 @@ public class Service : IService
         public string? ProductType { get; set; }
         public string? ParentProductId { get; set; }
         public string? NhanhProductId { get; set; }
-        public decimal? Stock { get; set; }
+        public decimal? AvailableForSale { get; set; }
     }
 
     private static (int? SellableQuantity, string? StockStatus, string? UnavailableReason) GetQuantityInfo(
@@ -1242,7 +1242,7 @@ public class Service : IService
         if (quantities.TryGetValue(product.Id, out var quantityInfo))
             return quantityInfo;
 
-        var stock = Math.Max(0, (int)(product.Stock ?? 0));
+        var stock = Math.Max(0, (int)(product.AvailableForSale ?? 0));
         return (stock, stock > 0 ? "Còn hàng" : "Hết hàng", null);
     }
 
@@ -1263,7 +1263,7 @@ public class Service : IService
                 ProductType = p.ProductType,
                 ParentProductId = p.ParentProductId,
                 NhanhProductId = p.NhanhProductId,
-                Stock = p.Stock
+                AvailableForSale = p.AvailableForSale
             })
             .ToListAsync();
 
@@ -1482,14 +1482,14 @@ public class Service : IService
                 else
                 {
                     // Sản phẩm cha không có biến thể combo dùng tồn kho trực tiếp, có clamp âm.
-                    quantity = Math.Max(0, (int)(product.Stock ?? 0));
+                    quantity = Math.Max(0, (int)(product.AvailableForSale ?? 0));
                     stockStatus = quantity > 0 ? "Còn hàng" : "Hết hàng";
                 }
             }
             else
             {
                 // Sản phẩm thường hoặc biến thể không phải combo dùng tồn kho trực tiếp, có clamp âm.
-                quantity = Math.Max(0, (int)(product.Stock ?? 0));
+                quantity = Math.Max(0, (int)(product.AvailableForSale ?? 0));
                 stockStatus = quantity > 0 ? "Còn hàng" : "Hết hàng";
             }
 
@@ -1847,7 +1847,7 @@ public class Service : IService
             ProductType = p.ProductType,
             ParentProductId = p.ParentProductId,
             NhanhProductId = p.NhanhProductId,
-            Stock = p.Stock
+            AvailableForSale = p.AvailableForSale
         }).ToList());
 
         // Tạo lookup để map response đúng thứ tự productIds trong request.
@@ -1948,7 +1948,7 @@ public class Service : IService
                 ProductType = product.ProductType,
                 ParentProductId = product.ParentProductId,
                 NhanhProductId = product.NhanhProductId,
-                Stock = product.Stock
+                AvailableForSale = product.AvailableForSale
             }
         });
 
