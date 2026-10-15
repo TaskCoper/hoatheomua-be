@@ -737,7 +737,8 @@ public class Service : IService
             .ToListAsync(cancellationToken);
 
         var parentNhanhProductIds = orderedProducts
-            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
+            // .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
+            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId) && x.ParentProductId != "-1" && x.ParentProductId != "-2")
             .Select(x => x.ParentProductId!)
             .Distinct()
             .ToList();

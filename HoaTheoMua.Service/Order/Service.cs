@@ -1873,7 +1873,8 @@ public class Service : IService
             .ToDictionaryAsync(x => x.NhanhProductId!);
 
         var parentNhanhProductIds = findProduct.Values
-            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
+            // .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId))
+            .Where(x => !string.IsNullOrWhiteSpace(x.ParentProductId) && x.ParentProductId != "-1" && x.ParentProductId != "-2")
             .Select(x => x.ParentProductId!)
             .Distinct()
             .ToList();
