@@ -360,27 +360,27 @@ public class Service: IService
             }
             
             // Parent.NhanhProductId == Child.ParentProductId.
-            var existParent = await _appDbContext.Products
-                .FirstOrDefaultAsync(x => x.NhanhProductId == product.ParentProductId);
-            //hỏi thử rằng là: product đó, nếu nó đã tồn tại rồi, thì hỏi thử có tồn tại 
-            //parent của nó hay không
-            if (existParent != null)
-            {
-                //update parent
-                existParent.AvailableForSale += (decimal?)item.Available;
-                existParent.TotalStock += (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
-                existParent.Stock += (decimal?)item.Remain;
-                existParent.DeliveringStock += (decimal?)item.Shipping;
-                existParent.StockError += (decimal?)item.Damaged;
-                existParent.Held += (decimal?)item.Holding;//tạm giữ các kho
-                existParent.StockTransferring += (decimal?)item.Transfering;
-                // product.HeldComponents = item.Holding;
-            
-                // product.WarehouseStock += (decimal?)item.Warranty.Remain;
-                existParent.WarrantyStock += (decimal?)item.Warranty?.Remain;
-                existParent.HeldComponents += (decimal?)item.Warranty?.Holding;
-                existParent.UpdatedAt = DateTimeOffset.UtcNow;
-            }
+            // var existParent = await _appDbContext.Products
+            //     .FirstOrDefaultAsync(x => x.NhanhProductId == product.ParentProductId);
+            // //hỏi thử rằng là: product đó, nếu nó đã tồn tại rồi, thì hỏi thử có tồn tại 
+            // //parent của nó hay không
+            // if (existParent != null)
+            // {
+            //     //update parent
+            //     existParent.AvailableForSale += (decimal?)item.Available;
+            //     existParent.TotalStock += (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
+            //     existParent.Stock += (decimal?)item.Remain;
+            //     existParent.DeliveringStock += (decimal?)item.Shipping;
+            //     existParent.StockError += (decimal?)item.Damaged;
+            //     existParent.Held += (decimal?)item.Holding;//tạm giữ các kho
+            //     existParent.StockTransferring += (decimal?)item.Transfering;
+            //     // product.HeldComponents = item.Holding;
+            //
+            //     // product.WarehouseStock += (decimal?)item.Warranty.Remain;
+            //     existParent.WarrantyStock += (decimal?)item.Warranty?.Remain;
+            //     existParent.HeldComponents += (decimal?)item.Warranty?.Holding;
+            //     existParent.UpdatedAt = DateTimeOffset.UtcNow;
+            // }
             
             
             product.AvailableForSale = (decimal?)item.Available;
