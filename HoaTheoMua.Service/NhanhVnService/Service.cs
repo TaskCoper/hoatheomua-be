@@ -364,38 +364,77 @@ public class Service: IService
                 .FirstOrDefaultAsync(x => x.NhanhProductId == product.ParentProductId);
             //hỏi thử rằng là: product đó, nếu nó đã tồn tại rồi, thì hỏi thử có tồn tại 
             //parent của nó hay không
+            
+            var newAvailableForSale = (decimal?)item.Available;
+            var newTotalStock = (decimal?)item.Remain;
+            var newDeliveringStock = (decimal?)item.Shipping;
+            var newStockError = (decimal?)item.Damaged;
+            var newHeld = (decimal?)item.Holding;
+            var newStockTransferring = (decimal?)item.Transfering;
+            var newWarrantyStock = (decimal?)item.Warranty?.Remain;
+            var newHeldComponents = (decimal?)item.Warranty?.Holding;
+            
             if (existParent != null)
             {
-                //update parent
-                existParent.AvailableForSale += (decimal?)item.Available;
-                existParent.TotalStock += (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
-                existParent.Stock += (decimal?)item.Remain;
-                existParent.DeliveringStock += (decimal?)item.Shipping;
-                existParent.StockError += (decimal?)item.Damaged;
-                existParent.Held += (decimal?)item.Holding;//tạm giữ các kho
-                existParent.StockTransferring += (decimal?)item.Transfering;
-                // product.HeldComponents = item.Holding;
-            
-                // product.WarehouseStock += (decimal?)item.Warranty.Remain;
-                existParent.WarrantyStock += (decimal?)item.Warranty?.Remain;
-                existParent.HeldComponents += (decimal?)item.Warranty?.Holding;
+                existParent.AvailableForSale = ApplyData(
+                    existParent.AvailableForSale,
+                    product.AvailableForSale,
+                    newAvailableForSale);
+
+                existParent.TotalStock = ApplyData(
+                    existParent.TotalStock,
+                    product.TotalStock,
+                    newTotalStock);
+
+                existParent.Stock = ApplyData(
+                    existParent.Stock,
+                    product.Stock,
+                    newTotalStock);
+
+                existParent.DeliveringStock = ApplyData(
+                    existParent.DeliveringStock,
+                    product.DeliveringStock,
+                    newDeliveringStock);
+
+                existParent.StockError = ApplyData(
+                    existParent.StockError,
+                    product.StockError,
+                    newStockError);
+
+                existParent.Held = ApplyData(
+                    existParent.Held,
+                    product.Held,
+                    newHeld);
+
+                existParent.StockTransferring = ApplyData(
+                    existParent.StockTransferring,
+                    product.StockTransferring,
+                    newStockTransferring);
+
+                existParent.WarrantyStock = ApplyData(
+                    existParent.WarrantyStock,
+                    product.WarrantyStock,
+                    newWarrantyStock);
+
+                existParent.HeldComponents = ApplyData(
+                    existParent.HeldComponents,
+                    product.HeldComponents,
+                    newHeldComponents);
+
                 existParent.UpdatedAt = DateTimeOffset.UtcNow;
             }
             
             
-            product.AvailableForSale = (decimal?)item.Available;
+            product.AvailableForSale = newAvailableForSale;
             product.ProductCode = item.Code;
-            product.TotalStock = (decimal?)item.Remain;//Tổng tồn = tổng số lượng tồn các kho
-            product.Stock = (decimal?)item.Remain;
-            product.DeliveringStock = (decimal?)item.Shipping;
-            product.StockError = (decimal?)item.Damaged;
-            product.Held = (decimal?)item.Holding;//tạm giữ các kho
-            product.StockTransferring = (decimal?)item.Transfering;
-            // product.HeldComponents = item.Holding;
-            
-            // product.WarehouseStock = (decimal?)item.Warranty.Remain;
-            product.WarrantyStock = (decimal?)item.Warranty?.Remain;
-            product.HeldComponents = (decimal?)item.Warranty?.Holding;
+            product.TotalStock = newTotalStock;
+            product.Stock = newTotalStock;
+            product.DeliveringStock = newDeliveringStock;
+            product.StockError = newStockError;
+            product.Held = newHeld;
+            product.StockTransferring = newStockTransferring;
+            product.WarrantyStock = newWarrantyStock;
+            product.HeldComponents = newHeldComponents;
             product.UpdatedAt = DateTimeOffset.UtcNow;
             
         }
@@ -403,6 +442,14 @@ public class Service: IService
         await _appDbContext.SaveChangesAsync();
 
         return "Cập nhật tồn kho thành công";
+    }
+    
+    public static decimal ApplyData(decimal? parentValue, decimal? oldChildValue, decimal? newChildValue)
+    {
+
+        return (parentValue ?? 0m)
+               + (newChildValue ?? 0m)
+               - (oldChildValue ?? 0m);
     }
 
     public async Task<string> WebhookNhanhVnProductAdd(NhanhProductAddWebhookRequest? request)
