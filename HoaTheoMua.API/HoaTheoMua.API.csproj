@@ -27,4 +27,8 @@
     <ItemGroup>
       <ProjectReference Include="..\HoaTheoMua.Service\HoaTheoMua.Service.csproj" />
     </ItemGroup>
+    
+    <ItemGroup>
+      <Folder Include="docs\" />
+    </ItemGroup>
 </Project>
