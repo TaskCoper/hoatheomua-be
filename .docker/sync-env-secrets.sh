@@ -20,7 +20,7 @@ ENVIRONMENTS="${ENVIRONMENTS:-dev}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Keys present in the env file that should NOT become secrets (computed in CI).
-EXCLUDE='^(REGISTRY|TAG)='
+EXCLUDE='^(REGISTRY|TAG|CLOUDFLARE_TUNNEL_TOKEN|CLOUDFLARED_IMAGE)='
 
 # Which deployment branch each environment is restricted to (empty => allow all).
 branch_for_env() {

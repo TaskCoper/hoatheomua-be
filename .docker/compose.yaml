@@ -21,13 +21,6 @@ x-rabbitmq-base: &rabbitmq-base
     timeout: 5s
     retries: 10
 
-x-cloudflare-tunnel: &cloudflare-tunnel
-  image: cloudflare/cloudflared
-  restart: unless-stopped
-  command: tunnel run
-  environment:
-    - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
-
 x-api-env: &api-env
   TZ: Asia/Bangkok
   Environment: ${ENVIRONMENT}
@@ -213,13 +206,6 @@ services:
     networks: [hoatheomua-network-prod]
     profiles: [prod, api-prod, api, prod-pull]
 
-  hoatheomua-cloudflare-dev:
-    <<: *cloudflare-tunnel
-    container_name: hoatheomua-cloudflare-dev
-    hostname: hoatheomua-cloudflare-dev
-    networks: [hoatheomua-network-dev]
-    profiles: [dev, cloudflare-dev, proxy, dev-pull]
-
 volumes:
   postgres-hoatheomua-data-dev:
     name: postgres-hoatheomua-data-dev
@@ -237,11 +223,7 @@ volumes:
 networks:
   hoatheomua-network-dev:
     name: hoatheomua-network-dev
-    driver: bridge
-    ipam:
-      driver: default
+    external: true
   hoatheomua-network-prod:
     name: hoatheomua-network-prod
-    driver: bridge
-    ipam:
-      driver: default
+    external: true
