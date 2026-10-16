@@ -100,8 +100,9 @@ public class Service : IService
         // Legacy: privateDescription từng chứa ghi chú, thông tin người nhận,
         // lịch giao và hóa đơn. Chi tiết Order hiện được xem tại trang Admin.
         // var privateDescription = await BuildPrivateDescriptionAsync(order, companyAddress?.Remarks);
-        var privateDescription = $"{_systemOption.ClientUrl}/htm/system-orders/{order.Id}?tab=snapshot";
-
+        var privateDescription =
+            $"NN:{order.FullNameReceiver}-{order.PhoneReceiver}\n" +
+            $"{_systemOption.ClientUrl}/htm/system-orders/{order.Id}?tab=snapshot";
 
         var tags = order.TagIds ?? new List<long>();
         var tagIds = (order.IsExportInvoice == true && order.InvoiceType != null)
