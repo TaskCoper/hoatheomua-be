@@ -539,7 +539,7 @@ public class Service : IService
             voucherSnapshot = await _voucherService.PrepareOrderVoucher(request.VoucherCode, totalProductFee, deliveryAt);
         }
 
-        // VAT tính trên (tiền hàng đã trừ voucher + tiền ship)
+        // VAT tính trên (tiền hàng đã giảm, ko tính tiền ship)
         var discountAmount = voucherSnapshot?.DiscountAmount ?? 0m;
         var taxableAmount = totalProductFee - discountAmount;
         var vatFee = string.IsNullOrEmpty(request.TaxCode)
@@ -1014,6 +1014,11 @@ public class Service : IService
             productRows.GroupBy(x => x.NhanhProductId).Any(x => x.Count() > 1))
             throw new BadRequestException("ORDER_PRODUCT_ITEM_ID_INVALID");
 
+        // Sản phẩm chưa có giá không được tính 0đ (Retail = Price ?? 0m bên dưới).
+        // Áp dụng cho cả dòng phát sinh: phần thêm, giấy gói, ruy băng của hoa AI.
+        if (productRows.Any(x => x.Price == null))
+            throw new BadRequestException("ORDER_PRODUCT_PRICE_MISSING");
+
         var productRowsById = productRows.ToDictionary(x => x.Id);
 
         foreach (var item in items)
@@ -1407,6 +1412,11 @@ public class Service : IService
                 !int.TryParse(x.NhanhProductId, out _)))
         {
             throw new BadRequestException("Đơn hàng có sản phẩm không có NhanhProductId hợp lệ");
+        }
+
+        if (productRows.Any(x => x.Price == null))
+        {
+            throw new BadRequestException("Một số sản phẩm chưa có giá bán. Vui lòng thử lại sau.");
         }
 
         var productRowsById = productRows.ToDictionary(x => x.Id);
