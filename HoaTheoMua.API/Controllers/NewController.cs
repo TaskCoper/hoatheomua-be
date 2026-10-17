@@ -16,11 +16,17 @@ public class NewController : ControllerBase
 {
     private readonly NewService.IService _newService;
     private readonly IService _revalidateService;
+    private readonly string _newsViewCookieName;
 
-    public NewController(NewService.IService newService, IService revalidateService)
+    public NewController(
+        NewService.IService newService,
+        IService revalidateService,
+        IConfiguration configuration)
     {
         _newService = newService;
         _revalidateService = revalidateService;
+        _newsViewCookieName = configuration["NewsView:CookieName"]
+            ?? NewService.NewsViewConstants.CookieName;
     }
 
     [HttpGet]
@@ -35,10 +41,35 @@ public class NewController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("highlights")]
+    public async Task<IActionResult> GetNewsHighlights([FromQuery] int featuredCount = 4)
+    {
+        var result = await _newService.GetNewsHighlightsAsync(featuredCount);
+        return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
+    }
+
     [HttpGet("{key}")]
     public async Task<IActionResult> GetNewById(string key)
     {
-        var result = await _newService.GetNewByIdAsync(key);
+        var clientContext = Request.Cookies[_newsViewCookieName];
+
+        if (string.IsNullOrWhiteSpace(clientContext))
+        {
+            clientContext = Guid.NewGuid().ToString("N");
+
+            Response.Cookies.Append(
+                _newsViewCookieName,
+                clientContext,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTimeOffset.UtcNow.AddYears(1)
+                });
+        }
+
+        var result = await _newService.GetNewByIdAsync(key, clientContext);
         return Ok(ApiResponseFactory.Base(result, true, "", HttpContext.TraceIdentifier));
     }
 
