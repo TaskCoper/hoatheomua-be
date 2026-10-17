@@ -100,8 +100,10 @@ public class Service : IService
         // Legacy: privateDescription từng chứa ghi chú, thông tin người nhận,
         // lịch giao và hóa đơn. Chi tiết Order hiện được xem tại trang Admin.
         // var privateDescription = await BuildPrivateDescriptionAsync(order, companyAddress?.Remarks);
+        // var privateDescription =
+        //     $"NN:{order.FullNameReceiver}-{order.PhoneReceiver}\n" +
+        //     $"{_systemOption.ClientUrl}/htm/system-orders/{order.Id}?tab=snapshot";
         var privateDescription =
-            $"NN:{order.FullNameReceiver}-{order.PhoneReceiver}\n" +
             $"{_systemOption.ClientUrl}/htm/system-orders/{order.Id}?tab=snapshot";
 
         var tags = order.TagIds ?? new List<long>();
@@ -523,7 +525,8 @@ public class Service : IService
                 IdReturn = null,
                 SaleId = 0,
                 SaleName = "",
-                Description = order.Remarks,
+                // Description = order.Remarks,
+                Description = $"{order.Remarks}\nNN:{order.FullNameReceiver}-{order.PhoneReceiver}",
                 PrivateDescription = plan.PrivateDescription,
                 // 56 = "đã xác nhận" for instant orders; 54 when the shop still has to act on it.
                 //Status = (order.OrderTime == 0 && tags.Count == 0) ? 56 : 54,
