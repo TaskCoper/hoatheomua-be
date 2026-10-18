@@ -45,6 +45,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
     public class CreateOrderTests
     {
         private const int SlotTagId = 229;
+        private const int ReferenceSlotTagId = 230;
         private static readonly Guid TestUserId = Guid.Parse("cba7c21c-d6f2-4b30-9b4e-8c7c10b4f0b2");
         private static readonly Guid TestAddressId = Guid.Parse("a32c276b-74f0-48fe-97b8-f3c66b42f103");
         private static readonly Guid TestProductId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -183,6 +184,9 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 .Hour;
             var slotStartHour = (currentVietnamHour + 23) % 24;
             var slotEndHour = (currentVietnamHour + 2) % 24;
+            var minimumDeliveryHour = (slotEndHour + 4) % 24;
+            var selectedSlotStartHour = minimumDeliveryHour;
+            var selectedSlotEndHour = (minimumDeliveryHour + 1) % 24;
 
             var configs = new List<ConfigEntity>
             {
@@ -202,16 +206,22 @@ namespace HoaTheoMua.Service.Test.OrderTest
                     {
                         group = "nhanhvn",
                         label = "Giờ giao hàng",
-                        value = new[] { SlotTagId },
+                        value = new[] { SlotTagId, ReferenceSlotTagId },
                         slotLimits = new Dictionary<string, int?>
                         {
-                            [SlotTagId.ToString()] = null
+                            [SlotTagId.ToString()] = null,
+                            [ReferenceSlotTagId.ToString()] = null
                         },
                         options = new[]
                         {
                             new
                             {
                                 label = $"{slotStartHour}h - {slotEndHour}h",
+                                value = ReferenceSlotTagId
+                            },
+                            new
+                            {
+                                label = $"{selectedSlotStartHour}h - {selectedSlotEndHour}h",
                                 value = SlotTagId
                             }
                         },
@@ -1489,6 +1499,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
     public class CreateOrderSlotTests
     {
         private const int SlotTagId = 229;
+        private const int ReferenceSlotTagId = 230;
         private static readonly Guid UserId = Guid.Parse("cba7c21c-d6f2-4b30-9b4e-8c7c10b4f0b2");
 
     [Fact]
@@ -1505,11 +1516,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
     [Fact]
     public async Task CreateOrder_OccupiedEqualsLimit_DoesNotCreateOrder()
     {
-        var currentHour = VietnamNow().Hour;
         var existingOrder = CreatePendingOrder(SlotTagId);
         var service = CreateService(
             CreateDbContext(
-                SlotLabel((currentHour + 23) % 24, (currentHour + 2) % 24),
+                ValidSelectedSlotLabel(),
                 limit: 1,
                 orders: [existingOrder]),
             out var orders);
@@ -1520,6 +1530,36 @@ namespace HoaTheoMua.Service.Test.OrderTest
         Assert.Contains("đã đạt giới hạn 1 đơn hàng", exception.Message);
         Assert.Single(orders);
         Assert.Same(existingOrder, orders[0]);
+    }
+
+    [Fact]
+    public async Task CreateOrder_SelectedSlotStartsAtReferenceEndPlusFourHours_PassesSlotValidation()
+    {
+        var service = CreateService(
+            CreateDbContext(
+                ValidSelectedSlotLabel(),
+                limit: 1),
+            out _);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => service.CreateOrder(CreateRequest([SlotTagId])));
+
+        Assert.Equal("ORDER_ITEMS_INVALID", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateOrder_SelectedSlotStartsAfterReferenceEndPlusFourHours_PassesSlotValidation()
+    {
+        var service = CreateService(
+            CreateDbContext(
+                ValidSelectedSlotLabel(additionalHours: 1),
+                limit: 1),
+            out _);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => service.CreateOrder(CreateRequest([SlotTagId])));//18h–19h
+
+        Assert.Equal("ORDER_ITEMS_INVALID", exception.Message);
     }
 
     private static OrderRequest.CreateOrderRequest CreateRequest(List<long> tagIds) => new()
@@ -1550,6 +1590,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
         List<OrderEntity>? orders = null)
     {
         orders ??= [];
+        var currentHour = VietnamNow().Hour;
+        var referenceSlotLabel = SlotLabel(
+            (currentHour + 23) % 24,
+            (currentHour + 2) % 24);
         var configs = new List<ConfigEntity>
         {
             new()
@@ -1562,9 +1606,13 @@ namespace HoaTheoMua.Service.Test.OrderTest
                           {
                             "group": "nhanhvn",
                             "label": "Giờ giao hàng",
-                            "value": [{{SlotTagId}}],
-                            "slotLimits": { "{{SlotTagId}}": {{limit}} },
+                            "value": [{{SlotTagId}}, {{ReferenceSlotTagId}}],
+                            "slotLimits": {
+                              "{{SlotTagId}}": {{limit}},
+                              "{{ReferenceSlotTagId}}": null
+                            },
                             "options": [
+                              { "label": "{{referenceSlotLabel}}", "value": {{ReferenceSlotTagId}} },
                               { "label": "{{slotLabel}}", "value": {{SlotTagId}} }
                             ],
                             "required": true,
@@ -1631,6 +1679,17 @@ namespace HoaTheoMua.Service.Test.OrderTest
 
     private static string SlotLabel(int startHour, int endHour) =>
         $"{startHour}h - {endHour}h";
+
+    private static string ValidSelectedSlotLabel(int additionalHours = 0)
+    {
+        var currentHour = VietnamNow().Hour;
+        var referenceEndHour = (currentHour + 2) % 24;
+        var minimumDeliveryHour = (referenceEndHour + 4 + additionalHours) % 24;
+
+        return SlotLabel(
+            minimumDeliveryHour,
+            (minimumDeliveryHour + 1) % 24);
+    }
     
     }
 }
