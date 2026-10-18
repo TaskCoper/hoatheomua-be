@@ -456,9 +456,7 @@ public class Service : IService
             minimumDeliveryMinutes < 24 * 60 &&
             DeliverySlotTimeHelper.ContainsTime(
                 selectedOption.Label,
-                // minimumDeliveryTime);
-                // Lùi 1 phút để khung kết thúc đúng mốc (vd mốc 21h, khung 20h - 21h) vẫn được tính
-                minimumDeliveryTime.AddMinutes(-1));
+                minimumDeliveryTime);
 
         var startsAfterMinimumTime =
             selectedStartMinutes >= minimumDeliveryMinutes;
