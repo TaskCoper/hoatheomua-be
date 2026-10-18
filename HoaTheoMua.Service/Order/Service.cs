@@ -279,6 +279,18 @@ public class Service : IService
             throw new BadRequestException("Ngày kiểm tra không hợp lệ");
         }
 
+        var config = await GetDeliverySlotConfig(cancellationToken);
+
+        return await GetDeliverySlotAvailability(
+            date,
+            tagId,
+            config,
+            cancellationToken);
+    }
+
+    private async Task<HoaTheoMua.Service.Config.Response.ConfigItem> GetDeliverySlotConfig(
+        CancellationToken cancellationToken)
+    {
         var entity = await _dbContext.Configs
             .AsNoTracking()
             .FirstOrDefaultAsync(config =>
@@ -309,7 +321,16 @@ public class Service : IService
             throw new BadRequestException("Không thể convert json");
         }
 
-        var configuredTagIds = config.Value.Distinct().ToList();
+        return config;
+    }
+
+    private async Task<Response.DeliverySlotAvailabilityResponse> GetDeliverySlotAvailability(
+        DateOnly date,
+        int? tagId,
+        HoaTheoMua.Service.Config.Response.ConfigItem config,
+        CancellationToken cancellationToken)
+    {
+        var configuredTagIds = config.Value!;
         if (tagId.HasValue && !configuredTagIds.Contains(tagId.Value))
         {
             throw new BadRequestException($"TagId {tagId.Value} không phải là tag giao hàng theo khung giờ");
@@ -319,7 +340,7 @@ public class Service : IService
             ? new List<int> { tagId.Value }
             : configuredTagIds;
 
-        var optionsByTagId = config.Options
+        var optionsByTagId = config.Options!
             .Where(option => option.Value.HasValue)
             .GroupBy(option => option.Value!.Value)
             .ToDictionary(group => group.Key, group => group.First());
@@ -347,6 +368,94 @@ public class Service : IService
             }).ToList()
         };
     }
+
+    private static void EnsureDeliverySlotMeetsPreparationTime(
+        HoaTheoMua.Service.Config.Response.ConfigItem config,
+        int selectedTagId,
+        DateTimeOffset createdAt)
+    {
+        var options = config.Options
+            ?? throw new BadRequestException("Không tìm thấy cấu hình khung giờ giao hàng");
+
+        var selectedOption = options.SingleOrDefault(
+            option => option.Value == selectedTagId);
+
+        if (selectedOption == null)
+        {
+            throw new BadRequestException(
+                $"TagId {selectedTagId} không tồn tại trong cấu hình");
+        }
+
+        var currentTime = TimeOnly.FromDateTime(
+            createdAt.ToOffset(TimeSpan.FromHours(7)).DateTime);
+
+        var parsedSlots = options
+            .Where(option =>
+                option.Value.HasValue &&
+                config.Value!.Contains(option.Value.Value))
+            .Select(option =>
+            {
+                var valid = DeliverySlotTimeHelper.TryGetHours(
+                    option.Label,
+                    out var start,
+                    out var end);
+
+                return new
+                {
+                    Option = option,
+                    Valid = valid,
+                    Start = start,
+                    End = end
+                };
+            })
+            .Where(slot => slot.Valid)
+            .ToList();
+
+        var referenceSlot = parsedSlots.FirstOrDefault(slot =>
+            slot.Start < slot.End
+                ? currentTime >= slot.Start && currentTime < slot.End
+                : currentTime >= slot.Start || currentTime < slot.End);
+
+        referenceSlot ??= parsedSlots
+            .Where(slot => slot.Start < slot.End && slot.End <= currentTime)
+            .OrderByDescending(slot => slot.End)
+            .FirstOrDefault();
+
+        referenceSlot ??= parsedSlots
+            .Where(slot => slot.Start < slot.End && slot.Start > currentTime)
+            .OrderBy(slot => slot.Start)
+            .FirstOrDefault();
+
+        if (referenceSlot == null)
+        {
+            throw new BadRequestException("Không xác định được khung giờ làm mốc");
+        }
+
+        if (!DeliverySlotTimeHelper.TryGetHours(
+                selectedOption.Label,
+                out var selectedStart,
+                out _))
+        {
+            throw new BadRequestException(
+                $"Khung giờ {selectedOption.Label} không hợp lệ");
+        }
+
+        var referenceEndMinutes = (int)referenceSlot.End.ToTimeSpan().TotalMinutes;
+        if (referenceSlot.Start > referenceSlot.End)
+        {
+            referenceEndMinutes += 24 * 60;
+        }
+
+        var minimumDeliveryMinutes = referenceEndMinutes + 4 * 60;
+        var selectedStartMinutes = (int)selectedStart.ToTimeSpan().TotalMinutes;
+
+        if (selectedStartMinutes < minimumDeliveryMinutes)
+        {
+            throw new BadRequestException(
+                "Vui lòng đặt hàng trước giờ giao ít nhất 4 tiếng");
+        }
+    }
+
     private static void EnsureDeliverySlotAvailable(Response.DeliverySlotAvailabilityItem slot)
     {
         if (slot.Limit.HasValue && slot.Occupied >= slot.Limit.Value)
@@ -432,12 +541,23 @@ public class Service : IService
                 .ToOffset(TimeSpan.FromHours(7)).DateTime);
         
         var slotTagId = checked((int)request.TagIds.Single());
-        
+
+        var slotConfig = await GetDeliverySlotConfig(cancellationToken);
         var availability = await GetDeliverySlotAvailability(
             slotDate,
             slotTagId,
+            slotConfig,
             cancellationToken);
         var selectedSlot = availability.Slots.Single();
+
+        if (request.OrderTime == 0)
+        {
+            EnsureDeliverySlotMeetsPreparationTime(
+                slotConfig,
+                slotTagId,
+                createdAt);
+        }
+
         EnsureDeliverySlotAvailable(selectedSlot);
 
         var checkoutConfigs = await ConfigHelper.GetConfigsByGroupsAsync(_dbContext, "checkout");

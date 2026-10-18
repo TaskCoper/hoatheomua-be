@@ -4,8 +4,14 @@ public static class DeliverySlotTimeHelper
 {
     private static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
 
-    public static bool IsWithinSlot(string? label, DateTimeOffset createdAt)
+    public static bool TryGetHours(
+        string? label,
+        out TimeOnly start,
+        out TimeOnly end)
     {
+        start = default;
+        end = default;
+
         if (string.IsNullOrWhiteSpace(label))
         {
             return false;
@@ -24,13 +30,28 @@ public static class DeliverySlotTimeHelper
             return false;
         }
 
+        start = new TimeOnly(startHour, 0);
+        end = new TimeOnly(endHour, 0);
+        return true;
+    }
+
+    public static bool ContainsTime(string? label, TimeOnly time)
+    {
+        if (!TryGetHours(label, out var start, out var end))
+        {
+            return false;
+        }
+
+        return start < end
+            ? time >= start && time < end
+            : time >= start || time < end;
+    }
+
+    public static bool IsWithinSlot(string? label, DateTimeOffset createdAt)
+    {
         var vietnamTime = TimeOnly.FromDateTime(
             createdAt.ToOffset(VietnamOffset).DateTime);
-        var startTime = new TimeOnly(startHour, 0);
-        var endTime = new TimeOnly(endHour, 0);
 
-        return startTime < endTime
-            ? vietnamTime >= startTime && vietnamTime < endTime
-            : vietnamTime >= startTime || vietnamTime < endTime;
+        return ContainsTime(label, vietnamTime);
     }
 }
