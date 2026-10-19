@@ -449,7 +449,19 @@ public class Service : IService
         var minimumDeliveryMinutes = referenceEndMinutes + 4 * 60;
         var selectedStartMinutes = (int)selectedStart.ToTimeSpan().TotalMinutes;
 
-        if (selectedStartMinutes < minimumDeliveryMinutes)
+        var minimumDeliveryTime = TimeOnly.MinValue.AddMinutes(
+            minimumDeliveryMinutes % (24 * 60));
+
+        var containsMinimumTime =
+            minimumDeliveryMinutes < 24 * 60 &&
+            DeliverySlotTimeHelper.ContainsTime(
+                selectedOption.Label,
+                minimumDeliveryTime);
+
+        var startsAfterMinimumTime =
+            selectedStartMinutes >= minimumDeliveryMinutes;
+
+        if (!containsMinimumTime && !startsAfterMinimumTime)
         {
             throw new BadRequestException(
                 "Vui lòng đặt hàng trước giờ giao ít nhất 4 tiếng");

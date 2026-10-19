@@ -43,8 +43,8 @@ public static class DeliverySlotTimeHelper
         }
 
         return start < end
-            ? time >= start && time < end
-            : time >= start || time < end;
+            ? time >= start && time <= end
+            : time >= start || time <= end;
     }
 
     public static bool IsWithinSlot(string? label, DateTimeOffset createdAt)
