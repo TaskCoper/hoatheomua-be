@@ -416,19 +416,38 @@ public class Service : IService
                 ? currentTime >= slot.Start && currentTime < slot.End
                 : currentTime >= slot.Start || currentTime < slot.End);
 
-        referenceSlot ??= parsedSlots
-            .Where(slot => slot.Start < slot.End && slot.End <= currentTime)
-            .OrderByDescending(slot => slot.End)
-            .FirstOrDefault();
+        // Không còn lấy slot vừa kết thúc.
+        // referenceSlot ??= parsedSlots
+        //     .Where(slot => slot.Start < slot.End && slot.End <= currentTime)
+        //     .OrderByDescending(slot => slot.End)
+        //     .FirstOrDefault();
 
-        referenceSlot ??= parsedSlots
-            .Where(slot => slot.Start < slot.End && slot.Start > currentTime)
-            .OrderBy(slot => slot.Start)
-            .FirstOrDefault();
+        // Không còn lấy slot gần nhất phía sau.
+        // referenceSlot ??= parsedSlots
+        //     .Where(slot => slot.Start < slot.End && slot.Start > currentTime)
+        //     .OrderBy(slot => slot.Start)
+        //     .FirstOrDefault();
+
+        int minimumDeliveryMinutes;
 
         if (referenceSlot == null)
         {
-            throw new BadRequestException("Không xác định được khung giờ làm mốc");
+            // Không nằm trong slot nào: lấy thời điểm đặt hàng + 4 tiếng.
+            minimumDeliveryMinutes =
+                (int)currentTime.ToTimeSpan().TotalMinutes + 4 * 60;
+        }
+        else
+        {
+            // Đang nằm trong slot: lấy giờ kết thúc slot + 4 tiếng.
+            var referenceEndMinutes =
+                (int)referenceSlot.End.ToTimeSpan().TotalMinutes;
+
+            if (referenceSlot.Start > referenceSlot.End)
+            {
+                referenceEndMinutes += 24 * 60;
+            }
+
+            minimumDeliveryMinutes = referenceEndMinutes + 4 * 60;
         }
 
         if (!DeliverySlotTimeHelper.TryGetHours(
@@ -440,13 +459,6 @@ public class Service : IService
                 $"Khung giờ {selectedOption.Label} không hợp lệ");
         }
 
-        var referenceEndMinutes = (int)referenceSlot.End.ToTimeSpan().TotalMinutes;
-        if (referenceSlot.Start > referenceSlot.End)
-        {
-            referenceEndMinutes += 24 * 60;
-        }
-
-        var minimumDeliveryMinutes = referenceEndMinutes + 4 * 60;
         var selectedStartMinutes = (int)selectedStart.ToTimeSpan().TotalMinutes;
 
         var minimumDeliveryTime = TimeOnly.MinValue.AddMinutes(
