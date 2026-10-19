@@ -185,9 +185,11 @@ namespace HoaTheoMua.Service.Test.OrderTest
             // var slotStartHour = (currentVietnamHour + 23) % 24;
             // var slotEndHour = (currentVietnamHour + 2) % 24;
             // var minimumDeliveryHour = (slotEndHour + 4) % 24;
-            // Từ 17h, mốc (giờ kết thúc + 4h) sẽ qua 0h -> dùng khung làm mốc đã kết thúc để mốc vẫn trong ngày
-            var slotStartHour = currentVietnamHour >= 17 ? currentVietnamHour - 4 : Math.Max(currentVietnamHour - 1, 0);
-            var slotEndHour = currentVietnamHour >= 17 ? currentVietnamHour - 3 : currentVietnamHour + 2;
+            // var slotStartHour = currentVietnamHour >= 17 ? currentVietnamHour - 4 : Math.Max(currentVietnamHour - 1, 0);
+            // var slotEndHour = currentVietnamHour >= 17 ? currentVietnamHour - 3 : currentVietnamHour + 2;
+            // Khung làm mốc là khung 1 tiếng đang chứa giờ hiện tại -> mốc = giờ kết thúc + 4h
+            var slotStartHour = currentVietnamHour;
+            var slotEndHour = currentVietnamHour + 1;
             var minimumDeliveryHour = slotEndHour + 4;
             var selectedSlotStartHour = minimumDeliveryHour;
             var selectedSlotEndHour = (minimumDeliveryHour + 1) % 24;
@@ -1598,8 +1600,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
         var referenceSlotLabel = SlotLabel(
             // (currentHour + 23) % 24,
             // (currentHour + 2) % 24);
-            currentHour >= 17 ? currentHour - 4 : Math.Max(currentHour - 1, 0),
-            currentHour >= 17 ? currentHour - 3 : currentHour + 2);
+            // currentHour >= 17 ? currentHour - 4 : Math.Max(currentHour - 1, 0),
+            // currentHour >= 17 ? currentHour - 3 : currentHour + 2);
+            currentHour,
+            currentHour + 1);
         var configs = new List<ConfigEntity>
         {
             new()
@@ -1690,7 +1694,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
     {
         var currentHour = VietnamNow().Hour;
         // var referenceEndHour = (currentHour + 2) % 24;
-        var referenceEndHour = currentHour >= 17 ? currentHour - 3 : currentHour + 2;
+        // var referenceEndHour = currentHour >= 17 ? currentHour - 3 : currentHour + 2;
+        var referenceEndHour = currentHour + 1;
         var minimumDeliveryHour = (referenceEndHour + 4 + additionalHours) % 24;
 
         return SlotLabel(
