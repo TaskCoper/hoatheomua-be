@@ -6,6 +6,11 @@ namespace HoaTheoMua.Service.Webhook;
 
 public class Request
 {
+   public class ManualConfirmPaymentRequest
+   {
+      public Guid OrderId { get; set; }
+   }
+
    // Snapshot đã lưu trong OrderDetails.Metadata. Đây không phải payload từ
    // gateway; Webhook dùng class này để đọc lại dữ liệu đã chốt ở CreateOrder.
    public class OrderDetailMetadata

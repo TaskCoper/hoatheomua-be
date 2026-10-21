@@ -1,8 +1,10 @@
 ﻿using System.Text;
 using System.Text.Json;
+using HoaTheoMua.Extentions;
 using HoaTheoMua.Service.Exceptions;
 using HoaTheoMua.Service.Models;
 using HoaTheoMua.Service.Webhook;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using BaoKimService = HoaTheoMua.Service.BaoKim;
 
@@ -25,6 +27,16 @@ public class SepayController : ControllerBase
         _sepayService = sepayService;
         _baoKimService = baoKimService;
         _environment = environment;
+    }
+
+    [HttpPost("/api/v1/sepay/manual-confirm-payment")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> ManualConfirmPayment(
+        [FromBody] Request.ManualConfirmPaymentRequest request)
+    {
+        await _sepayService.ManualConfirmPayment(request.OrderId);
+
+        return Ok(ApiResponseFactory.Base("Xác minh thành công", true, "", HttpContext.TraceIdentifier));
     }
 
     [HttpPost("/api/v1/sepay")]

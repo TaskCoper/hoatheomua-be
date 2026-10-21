@@ -354,6 +354,64 @@ public partial class Service : IService
     /// </summary>
     private const string UseSagaConfigKey = "fulfillment.use_saga";
 
+    public async Task ManualConfirmPayment(Guid orderId)
+    {
+        if (orderId == Guid.Empty)
+        {
+            throw new BadRequestException("OrderId không hợp lệ");
+        }
+
+        var order = await _dbContext.Orders
+            .FirstOrDefaultAsync(order =>
+                !order.IsDeleted &&
+                order.Id == orderId);
+
+        if (order == null)
+        {
+            throw new NotFoundException("Không tìm thấy đơn hàng");
+        }
+
+        // Đã xử lý thanh toán rồi thì trả thành công, không chạy lại flow.
+        if (order.Status is PaidStatus or
+            Fulfillment.Service.FulfillmentFailedStatus)
+        {
+            return;
+        }
+
+        if (order.Status != PendingStatus)
+        {
+            throw new ConflictException(
+                $"Không thể xác minh đơn hàng ở trạng thái {order.Status}");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+
+        var transaction = new Transaction
+        {
+            RequestId = $"manual:{order.Id:N}",
+            Gateway = order.PaymentGateway.ToString(),
+            paymentMethod = order.PaymentMethod,
+            TransactionDate = now.UtcDateTime,
+
+            AccountNumber = string.Empty,
+            SubAccount = string.Empty,
+            Code = string.Empty,
+            Content = string.Empty,
+            TransferType = "Manual",
+            Description = "Admin xác nhận thanh toán thủ công",
+            ReferenceCode = string.Empty,
+
+            TransferAmount = order.TotalFee,
+            Accumulated = 0,
+
+            OrderId = order.Id,
+            CreatedAt = now
+        };
+
+        // Tái sử dụng toàn bộ flow webhook hiện tại.
+        await FulfillPaidOrder(order, transaction);
+    }
+
     // Shared tail for both gateways.
     private async Task FulfillPaidOrder(Repository.Entity.Order order, Transaction transaction)
     {

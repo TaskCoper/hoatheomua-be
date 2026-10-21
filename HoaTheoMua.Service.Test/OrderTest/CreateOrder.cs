@@ -189,8 +189,8 @@ namespace HoaTheoMua.Service.Test.OrderTest
             // var slotEndHour = currentVietnamHour >= 17 ? currentVietnamHour - 3 : currentVietnamHour + 2;
             // Khung làm mốc là khung 1 tiếng đang chứa giờ hiện tại -> mốc = giờ kết thúc + 4h
             var slotStartHour = currentVietnamHour;
-            var slotEndHour = currentVietnamHour + 1;
-            var minimumDeliveryHour = slotEndHour + 4;
+            var slotEndHour = (currentVietnamHour + 1) % 24;
+            var minimumDeliveryHour = (slotEndHour + 4) % 24;
             var selectedSlotStartHour = minimumDeliveryHour;
             var selectedSlotEndHour = (minimumDeliveryHour + 1) % 24;
 
@@ -492,6 +492,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver,
                 Items = items.ToList()
@@ -570,6 +571,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -706,13 +708,12 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.XanhSm,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
 
-            var beforeCreate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             await service.CreateOrder(request);
-            var afterCreate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
             var order = Assert.Single(orders);
             Assert.Equal(ShippingGateway.XanhSm, order.ShippingGateway);
@@ -729,7 +730,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                         point.PackageTypes!.SequenceEqual(
                             new[] { HoaTheoMua.Service.XanhSm.XanhSmConstants.FlowersPackageType })) &&
                     points.Any(point => point.Type == "DROP OFF" && point.PhoneNumber == "+84901234567")),
-                It.Is<long>(orderTime => orderTime >= beforeCreate + 5400 && orderTime <= afterCreate + 5400),
+                It.Is<long>(orderTime => orderTime == request.OrderTime),
                 It.IsAny<CancellationToken>()), Times.Once);
         }
 
@@ -898,6 +899,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -941,6 +943,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -976,6 +979,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1013,6 +1017,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1051,6 +1056,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1095,6 +1101,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1138,6 +1145,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1191,6 +1199,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1270,6 +1279,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1343,6 +1353,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 PaymentGateway = PaymentGateway.BaoKim,
                 ShippingGateway = ShippingGateway.Ahamove,
                 TagIds = [SlotTagId],
+                OrderTime = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds(),
                 PhoneReceiver = TestPhoneReceiver,
                 FullNameReceiver = TestFullNameReceiver
             };
@@ -1530,8 +1541,10 @@ namespace HoaTheoMua.Service.Test.OrderTest
                 orders: [existingOrder]),
             out var orders);
 
+        var request = CreateRequest([SlotTagId]);
+        request.OrderTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => service.CreateOrder(CreateRequest([SlotTagId])));
+            () => service.CreateOrder(request));
 
         Assert.Contains("đã đạt giới hạn 1 đơn hàng", exception.Message);
         Assert.Single(orders);
@@ -1550,7 +1563,11 @@ namespace HoaTheoMua.Service.Test.OrderTest
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => service.CreateOrder(CreateRequest([SlotTagId])));
 
-        Assert.Equal("ORDER_ITEMS_INVALID", exception.Message);
+        Assert.Equal(
+            VietnamNow().Hour + 5 >= 24
+                ? "Vui lòng đặt hàng trước giờ giao ít nhất 4 tiếng"
+                : "ORDER_ITEMS_INVALID",
+            exception.Message);
     }
 
     [Fact]
@@ -1565,7 +1582,11 @@ namespace HoaTheoMua.Service.Test.OrderTest
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => service.CreateOrder(CreateRequest([SlotTagId])));//18h–19h
 
-        Assert.Equal("ORDER_ITEMS_INVALID", exception.Message);
+        Assert.Equal(
+            VietnamNow().Hour + 6 >= 24
+                ? "Vui lòng đặt hàng trước giờ giao ít nhất 4 tiếng"
+                : "ORDER_ITEMS_INVALID",
+            exception.Message);
     }
 
     private static OrderRequest.CreateOrderRequest CreateRequest(List<long> tagIds) => new()
@@ -1603,7 +1624,7 @@ namespace HoaTheoMua.Service.Test.OrderTest
             // currentHour >= 17 ? currentHour - 4 : Math.Max(currentHour - 1, 0),
             // currentHour >= 17 ? currentHour - 3 : currentHour + 2);
             currentHour,
-            currentHour + 1);
+            (currentHour + 1) % 24);
         var configs = new List<ConfigEntity>
         {
             new()
