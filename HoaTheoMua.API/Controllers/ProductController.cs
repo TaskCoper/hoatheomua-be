@@ -104,6 +104,11 @@ public class ProductController: ControllerBase
             id = new[] { id },
         });
         await _revalidateService.RevalidateApi(json);
+        if (request.CategoryId.HasValue)
+        {
+            // Ghim theo danh mục thì làm mới cả trang danh mục
+            await _revalidateService.RevalidateApi(JsonSerializer.SerializeToElement(new { entity = "category" }));
+        }
         return Ok(result);
     }
     
@@ -118,6 +123,29 @@ public class ProductController: ControllerBase
             id = new[] { request.ProductId },
         });
         await _revalidateService.RevalidateApi(json);
+        if (request.CategoryId.HasValue)
+        {
+            // Ghim theo danh mục thì làm mới cả trang danh mục
+            await _revalidateService.RevalidateApi(JsonSerializer.SerializeToElement(new { entity = "category" }));
+        }
+        return Ok(result);
+    }
+
+    [HttpPut("/api/v1/products/pin/bulk")]
+    [Authorize (Policy = JwtExtensions.AdminPolicy)]
+    public async Task<IActionResult> PinProducts(Request.PinProductsRequest request)
+    {
+        var result = await _productService.PinProducts(request);
+        JsonElement json = JsonSerializer.SerializeToElement(new
+        {
+            entity = "product",
+            id = request.ProductIds,
+        });
+        await _revalidateService.RevalidateApi(json);
+        if (request.CategoryId.HasValue)
+        {
+            await _revalidateService.RevalidateApi(JsonSerializer.SerializeToElement(new { entity = "category" }));
+        }
         return Ok(result);
     }
 

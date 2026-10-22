@@ -700,6 +700,21 @@ public class Service : IService
             .Select(x => x.CategoryProductId)
             .ToList();
 
+        //Vì hệ thống chỉ có 1 admin thôi nên không cần phải lock lại
+        // Transaction + khóa danh sách ghim của từng danh mục để hai request cùng lúc không tính ra cùng một vị trí
+        // await using var transaction = _dbContext.Database.IsRelational()
+        //     ? await _dbContext.Database.BeginTransactionAsync()
+        //     : null;
+        // if (_dbContext.Database.IsRelational())   // EF InMemory không chạy được SQL thô
+        // {
+        //     foreach (var lockCategoryId in categoryIds.OrderBy(x => x))   // sắp xếp để tránh deadlock
+        //     {
+        //         var lockKey = $"pin:{lockCategoryId}";
+        //         await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+        //             $"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))");
+        //     }
+        // }
+
         var productExists = await _dbContext.Products
             .AnyAsync(x => x.Id == request.ProductId && !x.IsDeleted);
 
@@ -734,6 +749,9 @@ public class Service : IService
             .Select(item => item.CategoryProductId)
             .ToList();
 
+        // Position lớn nhất hiện có của từng danh mục sắp ghim mới (không tính sản phẩm này)
+        var maxPositions = new Dictionary<Guid, double?>();
+
         if (categoryIdsToPin.Count > 0)
         {
             var pinnedCounts = await _dbContext.CategoryProductDetails
@@ -754,6 +772,19 @@ public class Service : IService
             {
                 throw new BadRequestException("Only 32 products can be pinned in this category");
             }
+
+            maxPositions = await _dbContext.CategoryProductDetails
+                .Where(x => !x.IsDeleted
+                            && x.IsPin
+                            && x.ProductId != request.ProductId
+                            && categoryIdsToPin.Contains(x.CategoryProductId))
+                .GroupBy(x => x.CategoryProductId)
+                .Select(group => new
+                {
+                    CategoryProductId = group.Key,
+                    MaxPosition = group.Max(x => x.Position)
+                })
+                .ToDictionaryAsync(x => x.CategoryProductId, x => x.MaxPosition);
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -765,8 +796,18 @@ public class Service : IService
             {
                 foreach (var detail in details)
                 {
+                    // detail.IsPin = categoryItem.IsPin;
+                    // detail.Position = categoryItem.Position;
                     detail.IsPin = categoryItem.IsPin;
-                    detail.Position = categoryItem.Position;
+                    if (!categoryItem.IsPin)
+                    {
+                        detail.Position = null;   // bỏ ghim thì không còn vị trí
+                    }
+                    else if (categoryIdsToPin.Contains(categoryItem.CategoryProductId))
+                    {
+                        // Mới ghim: BE tự tính xuống cuối, bỏ qua Position FE gửi. Đã ghim sẵn thì giữ nguyên Position
+                        detail.Position = (maxPositions.GetValueOrDefault(categoryItem.CategoryProductId) ?? 0) + 16384;
+                    }
                     detail.UpdatedAt = now;
                 }
                 continue;
@@ -778,7 +819,10 @@ public class Service : IService
                 ProductId = request.ProductId,
                 CategoryProductId = categoryItem.CategoryProductId,
                 IsPin = categoryItem.IsPin,
-                Position = categoryItem.Position,
+                // Position = categoryItem.Position,
+                Position = categoryItem.IsPin
+                    ? (maxPositions.GetValueOrDefault(categoryItem.CategoryProductId) ?? 0) + 16384
+                    : null,
                 CreatedAt = now,
             });
         }
@@ -789,7 +833,8 @@ public class Service : IService
         }
         
         await _dbContext.SaveChangesAsync();
-        
+        // if (transaction != null) await transaction.CommitAsync();
+
         return ApiResponseFactory.Base("Category product detail updated successfully.");
     }
 }

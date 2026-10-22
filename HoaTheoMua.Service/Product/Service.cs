@@ -17,6 +17,12 @@ namespace HoaTheoMua.Service.Product;
 
 public class Service : IService
 {
+    // Khoảng cách giữa 2 sản phẩm ghim liền kề: Position = (thứ tự + 1) * PinPositionGap
+    private const double PinPositionGap = 16384;
+    private const int maxPinnedProducts = 32;
+    private const double initialPosition = 140737488355328; // 2^47
+    private const double minimumGap = 2;
+
     private readonly AppDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContext;
     private readonly HttpClient _httpClient;
@@ -1521,8 +1527,115 @@ public class Service : IService
         return maxPrice ?? 0;
     }
 
+    // // Khoảng cách giữa 2 sản phẩm ghim liền kề: Position = (thứ tự + 1) * PinPositionGap
+    // private const double PinPositionGap = 16384;
+
     public async Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request)
     {
+        // const double initialPosition = 140737488355328; // 2^47
+        // const double minGap = 2;
+        //hàm này tính toán không query hay update database
+        //nhận vào một danh sách sản phẩm đã sắp xếp
+        //id của sản phẩm kéo
+        //id của thằng mốc
+        //đặt trước hay sau mốc,
+        static Dictionary<Guid, double> BuildMoveChanges(
+            IReadOnlyList<(Guid ProductId, double? Position)> orderedItems,
+            Guid movingProductId,
+            Guid anchorProductId,
+            bool insertAfter,
+            double initial,
+            double gap,
+            double minimumGap)
+        {
+            //lấy sản phẩm đang di chuyển
+            var moving = orderedItems.First(x => x.ProductId == movingProductId);
+            //loại sản phẩm đó khỏi danh sách
+            //giúp tính vị trị mới mà không bị ảnh hưởng bởi vị trí cũ của nó
+            var remaining = orderedItems
+                .Where(x => x.ProductId != movingProductId)
+                .ToList();
+            //tìm sản phẩm mốc
+            var anchorIndex = remaining.FindIndex(x => x.ProductId == anchorProductId);
+            if (anchorIndex < 0)
+            {
+                throw new ConflictException(
+                    "PIN_ANCHOR_NOT_FOUND",
+                    "Anchor product is not in the pin list.");
+            }
+            //tính index cần chèn
+            var insertIndex = insertAfter ? anchorIndex + 1 : anchorIndex;
+
+            var previousPosition = double.NegativeInfinity;
+            var isValid = true;
+            //kiểm tra danh sách còn lại có hợp lệ khng
+            //not null, hữu hạn , tăng dần, và không trùng
+            foreach (var item in remaining)
+            {
+                if (item.Position is not { } position ||
+                    !double.IsFinite(position) ||
+                    position <= previousPosition)
+                {
+                    isValid = false;
+                    break;
+                }
+
+                previousPosition = position;
+            }
+            //hợp lệ thì tính position mới
+            double? newPosition = null;
+            if (isValid)
+            {
+                if (remaining.Count == 0)
+                {
+                    newPosition = initial;
+                }
+                else if (insertIndex == 0)
+                {
+                    newPosition = remaining[0].Position!.Value - gap;
+                }
+                else if (insertIndex == remaining.Count)
+                {
+                    newPosition = remaining[^1].Position!.Value + gap;
+                }
+                else
+                {
+                    var previous = remaining[insertIndex - 1].Position!.Value;
+                    var next = remaining[insertIndex].Position!.Value;
+
+                    if (next - previous >= minimumGap)
+                    {
+                        newPosition = Math.Floor((previous + next) / 2);
+                    }
+                }
+
+                if (newPosition.HasValue && double.IsFinite(newPosition.Value))
+                {
+                    return moving.Position == newPosition.Value
+                        ? new Dictionary<Guid, double>()
+                        : new Dictionary<Guid, double>
+                        {
+                            [movingProductId] = newPosition.Value
+                        };
+                }
+            }
+
+            // Dữ liệu cũ không hợp lệ hoặc không còn khoảng trống: renumber toàn bộ.
+            remaining.Insert(insertIndex, moving);
+            var changes = new Dictionary<Guid, double>();
+
+            for (var index = 0; index < remaining.Count; index++)
+            {
+                var position = (index + 1) * gap;
+                if (remaining[index].Position != position)
+                {
+                    changes[remaining[index].ProductId] = position;
+                }
+            }
+
+            return changes;
+        }
+
         if (request == null)
         {
             throw new BadRequestException("Invalid movement data.");
@@ -1533,56 +1646,246 @@ public class Service : IService
             throw new BadRequestException("Product ID is required.");
         }
 
-        if (request.CategoryId.HasValue && request.CategoryId.Value == Guid.Empty)
+        if (request.CategoryId == Guid.Empty)
         {
             throw new BadRequestException("Category ID cannot be empty.");
         }
 
+        var hasAfter = request.AfterProductId.HasValue;
+        var hasBefore = request.BeforeProductId.HasValue;
+
+        if (hasAfter == hasBefore ||
+            request.AfterProductId == id ||
+            request.BeforeProductId == id)
+        {
+            throw new BadRequestException("Invalid move anchor.");
+        }
+
+        await using var transaction =
+            _dbContext.Database.IsRelational() &&
+            _dbContext.Database.CurrentTransaction == null
+                ? await _dbContext.Database.BeginTransactionAsync()
+                : null;
+
+        var anchorId = request.AfterProductId ?? request.BeforeProductId!.Value;
+        var now = DateTimeOffset.UtcNow;
+
         if (request.CategoryId.HasValue)
         {
-            var categoryProductDetail = await _dbContext.CategoryProductDetails
-                .FirstOrDefaultAsync(x =>
-                    x.ProductId == id &&
-                    x.CategoryProductId == request.CategoryId.Value &&
+            var pinned = await _dbContext.CategoryProductDetails
+                .Where(x =>
                     !x.IsDeleted &&
                     x.IsPin &&
+                    x.CategoryProductId == request.CategoryId.Value &&
                     !x.CategoryProduct.IsDeleted &&
                     !x.Product.IsDeleted &&
-                    (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty || x.Product.ParentProductId == "-1" || x.Product.ParentProductId == "-2"));
+                    (x.Product.ParentProductId == null ||
+                     x.Product.ParentProductId == string.Empty ||
+                     x.Product.ParentProductId == "-1" ||
+                     x.Product.ParentProductId == "-2"))
+                .OrderBy(x => x.Position)
+                .ThenBy(x => x.Product.ProductName)
+                .ThenBy(x => x.Product.Id)
+                .ToListAsync();
 
-            if (categoryProductDetail == null)
+            if (pinned.All(x => x.ProductId != id))
             {
-                throw new BadRequestException("Only product pinned in this category can update position");
+                throw new BadRequestException(
+                    "Only product pinned in this category can update position");
             }
 
-            categoryProductDetail.Position = request.Position;
-            categoryProductDetail.UpdatedAt = DateTimeOffset.UtcNow;
+            var changes = BuildMoveChanges(
+                pinned.Select(x => (x.ProductId, x.Position)).ToList(),
+                id,
+                anchorId,
+                hasAfter,
+                initialPosition,
+                PinPositionGap,
+                minimumGap);
+
+            foreach (var detail in pinned)
+            {
+                if (changes.TryGetValue(detail.ProductId, out var position))
+                {
+                    detail.Position = position;
+                    detail.UpdatedAt = now;
+                }
+            }
         }
         else
         {
-            var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
-                                                                                    x.Id == id &&
-                                                                                    !x.IsDeleted &&
-                                                                                    x.IsPin &&
-                                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2"));
+            var pinned = await _dbContext.Products
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.IsPin &&
+                    (x.ParentProductId == null ||
+                     x.ParentProductId == string.Empty ||
+                     x.ParentProductId == "-1" ||
+                     x.ParentProductId == "-2"))
+                .OrderBy(x => x.Position)
+                .ThenBy(x => x.ProductName)
+                .ThenBy(x => x.Id)
+                .ToListAsync();
 
-            if (product == null)
+            if (pinned.All(x => x.Id != id))
             {
-                throw new BadRequestException("Only product with pin can update position");
+                throw new BadRequestException(
+                    "Only product with pin can update position");
             }
 
-            product.Position = request.Position;
-            product.UpdatedAt = DateTimeOffset.UtcNow;
+            var changes = BuildMoveChanges(
+                pinned.Select(x => (x.Id, x.Position)).ToList(),
+                id,
+                anchorId,
+                hasAfter,
+                initialPosition,
+                PinPositionGap,
+                minimumGap);
+
+            foreach (var product in pinned)
+            {
+                if (changes.TryGetValue(product.Id, out var position))
+                {
+                    product.Position = position;
+                    product.UpdatedAt = now;
+                }
+            }
         }
 
         await _dbContext.SaveChangesAsync();
+        if (transaction != null)
+        {
+            await transaction.CommitAsync();
+        }
 
         return ApiResponseFactory.Base("Product position updated successfully.");
-
     }
 
     public async Task<BaseResponse> PinProduct(Request.PinProductRequest request)
     {
+        // const int maxPinnedProducts = 32;
+        // const double initialPosition = 140737488355328; // 2^47
+        // const double minimumGap = 2;
+
+        static Dictionary<Guid, double> BuildPinChanges(
+            IReadOnlyList<(Guid ProductId, double? Position)> orderedItems,
+            Guid productId,
+            Guid? afterProductId,
+            Guid? beforeProductId,
+            double initial,
+            double gap,
+            double minGap)
+        {
+            var insertIndex = orderedItems.Count;
+            var anchorId = afterProductId ?? beforeProductId;
+
+            if (anchorId.HasValue)
+            {
+                var anchorIndex = -1;
+                for (var index = 0; index < orderedItems.Count; index++)
+                {
+                    if (orderedItems[index].ProductId == anchorId.Value)
+                    {
+                        anchorIndex = index;
+                        break;
+                    }
+                }
+
+                if (anchorIndex < 0)
+                {
+                    throw new ConflictException(
+                        "PIN_ANCHOR_NOT_FOUND",
+                        "Anchor product is not in the pin list.");
+                }
+
+                insertIndex = afterProductId.HasValue
+                    ? anchorIndex + 1
+                    : anchorIndex;
+            }
+
+            var previousPosition = double.NegativeInfinity;
+            var isValid = true;
+
+            foreach (var item in orderedItems)
+            {
+                if (item.Position is not { } position ||
+                    !double.IsFinite(position) ||
+                    position <= previousPosition)
+                {
+                    isValid = false;
+                    break;
+                }
+
+                previousPosition = position;
+            }
+
+            double? newPosition = null;
+            if (isValid)
+            {
+                if (orderedItems.Count == 0)
+                {
+                    newPosition = initial;
+                }
+                else if (insertIndex == 0)
+                {
+                    newPosition = orderedItems[0].Position!.Value - gap;
+                }
+                else if (insertIndex == orderedItems.Count)
+                {
+                    newPosition = orderedItems[^1].Position!.Value + gap;
+                }
+                else
+                {
+                    var previous = orderedItems[insertIndex - 1].Position!.Value;
+                    var next = orderedItems[insertIndex].Position!.Value;
+
+                    if (next - previous >= minGap)
+                    {
+                        newPosition = Math.Floor((previous + next) / 2);
+                    }
+                }
+
+                if (newPosition.HasValue && double.IsFinite(newPosition.Value))
+                {
+                    return new Dictionary<Guid, double>
+                    {
+                        [productId] = newPosition.Value
+                    };
+                }
+            }
+
+            // Dữ liệu cũ không hợp lệ hoặc không còn khoảng trống: đánh số lại toàn bộ.
+            var reorderedItems = orderedItems.ToList();
+            reorderedItems.Insert(insertIndex, (productId, null));
+
+            var changes = new Dictionary<Guid, double>();
+            for (var index = 0; index < reorderedItems.Count; index++)
+            {
+                var position = (index + 1) * gap;
+                if (reorderedItems[index].Position != position)
+                {
+                    changes[reorderedItems[index].ProductId] = position;
+                }
+            }
+
+            return changes;
+        }
+
+        static void ApplyPositionChanges<T>(
+            IEnumerable<T> items,
+            Func<T, Guid> getProductId,
+            IReadOnlyDictionary<Guid, double> changes,
+            Action<T, double> apply)
+        {
+            foreach (var item in items)
+            {
+                if (changes.TryGetValue(getProductId(item), out var position))
+                {
+                    apply(item, position);
+                }
+            }
+        }
+
         if (request == null)
         {
             throw new BadRequestException("Invalid pin data.");
@@ -1593,81 +1896,376 @@ public class Service : IService
             throw new BadRequestException("Product ID is required.");
         }
 
-        if (request.CategoryId.HasValue && request.CategoryId.Value == Guid.Empty)
+        if (request.CategoryId == Guid.Empty)
         {
             throw new BadRequestException("Category ID cannot be empty.");
         }
 
+        if (request.IsPin &&
+            ((request.AfterProductId.HasValue && request.BeforeProductId.HasValue) ||
+             request.AfterProductId == request.ProductId ||
+             request.BeforeProductId == request.ProductId))
+        {
+            throw new BadRequestException("Invalid pin anchor.");
+        }
+
         var product = await _dbContext.Products.FirstOrDefaultAsync(x =>
-                                                                    x.Id == request.ProductId &&
-                                                                    !x.IsDeleted &&
-                                                                    (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2"));
+            x.Id == request.ProductId &&
+            !x.IsDeleted &&
+            (x.ParentProductId == null ||
+             x.ParentProductId == string.Empty ||
+             x.ParentProductId == "-1" ||
+             x.ParentProductId == "-2"));
 
         if (product == null)
         {
-            throw new BadRequestException("Product not found or is not a parent product.");
+            throw new BadRequestException(
+                "Product not found or is not a parent product.");
         }
 
-        if (request.IsPin)
-        {
-            if (request.CategoryId.HasValue)
-            {
-                var pinnedCategoryProductCount = await _dbContext.CategoryProductDetails
-                    .CountAsync(x =>
-                        !x.IsDeleted &&
-                        x.CategoryProductId == request.CategoryId.Value &&
-                        x.IsPin &&
-                        (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty || x.Product.ParentProductId == "-1" || x.Product.ParentProductId == "-2"));
-
-                if (pinnedCategoryProductCount >= 32)
-                {
-                    throw new BadRequestException("Only 32 products can be pinned in this category.");
-                }
-            }
-            else
-            {
-                var pinnedProductCount = await _dbContext.Products
-                    .CountAsync(x =>
-                        !x.IsDeleted &&
-                        x.IsPin &&
-                        (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2"));
-
-                if (pinnedProductCount >= 32)
-                {
-                    throw new BadRequestException("Only 32 products can be pinned.");
-                }
-            }
-        }
+        var now = DateTimeOffset.UtcNow;
 
         if (request.CategoryId.HasValue)
         {
             var categoryProductDetail = await _dbContext.CategoryProductDetails
                 .FirstOrDefaultAsync(x =>
                     !x.IsDeleted &&
+                    !x.CategoryProduct.IsDeleted &&
                     x.CategoryProductId == request.CategoryId.Value &&
                     x.ProductId == request.ProductId);
 
             if (categoryProductDetail == null)
             {
-                throw new BadRequestException("Product does not belong to this category.");
+                throw new BadRequestException(
+                    "Product does not belong to this category.");
             }
 
-            categoryProductDetail.IsPin = request.IsPin;
-            categoryProductDetail.UpdatedAt = DateTimeOffset.UtcNow;
+            if (!request.IsPin)
+            {
+                if (categoryProductDetail.IsPin)
+                {
+                    categoryProductDetail.IsPin = false;
+                    categoryProductDetail.Position = null;
+                    categoryProductDetail.UpdatedAt = now;
+                }
+            }
+            else if (!categoryProductDetail.IsPin)
+            {
+                var pinned = await _dbContext.CategoryProductDetails
+                    .Where(x =>
+                        !x.IsDeleted &&
+                        x.IsPin &&
+                        x.CategoryProductId == request.CategoryId.Value &&
+                        !x.CategoryProduct.IsDeleted &&
+                        !x.Product.IsDeleted &&
+                        (x.Product.ParentProductId == null ||
+                         x.Product.ParentProductId == string.Empty ||
+                         x.Product.ParentProductId == "-1" ||
+                         x.Product.ParentProductId == "-2"))
+                    .OrderBy(x => x.Position)
+                    .ThenBy(x => x.Product.ProductName)
+                    .ThenBy(x => x.Product.Id)
+                    .ToListAsync();
+
+                if (pinned.Count >= maxPinnedProducts)
+                {
+                    throw new BadRequestException(
+                        "Only 32 products can be pinned in this category.");
+                }
+
+                var changes = BuildPinChanges(
+                    pinned.Select(x => (x.ProductId, x.Position)).ToList(),
+                    request.ProductId,
+                    request.AfterProductId,
+                    request.BeforeProductId,
+                    initialPosition,
+                    PinPositionGap,
+                    minimumGap);
+
+                categoryProductDetail.IsPin = true;
+                ApplyPositionChanges(
+                    pinned.Append(categoryProductDetail),
+                    x => x.ProductId,
+                    changes,
+                    (item, position) =>
+                    {
+                        item.Position = position;
+                        item.UpdatedAt = now;
+                    });
+            }
         }
-        else
+        else if (!request.IsPin)
         {
-            product.IsPin = request.IsPin;
-            product.UpdatedAt = DateTimeOffset.UtcNow;
+            if (product.IsPin)
+            {
+                product.IsPin = false;
+                product.Position = null;
+                product.UpdatedAt = now;
+            }
+        }
+        else if (!product.IsPin)
+        {
+            var pinned = await _dbContext.Products
+                .Where(x =>
+                    !x.IsDeleted &&
+                    x.IsPin &&
+                    (x.ParentProductId == null ||
+                     x.ParentProductId == string.Empty ||
+                     x.ParentProductId == "-1" ||
+                     x.ParentProductId == "-2"))
+                .OrderBy(x => x.Position)
+                .ThenBy(x => x.ProductName)
+                .ThenBy(x => x.Id)
+                .ToListAsync();
+
+            if (pinned.Count >= maxPinnedProducts)
+            {
+                throw new BadRequestException("Only 32 products can be pinned.");
+            }
+
+            var changes = BuildPinChanges(
+                pinned.Select(x => (x.Id, x.Position)).ToList(),
+                request.ProductId,
+                request.AfterProductId,
+                request.BeforeProductId,
+                initialPosition,
+                PinPositionGap,
+                minimumGap);
+
+            product.IsPin = true;
+            ApplyPositionChanges(
+                pinned.Append(product),
+                x => x.Id,
+                changes,
+                (item, position) =>
+                {
+                    item.Position = position;
+                    item.UpdatedAt = now;
+                });
         }
 
         await _dbContext.SaveChangesAsync();
 
-        var message = request.IsPin
-            ? "Product pinned successfully."
-            : "Product unpinned successfully.";
+        return ApiResponseFactory.Base(
+            request.IsPin
+                ? "Product pinned successfully."
+                : "Product unpinned successfully.");
+    }
 
-        return ApiResponseFactory.Base(message);
+    public async Task<BaseResponse> PinProducts(Request.PinProductsRequest request)
+    {
+        // const int maxPinnedProducts = 32;
+        // const double initialPosition = 140737488355328; // 2^47
+
+        if (request?.ProductIds == null || request.ProductIds.Count == 0)
+        {
+            throw new BadRequestException("Product IDs are required.");
+        }
+
+        if (request.ProductIds.Any(productId => productId == Guid.Empty))
+        {
+            throw new BadRequestException("Product ID is required.");
+        }
+
+        if (request.CategoryId == Guid.Empty)
+        {
+            throw new BadRequestException("Category ID cannot be empty.");
+        }
+
+        // Bỏ ID trùng nhưng vẫn giữ thứ tự xuất hiện đầu tiên từ FE.
+        var productIds = request.ProductIds.Distinct().ToList();
+        var productOrder = productIds
+            .Select((productId, index) => new { productId, index })
+            .ToDictionary(item => item.productId, item => item.index);
+
+        // Query một lần để vừa validate, vừa tái sử dụng cho nhánh pin global.
+        var requestedProducts = await _dbContext.Products
+            .Where(product =>
+                productIds.Contains(product.Id) &&
+                !product.IsDeleted &&
+                (product.ParentProductId == null ||
+                 product.ParentProductId == string.Empty ||
+                 product.ParentProductId == "-1" ||
+                 product.ParentProductId == "-2"))
+            .ToListAsync();
+
+        if (requestedProducts.Count != productIds.Count)
+        {
+            throw new BadRequestException(
+                "Product not found or is not a parent product.");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+
+        if (request.CategoryId.HasValue)
+        {
+            // Lấy các quan hệ danh mục tương ứng để vừa validate vừa cập nhật.
+            var requestedDetails = await _dbContext.CategoryProductDetails
+                .Where(detail =>
+                    !detail.IsDeleted &&
+                    !detail.CategoryProduct.IsDeleted &&
+                    !detail.Product.IsDeleted &&
+                    detail.CategoryProductId == request.CategoryId.Value &&
+                    productIds.Contains(detail.ProductId))
+                .ToListAsync();
+
+            if (requestedDetails.Count != productIds.Count)
+            {
+                throw new BadRequestException(
+                    "Product does not belong to this category.");
+            }
+
+            var pinned = await _dbContext.CategoryProductDetails
+                .Where(detail =>
+                    !detail.IsDeleted &&
+                    detail.IsPin &&
+                    detail.CategoryProductId == request.CategoryId.Value &&
+                    !detail.CategoryProduct.IsDeleted &&
+                    !detail.Product.IsDeleted &&
+                    (detail.Product.ParentProductId == null ||
+                     detail.Product.ParentProductId == string.Empty ||
+                     detail.Product.ParentProductId == "-1" ||
+                     detail.Product.ParentProductId == "-2"))
+                .OrderBy(detail => detail.Position)
+                .ThenBy(detail => detail.Product.ProductName)
+                .ThenBy(detail => detail.Product.Id)
+                .ToListAsync();
+
+            var toPin = requestedDetails
+                .Where(detail => !detail.IsPin)
+                .OrderBy(detail => productOrder[detail.ProductId])
+                .ToList();
+
+            if (pinned.Count + toPin.Count > maxPinnedProducts)
+            {
+                throw new BadRequestException(
+                    "Only 32 products can be pinned in this category.");
+            }
+
+            // Nếu tất cả đã ghim thì không ghi lại dữ liệu.
+            if (toPin.Count > 0)
+            {
+                var previousPosition = double.NegativeInfinity;
+                var positionsAreValid = true;
+
+                foreach (var detail in pinned)
+                {
+                    if (detail.Position is not { } position ||
+                        !double.IsFinite(position) ||
+                        position <= previousPosition)
+                    {
+                        positionsAreValid = false;
+                        break;
+                    }
+
+                    previousPosition = position;
+                }
+
+                // Chỉ renumber khi dữ liệu Position cũ không hợp lệ.
+                if (!positionsAreValid)
+                {
+                    for (var index = 0; index < pinned.Count; index++)
+                    {
+                        var position = (index + 1) * PinPositionGap;
+                        if (pinned[index].Position != position)
+                        {
+                            pinned[index].Position = position;
+                            pinned[index].UpdatedAt = now;
+                        }
+                    }
+                }
+
+                var lastPosition = pinned.Count == 0
+                    ? initialPosition - PinPositionGap
+                    : pinned[^1].Position!.Value;
+
+                // Nối sản phẩm mới xuống cuối theo đúng thứ tự FE gửi.
+                foreach (var detail in toPin)
+                {
+                    lastPosition += PinPositionGap;
+                    detail.IsPin = true;
+                    detail.Position = lastPosition;
+                    detail.UpdatedAt = now;
+                }
+            }
+        }
+        else
+        {
+            var pinned = await _dbContext.Products
+                .Where(product =>
+                    !product.IsDeleted &&
+                    product.IsPin &&
+                    (product.ParentProductId == null ||
+                     product.ParentProductId == string.Empty ||
+                     product.ParentProductId == "-1" ||
+                     product.ParentProductId == "-2"))
+                .OrderBy(product => product.Position)
+                .ThenBy(product => product.ProductName)
+                .ThenBy(product => product.Id)
+                .ToListAsync();
+
+            var toPin = requestedProducts
+                .Where(product => !product.IsPin)
+                .OrderBy(product => productOrder[product.Id])
+                .ToList();
+
+            if (pinned.Count + toPin.Count > maxPinnedProducts)
+            {
+                throw new BadRequestException(
+                    "Only 32 products can be pinned.");
+            }
+
+            // Nếu tất cả đã ghim thì không ghi lại dữ liệu.
+            if (toPin.Count > 0)
+            {
+                var previousPosition = double.NegativeInfinity;
+                var positionsAreValid = true;
+
+                foreach (var product in pinned)
+                {
+                    if (product.Position is not { } position ||
+                        !double.IsFinite(position) ||
+                        position <= previousPosition)
+                    {
+                        positionsAreValid = false;
+                        break;
+                    }
+
+                    previousPosition = position;
+                }
+
+                // Chỉ renumber khi dữ liệu Position cũ không hợp lệ.
+                if (!positionsAreValid)
+                {
+                    for (var index = 0; index < pinned.Count; index++)
+                    {
+                        var position = (index + 1) * PinPositionGap;
+                        if (pinned[index].Position != position)
+                        {
+                            pinned[index].Position = position;
+                            pinned[index].UpdatedAt = now;
+                        }
+                    }
+                }
+
+                var lastPosition = pinned.Count == 0
+                    ? initialPosition - PinPositionGap
+                    : pinned[^1].Position!.Value;
+
+                // Nối sản phẩm mới xuống cuối theo đúng thứ tự FE gửi.
+                foreach (var product in toPin)
+                {
+                    lastPosition += PinPositionGap;
+                    product.IsPin = true;
+                    product.Position = lastPosition;
+                    product.UpdatedAt = now;
+                }
+            }
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        return ApiResponseFactory.Base("Products pinned successfully.");
     }
 
     public async Task<List<Response.PinnedProductResponse>> GetProductPin(Request.GetProductPinRequest request)
@@ -1693,7 +2291,8 @@ public class Service : IService
                     !x.Product.IsDeleted &&
                     (x.Product.ParentProductId == null || x.Product.ParentProductId == string.Empty || x.Product.ParentProductId == "-1" || x.Product.ParentProductId == "-2"))
                 .OrderBy(x => x.Position)
-                .ThenBy(x => x.Product.ProductName);
+                .ThenBy(x => x.Product.ProductName)
+                .ThenBy(x => x.Product.Id);
 
             var result = await categoryPinnedQuery
                 .Select(x => new Response.PinnedProductResponse
@@ -1718,7 +2317,8 @@ public class Service : IService
                 x.IsPin &&
                 (x.ParentProductId == null || x.ParentProductId == string.Empty || x.ParentProductId == "-1" || x.ParentProductId == "-2"))
             .OrderBy(x => x.Position)
-            .ThenBy(x => x.ProductName);
+            .ThenBy(x => x.ProductName)
+            .ThenBy(x => x.Id);
 
         var pinnedProducts = await pinnedProductQuery
             .Select(x => new Response.PinnedProductResponse

@@ -993,10 +993,74 @@ public class CategoryProductTest
             .ToDictionaryAsync(x => x.CategoryProductId);
 
         Assert.True(details[firstCategory.Id].IsPin);
-        Assert.Equal(1, details[firstCategory.Id].Position);
+        // Assert.Equal(1, details[firstCategory.Id].Position);
+        // Mới ghim: BE tự tính xuống cuối (danh sách trống nên là 16384), không dùng Position = 1 FE gửi
+        Assert.Equal(16384, details[firstCategory.Id].Position);
         Assert.False(details[secondCategory.Id].IsPin);
-        Assert.Equal(2, details[secondCategory.Id].Position);
+        // Assert.Equal(2, details[secondCategory.Id].Position);
+        // Bỏ ghim thì không còn vị trí
+        Assert.Null(details[secondCategory.Id].Position);
         Assert.All(details.Values, detail => Assert.NotNull(detail.UpdatedAt));
+    }
+
+    [Fact]
+    public async Task UpdateCategoryProductDetail_NewPin_GoesToEndOfCategoryPinList()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Rose" };
+        var otherProduct = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Lily" };
+        var category = CreateCategory("Featured");
+
+        await dbContext.AddRangeAsync(product, otherProduct, category);
+        var otherDetail = CreateDetail(otherProduct.Id, category.Id);
+        otherDetail.IsPin = true;
+        otherDetail.Position = 32768;
+        await dbContext.CategoryProductDetails.AddRangeAsync(CreateDetail(product.Id, category.Id), otherDetail);
+        await dbContext.SaveChangesAsync();
+
+        await service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+        {
+            ProductId = product.Id,
+            CategoryProductLists = new List<Request.CategoryList>
+            {
+                new() { CategoryProductId = category.Id, IsPin = true, Position = 5 }
+            }
+        });
+
+        var detail = await dbContext.CategoryProductDetails
+            .SingleAsync(x => x.ProductId == product.Id && x.CategoryProductId == category.Id);
+        Assert.True(detail.IsPin);
+        Assert.Equal(49152, detail.Position);   // lớn nhất hiện có 32768 + 16384, bỏ qua số 5 của FE
+        Assert.Equal(32768, otherDetail.Position);
+    }
+
+    [Fact]
+    public async Task UpdateCategoryProductDetail_AlreadyPinned_KeepsPosition()
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var service = CreateService(dbContext);
+        var product = new ProductEntity { Id = Guid.NewGuid(), ProductName = "Rose" };
+        var category = CreateCategory("Featured");
+
+        await dbContext.AddRangeAsync(product, category);
+        var detail = CreateDetail(product.Id, category.Id);
+        detail.IsPin = true;
+        detail.Position = 32768;
+        await dbContext.CategoryProductDetails.AddAsync(detail);
+        await dbContext.SaveChangesAsync();
+
+        await service.UpdateCategoryProductDetail(new Request.CategoryProductDetailRequest
+        {
+            ProductId = product.Id,
+            CategoryProductLists = new List<Request.CategoryList>
+            {
+                new() { CategoryProductId = category.Id, IsPin = true, Position = 5 }
+            }
+        });
+
+        Assert.True(detail.IsPin);
+        Assert.Equal(32768, detail.Position);
     }
 
     [Fact]
@@ -1023,7 +1087,8 @@ public class CategoryProductTest
         Assert.Equal(product.Id, detail.ProductId);
         Assert.Equal(category.Id, detail.CategoryProductId);
         Assert.True(detail.IsPin);
-        Assert.Equal(1, detail.Position);
+        // Assert.Equal(1, detail.Position);
+        Assert.Equal(16384, detail.Position);   // BE tự tính xuống cuối, không dùng Position FE gửi
         Assert.NotEqual(default, detail.CreatedAt);
     }
 
@@ -1054,7 +1119,8 @@ public class CategoryProductTest
             .ToDictionaryAsync(x => x.CategoryProductId);
         Assert.Equal(2, details.Count);
         Assert.True(details[unassignedCategory.Id].IsPin);
-        Assert.Equal(1, details[unassignedCategory.Id].Position);
+        // Assert.Equal(1, details[unassignedCategory.Id].Position);
+        Assert.Equal(16384, details[unassignedCategory.Id].Position);   // BE tự tính xuống cuối
     }
 
     [Fact]
