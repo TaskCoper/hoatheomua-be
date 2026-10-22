@@ -95,6 +95,7 @@ public class CategoryProductController : ControllerBase
     }
 
     [HttpPut("detail")]
+    [Authorize(Policy = JwtExtensions.AdminPolicy)]
     public async Task<IActionResult> UpdateCategoryProductDetail(CategoryProductService.Request.CategoryProductDetailRequest request)
     {
         var result = await _categoryProductService.UpdateCategoryProductDetail(request);

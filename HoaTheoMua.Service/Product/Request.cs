@@ -107,14 +107,30 @@ public class Request
     
     public class MoveProductRequest
     {
-        public double Position { get; set; }
+        // public double Position { get; set; }
+        // Giai đoạn chuyển tiếp: vẫn nhận Position cũ, sau này chỉ dùng mốc AfterProductId / BeforeProductId
+        // public double? Position { get; set; }
         public Guid? CategoryId { get; set; }
+        // Đặt ngay sau sản phẩm này
+        public Guid? AfterProductId { get; set; }
+        // Đặt ngay trước sản phẩm này
+        public Guid? BeforeProductId { get; set; }
     }
 
     public class PinProductRequest
     {
         public Guid ProductId { get; set; }
         public bool IsPin { get; set; }
+        public Guid? CategoryId { get; set; }
+        // Chỉ dùng khi IsPin = true. Không gửi cả hai thì đặt xuống cuối danh sách ghim
+        public Guid? AfterProductId { get; set; }
+        public Guid? BeforeProductId { get; set; }
+    }
+
+    public class PinProductsRequest
+    {
+        // Thứ tự trong danh sách là thứ tự nối xuống cuối
+        public List<Guid> ProductIds { get; set; } = new();
         public Guid? CategoryId { get; set; }
     }
 
@@ -198,8 +214,9 @@ public class Request
         public string? Size { get; set; }
         public string? Color { get; set; }
         public string? Origin { get; set; }
-        public double? Position { get; set; }
-        public bool? IsPin { get; set; }
+        // Ghim và vị trí chỉ đổi qua API pin / move, không cho PATCH update ghi đè
+        // public double? Position { get; set; }
+        // public bool? IsPin { get; set; }
     }
 
     public class GetProductWithList

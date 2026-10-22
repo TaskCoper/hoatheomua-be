@@ -14,6 +14,7 @@ public interface IService
     Task<decimal> GetMaxPrice(List<Guid>? categoryIds);
     Task<BaseResponse> MoveProduct(Guid id, Request.MoveProductRequest request);
     Task<BaseResponse> PinProduct(Request.PinProductRequest request);
+    Task<BaseResponse> PinProducts(Request.PinProductsRequest request);
     Task<List<Response.PinnedProductResponse>> GetProductPin(Request.GetProductPinRequest request);
     Task<string> UpdateProduct(Guid id, Request.UpdateProductRequest request);
     Task<Response.ComboSpecificationResponse?> GetComboSpecificationAsync(Guid id);
