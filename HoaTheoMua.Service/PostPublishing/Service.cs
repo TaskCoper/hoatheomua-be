@@ -13,11 +13,16 @@ namespace HoaTheoMua.Service.PostPublishing;
 
 public sealed partial class Service(AppDbContext db, Store store, ICurrentUserService user, IPublishEndpoint bus,
     IEnumerable<IPublishingAdapter> adapters, IOptions<PublishingOptions> settings,
-    IOptions<PlatformAccount.PlatformAccountOptions> accountSettings, TimeProvider clock, Worker worker) : IService
+    IOptions<PlatformAccount.PlatformAccountOptions> accountSettings, TimeProvider clock, Worker worker,
+    PlatformAccount.IPublicationTokenRefresher? tokenRefresher = null) : IService
 {
-    public async Task<Response.Preview> Preview(Guid id, string platform, Guid accountId, CancellationToken ct = default)
+    public Task<Response.Preview> Preview(Guid id, string platform, Guid accountId, CancellationToken ct = default)
     {
         user.GetRequiredUserId();
+        return PreviewCore(id, platform, accountId, ct);
+    }
+    private async Task<Response.Preview> PreviewCore(Guid id, string platform, Guid accountId, CancellationToken ct)
+    {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
         var target = await store.LockPlatform(id, PlatformAccount.Service.Parse(platform), ct);
         var account = await store.LockAccount(accountId, ct);
@@ -66,9 +71,22 @@ public sealed partial class Service(AppDbContext db, Store store, ICurrentUserSe
     }
     public Task<Response.Job> Publish(Guid id, string platform, Request.Publish request, CancellationToken ct = default)
         => CreatePublication(id, platform, request, null, ct);
-    private async Task<Response.Job> CreatePublication(Guid id, string platform, Request.Publish request, DateTimeOffset? scheduledAt, CancellationToken ct)
+    // Only the durable import worker calls this path. The actor comes from the accepted batch,
+    // not an HTTP request body or a background HttpContext.
+    internal async Task<Response.Job> PublishImported(Guid id, string platform, Guid accountId, DateTimeOffset? scheduledAt,
+        Guid actor, string idempotencyKey, string expectedContentHash, CancellationToken ct)
     {
-        Validate(request); var actor = user.GetRequiredUserId(); settings.Value.Validate();
+        var target = await db.PlatformPosts.AsNoTracking().SingleAsync(x => x.BasePostId == id && !x.IsDeleted && x.Platform == PlatformAccount.Service.Parse(platform), ct);
+        var existing = await db.PostPublications.AsNoTracking().SingleOrDefaultAsync(x => x.PlatformPostId == target.Id && x.IdempotencyKey == idempotencyKey, ct);
+        if (existing != null) return ToResponse(existing);
+        if (target.Platform == PlatformType.Zalo && settings.Value.ZaloEnabled && tokenRefresher != null)
+            await tokenRefresher.RefreshForPublication(accountId, ct);
+        var preview = await PreviewCore(id, platform, accountId, ct);
+        return await CreatePublication(id, platform, new Request.Publish { AccountId = accountId, IdempotencyKey = idempotencyKey, ExpectedRevision = preview.Revision }, scheduledAt, ct, actor, expectedContentHash);
+    }
+    private async Task<Response.Job> CreatePublication(Guid id, string platform, Request.Publish request, DateTimeOffset? scheduledAt, CancellationToken ct, Guid? importedActor = null, string? expectedImportedContentHash = null)
+    {
+        Validate(request); var actor = importedActor ?? user.GetRequiredUserId(); settings.Value.Validate();
         if (string.IsNullOrWhiteSpace(request.IdempotencyKey) || request.AccountId == Guid.Empty) throw Error(400, "PUBLICATION_INVALID_REQUEST", "Thiếu tài khoản hoặc idempotency key.");
         var hash = scheduledAt.HasValue ? Hash(Json(new { operation = "Schedule", request.AccountId, request.ExpectedRevision, scheduledAt }))
             : Hash(Json(new { request.AccountId, request.ExpectedRevision }));
@@ -84,6 +102,9 @@ public sealed partial class Service(AppDbContext db, Store store, ICurrentUserSe
         var account = await store.LockAccount(request.AccountId, ct);
         if (scheduledAt.HasValue) ValidateScheduleTime(scheduledAt.Value);
         var preview = await MakePreview(target, account, ct);
+        if (expectedImportedContentHash != null && ContentHash(preview.Snapshot.Title, preview.Snapshot.Content, preview.Snapshot.Hashtag,
+                preview.Snapshot.Images.OrderBy(x => x.Order).Select(x => x.Url)) != expectedImportedContentHash)
+            throw Error(409, "IMPORT_CONTENT_CHANGED", "Nội dung hoặc ảnh đã thay đổi từ khi dòng Excel được nhận; không đăng dữ liệu của đợt nhập khác.");
         if (preview.Revision != request.ExpectedRevision) throw Error(409, "PUBLICATION_PREVIEW_CHANGED", "Nội dung, ảnh, tài khoản hoặc formatter đã đổi; xem preview lại.");
         if (!preview.CanPublish) throw Error(preview.Reasons.Any(x => x is "PUBLISHING_DISABLED" or "PUBLISHING_ADAPTER_UNAVAILABLE") ? 503 : 409,
             preview.Reasons[0], "Bài chưa đủ điều kiện tạo tác vụ: " + string.Join(", ", preview.Reasons));

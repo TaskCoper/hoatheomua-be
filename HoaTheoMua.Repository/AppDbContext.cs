@@ -30,6 +30,11 @@ public class AppDbContext : DbContext
     public virtual DbSet<PostPublication> PostPublications { get; set; }
     public virtual DbSet<PostPublicationAttempt> PostPublicationAttempts { get; set; }
     public virtual DbSet<PostPublicationReview> PostPublicationReviews { get; set; }
+    public virtual DbSet<PostImportBatch> PostImportBatches { get; set; }
+    public virtual DbSet<PostImportRow> PostImportRows { get; set; }
+    public virtual DbSet<PostImportChannel> PostImportChannels { get; set; }
+    public virtual DbSet<ImportedPostIdentity> ImportedPostIdentities { get; set; }
+    public virtual DbSet<PostImportAccount> PostImportAccounts { get; set; }
     public virtual DbSet<PlatformPost> PlatformPosts { get; set; }
     public virtual DbSet<GeneratedPostImage> GeneratedPostImages { get; set; }
     public virtual DbSet<PlatformPostImage> PlatformPostImages { get; set; }

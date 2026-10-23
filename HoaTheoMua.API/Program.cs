@@ -131,7 +131,12 @@ builder.Services.Configure<HoaTheoMua.Service.PostPublishing.PublishingOptions>(
 builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Store>();
 builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Worker>();
 builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Recovery>();
-builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.IService, HoaTheoMua.Service.PostPublishing.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.Service>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostPublishing.IService>(sp => sp.GetRequiredService<HoaTheoMua.Service.PostPublishing.Service>());
+builder.Services.AddScoped<HoaTheoMua.Service.PostImport.WorkbookReader>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostImport.Worker>();
+builder.Services.AddScoped<HoaTheoMua.Service.PostImport.IService, HoaTheoMua.Service.PostImport.Service>();
+builder.Services.AddHostedService<HoaTheoMua.Service.PostImport.HostedService>();
 builder.Services.AddScoped<HoaTheoMua.Service.PostInsights.IService, HoaTheoMua.Service.PostInsights.Service>();
 builder.Services.AddScoped<HoaTheoMua.Service.PostInsights.MetaInsightsClient>();
 builder.Services.AddHostedService<HoaTheoMua.Service.PostPublishing.RecoveryHostedService>();

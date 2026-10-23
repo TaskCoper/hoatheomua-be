@@ -15,6 +15,8 @@ public sealed class Store(AppDbContext db, TimeProvider clock)
     public static readonly string[] ActiveStates = ["Queued", "Scheduled", "Publishing", "NeedsReview"];
     public static readonly string[] PreventRepostStates = ["Succeeded", "Closed", "NeedsReview"];
     public static string Hash(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
+    internal static string ContentHash(string? title, string content, string? hashtag, IEnumerable<string> images) =>
+        Hash(Json(new { title, content, hashtag = hashtag ?? "", images = images.ToArray() }));
     public static string Json<T>(T value) => JsonSerializer.Serialize(value);
     public static T Read<T>(string value) => JsonSerializer.Deserialize<T>(value) ?? throw new InvalidOperationException("Missing publication data");
 

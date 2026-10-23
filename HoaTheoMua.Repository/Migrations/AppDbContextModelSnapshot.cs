@@ -1356,6 +1356,34 @@ namespace HoaTheoMua.Repository.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ImportedPostIdentity", b =>
+                {
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("BasePostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RequestedBy", "Code");
+
+                    b.HasIndex("BasePostId")
+                        .IsUnique();
+
+                    b.ToTable("ImportedPostIdentity", (string)null);
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.JobDescriptions", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2571,6 +2599,186 @@ namespace HoaTheoMua.Repository.Migrations
                     b.ToTable("PostHistory", (string)null);
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostImportAccount", b =>
+                {
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<PlatformType>("Platform")
+                        .HasColumnType("\"PlatformType\"");
+
+                    b.Property<Guid>("PlatformAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RequestedBy", "Platform");
+
+                    b.HasIndex("PlatformAccountId");
+
+                    b.ToTable("PostImportAccount", (string)null);
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Issues")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("LeaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestedBy", "CreatedAt")
+                        .IsDescending(false, true);
+
+                    b.HasIndex("RequestedBy", "RequestKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "LeaseUntil")
+                        .HasFilter("\"Status\" <> 'Processed'");
+
+                    b.ToTable("PostImportBatch", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PostImportBatch_Lease", "(\"LeaseId\" IS NULL) = (\"LeaseUntil\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_PostImportBatch_Status", "\"Status\" IN ('Queued','Processing','Processed')");
+                        });
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostImportChannel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<PlatformType>("Platform")
+                        .HasColumnType("\"PlatformType\"");
+
+                    b.Property<Guid?>("PlatformAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PublicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RowId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlatformAccountId");
+
+                    b.HasIndex("PublicationId");
+
+                    b.HasIndex("RowId", "Platform")
+                        .IsUnique();
+
+                    b.ToTable("PostImportChannel", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PostImportChannel_Status", "\"Status\" IN ('Pending','Submitted','Existing','Rejected')");
+                        });
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostImportRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("BasePostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Issues")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("RowNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BasePostId");
+
+                    b.HasIndex("BatchId", "RowNumber")
+                        .IsUnique();
+
+                    b.HasIndex("BatchId", "Status", "RowNumber");
+
+                    b.ToTable("PostImportRow", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PostImportRow_Range", "\"RowNumber\" >= 2 AND \"Attempts\" >= 0");
+
+                            t.HasCheckConstraint("CK_PostImportRow_Status", "\"Status\" IN ('Queued','Processed','Invalid')");
+                        });
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostPublication", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3690,6 +3898,15 @@ namespace HoaTheoMua.Repository.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.ImportedPostIdentity", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.BasePost", null)
+                        .WithMany()
+                        .HasForeignKey("BasePostId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("HoaTheoMua.Repository.Entity.OrderDetails", b =>
                 {
                     b.HasOne("HoaTheoMua.Repository.Entity.Order", "Order")
@@ -3764,6 +3981,48 @@ namespace HoaTheoMua.Repository.Migrations
                         .WithMany()
                         .HasForeignKey("SystemPromptId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostImportAccount", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.PlatformAccount", null)
+                        .WithMany()
+                        .HasForeignKey("PlatformAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostImportChannel", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.PlatformAccount", null)
+                        .WithMany()
+                        .HasForeignKey("PlatformAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.PostPublication", null)
+                        .WithMany()
+                        .HasForeignKey("PublicationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.PostImportRow", null)
+                        .WithMany()
+                        .HasForeignKey("RowId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HoaTheoMua.Repository.Entity.PostImportRow", b =>
+                {
+                    b.HasOne("HoaTheoMua.Repository.Entity.BasePost", null)
+                        .WithMany()
+                        .HasForeignKey("BasePostId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HoaTheoMua.Repository.Entity.PostImportBatch", null)
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
