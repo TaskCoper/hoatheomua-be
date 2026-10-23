@@ -61,6 +61,26 @@ public sealed partial class Service
             var (job, platform, _) = await store.LockJob(id, ct); Expected(job, request.ExpectedRevision);
             if (job.Status != "NeedsReview" || job.LeaseId != null)
                 throw Error(409, "PUBLICATION_REVIEW_NOT_ALLOWED", "Tác vụ chưa cần đối soát hoặc đang được kiểm tra.");
+            // Older workers treated a documented create rejection as ambiguous. Recover only
+            // from a single completed, rejected create; an operator's feed observation alone
+            // never clears an interrupted or potentially successful publication.
+            if (action == "ConfirmNotPublished"
+                && Read<PublicationSnapshot>(job.Snapshot).Platform == Repository.Enum.PlatformType.Zalo
+                && Read<PublicationCheckpoint>(job.Checkpoint).ProtectedProviderReference == null
+                && job.ExternalPostId == null)
+            {
+                var publishes = await db.PostPublicationAttempts.Where(x => x.PublicationId == id && x.Operation == "Publish").ToListAsync(ct);
+                if (publishes.Count == 1 && publishes[0].CompletedAt != null && publishes[0].Status == "Unknown"
+                    && publishes[0].ErrorCode == "ZALO_REQUEST_REJECTED" && publishes[0].ProviderCode is "-201" or "-210")
+                {
+                    job.PublishMayHaveOccurred = false;
+                    store.State(job, platform, "Failed", "ZALO_INVALID_MEDIA_OR_PARAMETER");
+                    job.NextRunAt = null;
+                    AddReview(id, actor, action, note);
+                    await db.SaveChangesAsync(ct); if (tx != null) await tx.CommitAsync(ct);
+                    return ToResponse(job);
+                }
+            }
             if (action == "Close") store.State(job, platform, "Closed", "PUBLICATION_CLOSED_UNRESOLVED");
             else { job.NextRunAt = clock.GetUtcNow(); store.Touch(job); }
             AddReview(id, actor, action, note, candidate); revision = job.Revision;

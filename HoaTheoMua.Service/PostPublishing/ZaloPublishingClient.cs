@@ -8,6 +8,7 @@ namespace HoaTheoMua.Service.PostPublishing;
 public sealed class ZaloPublishingException(string code, bool retryable = false, bool definitive = false,
     string? providerCode = null, int retryAfter = 60) : Exception("Zalo publishing request failed")
 {
+    public string? ProviderCode { get; } = providerCode;
     public PublicationResult Result(bool mayHavePublished, bool reconcile = false) => new(
         mayHavePublished && (!definitive || reconcile) ? PublicationOutcome.Unknown : PublicationOutcome.Rejected)
     {
@@ -40,6 +41,11 @@ public sealed class ZaloPublishingClient(HttpClient http)
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("error", out var error) || error.ValueKind != JsonValueKind.Number || !error.TryGetInt32(out var code))
                 throw new ZaloPublishingException("ZALO_INVALID_RESPONSE", true);
+            // Documented parameter rejections are different from an ambiguous transport failure.
+            // Keep only allowlisted field names, never the raw message (which may echo secrets).
+            if (code is -201 or -210)
+                throw new ZaloPublishingException(InvalidParameterCode(root), definitive: true, providerCode: code.ToString());
+            if (code == -214) throw new ZaloPublishingException("ZALO_PROCESSING", true, providerCode: code.ToString(), retryAfter: 30);
             // Unknown application errors are not evidence that a create request had no effect.
             if (code == -124) throw new ZaloPublishingException("ZALO_TOKEN_INVALID", true, true, code.ToString());
             if (code != 0) throw new ZaloPublishingException("ZALO_REQUEST_REJECTED", providerCode: code.ToString());
@@ -50,5 +56,17 @@ public sealed class ZaloPublishingClient(HttpClient http)
         catch (JsonException) { throw new ZaloPublishingException("ZALO_INVALID_RESPONSE", true); }
         catch (HttpRequestException) { throw new ZaloPublishingException("ZALO_TRANSPORT_ERROR", true); }
         catch (OperationCanceledException) { throw new ZaloPublishingException("ZALO_TIMEOUT", true); }
+    }
+
+    private static string InvalidParameterCode(JsonElement root)
+    {
+        if (root.TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String)
+        {
+            var text = message.GetString()?.Trim();
+            foreach (var field in new[] { "type", "title", "author", "description", "cover", "cover.photo_url", "photo_url", "body", "related_medias", "tracking_link", "status", "comment" })
+                if (string.Equals(text, field + " is invalid!", StringComparison.OrdinalIgnoreCase))
+                    return "ZALO_INVALID_PARAMETER_" + field.Replace('.', '_').ToUpperInvariant();
+        }
+        return "ZALO_INVALID_MEDIA_OR_PARAMETER";
     }
 }

@@ -54,7 +54,7 @@ public sealed class ZaloPublisher(ZaloPublishingClient client, PublishingMediaCl
         {
             type = "normal", title = s.Title, author = s.Article!.Author, description = s.Article.Description,
             cover = new { cover_type = "photo", photo_url = images[0].Url, status = "show" },
-            body, status = "show", comment = "show", related_medias = Array.Empty<string>(), tracking_link = ""
+            body, status = "show", comment = "show"
         }, ct);
         var reference = MetaPublishingClient.Text(created, "token");
         if (string.IsNullOrWhiteSpace(reference) || reference.Length > 16000)
@@ -71,7 +71,16 @@ public sealed class ZaloPublisher(ZaloPublishingClient client, PublishingMediaCl
             return new(PublicationOutcome.Unknown) { ErrorCode = "ZALO_PROCESS_REFERENCE_MISSING" };
         // Verify identifies the exact request; never infer success from matching text or a candidate supplied by a user.
         var token = protector.Unprotect(cp.ProtectedProviderReference, Purpose(s));
-        var verified = await client.Send("article/verify", c, new { token }, ct);
+        System.Text.Json.JsonElement verified;
+        try { verified = await client.Send("article/verify", c, new { token }, ct); }
+        catch (ZaloPublishingException ex) when (ex.ProviderCode == "-214")
+        {
+            return new(PublicationOutcome.Pending)
+            {
+                Checkpoint = cp, PublishMayHaveOccurred = true, RetryAfterSeconds = 30,
+                ErrorCode = "ZALO_PROCESSING", ProviderCode = "-214"
+            };
+        }
         var id = MetaPublishingClient.Text(verified, "id");
         if (!ArticleId(id)) return new(PublicationOutcome.Pending)
             { Checkpoint = cp, PublishMayHaveOccurred = true, RetryAfterSeconds = 30, ErrorCode = "ZALO_PROCESSING" };

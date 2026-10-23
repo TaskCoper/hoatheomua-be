@@ -35,6 +35,102 @@ public class ZaloAdapters
     internal static ZaloPublisher Create(Handler handler, Adapters.MediaHandler? media = null) => new(
         new(new HttpClient(handler)), new(new HttpClient(media ?? new())), new(Config()), Config(), new Lifecycle.Clock());
 
+    private static async Task<(HoaTheoMua.Service.PostPublishing.Service Service, Worker Worker, Lifecycle.Clock Clock,
+        Handler Handler, Guid PublicationId)> RejectedJob(HoaTheoMua.Repository.AppDbContext db, bool timeout = false)
+    {
+        var (postId, accountId) = await Lifecycle.Seed(db);
+        var account = await db.PlatformAccounts.SingleAsync(); account.Platform = PlatformType.Zalo;
+        account.ExternalAccountId = "456"; account.PageId = null;
+        (await db.PlatformPosts.SingleAsync()).Platform = PlatformType.Zalo; await db.SaveChangesAsync();
+        var handler = new Handler { Reply = path => path.EndsWith("/getoa")
+            ? Adapters.Json("{\"error\":0,\"data\":{\"oa_id\":\"456\"}}")
+            : timeout ? throw new TaskCanceledException("SECRET") : Adapters.Json("{\"error\":-201,\"message\":\"SECRET\"}") };
+        var adapter = Create(handler); var clock = new Lifecycle.Clock(); var store = new Store(db, clock);
+        var options = Options.Create(new PublishingOptions { ZaloEnabled = true });
+        var worker = new Worker(db, store, [adapter], options, new(Config()), clock);
+        var service = new HoaTheoMua.Service.PostPublishing.Service(db, store, new GeneratePlatformPosts.User(),
+            new Mock<IPublishEndpoint>().Object, [adapter], options, Config(), clock, worker);
+        var preview = await service.Preview(postId, "zalo", accountId);
+        var job = await service.Publish(postId, "zalo", new() { AccountId = accountId, ExpectedRevision = preview.Revision, IdempotencyKey = "rejected-zalo" });
+        await worker.Process(job.PublicationId, job.Revision, default);
+        clock.Now = clock.Now.AddMinutes(1);
+        await worker.Process(job.PublicationId, (await service.Get(job.PublicationId)).Job.Revision, default);
+        return (service, worker, clock, handler, job.PublicationId);
+    }
+
+    [Theory]
+    [InlineData(-201, "cover.photo_url is invalid!", "ZALO_INVALID_PARAMETER_COVER_PHOTO_URL")]
+    [InlineData(-201, "tracking_link is invalid!", "ZALO_INVALID_PARAMETER_TRACKING_LINK")]
+    [InlineData(-201, "SECRET is invalid!", "ZALO_INVALID_MEDIA_OR_PARAMETER")]
+    [InlineData(-210, "SECRET", "ZALO_INVALID_MEDIA_OR_PARAMETER")]
+    public async Task ParameterRejectionKeepsOnlyKnownFieldNames(int code, string message, string expected)
+    {
+        var handler = new Handler { Reply = _ => Adapters.Json(JsonSerializer.Serialize(new { error = code, message })) };
+        var ex = await Assert.ThrowsAsync<ZaloPublishingException>(() => new ZaloPublishingClient(new HttpClient(handler))
+            .Send("article/create", Adapters.Credentials, new { }, default));
+        var result = ex.Result(true);
+        Assert.Equal(PublicationOutcome.Rejected, result.Outcome);
+        Assert.True(result.ConfirmedNotPublished); Assert.False(result.Retryable);
+        Assert.Equal(expected, result.ErrorCode); Assert.Equal(code.ToString(), result.ProviderCode);
+        Assert.DoesNotContain("SECRET", JsonSerializer.Serialize(result) + ex);
+        // A failed verify/read cannot disprove a previous create.
+        Assert.Equal(PublicationOutcome.Unknown, ex.Result(true, true).Outcome);
+        Assert.False(ex.Result(true, true).ConfirmedNotPublished);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task WorkerStopsWithoutProcessReferenceAndDoesNotReplayCreate(bool timeout)
+    {
+        await using var db = Lifecycle.Db(); var s = await RejectedJob(db, timeout);
+        var detail = await s.Service.Get(s.PublicationId);
+        Assert.Equal(timeout ? "NeedsReview" : "Failed", detail.Job.Status);
+        Assert.Equal(timeout ? "ZALO_TIMEOUT" : "ZALO_INVALID_MEDIA_OR_PARAMETER", detail.Job.ErrorCode);
+        Assert.Equal(timeout, detail.Job.PublishMayHaveOccurred); Assert.False(detail.Job.CanRetry);
+        if (timeout) Assert.Null((await db.PostPublications.SingleAsync()).NextRunAt);
+        s.Clock.Now = s.Clock.Now.AddHours(1);
+        var bus = new Mock<IPublishEndpoint>();
+        Assert.Equal(0, await new Recovery(db, bus.Object, s.Clock).Dispatch(default));
+        Assert.Single(s.Handler.Requests, x => x.Path.EndsWith("/create"));
+        Assert.DoesNotContain("SECRET", JsonSerializer.Serialize(detail));
+    }
+
+    [Theory]
+    [InlineData("rejected")] [InlineData("unknown-code")] [InlineData("interrupted")]
+    [InlineData("multiple-publishes")] [InlineData("has-reference")]
+    public async Task LegacyReviewRequiresStoredDefiniteRejectionBeforeUnlocking(string scenario)
+    {
+        await using var db = Lifecycle.Db(); var s = await RejectedJob(db);
+        var job = await db.PostPublications.SingleAsync();
+        job.Status = "NeedsReview"; job.PublishMayHaveOccurred = true; job.CompletedAt = null;
+        job.ErrorCode = "ZALO_PROCESS_REFERENCE_MISSING"; job.NextRunAt = null;
+        var attempt = await db.PostPublicationAttempts.SingleAsync(x => x.Operation == "Publish");
+        attempt.Status = "Unknown"; attempt.ErrorCode = "ZALO_REQUEST_REJECTED"; attempt.ProviderCode = "-201";
+        if (scenario == "unknown-code") attempt.ProviderCode = "-999";
+        if (scenario == "interrupted") { attempt.Status = "Interrupted"; attempt.CompletedAt = null; }
+        if (scenario == "has-reference") job.Checkpoint = Store.Json(new PublicationCheckpoint { ReadyToPublish = true, ProtectedProviderReference = "untrusted" });
+        if (scenario == "multiple-publishes") db.PostPublicationAttempts.Add(new()
+        {
+            Id = Guid.NewGuid(), PublicationId = job.Id, Number = 3, Operation = "Publish", Status = "Unknown",
+            StartedAt = s.Clock.Now, CompletedAt = s.Clock.Now, ErrorCode = "ZALO_TIMEOUT"
+        });
+        await db.SaveChangesAsync();
+        var result = await s.Service.Resolve(job.Id, new()
+        {
+            ExpectedRevision = job.Revision, Action = "ConfirmNotPublished", Note = "Checked OA Manager; article absent."
+        });
+        var recovered = scenario == "rejected";
+        Assert.Equal(recovered ? "Failed" : "NeedsReview", result.Status);
+        Assert.Equal(!recovered, result.PublishMayHaveOccurred); Assert.False(result.CanRetry);
+        Assert.Single(s.Handler.Requests, x => x.Path.EndsWith("/create"));
+        if (recovered)
+        {
+            Assert.True((await s.Service.Preview(job.BasePostId, "zalo", job.PlatformAccountId)).CanPublish);
+            Assert.Equal("ZALO_INVALID_MEDIA_OR_PARAMETER", result.ErrorCode);
+            Assert.Null((await db.PostPublications.SingleAsync()).NextRunAt);
+        }
+    }
+
     [Fact]
     public async Task WorkerPersistsProcessReferenceAndDuplicateDeliveryDoesNotDuplicateArticle()
     {
@@ -93,6 +189,8 @@ public class ZaloAdapters
         Assert.Equal("https://example.com/1.jpg", request.GetProperty("cover").GetProperty("photo_url").GetString());
         Assert.Equal("Nội dung\n\n#hoa", request.GetProperty("body")[0].GetProperty("content").GetString());
         Assert.Equal("https://example.com/2.jpg", request.GetProperty("body")[1].GetProperty("url").GetString());
+        Assert.False(request.TryGetProperty("tracking_link", out _));
+        Assert.False(request.TryGetProperty("related_medias", out _));
         Assert.Equal(PublicationOutcome.Unknown, (await adapter.Execute(PublicationOperation.Publish, s, created.Checkpoint!, Adapters.Credentials, null, default)).Outcome);
         Assert.Equal(PublicationOutcome.Pending, (await adapter.Execute(PublicationOperation.Reconcile, s, created.Checkpoint!, Adapters.Credentials, null, default)).Outcome);
         pending = false;
@@ -124,6 +222,35 @@ public class ZaloAdapters
         Assert.Equal(code, ex.Result(true).ErrorCode); Assert.True(ex.Result(true).ConfirmedNotPublished);
         Assert.Equal(PublicationOutcome.Unknown, ex.Result(true, true).Outcome);
     }
+    [Fact]
+    public async Task ProcessingResponsePollsTheSameReferenceWithoutCreatingAgain()
+    {
+        var handler = new Handler { Reply = _ => Adapters.Json("{\"error\":0,\"data\":{\"token\":\"private-reference\"}}") };
+        var adapter = Create(handler); var snapshot = Snapshot();
+        var created = await adapter.Execute(PublicationOperation.Publish, snapshot, new() { ReadyToPublish = true }, Adapters.Credentials, null, default);
+        handler.Reply = _ => Adapters.Json("{\"error\":-214,\"message\":\"Article is being processed\"}");
+        var pending = await adapter.Execute(PublicationOperation.Reconcile, snapshot, created.Checkpoint!, Adapters.Credentials, null, default);
+        Assert.Equal(PublicationOutcome.Pending, pending.Outcome); Assert.Equal("-214", pending.ProviderCode);
+        Assert.Equal(created.Checkpoint, pending.Checkpoint); Assert.True(pending.PublishMayHaveOccurred);
+        handler.Reply = path => path.EndsWith("/verify")
+            ? Adapters.Json("{\"error\":0,\"data\":{\"id\":\"article-123\"}}")
+            : Adapters.Json(JsonSerializer.Serialize(new { error = 0, data = new { id = "article-123", type = "normal", status = "show", title = snapshot.Title } }));
+        var result = await adapter.Execute(PublicationOperation.Reconcile, snapshot, pending.Checkpoint!, Adapters.Credentials, null, default);
+        Assert.Equal(PublicationOutcome.Succeeded, result.Outcome);
+        Assert.Single(handler.Requests, x => x.Path.EndsWith("/create"));
+        Assert.All(handler.Requests.Where(x => x.Path.EndsWith("/verify")), x => Assert.Equal("private-reference", x.Body.GetProperty("token").GetString()));
+    }
+
+    [Fact]
+    public async Task UndocumentedApplicationErrorDoesNotUnlockPublishing()
+    {
+        var handler = new Handler { Reply = _ => Adapters.Json("{\"error\":-999,\"message\":\"SECRET\"}") };
+        var ex = await Assert.ThrowsAsync<ZaloPublishingException>(() => new ZaloPublishingClient(new HttpClient(handler))
+            .Send("article/create", Adapters.Credentials, new { }, default));
+        Assert.Equal(PublicationOutcome.Unknown, ex.Result(true).Outcome);
+        Assert.False(ex.Result(true).ConfirmedNotPublished);
+    }
+
     [Fact]
     public async Task MissingProcessTokenRequiresReviewAndCannotUseArbitraryCandidate()
     {

@@ -167,6 +167,11 @@ public sealed class Worker(AppDbContext db, Store store, IEnumerable<IPublishing
             store.State(current, target, current.PublishMayHaveOccurred ? "NeedsReview" : "Failed", result.ErrorCode ?? "PUBLICATION_RESULT_UNKNOWN");
             current.CanRetry = !current.PublishMayHaveOccurred;
         }
+        // A missing Zalo process token cannot be recovered by polling. Keep the create error
+        // visible and wait for explicit review instead of repeatedly replacing it with "missing reference".
+        if (snapshot.Platform == Repository.Enum.PlatformType.Zalo && current.Status == "NeedsReview"
+            && Read<PublicationCheckpoint>(current.Checkpoint).ProtectedProviderReference == null)
+            current.NextRunAt = null;
         // Only mark the credential revision actually used. Preserve a newer reconnect/refresh.
         if (result.RequiresReauth && latestAccount.Revision == accountRevision)
         {
