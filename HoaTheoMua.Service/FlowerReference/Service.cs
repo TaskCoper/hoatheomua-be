@@ -84,7 +84,7 @@ public class Service : IService
 
         if (isExisting)
         {
-            throw new ConflictException("Tên hình tham khảo đã tồn tại. Vui lòng chọn tên khác.");
+            throw new ConflictException("Tên mẫu đã tồn tại. Vui lòng chọn tên khác.");
         }
 
         var flowerReference = new Repository.Entity.FlowerReference()
@@ -123,7 +123,7 @@ public class Service : IService
 
         if (flowerReference == null)
         {
-            throw new NotFoundException("Không tìm thấy hình tham khảo hoặc hình tham khảo đã bị xóa.");
+            throw new NotFoundException("Không tìm thấy mẫu hoặc mẫu đã bị xóa.");
         }
 
         flowerReference.IsActive = !flowerReference.IsActive;
@@ -154,7 +154,7 @@ public class Service : IService
 
         if (flowerReference == null)
         {
-            throw new NotFoundException("Không tìm thấy hình tham khảo cần xóa hoặc hình tham khảo đã bị xóa.");
+            throw new NotFoundException("Không tìm thấy mẫu cần xóa hoặc mẫu đã bị xóa.");
         }
 
         flowerReference.IsDeleted = true;
@@ -180,7 +180,7 @@ public class Service : IService
     {
         if (int.TryParse(value, out _) || !Enum.TryParse<FlowerReferenceType>(value, true, out var type))
         {
-            throw new BadRequestException("Loại hình tham khảo không hợp lệ. Vui lòng chọn \"flower\" hoặc \"bundle\".");
+            throw new BadRequestException("Loại mẫu không hợp lệ. Vui lòng chọn \"flower\" hoặc \"bundle\".");
         }
 
         return type;
