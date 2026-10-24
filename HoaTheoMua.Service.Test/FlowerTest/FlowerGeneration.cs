@@ -60,6 +60,64 @@ public class FlowerGeneration
     }
 
     [Fact]
+    public async Task CreateRejectsLargestSizeWhenAdditionalQuantityReachesSmallestSize()
+    {
+        using var fixture = new Fixture();
+        var matId = fixture.Request.MaterialTotals[0].MatId;
+
+        // Combo đang chọn là size L (số lượng gốc của nguyên liệu là 10)
+        var large = await fixture.Db.Products.SingleAsync(x => x.Id == fixture.Request.ProductId);
+        large.ParentProductId = "9001";
+        large.ProductCode = "HB_TEST L_2026";
+
+        // Cùng nhóm có size S, cùng nguyên liệu, số lượng 3
+        var small = new ProductEntity { Id = Guid.NewGuid(), ParentProductId = "9001", ProductCode = "HB_TEST S_2026",
+            ProductName = "Bó test size S", ProductType = "Combo", IsActive = true };
+        fixture.Db.Products.Add(small);
+        fixture.Db.ComboSpecifications.Add(new ComboSpecification { Id = Guid.NewGuid(), SubId = small.Id,
+            MatId = matId, Quantity = 3, IsCore = true, IsActive = true });
+        await fixture.Db.SaveChangesAsync();
+
+        // L gốc 10, S = 3 nên chỉ được từ 10 đến dưới 13. Gửi 13 (tăng 3) phải bị chặn
+        fixture.Request.MaterialTotals[0].Quantity = 13;
+
+        var ex = await Assert.ThrowsAnyAsync<AppException>(() => fixture.Service.CreateAiFlower(fixture.Request));
+        Assert.Equal(400, ex.StatusCode);
+        Assert.Equal("MATERIAL_QUANTITY_EXCEEDS_LIMIT", ex.MessageCode);
+    }
+
+    [Fact]
+    public async Task CreateAcceptsDecimalQuantityBelowSmallestSizeLimit()
+    {
+        using var fixture = new Fixture();
+        var matId = fixture.Request.MaterialTotals[0].MatId;
+
+        // Combo đang chọn là size L (số lượng gốc của nguyên liệu là 10)
+        var large = await fixture.Db.Products.SingleAsync(x => x.Id == fixture.Request.ProductId);
+        large.ParentProductId = "9002";
+        large.ProductCode = "HB_TEST L_2026";
+
+        // Cùng nhóm có size S, cùng nguyên liệu, số lượng 3
+        var small = new ProductEntity { Id = Guid.NewGuid(), ParentProductId = "9002", ProductCode = "HB_TEST S_2026",
+            ProductName = "Bó test size S", ProductType = "Combo", IsActive = true };
+        fixture.Db.Products.Add(small);
+        fixture.Db.ComboSpecifications.Add(new ComboSpecification { Id = Guid.NewGuid(), SubId = small.Id,
+            MatId = matId, Quantity = 3, IsCore = true, IsActive = true });
+        await fixture.Db.SaveChangesAsync();
+
+        // L gốc 10, S = 3 nên được từ 10 đến dưới 13. Gửi 12,9 (tăng 2,9) phải hợp lệ
+        fixture.Request.MaterialTotals[0].Quantity = 12.9m;
+
+        await fixture.Service.CreateAiFlower(fixture.Request);
+
+        var input = Assert.Single(fixture.Inputs);
+        var material = Assert.Single(input.Materials);
+        Assert.Equal(10, material.BaseQuantity);
+        Assert.Equal(2.9m, material.AdditionalQuantity);
+        Assert.Equal(12.9m, material.FinalQuantity);
+    }
+
+    [Fact]
     public async Task RegenerateUsesHistoricalCompositionAndPromptPairWhenConfigsRemoved()
     {
         using var fixture = new Fixture();

@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using HoaTheoMua.Repository;
 using HoaTheoMua.Repository.Entity;
 using HoaTheoMua.Repository.Enum;
@@ -238,6 +240,7 @@ public partial class Service : IService
             throw new ConflictException("PRODUCT_SPECIFICATION_NOT_FOUND", "Product chưa có công thức.");
 
         var materialTotals = ValidateMaterials(request.MaterialTotals, specs);
+        await ValidateSizeLimit(product, specs, request.MaterialTotals);
         var availability = await CalculateAvailableQty(product.Id);
         if (!availability.TryGetValue(product.Id, out var quantity)
             || quantity.UnavailableReason is not null
@@ -538,6 +541,112 @@ public partial class Service : IService
                 ValidatedAt = flower.CreatedAt
             }, JsonOptions)
         };
+
+    // Thứ tự size từ nhỏ đến lớn
+    private static readonly string[] SizeOrder = { "XS", "S", "M", "L", "XL" };
+
+    private static readonly Regex CodeSizeRegex =
+        new(@"(?:^|[ _])(?<size>XS|S|M|L|XL)\d?(?:_\d{4})?$", RegexOptions.IgnoreCase);
+    private static readonly Regex NameSizeRegex =
+        new(@"size\s*(?<size>XS|S|M|L|XL)\b|(?:^|[\s_])(?<size>XS|S|M|L|XL)\d?(?:_\d{4})?\s*$", RegexOptions.IgnoreCase);
+
+    // Lấy size từ ProductCode, không có thì lấy từ ProductName (không đọc cột Size vì dữ liệu chưa đầy đủ)
+    private static string? ResolveSize(ProductEntity product)
+    {
+        var codeMatch = CodeSizeRegex.Match(product.ProductCode?.Trim() ?? "");
+        if (codeMatch.Success)
+            return codeMatch.Groups["size"].Value.ToUpperInvariant();
+
+        var nameMatch = NameSizeRegex.Match(product.ProductName?.Trim() ?? "");
+        if (nameMatch.Success)
+            return nameMatch.Groups["size"].Value.ToUpperInvariant();
+
+        return null;
+    }
+
+    // Size có size lớn hơn (S, M): số lượng phải nhỏ hơn số lượng ở size kế tiếp.
+    // Size lớn nhất (L): phần tăng thêm phải nhỏ hơn số lượng ở size nhỏ nhất.
+    private async Task ValidateSizeLimit(
+        ProductEntity current, List<ComboSpecification> currentSpecs, List<Request.MaterialTotalRequest> requested)
+    {
+        // Không có parent thì không có nhóm size
+        if (string.IsNullOrWhiteSpace(current.ParentProductId))
+            return;
+
+        // Các size cùng nhóm (đang bán, hoặc chính là sản phẩm khách chọn)
+        var siblings = await _db.Products.AsNoTracking()
+            .Where(x => x.ParentProductId == current.ParentProductId
+                        && !x.IsDeleted
+                        && (x.IsActive || x.Id == current.Id))
+            .ToListAsync();
+
+        // Chỉ có 1 size, hoặc cả nhóm không có size (nhóm Lan) thì không áp rule
+        var sizes = siblings.Select(x => ResolveSize(x)).ToList();
+        if (siblings.Count < 2 || sizes.All(x => x == null))
+            return;
+
+        if (sizes.Any(x => x == null))
+            throw new ConflictException("PRODUCT_SIZE_INCOMPLETE", "Cấu hình size của sản phẩm chưa đầy đủ.");
+        if (sizes.Distinct().Count() < siblings.Count)
+            throw new ConflictException("PRODUCT_SIZE_DUPLICATE", "Cấu hình size của sản phẩm bị trùng.");
+
+        // Sắp xếp từ nhỏ đến lớn, rồi chọn size dùng để so sánh
+        var sorted = siblings.OrderBy(x => Array.IndexOf(SizeOrder, ResolveSize(x))).ToList();
+        var index = sorted.FindIndex(x => x.Id == current.Id);
+        var isLargest = index == sorted.Count - 1;
+
+        // Size lớn nhất so với size nhỏ nhất, còn lại so với size kế tiếp
+        var compareProduct = sorted[0];
+        if (!isLargest)
+            compareProduct = sorted[index + 1];
+
+        var compareSpecs = await _db.ComboSpecifications.AsNoTracking()
+            .Where(x => x.SubId == compareProduct.Id && x.IsActive && !x.IsDeleted && !x.Mat.IsDeleted && x.Quantity != null)
+            .ToListAsync();
+
+        foreach (var spec in currentSpecs)
+        {
+            var baseQuantity = spec.Quantity!.Value;
+            var requestedQuantity = requested.First(x => x.MatId == spec.MatId).Quantity;
+
+            // Khách giữ nguyên số lượng gốc thì luôn hợp lệ
+            if (requestedQuantity == baseQuantity)
+                continue;
+
+            var compareSpec = compareSpecs.FirstOrDefault(x => x.MatId == spec.MatId);
+
+            // Số lượng khách gửi phải nhỏ hơn giá trị này
+            decimal maxExclusive;
+            if (isLargest)
+            {
+                if (compareSpec == null || compareSpec.Quantity!.Value <= 0)
+                    throw new FlowerException(400, "MATERIAL_NOT_IN_SMALLEST_SIZE", "Không thể tăng số lượng thành phần vì thành phần này không tồn tại ở size nhỏ nhất.");
+                maxExclusive = baseQuantity + compareSpec.Quantity!.Value;
+            }
+            else
+            {
+                if (compareSpec == null)
+                    throw new FlowerException(400, "MATERIAL_NOT_IN_NEXT_SIZE", "Không thể tăng số lượng thành phần vì thành phần này không tồn tại ở size kế tiếp.");
+                if (compareSpec.Quantity!.Value < baseQuantity)
+                    throw new ConflictException("PRODUCT_SIZE_QUANTITY_INVALID", "Số lượng thành phần giữa các size không hợp lệ.");
+                maxExclusive = compareSpec.Quantity!.Value;
+            }
+
+            if (requestedQuantity >= maxExclusive)
+                throw new FlowerException(400, "MATERIAL_QUANTITY_EXCEEDS_LIMIT",
+                    $"Số lượng {spec.Mat.ProductName} {GetAllowedRangeText(baseQuantity, maxExclusive)}.");
+        }
+    }
+
+    // Khoảng hợp lệ là từ min đến dưới maxExclusive (số lượng có thể là số thập phân)
+    private static string GetAllowedRangeText(decimal min, decimal maxExclusive)
+    {
+        var vi = CultureInfo.GetCultureInfo("vi-VN");
+        if (maxExclusive <= min)
+            return $"chỉ được giữ nguyên là {min.ToString("0.##", vi)}";
+
+        return $"chỉ được phép từ {min.ToString("0.##", vi)} đến dưới {maxExclusive.ToString("0.##", vi)}";
+    }
 
     private static (List<MaterialSnapshot> Materials, List<MaterialSnapshot> Additions) ValidateMaterials(
         List<Request.MaterialTotalRequest> requested, List<ComboSpecification> specs)
