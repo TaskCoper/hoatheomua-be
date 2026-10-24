@@ -6,9 +6,10 @@ namespace HoaTheoMua.Service.PostImport;
 
 public sealed class ImportException(int status, string code, string message) : AppException("Post import", status, code, message);
 public record ImportIssue(string Sheet, int RowNumber, string Code, string Message);
-public record ImportImage(int Order, string Url);
+public record ImportImage(int Order, string Url, PlatformType? Platform = null,
+    AspectRatioType? Ratio = null, bool UseAi = false, string? Instruction = null);
 public record ImportInput(string Code, string Title, string Content, string? Hashtag,
-    PlatformType[] Platforms, DateTimeOffset? ScheduledAt, ImportImage[] Images);
+    PlatformType[] Platforms, DateTimeOffset? ScheduledAt, ImportImage[] Images, bool UseAiContent = false);
 public record ParsedRow(int RowNumber, ImportInput Input, IReadOnlyList<ImportIssue> Issues);
 public record ParsedWorkbook(IReadOnlyList<ParsedRow> Rows, IReadOnlyList<ImportIssue> Issues);
 
@@ -31,7 +32,7 @@ public class Response
     public record Settings(IReadOnlyList<Account> Accounts);
     public record Summary(Guid Id, string FileName, DateTimeOffset CreatedAt, string Status, int TotalRows,
         int ProcessedRows, int InvalidRows, int TotalChannels, int Succeeded, int Failed, int Pending,
-        int Scheduled, int NeedsReview, int Existing);
+        int Scheduled, int NeedsReview, int Existing, int Waiting = 0);
     public record Channel(string Platform, string Status, string? ErrorCode, Guid? PublicationId,
         string? ExternalPostId, string? ExternalPostUrl, bool Existing);
     public record Row(int RowNumber, string Code, string Title, string Status, Guid? BasePostId,

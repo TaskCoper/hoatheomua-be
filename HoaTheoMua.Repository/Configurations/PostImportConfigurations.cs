@@ -38,6 +38,7 @@ public class PostImportRowConfiguration : IEntityTypeConfiguration<PostImportRow
         b.Property(x => x.Code).HasMaxLength(100).IsRequired();
         b.Property(x => x.Status).HasMaxLength(20).IsRequired();
         b.Property(x => x.Payload).HasColumnType("jsonb").IsRequired();
+        b.Property(x => x.Preparation).HasColumnType("jsonb").IsRequired();
         b.Property(x => x.Issues).HasColumnType("jsonb").IsRequired();
         b.HasOne<PostImportBatch>().WithMany().HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Cascade);
         b.HasOne<BasePost>().WithMany().HasForeignKey(x => x.BasePostId).OnDelete(DeleteBehavior.Restrict);
@@ -51,7 +52,7 @@ public class PostImportChannelConfiguration : IEntityTypeConfiguration<PostImpor
 {
     public void Configure(EntityTypeBuilder<PostImportChannel> b)
     {
-        b.ToTable("PostImportChannel", t => t.HasCheckConstraint("CK_PostImportChannel_Status", "\"Status\" IN ('Pending','Submitted','Existing','Rejected')"));
+        b.ToTable("PostImportChannel", t => t.HasCheckConstraint("CK_PostImportChannel_Status", "\"Status\" IN ('Pending','Submitted','Existing','Rejected','Waiting')"));
         b.HasKey(x => x.Id);
         b.Property(x => x.Platform).HasColumnType("\"PlatformType\"");
         b.Property(x => x.Status).HasMaxLength(20).IsRequired();

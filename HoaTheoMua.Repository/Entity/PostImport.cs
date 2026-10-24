@@ -29,6 +29,7 @@ public class PostImportRow
     public string Issues { get; set; } = "[]";
     public Guid? BasePostId { get; set; }
     public int Attempts { get; set; }
+    public string Preparation { get; set; } = "{}";
 }
 
 public class PostImportChannel

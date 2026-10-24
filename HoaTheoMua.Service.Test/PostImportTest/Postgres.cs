@@ -15,7 +15,7 @@ namespace HoaTheoMua.Service.Test.PostImportTest;
 public class Postgres
 {
     [PostGenPostgresFact]
-    public async Task MigrationConcurrentUploadsAndWorkersPersistExactlyOnePostJobAndOutboxMessage()
+    public async Task MigrationConcurrentUploadsAndWorkersPersistExactlyOneScheduledJob()
     {
         var connection = new NpgsqlConnectionStringBuilder(Environment.GetEnvironmentVariable("POSTGEN_TEST_CONNECTION_STRING"));
         Assert.Contains(connection.Host, new[] { "localhost", "127.0.0.1" });
@@ -62,16 +62,16 @@ public class Postgres
             await Task.WhenAll(Process(duplicates[0]), Process(secondBatch));
             Assert.Equal(1, await db.BasePosts.CountAsync()); Assert.Equal(1, await db.ImportedPostIdentities.CountAsync());
             Assert.Equal(1, await db.PlatformPosts.CountAsync()); Assert.Equal(1, await db.PostPublications.CountAsync());
-            Assert.Equal(1, await db.Set<MassTransit.EntityFrameworkCoreIntegration.OutboxMessage>().CountAsync());
+            Assert.Equal(0, await db.Set<MassTransit.EntityFrameworkCoreIntegration.OutboxMessage>().CountAsync());
             Assert.Equal(2, await db.PostImportChannels.CountAsync(x => x.PublicationId != null));
             var publication = await db.PostPublications.AsNoTracking().SingleAsync();
-            Assert.Equal("Queued", publication.Status); Assert.Equal(actor, publication.RequestedBy);
+            Assert.Equal("Scheduled", publication.Status); Assert.Equal(actor, publication.RequestedBy);
             Assert.Equal(accountId, publication.PlatformAccountId);
             Assert.Equal(1, (await setup.Service.Get(secondBatch)).Batch.Existing + (await setup.Service.Get(duplicates[0])).Batch.Existing);
 
             // A completed upload can replay safely without more outbox rows.
             Assert.Equal(duplicates[0], await Upload("same-request"));
-            Assert.Equal(1, await db.Set<MassTransit.EntityFrameworkCoreIntegration.OutboxMessage>().CountAsync());
+            Assert.Equal(0, await db.Set<MassTransit.EntityFrameworkCoreIntegration.OutboxMessage>().CountAsync());
             var rollback = await Assert.ThrowsAsync<PostgresException>(() => db.GetService<IMigrator>().MigrateAsync("20261014164002_add_filter_isDeletd=false_orderNhanhVn"));
             Assert.Contains("Cannot remove bulk import history", rollback.MessageText);
             Assert.Equal(2, await db.PostImportBatches.CountAsync());

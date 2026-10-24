@@ -44,7 +44,7 @@ public sealed class Service(AppDbContext db, ICurrentUserService user, WorkbookR
     {
         var actor = user.GetRequiredUserId();
         if (string.IsNullOrWhiteSpace(requestKey) || requestKey.Length > 128) throw new ImportException(400, "IMPORT_REQUEST_KEY_REQUIRED", "Thiếu mã yêu cầu nhập file.");
-        if (!Path.GetExtension(fileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase)) throw new ImportException(400, "IMPORT_FILE_TYPE_INVALID", "Chỉ nhận file .xlsx theo mẫu v2.");
+        if (!Path.GetExtension(fileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase)) throw new ImportException(400, "IMPORT_FILE_TYPE_INVALID", "Chỉ nhận file .xlsx theo mẫu Excel.");
         using var bytes = new MemoryStream(); var buffer = new byte[16384]; int count;
         while ((count = await stream.ReadAsync(buffer, ct)) > 0)
         {
@@ -125,13 +125,14 @@ public sealed class Service(AppDbContext db, ICurrentUserService user, WorkbookR
         var grouped = channels.ToLookup(x => x.RowId);
         var result = rows.Select(r =>
         {
-            var items = grouped[r.Id].Select(c => new Response.Channel(Name(c.Platform), c.JobStatus ?? (c.Status == "Rejected" ? "Failed" : "Pending"),
+            var items = grouped[r.Id].Select(c => new Response.Channel(Name(c.Platform), c.JobStatus ?? (c.Status == "Rejected" ? "Failed" : c.Status == "Waiting" ? "Waiting" : "Pending"),
                 c.JobError ?? c.ErrorCode, c.PublicationId, c.ExternalPostId, c.ExternalPostUrl, c.Status == "Existing")).ToArray();
             var state = r.Status == "Invalid" ? "Invalid" : r.Status == "Queued" ? "Queued"
                 : items.Any(x => x.Status is "Pending" or "Queued" or "Publishing") ? "Publishing"
                 : items.Any(x => x.Status is "NeedsReview" or "Closed") ? "NeedsReview"
                 : items.Any(x => x.Status == "Scheduled") ? "Scheduled"
-                : items.Any(x => x.Status is "Failed" or "Cancelled") ? "Failed" : "Succeeded";
+                : items.Any(x => x.Status is "Failed" or "Cancelled") ? "Failed"
+                : items.Any(x => x.Status == "Waiting") ? "Waiting" : "Succeeded";
             return new Response.Row(r.RowNumber, r.Code, Read<ImportInput>(r.Payload).Title, state, r.BasePostId, Read<ImportIssue[]>(r.Issues), items);
         }).ToArray();
         var all = result.SelectMany(x => x.Channels).ToArray();
@@ -144,7 +145,7 @@ public sealed class Service(AppDbContext db, ICurrentUserService user, WorkbookR
         var status = batch.Status != "Processed" || pending > 0 ? "Processing" : scheduled > 0 ? "Scheduled" : review > 0 ? "NeedsReview"
             : failed > 0 || invalid > 0 || issues.Length > 0 ? "CompletedWithErrors" : "Completed";
         var summary = new Response.Summary(batch.Id, batch.FileName, batch.CreatedAt, status, rows.Count, rows.Count(x => x.Status != "Queued"),
-            invalid, all.Length, all.Count(x => x.Status == "Succeeded"), failed, pending, scheduled, review, all.Count(x => x.Existing));
+            invalid, all.Length, all.Count(x => x.Status == "Succeeded"), failed, pending, scheduled, review, all.Count(x => x.Existing), all.Count(x => x.Status == "Waiting"));
         return new(summary, issues, result, 1, rows.Count, rows.Count);
     }
     public async Task<byte[]> Export(Guid id, CancellationToken ct = default)

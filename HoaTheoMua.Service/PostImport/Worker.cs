@@ -10,7 +10,8 @@ using static HoaTheoMua.Service.PostPublishing.Store;
 
 namespace HoaTheoMua.Service.PostImport;
 
-public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, TimeProvider clock)
+public sealed partial class Worker(AppDbContext db, PostPublishing.Service publishing, TimeProvider clock,
+    AiService.IService? ai = null)
 {
     private static readonly string[] BlockingStates = ["Queued", "Scheduled", "Publishing", "NeedsReview", "Succeeded", "Closed"];
 
@@ -36,6 +37,7 @@ public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, T
         try
         {
             var postId = await EnsurePost(batchId, rowId, actor, lease, ct);
+            await PrepareAi(batchId, rowId, actor, lease, postId, ct);
             var row = await db.PostImportRows.AsNoTracking().SingleAsync(x => x.Id == rowId, ct);
             var input = Read<ImportInput>(row.Payload);
             var channels = await db.PostImportChannels.AsNoTracking().Where(x => x.RowId == rowId && x.Status == "Pending").OrderBy(x => x.Platform).ToListAsync(ct);
@@ -44,6 +46,11 @@ public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, T
                 if (!await HasLease(batchId, lease, ct)) return false;
                 PostPublication? known = await Known(postId, channel.Platform, ct);
                 Guid? publicationId = known?.Id; var disposition = known == null ? "Submitted" : "Existing"; string? error = null;
+                if (known == null && input.ScheduledAt == null)
+                {
+                    if (!await SaveChannel(batchId, lease, channel.Id, null, "Waiting", null, ct)) return false;
+                    continue;
+                }
                 if (known == null)
                 {
                     if (channel.PlatformAccountId == null) { disposition = "Rejected"; error = "IMPORT_ACCOUNT_REQUIRED"; }
@@ -52,7 +59,7 @@ public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, T
                         try
                         {
                             var job = await publishing.PublishImported(postId, Service.Name(channel.Platform), channel.PlatformAccountId.Value,
-                                input.ScheduledAt, actor, "bulk:" + channel.Id.ToString("N"), Fingerprint(input.Title, input.Content, input.Hashtag, input.Images.Select(x => x.Url)), ct);
+                                input.ScheduledAt, actor, "bulk:" + channel.Id.ToString("N"), Read<Preparation>(row.Preparation).Fingerprints![Service.Name(channel.Platform)], ct);
                             publicationId = job.PublicationId;
                         }
                         catch (AppException ex)
@@ -122,6 +129,10 @@ public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, T
             row.Status = issue == null ? "Processed" : "Invalid";
             if (issue != null)
             {
+                var ownedTargets = Read<Preparation>(row.Preparation).OwnedTargets ?? [];
+                if (row.BasePostId.HasValue)
+                    foreach (var target in await db.PlatformPosts.Where(x => ownedTargets.Contains(x.Id) && x.Status == PlatformPostStatus.Generating).ToListAsync(ct))
+                    { target.Status = PlatformPostStatus.Failed; target.LastError = issue.Message; }
                 row.Issues = Json(new[] { issue with { RowNumber = row.RowNumber } });
                 foreach (var pending in await db.PostImportChannels.Where(x => x.RowId == rowId && x.Status == "Pending").ToListAsync(ct))
                 { pending.Status = "Rejected"; pending.ErrorCode = issue.Code; }
@@ -149,9 +160,22 @@ public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, T
         if ((await LockBatch(batchId, ct))?.LeaseId != lease) throw new ImportException(409, "IMPORT_LEASE_CHANGED", "Tác vụ đang được xử lý ở tiến trình khác.");
         var row = await db.PostImportRows.SingleAsync(x => x.Id == rowId, ct);
         var input = Read<ImportInput>(row.Payload);
+        if (row.BasePostId.HasValue)
+        {
+            if (Read<Preparation>(row.Preparation).Fingerprints == null)
+            {
+                row.Preparation = Json(new Preparation(Fingerprints: input.Platforms.ToDictionary(Service.Name,
+                    platform => Fingerprint(input.Title, input.Content, input.Hashtag,
+                        input.Images.Where(x => x.Platform == null || x.Platform == platform).OrderBy(x => x.Order).Select(x => x.Url)))));
+                await db.SaveChangesAsync(ct); if (tx != null) await tx.CommitAsync(ct);
+            }
+            return row.BasePostId.Value;
+        }
         await Service.Advisory(db, $"post-import-code:{actor}:{input.Code}", ct);
         var identity = await db.ImportedPostIdentities.SingleOrDefaultAsync(x => x.RequestedBy == actor && x.Code == input.Code, ct);
-        var wantedHash = Fingerprint(input.Title, input.Content, input.Hashtag, input.Images.Select(x => x.Url));
+        var legacy = !input.UseAiContent && input.Images.All(x => x.Platform == null && x.Ratio == null && !x.UseAi && string.IsNullOrEmpty(x.Instruction));
+        var wantedHash = Fingerprint(input.Title, input.Content, input.Hashtag, legacy
+            ? input.Images.Select(x => x.Url) : input.Images.Select(x => Json(x)).Append(input.UseAiContent.ToString()));
         BasePost post; var changed = identity == null;
         if (identity == null)
         {
@@ -167,7 +191,7 @@ public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, T
                 : await db.BasePosts.SingleAsync(x => x.Id == identity.BasePostId, ct);
             if (post.IsDeleted) throw new ImportException(409, "IMPORT_SOURCE_DELETED", Service.ErrorMessage("IMPORT_SOURCE_DELETED")!);
             var urls = await db.BasePostImages.Where(x => x.BasePostId == post.Id && !x.IsDeleted).OrderBy(x => x.SortOrder).Select(x => x.ImageUrl).ToListAsync(ct);
-            changed = identity.ContentHash != wantedHash || Fingerprint(post.Title, post.Content, post.Hashtag, urls) != wantedHash;
+            changed = identity.ContentHash != wantedHash || Fingerprint(post.Title, post.Content, post.Hashtag, urls) != Fingerprint(input.Title, input.Content, input.Hashtag, input.Images.Select(x => x.Url));
             if (await db.PlatformPosts.AnyAsync(x => x.BasePostId == post.Id && !x.IsDeleted && x.Status == PlatformPostStatus.Generating, ct)
                 || changed && await db.PostPublications.AnyAsync(x => x.BasePostId == post.Id && BlockingStates.Contains(x.Status), ct))
                 throw new ImportException(409, "IMPORT_CONTENT_CHANGED", Service.ErrorMessage("IMPORT_CONTENT_CHANGED")!);
@@ -178,8 +202,8 @@ public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, T
             foreach (var old in source) old.IsDeleted = true;
             // Release filtered unique sort positions before inserting replacement source rows.
             await db.SaveChangesAsync(ct);
-            source = input.Images.Select(x => new BasePostImage { Id = Guid.NewGuid(), BasePostId = post.Id, ImageUrl = x.Url,
-                SortOrder = x.Order, CreatedAt = clock.GetUtcNow() }).ToList();
+            source = input.Images.Select((x, index) => new BasePostImage { Id = Guid.NewGuid(), BasePostId = post.Id, ImageUrl = x.Url,
+                SortOrder = index + 1, CreatedAt = clock.GetUtcNow() }).ToList();
             db.BasePostImages.AddRange(source);
             post.Title = input.Title; post.Content = input.Content; post.Hashtag = input.Hashtag; post.UpdatedAt = clock.GetUtcNow();
             identity.ContentHash = wantedHash;
@@ -191,6 +215,7 @@ public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, T
         {
             if (await Known(post.Id, platform, ct) != null) continue;
             var target = platforms.SingleOrDefault(x => x.Platform == platform);
+            if (target != null && !changed) continue;
             if (target == null)
             {
                 target = new() { Id = Guid.NewGuid(), BasePostId = post.Id, Platform = platform, Status = PlatformPostStatus.Ready, UserId = actor, CreatedAt = clock.GetUtcNow() };
@@ -201,25 +226,30 @@ public sealed class Worker(AppDbContext db, PostPublishing.Service publishing, T
             db.GeneratedPosts.Add(content);
             db.PlatformPostImages.RemoveRange(await db.PlatformPostImages.Where(x => x.PlatformPostId == target.Id).ToListAsync(ct));
             await db.SaveChangesAsync(ct);
-            foreach (var image in source)
+            foreach (var selection in input.Images.Select((item, index) => (item, index)).Where(x => x.item.Platform == null || x.item.Platform == platform))
             {
-                var original = await db.GeneratedPostImages.Where(x => x.SourceBasePostImageId == image.Id && x.StorageProvider == "ImportedUrl" && x.Status == ImageStatus.Succeeded)
+                var image = source[selection.index];
+                var ratio = selection.item.Ratio ?? AspectRatioType.Square1x1;
+                var original = await db.GeneratedPostImages.Where(x => x.SourceBasePostImageId == image.Id && x.StorageProvider == "ImportedUrl" && x.RatioCode == ratio && x.Status == ImageStatus.Succeeded)
                     .OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync(ct);
                 if (original == null)
                 {
                     original = new() { Id = Guid.NewGuid(), BasePostId = post.Id, SourceBasePostImageId = image.Id,
-                        SourceImageUrl = image.ImageUrl, ImageUrl = image.ImageUrl, RatioCode = AspectRatioType.Square1x1,
+                        SourceImageUrl = image.ImageUrl, ImageUrl = image.ImageUrl, RatioCode = ratio,
                         StorageProvider = "ImportedUrl", Status = ImageStatus.Succeeded, CreatedAt = clock.GetUtcNow() };
                     db.GeneratedPostImages.Add(original);
                 }
                 db.PlatformPostImages.Add(new() { Id = Guid.NewGuid(), PlatformPostId = target.Id, SourceBasePostImageId = image.Id,
-                    RatioCode = AspectRatioType.Square1x1, SelectedGeneratedPostImageId = original.Id, SortOrder = image.SortOrder, CreatedAt = clock.GetUtcNow() });
+                    RatioCode = ratio, SelectedGeneratedPostImageId = original.Id, SortOrder = selection.item.Order, CreatedAt = clock.GetUtcNow() });
             }
             target.OfficialGenerationId = content.Id; target.SelectedAt = clock.GetUtcNow(); target.UpdatedAt = clock.GetUtcNow();
             target.Status = PlatformPostStatus.Ready; target.LastError = null; target.PublishError = null;
             await db.SaveChangesAsync(ct);
         }
         row.BasePostId = post.Id;
+        var fingerprints = input.Platforms.ToDictionary(Service.Name, platform => Fingerprint(input.Title, input.Content, input.Hashtag,
+            input.Images.Where(x => x.Platform == null || x.Platform == platform).OrderBy(x => x.Order).Select(x => x.Url)));
+        row.Preparation = Json(new Preparation(Fingerprints: fingerprints));
         await db.SaveChangesAsync(ct); if (tx != null) await tx.CommitAsync(ct);
         return post.Id;
     }

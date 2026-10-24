@@ -46,7 +46,7 @@ public class Imports
     }
     internal sealed record Setup(ImportService Service, ImportWorker Worker, PublishWorker Publisher, WorkbookReader Reader,
         Lifecycle.Clock Clock, IOptions<PlatformAccountOptions> Accounts, Guid Actor, Adapter[] Adapters);
-    internal static Setup Create(AppDbContext db, Guid? actor = null, IPublishEndpoint? endpoint = null, IPublicationTokenRefresher? refresher = null)
+    internal static Setup Create(AppDbContext db, Guid? actor = null, IPublishEndpoint? endpoint = null, IPublicationTokenRefresher? refresher = null, HoaTheoMua.Service.AiService.IService? ai = null)
     {
         var who = actor ?? Guid.NewGuid();
         var clock = new Lifecycle.Clock { Now = DateTimeOffset.Parse("2026-10-23T07:00:00Z") };
@@ -58,7 +58,7 @@ public class Imports
         var publisher = new PublishWorker(db, store, adapters, settings, new(accounts), clock);
         var publishing = new PublishService(db, store, new User(Guid.Empty), endpoint ?? new Mock<IPublishEndpoint>().Object, adapters, settings, accounts, clock, publisher, refresher);
         var reader = new WorkbookReader(settings, clock);
-        return new(new(db, new User(who), reader, clock), new(db, publishing, clock), publisher, reader, clock, accounts, who, adapters);
+        return new(new(db, new User(who), reader, clock), new(db, publishing, clock, ai), publisher, reader, clock, accounts, who, adapters);
     }
     internal static async Task<Guid> Account(AppDbContext db, Setup s, PlatformType platform)
     {
@@ -70,7 +70,7 @@ public class Imports
         await db.SaveChangesAsync(); return id;
     }
     internal static Dictionary<string, object?> Post(string code = "HTM-001", string channels = "Zalo OA", object? date = null, string content = "Nội dung hoàn chỉnh\n\nDòng thứ hai") => new()
-    { ["Mã bài"] = code, ["Tiêu đề"] = "Bó Mộc Tana", ["Nội dung"] = content, ["Hashtag"] = "#HoaTheoMua", ["Kênh đăng"] = channels, ["Ngày giờ đăng"] = date };
+    { ["Mã bài"] = code, ["Tiêu đề"] = "Bó Mộc Tana", ["Nội dung"] = content, ["Hashtag"] = "#HoaTheoMua", ["Kênh đăng"] = channels, ["Ngày giờ đăng"] = date ?? "25/10/2026 09:00" };
     internal static Dictionary<string, object?> Image(string code = "HTM-001", object? order = null, string url = "https://example.com/one.jpg") => new()
     { ["Mã bài"] = code, ["Thứ tự"] = order ?? 1, ["Đường dẫn ảnh"] = url };
     internal static async Task<byte[]> Book(Dictionary<string, object?>[]? posts = null, Dictionary<string, object?>[]? images = null)
@@ -172,7 +172,7 @@ public class Imports
         await Configure(s, (PlatformType.Zalo, second));
         Assert.True(await s.Worker.ProcessOne(batch.Id));
         var job = Assert.Single(await db.PostPublications.ToListAsync());
-        Assert.Equal(first, job.PlatformAccountId); Assert.Equal(s.Actor, job.RequestedBy); Assert.Equal("Queued", job.Status);
+        Assert.Equal(first, job.PlatformAccountId); Assert.Equal(s.Actor, job.RequestedBy); Assert.Equal("Scheduled", job.Status);
         var snapshot = Store.Read<PublicationSnapshot>(job.Snapshot);
         Assert.Equal("Nội dung hoàn chỉnh\n\nDòng thứ hai", snapshot.Content);
         Assert.All(await db.GeneratedPosts.ToListAsync(), x => { Assert.Equal(ContentSource.Manual, x.Source); Assert.Null(x.AiModel); });
@@ -189,7 +189,7 @@ public class Imports
         var detail = await s.Service.Get(batch.Id);
         Assert.Equal("Invalid", detail.Rows[0].Status);
         Assert.Contains(detail.Rows[1].Channels, x => x.Platform == "zalo" && x.ErrorCode == "IMPORT_ACCOUNT_REQUIRED");
-        Assert.Contains(detail.Rows[1].Channels, x => x.Platform == "facebook" && x.Status == "Queued");
+        Assert.Contains(detail.Rows[1].Channels, x => x.Platform == "facebook" && x.Status == "Scheduled");
         Assert.Single(await db.PostPublications.ToListAsync());
     }
     [Fact]
@@ -210,10 +210,11 @@ public class Imports
         await Configure(s, (PlatformType.Zalo, account)); var bytes = await Book();
         var first = await Upload(s, bytes); await s.Worker.ProcessOne(first.Id);
         var job = await db.PostPublications.SingleAsync();
+        s.Clock.Now = job.ScheduledAt!.Value;
         await s.Publisher.Process(job.Id, job.Revision, default); s.Clock.Now = s.Clock.Now.AddMinutes(1);
         await s.Publisher.Process(job.Id, (await db.PostPublications.AsNoTracking().SingleAsync()).Revision, default);
         Assert.Equal("Succeeded", (await db.PostPublications.AsNoTracking().SingleAsync()).Status);
-        var second = await Upload(s, bytes); await s.Worker.ProcessOne(second.Id);
+        var second = await Upload(s, await Book(posts: [Post(date: "")])); await s.Worker.ProcessOne(second.Id);
         var result = await s.Service.Get(second.Id);
         Assert.Equal(1, result.Batch.Existing); Assert.Equal(1, result.Batch.Succeeded);
         Assert.Single(await db.BasePosts.ToListAsync()); Assert.Single(await db.ImportedPostIdentities.ToListAsync()); Assert.Single(await db.PostPublications.ToListAsync());
@@ -288,7 +289,7 @@ public class Imports
         Assert.False(await s.Worker.ProcessOne(batch.Id)); Assert.Equal(0, (await db.PostImportRows.SingleAsync()).Attempts);
         Assert.Empty(await db.PostPublications.ToListAsync());
         busy = false; Assert.True(await s.Worker.ProcessOne(batch.Id));
-        Assert.Equal("Queued", (await db.PostPublications.SingleAsync()).Status);
+        Assert.Equal("Scheduled", (await db.PostPublications.SingleAsync()).Status);
         refresher.Verify(x => x.RefreshForPublication(account, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 }

@@ -2722,7 +2722,7 @@ namespace HoaTheoMua.Repository.Migrations
 
                     b.ToTable("PostImportChannel", null, t =>
                         {
-                            t.HasCheckConstraint("CK_PostImportChannel_Status", "\"Status\" IN ('Pending','Submitted','Existing','Rejected')");
+                            t.HasCheckConstraint("CK_PostImportChannel_Status", "\"Status\" IN ('Pending','Submitted','Existing','Rejected','Waiting')");
                         });
                 });
 
@@ -2751,6 +2751,10 @@ namespace HoaTheoMua.Repository.Migrations
                         .HasColumnType("jsonb");
 
                     b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Preparation")
                         .IsRequired()
                         .HasColumnType("jsonb");
 
