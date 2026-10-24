@@ -427,6 +427,15 @@ public partial class Service : IService
         // The saga path does exactly one thing here: record that the money arrived, and hand the
         // rest to the bus. No Ahamove call, no NhanhVn call, nothing that can make the gateway wait
         // or make this request fail after the payment is already real.
+        // Voucher row stays locked from the usage check until UsedCount + 1 commits with the Paid status,
+        // so two payments for the last use cannot both pass the check (#2).
+        await using var voucherTransaction = !string.IsNullOrWhiteSpace(order.VoucherSnapshot)
+                                             && _dbContext.Database.IsRelational()
+            ? await _dbContext.Database.BeginTransactionAsync()
+            : null;
+
+        await FlagVoucherOverUsageAsync(order);
+
         order.Status = PaidStatus;
         order.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -458,10 +467,14 @@ public partial class Service : IService
             // A concurrent redelivery won the race and already recorded this exact gateway event.
             // The unique index is the only thing that actually stops two simultaneous callbacks -
             // the status check above is read-then-act and both can pass it. Ack and drop.
+            // voucherTransaction is not committed, so disposing it rolls back; no use is counted.
             return;
         }
 
         await AddVoucherUsageAsync(order);
+
+        if (voucherTransaction != null)
+            await voucherTransaction.CommitAsync();
     }
 
     /// <summary>
@@ -477,6 +490,10 @@ public partial class Service : IService
         // Handmade sau chúng, ngay trước lần commit cuối của flow legacy.
         await CreateHandMadeCardsAsync(order);
 
+        // No transaction here: the steps above already SaveChanges and call Ahamove/NhanhVn,
+        // so the voucher lock is not held across them. The flag may be wrong if two callbacks race.
+        await FlagVoucherOverUsageAsync(order);
+
         // Status is flipped LAST, deliberately. Both fulfilment steps SaveChanges on this same
         // scoped DbContext, so assigning "Paid" up front would persist it before NhanhVn had
         // succeeded, and the gateway's next redelivery would short-circuit on the Paid guard and
@@ -491,6 +508,51 @@ public partial class Service : IService
         await AddVoucherUsageAsync(order);
 
         await _fulfillmentService.RevalidateOrderProductsAsync(order.Id);
+    }
+
+    // #2: a SePay QR has no expiry, so a buyer can pay after PendingHoldWindow, when the order no longer
+    // holds its use. The money is already in, so the order still goes ahead: it is only flagged on its
+    // VoucherSnapshot (exceededUsageLimit) for admin to find. Never throws.
+    private async Task FlagVoucherOverUsageAsync(Repository.Entity.Order order)
+    {
+        var snapshot = DeserializeVoucherSnapshot(order.VoucherSnapshot);
+        if (snapshot == null)
+        {
+            return;
+        }
+
+        if (_dbContext.Database.IsRelational())
+        {
+            await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT 1 FROM \"Vouchers\" WHERE \"Id\" = {snapshot.VoucherId} FOR UPDATE");
+        }
+
+        // UsedCount = uses already paid; this order is still Pending, so it is not in it yet.
+        // No IsDeleted / IsActive filter, same as AddVoucherUsageAsync: a voucher deleted or turned off
+        // after the order was created still had its uses, and this order must still be flagged.
+        var voucher = await _dbContext.Vouchers
+            .AsNoTracking()
+            .Where(x => x.Id == snapshot.VoucherId)
+            .Select(x => new { x.UsedCount, x.MaxUsageCount })
+            .FirstOrDefaultAsync();
+
+        if (voucher == null || voucher.UsedCount < voucher.MaxUsageCount)
+        {
+            return;
+        }
+
+        // System.Text.Json like CreateOrder, so the key stays "voucherId" and CountUsages still finds it
+        order.VoucherSnapshot = System.Text.Json.JsonSerializer.Serialize(new HoaTheoMua.Service.Order.Request.VoucherSnapshot
+        {
+            VoucherId = snapshot.VoucherId,
+            Code = snapshot.Code,
+            DiscountType = snapshot.DiscountType,
+            DiscountValue = snapshot.DiscountValue,
+            MaxDiscountAmount = snapshot.MaxDiscountAmount,
+            DiscountAmount = snapshot.DiscountAmount,
+            ProgramId = snapshot.ProgramId,
+            ExceededUsageLimit = true
+        });
     }
 
     // A paid order that used a voucher takes one use. Called only after the SaveChanges that marks the

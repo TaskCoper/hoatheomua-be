@@ -45,23 +45,81 @@ public class PrepareOrderVoucherTest
         Assert.Equal(20_000, snapshot.DiscountAmount);
     }
 
+    // Tắt: PrepareOrderVoucher không còn hạ UsedCount về số đơn Paid (S5, cách 3 chỉ nâng lên, không hạ)
+    // [VoucherPostgresFact]
+    // public async Task UsedCountColumn_IsResyncedToPaidOrdersOnly()
+    // {
+    //     await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+    //     await using var db = fixture.Context();
+    //     var voucher = await SeedVoucher(db, maxUsageCount: 10, usedCount: 7);
+    //     db.Orders.AddRange(
+    //         Order(voucher.Id, "Paid", DateTimeOffset.UtcNow.AddDays(-1)),
+    //         Order(voucher.Id, "Paid", DateTimeOffset.UtcNow.AddDays(-1)),
+    //         Order(voucher.Id, "Pending", DateTimeOffset.UtcNow));
+    //     await db.SaveChangesAsync();
+    //
+    //     // await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000);
+    //     await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000, DateTimeOffset.UtcNow);
+    //
+    //     db.ChangeTracker.Clear();
+    //     Assert.Equal(2, (await db.Vouchers.SingleAsync()).UsedCount);
+    // }
+
+    // Far from the limit the column is trusted as is: no recount, even if orders say more
     [VoucherPostgresFact]
-    public async Task UsedCountColumn_IsResyncedToPaidOrdersOnly()
+    public async Task FarFromLimit_DoesNotRecount()
+    {
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
+        var voucher = await SeedVoucher(db, maxUsageCount: 100, usedCount: 0);
+        db.Orders.AddRange(
+            Order(voucher.Id, "Paid", DateTimeOffset.UtcNow.AddDays(-1)),
+            Order(voucher.Id, "Paid", DateTimeOffset.UtcNow.AddDays(-1)));
+        await db.SaveChangesAsync();
+
+        await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000, DateTimeOffset.UtcNow);
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(0, (await db.Vouchers.SingleAsync()).UsedCount);
+    }
+
+    // Near the limit, FulfillmentFailed orders are counted and fill the last uses
+    [VoucherPostgresFact]
+    public async Task NearLimit_RecountsPaidAndFulfillmentFailed_ThenRejects()
+    {
+        await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
+        await using var db = fixture.Context();
+        var voucher = await SeedVoucher(db, maxUsageCount: 3, usedCount: 1);
+        db.Orders.AddRange(
+            Order(voucher.Id, "Paid", DateTimeOffset.UtcNow.AddDays(-1)),
+            Order(voucher.Id, "FulfillmentFailed", DateTimeOffset.UtcNow.AddDays(-1)),
+            Order(voucher.Id, "FulfillmentFailed", DateTimeOffset.UtcNow.AddDays(-1)));
+        await db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<ConflictException>(
+            () => new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000, DateTimeOffset.UtcNow));
+
+        Assert.Equal("Voucher đã hết lượt sử dụng.", error.Message);
+        db.ChangeTracker.Clear();
+        Assert.Equal(3, (await db.Vouchers.SingleAsync()).UsedCount);
+    }
+
+    // The recount only raises the column, never lowers it
+    [VoucherPostgresFact]
+    public async Task NearLimit_DoesNotLowerUsedCount()
     {
         await using var fixture = await VoucherProgramPostgres.PostgresDatabase.Create();
         await using var db = fixture.Context();
         var voucher = await SeedVoucher(db, maxUsageCount: 10, usedCount: 7);
         db.Orders.AddRange(
             Order(voucher.Id, "Paid", DateTimeOffset.UtcNow.AddDays(-1)),
-            Order(voucher.Id, "Paid", DateTimeOffset.UtcNow.AddDays(-1)),
-            Order(voucher.Id, "Pending", DateTimeOffset.UtcNow));
+            Order(voucher.Id, "Paid", DateTimeOffset.UtcNow.AddDays(-1)));
         await db.SaveChangesAsync();
 
-        // await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000);
         await new VoucherService(db).PrepareOrderVoucher(voucher.Code, 200_000, DateTimeOffset.UtcNow);
 
         db.ChangeTracker.Clear();
-        Assert.Equal(2, (await db.Vouchers.SingleAsync()).UsedCount);
+        Assert.Equal(7, (await db.Vouchers.SingleAsync()).UsedCount);
     }
 
     [VoucherPostgresFact]

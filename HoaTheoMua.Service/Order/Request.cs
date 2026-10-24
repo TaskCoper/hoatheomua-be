@@ -308,5 +308,9 @@ public class Request
 
         [JsonPropertyName("programId")]
         public Guid? ProgramId { get; init; }
+
+        // Webhook gắn cờ khi khách trả tiền lúc voucher đã hết lượt (#2). Đơn vẫn được giao.
+        [JsonPropertyName("exceededUsageLimit")]
+        public bool ExceededUsageLimit { get; set; }
     }
 }

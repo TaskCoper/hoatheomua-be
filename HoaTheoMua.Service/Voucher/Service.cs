@@ -19,6 +19,8 @@ public class Service : IService
     // TEMPORARY: orders have no expiry yet, so a Pending order holds its voucher use only for this window.
     // When an order-expiry job exists (Pending -> Expired), delete this and count Pending orders by status alone.  
     private static readonly TimeSpan PendingHoldWindow = TimeSpan.FromMinutes(15);
+    // PrepareOrderVoucher recounts uses from orders only when this many uses or fewer are left
+    private const int RecountThreshold = 5;
 
     private readonly AppDbContext _dbContext;
 
@@ -912,13 +914,37 @@ public class Service : IService
         await _dbContext.Database.ExecuteSqlInterpolatedAsync(
             $"SELECT 1 FROM \"Vouchers\" WHERE \"Id\" = {voucher.Id} FOR UPDATE");
 
-        var paidCount = await CountUsages(voucher.Id, pendingSince: null);
-        var reservedCount = await CountUsages(voucher.Id, pendingSince: DateTimeOffset.UtcNow - PendingHoldWindow);
+        // var paidCount = await CountUsages(voucher.Id, pendingSince: null);
+        // var reservedCount = await CountUsages(voucher.Id, pendingSince: DateTimeOffset.UtcNow - PendingHoldWindow);
+        //
+        // // The column is for display and only counts Paid orders; refresh it while we have the real number
+        // await _dbContext.Vouchers
+        //     .Where(x => x.Id == voucher.Id && x.UsedCount != paidCount)
+        //     .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCount, paidCount));
 
-        // The column is for display and only counts Paid orders; refresh it while we have the real number
-        await _dbContext.Vouchers
-            .Where(x => x.Id == voucher.Id && x.UsedCount != paidCount)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCount, paidCount));
+        // UsedCount = Paid + FulfillmentFailed uses (the webhook adds 1 per paid order, in the same commit).
+        // Read after FOR UPDATE: the voucher from FindUsableVoucher was loaded before the lock.
+        var usedCount = await _dbContext.Vouchers
+            .AsNoTracking()
+            .Where(x => x.Id == voucher.Id)
+            .Select(x => x.UsedCount)
+            .SingleAsync();
+        var reservedCount = usedCount
+                            + await CountUsages(voucher.Id, DateTimeOffset.UtcNow - PendingHoldWindow, includeUsed: false);
+
+        // Old rows can be short: the old recount above wrote Paid only, so FulfillmentFailed uses were lost.
+        // Near the limit, recount from orders and only raise the column, never lower it.
+        if (voucher.MaxUsageCount - reservedCount <= RecountThreshold)
+        {
+            var countedUsed = await CountUsages(voucher.Id, pendingSince: null, includeUsed: true);
+            if (countedUsed > usedCount)
+            {
+                await _dbContext.Vouchers
+                    .Where(x => x.Id == voucher.Id)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedCount, countedUsed));
+                reservedCount += countedUsed - usedCount;
+            }
+        }
 
         // var estimate = QuoteVoucher(voucher, productFee, reservedCount);
         var estimate = QuoteVoucher(voucher, productFee, reservedCount, deliveryAt);
@@ -935,16 +961,30 @@ public class Service : IService
         };
     }
 
-    // Uses = Paid orders whose snapshot holds this voucher id, plus Pending ones created after pendingSince
-    private async Task<int> CountUsages(Guid voucherId, DateTimeOffset? pendingSince)
+    // // Uses = Paid orders whose snapshot holds this voucher id, plus Pending ones created after pendingSince
+    // private async Task<int> CountUsages(Guid voucherId, DateTimeOffset? pendingSince)
+    // {
+    //     var snapshotFilter = JsonConvert.SerializeObject(new { voucherId });
+    //
+    //     return await _dbContext.Orders
+    //         .AsNoTracking()
+    //         .CountAsync(x => !x.IsDeleted
+    //                          && (x.Status == "Paid"
+    //                              || (pendingSince != null && x.Status == "Pending" && x.CreatedAt > pendingSince))
+    //                          && EF.Functions.JsonContains(x.VoucherSnapshot, snapshotFilter));
+    // }
+
+    // includeUsed = true: Paid + FulfillmentFailed orders (money taken, the use is kept).
+    // includeUsed = false: only Pending orders created after pendingSince (uses still being held).
+    private async Task<int> CountUsages(Guid voucherId, DateTimeOffset? pendingSince, bool includeUsed)
     {
         var snapshotFilter = JsonConvert.SerializeObject(new { voucherId });
 
         return await _dbContext.Orders
             .AsNoTracking()
             .CountAsync(x => !x.IsDeleted
-                             && (x.Status == "Paid"
-                                 || (pendingSince != null && x.Status == "Pending" && x.CreatedAt > pendingSince))
+                             && ((includeUsed && (x.Status == "Paid" || x.Status == "FulfillmentFailed"))
+                                 || (!includeUsed && pendingSince != null && x.Status == "Pending" && x.CreatedAt > pendingSince))
                              && EF.Functions.JsonContains(x.VoucherSnapshot, snapshotFilter));
     }
 
